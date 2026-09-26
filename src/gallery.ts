@@ -10,14 +10,14 @@
 // rechts ziehen verschiebt, das Mausrad zoomt.
 
 import {
-  ANIMAL_CLIPS, ANIMAL_POSE, BUILDING_HEADING, CLIPS, CLIP_POSE, EntityRenderer, FALL_LYING, FIELDS, FLOWERS, POSE, SHAPE, animationTime,
+  ANIMAL_CLIPS, ANIMAL_POSE, BUILDING_HEADING, CLIPS, CLIP_POSE, EntityRenderer, FALL_LYING, FIELDS, FLOWERS, POSE, SHAPE, animationTime, setAnimationTime, setAnimationsPaused,
   buildingHeading, figureProps, frozenMillMotion, millMotion, modelWorkSpot,
   type EntityInstance,
 } from './gl/entityRenderer';
 import {
   groundToWorld, setViewElevation, snapCamera, viewElevation, worldToGround, worldToScreen, type IsoView,
 } from './gl/iso';
-import { AXIS_COLORS, GIZMO_RADIUS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
+import { AXIS_COLORS, GIZMO_RADIUS, TIMELINE_SECONDS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
 import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
 import { FLOWER_SIZE } from './world/flowers';
 import { FLOWER_KINDS } from './gl/flowerModel';
@@ -244,6 +244,12 @@ function oneFlower(kind: number): Exhibit {
 }
 
 /**
+ * Schritte je Sekunde (Phase) beim Gehen und Tragen: in der Galerie halb so
+ * schnell wie im Spiel - so sieht man die Bewegung.
+ */
+const walkRate = (VILLAGER.speed * Math.PI * 2 / 0.6) * 0.5;
+
+/**
  * Die Reihen der Galerie, von oben nach unten. `gap`: Abstand der Stücke,
  * `depth`: Platz bis zur nächsten Reihe (Tiles) - hohe Modelle brauchen mehr.
  */
@@ -252,7 +258,6 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
     title: 'Dorfbewohner', gap: 2.7, depth: 3.2,
     items: [false, true].flatMap((female) => {
       const who = female ? 'Frau' : 'Mann';
-      const walkRate = VILLAGER.speed * Math.PI * 2 / 0.6;
       return [
         figure(`${who} · steht`, female, POSE.stand, 1, Math.PI * 0.25),
         figure(`${who} · geht`, female, POSE.walk, walkRate, -Math.PI / 4),
@@ -352,7 +357,6 @@ function building(label: string, shapes: number[], size: number, zoom: number, l
   };
 }
 
-const walkRate = VILLAGER.speed * Math.PI * 2 / 0.6;
 const people = (female: boolean) => {
   const who = female ? 'Frau' : 'Mann';
   return showcase('Dorfbewohner', who, [
@@ -463,6 +467,13 @@ let animation = 0;
 let demolishing = false;
 /** Stück Boden unter den Modellen (Knopf "Boden"). */
 let showGround = false;
+/** Läuft die Animation? Die Zeit ist die Animationsuhr des Renderers (animationTime). */
+let playing = true;
+function togglePlay() {
+  playing = !playing;
+  setAnimationsPaused(!playing);
+  return playing;
+}
 /** Weißes Gitter: 0 aus, 1 über dem Modell, 2 nur das Gitter. */
 let wireMode = 0;
 /** So viele Tiles liegt das Gitter über dem Modell vor den Flächen - genug gegen Flimmern, zu wenig, um verdeckte Kanten durchscheinen zu lassen. */
@@ -512,7 +523,7 @@ function groundUnder(list: EntityInstance[]): EntityInstance | null {
   return { x: (x0 + x1) / 2 - 0.5, y: (y0 + y1) / 2 - 0.5, size, color: GRASS, shape: SHAPE.flat, alpha: 1, ground: 0, motion: [0, 0, 0, 1] };
 }
 
-const { canvas, labels: labelEls, titles: titleEls, show, files, vertices, gizmo } = mountGallery(
+const { canvas, labels: labelEls, titles: titleEls, show, files, vertices, gizmo, time } = mountGallery(
   document.getElementById('app')!,
   SHOWCASE,
   placed.map((p) => p.item.label),
@@ -533,6 +544,13 @@ const { canvas, labels: labelEls, titles: titleEls, show, files, vertices, gizmo
       spin = 0;
       setViewElevation(Math.PI / 6);
       if (current >= 0) frame0();
+    },
+    play: () => togglePlay(),
+    seek: (seconds) => setAnimationTime(seconds),
+    step: (frames) => {
+      playing = false;
+      setAnimationsPaused(true);
+      setAnimationTime(Math.max(0, animationTime() + frames / 30));
     },
     hover: (axis) => {
       hotAxis = axis;
@@ -704,6 +722,11 @@ canvas.addEventListener('wheel', (e) => {
 // Pfeiltasten: hoch/runter das Modell, links/rechts die Animation; Q/E drehen,
 // W/S neigen (W = mehr von oben).
 window.addEventListener('keydown', (e) => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    togglePlay();
+    return;
+  }
   if (e.key === 'q' || e.key === 'e') {
     spin += (e.key === 'q' ? 1 : -1) * (Math.PI / 12);
   } else if (e.key === 'w' || e.key === 's') {
@@ -731,7 +754,6 @@ choose(startItem, startAnim, true);
 if (params.has('zoom')) zoom = Number(params.get('zoom'));
 
 const instances: EntityInstance[] = [];
-const start = performance.now();
 
 /**
  * Das gewählte Stück um seine Mitte (0, 0) gedreht: jede Instanz rückt auf
@@ -863,8 +885,12 @@ function drawGizmo(box: DOMRect, silhouette: number) {
   gl.viewport(0, 0, canvas.width, canvas.height);
 }
 
-function frame(now: number) {
-  const t = (now - start) / 1000;
+function frame() {
+  // Zeit der Animationsuhr - anhalten und spulen wie bei einem Video; nach
+  // TIMELINE_SECONDS von vorn.
+  let t = animationTime();
+  if (t >= TIMELINE_SECONDS) setAnimationTime((t %= TIMELINE_SECONDS));
+  time(t, playing);
   instances.length = 0;
   // Solange die Kamera sich einpasst (fit), ohne Boden - sonst passte sie den Boden ein.
   const withGround = showGround && fitPasses === 0;

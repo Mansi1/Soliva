@@ -215,3 +215,21 @@
   font-size: 11px;
   color: var(--cream-muted);
 }
+
+/* Zeitleiste der Animation: Knöpfe, Regler, Zeit. */
+.gal-timeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+.gal-timeline input[type='range'] {
+  width: 320px;
+}
+.gal-time {
+  min-width: 64px;
+  font-size: 11px;
+  color: var(--cream-muted);
+  font-variant-numeric: tabular-nums;
+}

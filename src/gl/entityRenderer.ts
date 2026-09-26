@@ -535,6 +535,12 @@ export function setAnimationsPaused(paused: boolean) {
   animationPaused = paused;
 }
 
+/** Die Uhr auf diesen Stand setzen (Sekunden) - Spulen in der Galerie. */
+export function setAnimationTime(seconds: number) {
+  animationClock = seconds;
+  animationLast = performance.now() / 1000;
+}
+
 /** Spielgeschwindigkeit: 1 = normal, 2 = doppelt so schnell. */
 export function setAnimationSpeed(speed: number) {
   animationSpeed = speed;

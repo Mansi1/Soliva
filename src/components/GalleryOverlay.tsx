@@ -14,6 +14,9 @@ const AXES = ['X', 'Y', 'Z'];
 /** Beschriftung des Gitter-Knopfs je Stufe. */
 const WIRE_LABELS = ['Gitter', 'Gitter + Modell', 'Nur Gitter'];
 
+/** Länge der Zeitleiste in Sekunden - danach beginnt die Animation von vorn. */
+export const TIMELINE_SECONDS = 30;
+
 export const AXIS_COLORS = ['#e04848', '#5cc85c', '#4a78e8'];
 /** Radius der Ringe im Gizmo, CSS-Pixel (das Feld ist 140 breit). */
 export const GIZMO_RADIUS = 58;
@@ -45,6 +48,12 @@ export interface GalleryHooks {
   reset(): void;
   /** Zoomen um diesen Faktor (> 1 hinein). */
   zoom(factor: number): void;
+  /** Animation abspielen oder anhalten - liefert, ob sie jetzt läuft. */
+  play(): boolean;
+  /** Zu dieser Zeit der Animation springen (Sekunden). */
+  seek(seconds: number): void;
+  /** Um so viele Einzelbilder vor (> 0) oder zurück (< 0) - hält an. */
+  step(frames: number): void;
   /** Ring unter dem Zeiger oder in der Hand (0 x, 1 y, 2 z), -1 = keiner - er leuchtet heller. */
   hover(axis: number): void;
 }
@@ -61,6 +70,8 @@ export interface GalleryElements {
   files(names: readonly string[]): void;
   /** Gezeichnete Eckpunkte des gezeigten Modells. */
   vertices(count: number): void;
+  /** Stand der Animation für die Zeitleiste: Zeit (Sekunden) und ob sie läuft. */
+  time(seconds: number, playing: boolean): void;
   /**
    * Dreh-Gizmo in der Ecke: je Achse der Ring als Punkte auf dem Bildschirm,
    * um (0, 0), Radius 1 = GIZMO_RADIUS Pixel - so, wie die Kamera gerade
@@ -86,6 +97,11 @@ export function mountGallery(root: HTMLElement, items: GalleryItem[], labels: st
   const fileLine = createRef<HTMLDivElement>();
   const chips = createRef<HTMLDivElement>();
   const countLine = createRef<HTMLDivElement>();
+  const playButton = createRef<HTMLButtonElement>();
+  const timeline = createRef<HTMLInputElement>();
+  const timeLabel = createRef<HTMLSpanElement>();
+  /** Solange der Regler gezogen wird, setzt ihn nicht die Uhr. */
+  let scrubbing = false;
   const wireButton = createRef<HTMLButtonElement>();
   const groundButton = createRef<HTMLButtonElement>();
   const plainButton = createRef<HTMLButtonElement>();
@@ -179,6 +195,18 @@ export function mountGallery(root: HTMLElement, items: GalleryItem[], labels: st
         <div class="gal-file" ref={fileLine} />
         <div class="gal-file" ref={countLine} />
         <div class="gal-chips" ref={chips} />
+        {/* Zeitleiste wie bei einem Video: abspielen, anhalten, spulen, Bild für Bild. */}
+        <div class="gal-timeline">
+          <button type="button" class="wood-btn" title="Ein Bild zurück" onClick={() => hooks.step(-1)}>|◀</button>
+          <button type="button" class="wood-btn" ref={playButton} title="Abspielen / Anhalten (Leertaste)"
+            onClick={() => { playButton.current.textContent = hooks.play() ? '❚❚' : '▶'; }}>❚❚</button>
+          <button type="button" class="wood-btn" title="Ein Bild vor" onClick={() => hooks.step(1)}>▶|</button>
+          <input type="range" min="0" max={String(TIMELINE_SECONDS)} step="0.01" value="0" ref={timeline}
+            onPointerDown={() => { scrubbing = true; }}
+            onPointerUp={() => { scrubbing = false; }}
+            onInput={() => hooks.seek(Number(timeline.current.value))} />
+          <span class="gal-time" ref={timeLabel}>0,00 s</span>
+        </div>
         <div class="gal-rotate">
           <button type="button" class="wood-btn gal-chip" ref={wireButton} title="Weißes Drahtgitter: aus, über dem Modell, nur Gitter"
             onClick={() => {
@@ -253,6 +281,12 @@ export function mountGallery(root: HTMLElement, items: GalleryItem[], labels: st
         windings[i] = area >= 0 ? 1 : -1;
       });
       return gizmoSvg.current.getBoundingClientRect();
+    },
+    time: (seconds, playing) => {
+      if (!scrubbing) timeline.current.value = seconds.toFixed(2);
+      timeLabel.current.textContent = `${seconds.toFixed(2).replace('.', ',')} s`;
+      const icon = playing ? '❚❚' : '▶';
+      if (playButton.current.textContent !== icon) playButton.current.textContent = icon;
     },
     vertices: (count) => {
       const text = `${count.toLocaleString('de-DE')} Eckpunkte · ${Math.round(count / 3).toLocaleString('de-DE')} Dreiecke`;
