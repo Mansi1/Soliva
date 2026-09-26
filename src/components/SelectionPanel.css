@@ -144,9 +144,6 @@
   gap: 7px;
   margin-top: 3px;
 }
-#selection .sel-stock > div {
-  flex: 1;
-}
 #selection .sel-stock-icon {
   flex: none;
   width: 38px;

@@ -296,36 +296,19 @@ function Resource({ v }: { v: Extract<SelectionView, { kind: 'resource' }> }) {
   );
 }
 
-/** Ein Stück Fleisch: Keule mit Knochen - vor der Nahrung eines Tiers. */
-function MeatIcon() {
-  return (
-    <svg viewBox="0 0 44 44" width="34" height="34" aria-hidden="true">
-      <path d="M27 17 L36 8" stroke="#efe6d2" stroke-width="4.5" stroke-linecap="round" />
-      <circle cx="35" cy="6.5" r="3.2" fill="#f6efdf" stroke="#1a0f07" stroke-width="1.2" />
-      <circle cx="38.5" cy="10" r="3.2" fill="#f6efdf" stroke="#1a0f07" stroke-width="1.2" />
-      <path d="M28 16 C34 22 30 36 18 38 C8 40 3 32 7 24 C11 15 22 10 28 16 Z" fill="#b8432e" stroke="#1a0f07" stroke-width="1.6" />
-      <path d="M11 26 C13 20 19 16 24 17" stroke="#e8a58e" stroke-width="2.4" fill="none" stroke-linecap="round" />
-      <path d="M26 20 C28 26 25 32 18 34" stroke="#7a2416" stroke-width="1.6" fill="none" stroke-linecap="round" />
-    </svg>
-  );
-}
-
 function Animal({ v }: { v: Extract<SelectionView, { kind: 'animal' }> }) {
   return (
     <>
       <div class="sel-title">{v.label} <span class="muted">{v.doing}</span></div>
       <div class="sel-body">
-        <Portrait src={animalIcon(v.type, v.dead)} />
+        <Portrait src={animalIcon(v.type, v.dead)} hp={v.dead ? undefined : v.hp} maxHp={v.maxHp} />
         <div class="sel-info">
-          <div>Leben <b>{Math.ceil(v.hp)}/{v.maxHp}</b></div>
-          <div class="hp"><i style={`width:${Math.max(0, Math.min(100, (v.hp / v.maxHp) * 100))}%`} /></div>
-          <div class="sel-stock">
-            <span class="sel-stock-icon"><MeatIcon /></span>
-            <div>
-              Nahrung <b>{Math.ceil(v.food)}/{v.maxFood}</b>
+          {v.dead ? (
+            <>
+              <div>Nahrung <b>{Math.ceil(v.food)}/{v.maxFood}</b></div>
               <Bar percent={(v.food / v.maxFood) * 100} />
-            </div>
-          </div>
+            </>
+          ) : <div>Gibt erlegt <b>{v.maxFood}</b> Nahrung</div>}
           <div class="muted">
             Wähle Dorfbewohner und klicke mit rechts darauf, um es {v.dead ? 'zu zerlegen' : 'zu jagen'}.
           </div>
