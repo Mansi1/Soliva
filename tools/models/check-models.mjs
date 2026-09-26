@@ -28,28 +28,33 @@ const RULES = [
   { match: /^(boar|cow|deer|goat|hare|sheep)$/, needs: ['Leg.FL', 'Leg.FR', 'Leg.BL', 'Leg.BR', 'Head'], why: 'Beine und Kopf für die Knochen' },
   {
     match: /^villager_/,
-    needs: ['Leg.L', 'Leg.L.Lower', 'Leg.R', 'Leg.R.Lower', 'Arm.L', 'Arm.L.Lower', 'Arm.R', 'Arm.R.Lower', 'Arm.R.Lower.Hand', 'Head', 'Load'],
+    needs: ['Head', 'Load'],
+    // Starr in Teilen (Knochen aus dem Namen) oder eine Hülle mit Knochen aus Blender (Armature).
+    parts: ['Leg.L', 'Leg.L.Lower', 'Leg.R', 'Leg.R.Lower', 'Arm.L', 'Arm.L.Lower', 'Arm.R', 'Arm.R.Lower', 'Arm.R.Lower.Hand'],
+    bones: ['thigh.L', 'shin.L', 'thigh.R', 'shin.R', 'upperArm.L', 'forearm.L', 'upperArm.R', 'forearm.R', 'hand.R', 'head'],
     forbids: ['Arm.R.Lower.Tool', 'Arm.R.Lower.Scythe', 'Knife'],
-    why: 'Körperteile für die Knochen, Hand für die Werkzeuge; Werkzeuge sind eigene Modelle',
+    why: 'Körperteile oder Knochen, Hand für die Werkzeuge; Werkzeuge sind eigene Modelle',
   },
   { match: /^prop_axe$/, needs: ['Arm.R.Lower.Tool'], why: 'Beil an der Hand' },
   { match: /^prop_scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
   { match: /^prop_knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
 ];
 
-/** Objektnamen und ob jede Fläche ein Material hat. */
+/** Objektnamen, Knochen (j) und ob jede Fläche ein Material hat. */
 function read(dir, model) {
   const names = [];
+  const bones = [];
   let material = false;
   let bare = 0;
   for (const raw of readModel(model, dir).obj.split('\n')) {
-    if (raw.startsWith('o ')) {
+    if (raw.startsWith('j ')) bones.push(raw.split(' ')[1]);
+    else if (raw.startsWith('o ')) {
       names.push(raw.slice(2).trim());
       material = false;
     } else if (raw.startsWith('usemtl ')) material = true;
     else if (raw.startsWith('f ') && !material) bare++;
   }
-  return { names, bare };
+  return { names, bones, bare };
 }
 
 const has = (names, prefix) => names.some((n) => n === prefix || n.startsWith(`${prefix}.`));
@@ -58,7 +63,7 @@ export function checkModels(dir = modelsDir) {
   const problems = [];
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.glb') && !f.endsWith('_clips.glb')).sort()) {
     const model = file.slice(0, -4);
-    const { names, bare } = read(dir, model);
+    const { names, bones, bare } = read(dir, model);
     const say = (text) => problems.push(`${model}: ${text}`);
     if (bare) say(`${bare} Flächen ohne Material`);
     // Blender hat einen Namen durchnummeriert, den es sonst im Modell nicht gibt.
@@ -67,6 +72,13 @@ export function checkModels(dir = modelsDir) {
     for (const rule of RULES.filter((r) => r.match.test(model))) {
       const missing = (rule.needs ?? []).filter((p) => !has(names, p));
       if (missing.length) say(`fehlt ${missing.join(', ')} (${rule.why})`);
+      if (rule.bones && bones.length) {
+        const gone = rule.bones.filter((b) => !bones.includes(b));
+        if (gone.length) say(`fehlt Knochen ${gone.join(', ')} (${rule.why})`);
+      } else if (rule.parts) {
+        const gone = rule.parts.filter((p) => !has(names, p));
+        if (gone.length) say(`fehlt ${gone.join(', ')} (${rule.why})`);
+      }
       const extra = (rule.forbids ?? []).filter((p) => has(names, p));
       if (extra.length) say(`darf nicht enthalten ${extra.join(', ')} (${rule.why})`);
       for (const [prefix, count] of rule.numbered ?? []) {

@@ -83,6 +83,8 @@ const partOf = (object) => {
 };
 
 const figure = readModel(female ? 'villager_female' : 'villager_male');
+// ponytail: nur starre Körper (Teilnamen); eine Hülle mit Knochen (j/vw) bräuchte die Gewichte hier.
+if (/^j /m.test(figure.obj)) throw new Error('bognerei.mjs kennt nur starre Körper - dieser hat Knochen (Armature)');
 const figureTris = parseObj(figure.obj);
 const figureColors = parseMtl(figure.mtl);
 figureColors.set('Tunic', PLAYER);

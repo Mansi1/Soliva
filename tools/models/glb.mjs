@@ -107,6 +107,14 @@ function localMatrix(node) {
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 const isIdentity = (m) => m.every((v, i) => v === IDENTITY[i]);
 
+/** "vw a" bzw. "vw a b w" - die zwei stärksten Knochen eines Eckpunkts, w = Anteil von a. */
+function weightLine(gltf, skin, joints, weights) {
+  const [a, b] = [0, 1, 2, 3].sort((i, k) => weights[k] - weights[i]);
+  const name = (i) => gltf.nodes[skin.joints[joints[i]]].name;
+  const sum = weights[a] + weights[b];
+  return weights[b] > 0 ? `vw ${name(a)} ${name(b)} ${fmt(weights[a] / sum, 4)}` : `vw ${name(a)}`;
+}
+
 /**
  * Das Modell einer .glb als OBJ- und MTL-Text, wie ihn das Spiel liest:
  * je Mesh-Knoten ein `o` mit dem Namen im Spiel, Eckpunkte in Modell-
@@ -114,11 +122,13 @@ const isIdentity = (m) => m.every((v, i) => v === IDENTITY[i]);
  */
 export function glbToObj(bytes, mtllib = 'model.mtl') {
   const { json: gltf, bin } = parseGlb(bytes);
+  const nodeWorld = new Map();
   const meshNodes = [];
   const visit = (index, parent) => {
     const node = gltf.nodes[index];
     const local = localMatrix(node);
     const world = isIdentity(parent) ? local : multiply(parent, local);
+    nodeWorld.set(index, world);
     if (node.mesh !== undefined) meshNodes.push({ node, world });
     for (const child of node.children ?? []) visit(child, world);
   };
@@ -130,6 +140,14 @@ export function glbToObj(bytes, mtllib = 'model.mtl') {
   const materialName = (i) => gltf.materials[i].name ?? `Material.${i}`;
 
   const lines = [`mtllib ${mtllib}`];
+  // Knochen (Blender: Armature): je Knochen sein Kopf, Zeile "j Name x y z".
+  for (const skin of gltf.skins ?? []) {
+    for (const joint of skin.joints) {
+      const w = nodeWorld.get(joint) ?? localMatrix(gltf.nodes[joint]);
+      const line = `j ${gltf.nodes[joint].name} ${fmt(w[12], 4)} ${fmt(w[13], 4)} ${fmt(w[14], 4)}`;
+      if (!lines.includes(line)) lines.push(line);
+    }
+  }
   const used = new Map();
   let base = 0;
   let uvBase = 0;
@@ -146,12 +164,17 @@ export function glbToObj(bytes, mtllib = 'model.mtl') {
       if (!offsets.has(accessor)) {
         const p = readAccessor(gltf, bin, accessor);
         const plain = isIdentity(world);
+        // Gewichte: je Eckpunkt die zwei stärksten Knochen, "vw a [b Anteil von a]".
+        const skin = node.skin !== undefined && primitive.attributes.JOINTS_0 !== undefined ? gltf.skins[node.skin] : undefined;
+        const joints = skin && readAccessor(gltf, bin, primitive.attributes.JOINTS_0);
+        const weights = skin && readAccessor(gltf, bin, primitive.attributes.WEIGHTS_0);
         for (let v = 0; v < p.length; v += 3) {
           let [x, y, z] = [p[v], p[v + 1], p[v + 2]];
           if (!plain) {
             [x, y, z] = [0, 1, 2].map((r) => world[r] * p[v] + world[4 + r] * p[v + 1] + world[8 + r] * p[v + 2] + world[12 + r]);
           }
           lines.push(`v ${fmt(x, 4)} ${fmt(y, 4)} ${fmt(z, 4)}`);
+          if (skin) lines.push(weightLine(gltf, skin, joints.slice(v / 3 * 4, v / 3 * 4 + 4), weights.slice(v / 3 * 4, v / 3 * 4 + 4)));
         }
         offsets.set(accessor, base);
         base += p.length / 3;
@@ -237,6 +260,8 @@ export function objToGlb(objText, mtlText) {
   const positions = [];
   const uvs = [];
   const objects = [];
+  const bones = [];
+  const boneWeights = [];
   let object = null;
   let material;
   for (const raw of objText.split('\n')) {
@@ -244,6 +269,8 @@ export function objToGlb(objText, mtlText) {
     if (line === '' || line.startsWith('#')) continue;
     const [keyword, ...args] = line.split(/\s+/);
     if (keyword === 'v') positions.push(args.slice(0, 3).map(Number));
+    else if (keyword === 'j') bones.push({ name: args[0], head: args.slice(1, 4).map(Number) });
+    else if (keyword === 'vw') boneWeights[positions.length - 1] = args.length > 1 ? [args[0], args[1], Number(args[2])] : [args[0]];
     else if (keyword === 'vt') uvs.push(args.slice(0, 2).map(Number));
     else if (keyword === 'o' || keyword === 'g') {
       object = { name: args.join(' '), runs: [] };
@@ -272,6 +299,7 @@ export function objToGlb(objText, mtlText) {
     }
   }
 
+  const boneIndex = new Map(bones.map((b, i) => [b.name, i]));
   const gltf = {
     asset: { version: '2.0', generator: 'Soliva tools/models/glb.mjs' },
     scene: 0,
@@ -335,8 +363,20 @@ export function objToGlb(objText, mtlText) {
         max[i % 3] = Math.max(max[i % 3], points[i]);
       }
       gltf.accessors.push({ bufferView: addView(points, 34962), componentType: 5126, count: list.length, type: 'VEC3', min, max });
-      return gltf.accessors.length - 1;
+      const attributes = { POSITION: gltf.accessors.length - 1 };
+      // Gewichte (vw): zwei Knochen je Eckpunkt, Anteil w und 1 - w.
+      if (list.length && list.every((g) => boneWeights[g])) {
+        const joints = new Uint8Array(list.flatMap((g) => [boneIndex.get(boneWeights[g][0]), boneIndex.get(boneWeights[g][1]) ?? 0, 0, 0]));
+        const weights = new Float32Array(list.flatMap((g) => (boneWeights[g].length > 1 ? [boneWeights[g][2], 1 - boneWeights[g][2], 0, 0] : [1, 0, 0, 0])));
+        gltf.accessors.push({ bufferView: addView(joints, 34962), componentType: 5121, count: list.length, type: 'VEC4' });
+        attributes.JOINTS_0 = gltf.accessors.length - 1;
+        gltf.accessors.push({ bufferView: addView(weights, 34962), componentType: 5126, count: list.length, type: 'VEC4' });
+        attributes.WEIGHTS_0 = gltf.accessors.length - 1;
+        skinned = true;
+      }
+      return attributes;
     };
+    let skinned = false;
     const position = used.length ? addPositions(used) : undefined;
     const addIndices = (list, count) => {
       const Indices = count < 65536 ? Uint16Array : Uint32Array;
@@ -359,17 +399,28 @@ export function objToGlb(objText, mtlText) {
         const texcoord = gltf.accessors.length - 1;
         const points = addPositions(keys.map(([g]) => g));
         const indices = addIndices(run.triangles.map((g, k) => slot.get(`${g}/${run.uvTriangles[k]}`)), keys.length);
-        primitive = { attributes: { POSITION: points, TEXCOORD_0: texcoord }, indices, mode: 4 };
+        primitive = { attributes: { ...points, TEXCOORD_0: texcoord }, indices, mode: 4 };
       } else {
-        primitive = { attributes: { POSITION: position }, indices: addIndices(run.triangles.map((g) => local.get(g)), used.length), mode: 4 };
+        primitive = { attributes: { ...position }, indices: addIndices(run.triangles.map((g) => local.get(g)), used.length), mode: 4 };
       }
       const m = materialOf(run.material);
       if (m !== undefined) primitive.material = m;
       return primitive;
     });
     gltf.meshes.push({ name: nodeName, primitives });
-    gltf.nodes.push({ name: nodeName, mesh: gltf.meshes.length - 1 });
+    gltf.nodes.push({ name: nodeName, mesh: gltf.meshes.length - 1, ...(skinned && { skin: 0 }) });
     gltf.scenes[0].nodes.push(gltf.nodes.length - 1);
+  }
+  // Knochen (j): Knoten an ihrem Kopf, eine Haut für alle.
+  if (bones.length) {
+    const first = gltf.nodes.length;
+    for (const b of bones) {
+      gltf.nodes.push({ name: b.name, translation: b.head });
+      gltf.scenes[0].nodes.push(gltf.nodes.length - 1);
+    }
+    const inverse = new Float32Array(bones.flatMap((b) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -b.head[0], -b.head[1], -b.head[2], 1]));
+    gltf.accessors.push({ bufferView: addView(inverse), componentType: 5126, count: bones.length, type: 'MAT4' });
+    gltf.skins = [{ joints: bones.map((_, i) => first + i), inverseBindMatrices: gltf.accessors.length - 1 }];
   }
   if (gltf.materials.length === 0) delete gltf.materials;
   gltf.buffers[0].byteLength = byteLength;

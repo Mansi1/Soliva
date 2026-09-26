@@ -40,8 +40,12 @@ function figure(file, stride) {
   let hip = -1e9, sh = -1e9, el = -1e9, kn = -1e9, minY = 1e9, maxY = -1e9;
   const fa = [1e9, 0];
   const verts = [];
+  // Hülle mit Knochen (Armature): Köpfe (j) und stärkster Knochen je Eckpunkt (vw).
+  const heads = new Map();
   for (const l of readModel(file.replace(/\.obj$/, '')).obj.split('\n')) {
     if (l.startsWith('o ')) obj = l.slice(2);
+    if (l.startsWith('j ')) heads.set(l.split(' ')[1], l.split(' ').slice(2).map(Number));
+    if (l.startsWith('vw ')) verts.at(-1).bone = l.split(' ')[1];
     if (!l.startsWith('v ')) continue;
     const [x, y, z] = l.split(' ').slice(1).map(Number);
     verts.push({ obj, p: [x, y, z] });
@@ -57,26 +61,34 @@ function figure(file, stride) {
   }
   const H = maxY - minY;
   const m = ([x, y, z]) => [z / H, x / H, (y - minY) / H];
-  const J = { hip: (hip - minY) / H, knee: (kn - minY) / H, shoulder: (sh - minY) / H, elbow: (el - minY) / H, arm: (fa[0] + fa[1]) / 2 / H };
+  const head = (bone) => m(heads.get(bone));
+  // Mit Knochen: Gelenke aus den Köpfen, wie loadModel().
+  const J = heads.size
+    ? { hip: head('thigh.L')[2], knee: head('shin.L')[2], shoulder: head('upperArm.L')[2], elbow: head('forearm.L')[2], arm: Math.abs(head('upperArm.L')[1]) }
+    : { hip: (hip - minY) / H, knee: (kn - minY) / H, shoulder: (sh - minY) / H, elbow: (el - minY) / H, arm: (fa[0] + fa[1]) / 2 / H };
+  // Ein Teil: starr am Namen (re) oder - auf der Hülle - am stärksten Knochen.
+  const of = (re, bone) => verts.filter((v) => (v.bone ? v.bone === bone : re.test(v.obj))).map((v) => m(v.p));
   const centre = (re) => {
     const ps = verts.filter((v) => re.test(v.obj)).map((v) => m(v.p));
     return ps.reduce((s, p) => s.map((c, i) => c + p[i] / ps.length), [0, 0, 0]);
   };
-  const extreme = (re, key) => verts.filter((v) => re.test(v.obj)).map((v) => m(v.p)).reduce((b, p) => (key(p) > key(b) ? p : b));
+  const extreme = (ps, key) => ps.reduce((b, p) => (key(p) > key(b) ? p : b));
   // Unterer Rumpf: der tiefste Punkt des Rumpfs (Rock- bzw. Hosensaum), vorn.
-  const torso = verts.filter((v) => !/^(Leg|Arm|Head|Load|Knife)/.test(v.obj)).map((v) => m(v.p));
+  const torso = verts.filter((v) => (v.bone ? /Body$/.test(v.bone) : !/^(Leg|Arm|Head|Load|Knife)/.test(v.obj))).map((v) => m(v.p));
   const hem = torso.reduce((b, p) => (p[2] < b[2] - 1e-6 || (Math.abs(p[2] - b[2]) < 1e-6 && p[0] > b[0]) ? p : b));
+  const foot = (p) => -p[2] + p[0] * 0.01;
   return {
     H, J, stride,
     points: {
-      'Hand rechts': { part: 'forearm.R', p: centre(/^Arm\.R\.Lower\.Hand/) },
-      'Hand links': { part: 'forearm.L', p: centre(/^Arm\.L\.Lower\.Hand/) },
-      'Fuß rechts': { part: 'shin.R', p: extreme(/^Leg\.R\.Lower/, (p) => -p[2] + p[0] * 0.01) },
-      'Fuß links': { part: 'shin.L', p: extreme(/^Leg\.L\.Lower/, (p) => -p[2] + p[0] * 0.01) },
-      Scheitel: { part: 'head', p: extreme(/^Head/, (p) => p[2]) },
+      'Hand rechts': { part: 'forearm.R', p: heads.size ? head('hand.R') : centre(/^Arm\.R\.Lower\.Hand/) },
+      'Hand links': { part: 'forearm.L', p: heads.size ? head('hand.L') : centre(/^Arm\.L\.Lower\.Hand/) },
+      'Fuß rechts': { part: 'shin.R', p: extreme(of(/^Leg\.R\.Lower/, 'shin.R'), foot) },
+      'Fuß links': { part: 'shin.L', p: extreme(of(/^Leg\.L\.Lower/, 'shin.L'), foot) },
+      Scheitel: { part: 'head', p: extreme(of(/^Head/, 'head'), (p) => p[2]) },
       'Rumpf unten': { part: 'torso', p: hem },
     },
   };
+
 }
 
 // --- Die Formel des Shaders je Punkt ----------------------------------------

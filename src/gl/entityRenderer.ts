@@ -28,7 +28,7 @@ import {
 import { TERRAIN_COMMON } from './terrainShader';
 import { addRenderStats } from '../renderStats';
 import { FLATTEN_GLSL, MAX_FLAT_ZONES } from '../world/flatten';
-import { parseMtl, parseMtlImages, parseObj, type ObjTriangle, type RGB01 } from './obj';
+import { parseMtl, parseMtlImages, parseObj, parseObjBones, type BoneWeight, type ObjTriangle, type RGB01 } from './obj';
 import villagerMaleModel from '../models/villager_male.glb?model';
 import villagerFemaleModel from '../models/villager_female.glb?model';
 import propAxeModel from '../models/prop_axe.glb?model';
@@ -639,6 +639,7 @@ layout(location = 5) in vec3 aAccent;   // Figuren: Farbe der Last
 layout(location = 6) in vec4 aMaterial; // Modelle: Materialfarbe, w = Rolle (MATERIAL_ROLE)
 layout(location = 7) in float aGround;  // Geländehöhe in Tiles, oder ${GROUND_UNKNOWN} = ausrechnen
 layout(location = 8) in vec2 aDetail;   // Modelle: u, v der aufgemalten Details (uDetailLayer), < 0 = keine
+layout(location = 9) in vec3 aBones;    // Figuren mit Knochen: Knochen a + 1, b + 1, Anteil von a - (0, 0, 0) = starr nach Teilname
 
 /** Untergrenze für die Größe, damit Gebäude beim Herauszoomen sichtbar bleiben. */
 uniform float uMinSizeTiles;
@@ -962,8 +963,8 @@ void main() {
           if (part == P_LOAD) p = uLoadAnchor + (p - uLoadAnchor) * aMotion.w;
           // Rock und Hosenboden schwingen etwas mit, wenn sich die Schultern
           // gegen die Hüfte drehen - vor dem Stauchen.
-          if (part == P_TORSO && p.z <= uHip) p.y += clipTwist(clip, time) * 0.25 * (uHip - p.z);
-          if ((props & ${KNEEL_BIT}) != 0 && part == P_TORSO && p.z <= uHip) {
+          if (part == P_TORSO && p.z <= uHip && aBones.x < 0.5) p.y += clipTwist(clip, time) * 0.25 * (uHip - p.z);
+          if ((props & ${KNEEL_BIT}) != 0 && part == P_TORSO && p.z <= uHip && aBones.x < 0.5) {
             // Kniend: der Rock staucht sich bis zum Boden und legt sich vorn
             // über das aufgestellte Knie - so tief, wie die Knochen die Figur
             // senken (das Knie auf dem Boden: -(uKnee - 0.04)).
@@ -976,6 +977,10 @@ void main() {
             // Zweihändig: nach der Lage zwischen den Händen auf beide Unterarme verteilt.
             float k = clamp((p.y + uArm) / (2.0 * uArm), 0.0, 1.0);
             p = mix(clipSkin(p, clip, time, ${BONE['forearm.R']}), clipSkin(p, clip, time, ${BONE['forearm.L']}), k);
+          } else if (aBones.x > 0.5) {
+            // Hülle mit Knochen aus Blender: bis zu zwei, nach Gewicht gemischt.
+            vec3 a = clipSkin(p, clip, time, int(aBones.x - 0.5));
+            p = aBones.y > 0.5 ? mix(clipSkin(p, clip, time, int(aBones.y - 0.5)), a, aBones.z) : a;
           } else {
             p = clipSkin(p, clip, time, boneOf(part, p.z));
           }
@@ -1256,6 +1261,8 @@ void main() {
     // Mit mitgegebener Bodenhöhe (Mitte) liegt er waagerecht darauf.
     float ground = aGround > ${GROUND_UNKNOWN / 10}.0 ? aGround * uReliefScale : groundZ(p);
     world = vec3(p, ground + (shape == ${SHAPE_RING} ? 0.012 : aMotion.w > 0.5 ? 0.0 : 0.15));
+    // Galerie: der Boden unter dem Stück dreht sich mit ihm (im Spiel Einheit).
+    if (shape == 4) world = uModelRot * (world - uModelPivot) + uModelPivot;
   } else {
     float size = max(aParams.z, uMinSizeTiles);
     // x = Anteil der Grundfläche, y = Wandhöhe, z = Dachhöhe (je Kantenlänge)
@@ -2140,6 +2147,22 @@ function berryRandom(index: number): number {
   return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
 }
 
+/** Knochen der Hülle, die das Skelett der Clips nicht kennt - sie zählen zu ihrem Eltern. */
+const BONE_FOLD: Record<string, string> = { 'hand.L': 'forearm.L', 'hand.R': 'forearm.R' };
+/**
+ * aBones eines Eckpunkts: Knochen a + 1, Knochen b + 1, Anteil von a -
+ * (0, 0, 1) = starr, der Knochen kommt aus dem Teilnamen (boneOf).
+ */
+function boneSlots(weight: BoneWeight | undefined): [number, number, number] {
+  if (!weight) return [0, 0, 1];
+  const index = (name: string) => {
+    const bone = BONE[BONE_FOLD[name] ?? name];
+    if (bone === undefined) throw new Error(`Knochen ${name} gibt es im Skelett der Clips nicht`);
+    return bone + 1;
+  };
+  return weight.length === 3 ? [index(weight[0]), index(weight[1]), weight[2]] : [index(weight[0]), 0, 1];
+}
+
 /**
  * Baut ein Mesh aus einem OBJ, wie Blender es exportiert: Meter, Y oben,
  * Vorderseite nach +Z, links auf +X. Die Größe in der Datei spielt keine
@@ -2161,7 +2184,9 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
   const images = parseMtlImages(mtl);
   // Aufgemalt (Augen, Nähte ...): liegt über Farbe und Muster, siehe aDetail.
   const details = parseMtlImages(mtl, 'map_detail');
-  const floats = details.size ? 10 : 8;
+  // Knochen aus Blender (Armature, j/vw): die Hülle biegt sich mit bis zu zwei Knochen je Eckpunkt.
+  const bones = typeof obj === 'string' ? parseObjBones(obj) : new Map<string, RGB01>();
+  const floats = bones.size ? 13 : details.size ? 10 : 8;
   let detailLayer = -1;
   if (triangles.length === 0) throw new Error('Figuren-Modell ist leer');
 
@@ -2201,6 +2226,12 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
   // Datei (x links, y oben, z vorn) -> Modell (x vorn, y links, z oben)
   const local = (p: [number, number, number]) =>
     [p[2] / unitLength, p[0] / unitLength, (p[1] - minY) / unitLength] as const;
+  // Kopf eines Knochens in Modell-Einheiten.
+  const boneHead = (name: string): [number, number, number] => {
+    const head = bones.get(name);
+    if (!head) throw new Error(`Modell mit Knochen: ${name} fehlt`);
+    return [...local(head)];
+  };
 
   // Figuren: Mitte der rechten Hand in Ruhelage - dort hängen Werkzeuge (uSocket).
   // Der Mittelwert der Eckpunkte des Objekts (so wurden die Werkzeuge an die Hand gesetzt).
@@ -2364,7 +2395,8 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
         : sawable ? 19 + (bottom.get(t.index) ?? 0) * 0.45
         : part;
       const vertex = [x, y, z, partValue, rgb[0], rgb[1], rgb[2], vertexRole];
-      if (floats === 10) vertex.push(...(layerHere >= 0 ? t.uvs![k] : [-1, -1]));
+      if (floats >= 10) vertex.push(...(layerHere >= 0 ? t.uvs![k] : [-1, -1]));
+      if (floats === 13) vertex.push(...boneSlots(t.bones?.[k]));
       v.push(...vertex);
       if (lod) {
         LOD_PARTS.forEach((min, i) => {
@@ -2423,6 +2455,14 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
       .map((v) => v / points.length) as [number, number, number]);
     return [c[0], c[1]];
   };
+  if (bones.size) {
+    // Gelenke aus den Knochenköpfen statt aus den Oberkanten der Teile.
+    hip = boneHead('thigh.L')[2];
+    knee = boneHead('shin.L')[2];
+    shoulder = boneHead('upperArm.L')[2];
+    elbow = boneHead('forearm.L')[2];
+    forearm[0] = forearm[1] = Math.abs(boneHead('upperArm.L')[1]);
+  }
   const stand = markerAt(markerPoints('Work.Stand'));
   const aim = markerAt(markerPoints('Work.Aim'));
   return {
@@ -2454,7 +2494,7 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
     side,
     top: (maxY - minY) / unitLength,
     meters: unitLength,
-    hand,
+    hand: bones.size ? boneHead('hand.R') : hand,
   };
 }
 
@@ -3079,7 +3119,7 @@ export class EntityRenderer {
     return texture;
   }
 
-  /** @param components Floats je Eckpunkt: 4 (aCorner), 8 (+ aMaterial) oder 10 (+ aDetail). */
+  /** @param components Floats je Eckpunkt: 4 (aCorner), 8 (+ aMaterial), 10 (+ aDetail) oder 13 (+ aBones). */
   private createMesh(vertices: Float32Array, components = 4): Mesh {
     const gl = this.gl;
     const vao = gl.createVertexArray()!;
@@ -3095,9 +3135,14 @@ export class EntityRenderer {
       gl.vertexAttribPointer(6, 4, gl.FLOAT, false, components * 4, 16);
     }
     // Ohne aDetail liefert der Shader (0, 0) - gemalt wird nur mit uDetailLayer >= 0.
-    if (components === 10) {
+    if (components >= 10) {
       gl.enableVertexAttribArray(8);
-      gl.vertexAttribPointer(8, 2, gl.FLOAT, false, 40, 32);
+      gl.vertexAttribPointer(8, 2, gl.FLOAT, false, components * 4, 32);
+    }
+    // Ohne aBones liefert der Shader (0, 0, 0): starr nach Teilname.
+    if (components === 13) {
+      gl.enableVertexAttribArray(9);
+      gl.vertexAttribPointer(9, 3, gl.FLOAT, false, 52, 40);
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);

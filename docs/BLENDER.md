@@ -79,8 +79,20 @@ Höhe - wird ein Gebäude breiter, wirkt es im Spiel also kleiner.
   je Modell, alle bemalten Materialien teilen es (Image Texture → Mix
   *Multiply* mit der Farbe → Base Color). Durchsichtig und weiß heißt:
   nichts gemalt. So trägt `villager_male` Augen, Bart, Sixpack, Rücken,
-  Armbänder, Nähte und Schnürung. Export mit Texturkoordinaten, ohne
-  Normalen.
+  Armbänder, Nähte, Gürtel, Schnürung, Kappe und Sohle. Export mit
+  Texturkoordinaten, ohne Normalen.
+- **Knochen (Armature):** Eine Figur kann eine Hülle mit Knochen sein statt
+  starrer Teile, so ist es `villager_male`. Das Objekt heißt `Body` und ist
+  an das Skelett `Rig` gebunden. Die Knochen heißen wie im Clip-Skelett:
+  `root`, `lowerBody`, `upperBody`, `head`, `thigh.L`, `shin.L`,
+  `shoulder.L`, `upperArm.L`, `forearm.L`, dazu `hand.L` (zählt zum
+  Unterarm), ebenso `.R`. Ihre Köpfe sind die Gelenke: Hüfte =
+  `thigh.L`, Knie = `shin.L`, Schulter = `upperArm.L`, Ellbogen =
+  `forearm.L`, Kopf von `hand.R` = Halterung der Werkzeuge. Je Eckpunkt
+  zählen die zwei stärksten Gewichte (Weight Paint). Starre Teile wie
+  `Head…`, `Load` und die Stiefel `Leg.*.Lower.*` hängen weiter über ihren
+  Namen an einem Knochen. Export mit „Skinning“ an und dem Skelett
+  ausgewählt.
 
 Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 

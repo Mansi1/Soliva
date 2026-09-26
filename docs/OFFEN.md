@@ -76,10 +76,9 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
 
 ## Bewegungen (docs/ANIMATION.md)
 
-- **Weiche Haut:** Die Körper sind starr in Teile geschnitten, jeder Eckpunkt
-  folgt genau einem Knochen (aus seinem Namen). Gewichte aus Blender
-  (Ellbogen, Knie, Schultern biegen weich) brauchen Skinning-Gewichte im
-  Export und geteilte Eckpunkte.
+- **Weiche Haut:** Beim Mann erledigt. Er ist eine Hülle mit Knochen aus
+  Blender (docs/BLENDER.md, „Knochen“). Die Frau ist noch starr in Teile
+  geschnitten.
 - **Körper in `humanoid.blend`:** Die Figur in der Clip-Bibliothek ist nur
   Vorschau. Wird ein Körper in `models/villagers/` geändert, passt die
   Vorschau nicht mehr dazu - die Clips selbst passen, die Gelenke liest das
