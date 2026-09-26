@@ -1,4 +1,4 @@
-// Vergleicht die Clips aus Blender (src/models/humanoid_clips.glb + .json) mit
+// Vergleicht die Clips aus Blender (src/models/clips/humanoid.glb + .json) mit
 // den Formeln des Shaders (tools/export/poses.mjs, Figuren-Zweig in
 // src/gl/entityRenderer.ts) - für Mann und Frau, an Händen, Füßen, Scheitel und
 // unterem Rumpf, auf jedem Bild und zwischen zwei Bildern (so mischt das Spiel).
@@ -28,8 +28,8 @@ execFileSync('npx', ['tsc', `${root}src/gl/clips.ts`, '--ignoreConfig', '--outDi
 writeFileSync(`${out}/package.json`, '{"type":"module"}\n');
 const { loadClips, bakeClip, BONE, HUMANOID_BONES } = await import(`${out}/clips.js`);
 
-const glb = readFileSync(`${root}src/models/humanoid_clips.glb`);
-const manifest = JSON.parse(readFileSync(`${root}src/models/humanoid_clips.json`, 'utf8'));
+const glb = readFileSync(`${root}src/models/clips/humanoid.glb`);
+const manifest = JSON.parse(readFileSync(`${root}src/models/clips/humanoid.json`, 'utf8'));
 const clips = loadClips(`data:model/gltf-binary;base64,${glb.toString('base64')}`, manifest);
 const meta = new Map(manifest.clips.map((c) => [c.name, c]));
 
@@ -42,7 +42,7 @@ function figure(file, stride) {
   const verts = [];
   // Hülle mit Knochen (Armature): Köpfe (j) und stärkster Knochen je Eckpunkt (vw).
   const heads = new Map();
-  for (const l of readModel(file.replace(/\.obj$/, '')).obj.split('\n')) {
+  for (const l of readModel(file).obj.split('\n')) {
     if (l.startsWith('o ')) obj = l.slice(2);
     if (l.startsWith('j ')) heads.set(l.split(' ')[1], l.split(' ').slice(2).map(Number));
     if (l.startsWith('vw ')) verts.at(-1).bone = l.split(' ')[1];
@@ -168,7 +168,7 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const lerp3 = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 const cm = (v) => `${(v * 170).toFixed(2)} cm`;
 
-const bodies = { Mann: figure('villager_male.obj', 1), Frau: figure('villager_female.obj', 0.6) };
+const bodies = { Mann: figure('villagers/male', 1), Frau: figure('villagers/female', 0.6) };
 for (const clip of clips) {
   const c = meta.get(clip.name);
   if (c?.pose === undefined) continue;

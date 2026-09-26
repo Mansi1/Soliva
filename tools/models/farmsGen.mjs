@@ -1,6 +1,6 @@
 // Field models - 3x3 tiles (15 m square) like the AoE2 farm: the staked-out
 // outline and the crop in rows. The parts are Blender models (docs/BLENDER.md,
-// src/models/field_*.glb): stake, cord, wheat leaf, wheat stalks with
+// src/models/fields/*.glb): stake, cord, wheat leaf, wheat stalks with
 // ears in three tones, maize plants with one or two cobs. Here only the
 // placing is decided - where each stands, how tall, how it leans and turns -
 // and the game builds the field from it at start-up (src/gl/entityRenderer.ts)
@@ -12,7 +12,7 @@
 // No Node APIs here - tools/models/farms.mjs writes the OBJ files for a look.
 import { model } from './primitives.mjs';
 
-/** The parts a field is made of (src/models/field_<name>.glb). */
+/** The parts a field is made of (src/models/fields/<name>.glb). */
 export const FIELD_PARTS = [
   'stake', 'cord', 'wheat_leaf', 'wheat_stalk_light', 'wheat_stalk', 'wheat_stalk_dark', 'corn_1', 'corn_2',
   'tomato', 'potato', 'hop',
@@ -99,7 +99,7 @@ function stand(x, y, z, turn = 0, grow = 0, above = Infinity) {
   return ([vx, vy, vz]) => [x + vx * c - vz * s, y + vy + (vy > above ? grow : 0), z + vx * s + vz * c];
 }
 
-/** Height of the maize plants in Blender (field_corn_*.blend) and from where up they grow with the plant. */
+/** Height of the maize plants in Blender (fields/corn_*.glb) and from where up they grow with the plant. */
 const CORN_HEIGHT = 2.2;
 const CORN_GROWS_ABOVE = 2.0;
 
@@ -274,7 +274,7 @@ const MAKE = { wheat, corn, tomato: bushes('tomato', 31, 4), potato: bushes('pot
 
 /**
  * OBJ and MTL text of one field, from its parts (`parts[name] = { obj, mtl }`,
- * src/models/field_<name>.glb, read as OBJ/MTL text). `detail` < 1 gives the simpler
+ * src/models/fields/<name>.glb, read as OBJ/MTL text). `detail` < 1 gives the simpler
  * versions for zooming out: fewer stalks of wheat, fewer maize plants (0.3
  * and 0.1).
  */

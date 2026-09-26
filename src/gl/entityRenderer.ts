@@ -13,14 +13,14 @@ import {
   PROJECT_GLSL, cameraDirection, groundToWorld, setCameraUniforms, viewGroundV, viewRotation, viewZScreen, worldToGround, type GpuCamera,
 } from './iso';
 import { uploadTerrainParams } from './terrainRenderer';
-import humanoidClipsGlb from '../models/humanoid_clips.glb?inline';
-import humanoidClipsManifest from '../models/humanoid_clips.json';
-import quadrupedClipsGlb from '../models/quadruped_clips.glb?inline';
-import quadrupedClipsManifest from '../models/quadruped_clips.json';
-import millClipsGlb from '../models/mill_clips.glb?inline';
-import millClipsManifest from '../models/mill_clips.json';
-import flagClipsGlb from '../models/flag_clips.glb?inline';
-import flagClipsManifest from '../models/flag_clips.json';
+import humanoidClipsGlb from '../models/clips/humanoid.glb?inline';
+import humanoidClipsManifest from '../models/clips/humanoid.json';
+import quadrupedClipsGlb from '../models/clips/quadruped.glb?inline';
+import quadrupedClipsManifest from '../models/clips/quadruped.json';
+import millClipsGlb from '../models/clips/mill.glb?inline';
+import millClipsManifest from '../models/clips/mill.json';
+import flagClipsGlb from '../models/clips/flag.glb?inline';
+import flagClipsManifest from '../models/clips/flag.json';
 import {
   BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips,
   type Clip, type Rig,
@@ -29,65 +29,65 @@ import { TERRAIN_COMMON } from './terrainShader';
 import { addRenderStats } from '../renderStats';
 import { FLATTEN_GLSL, MAX_FLAT_ZONES } from '../world/flatten';
 import { parseMtl, parseMtlImages, parseObj, parseObjBones, type BoneWeight, type ObjTriangle, type RGB01 } from './obj';
-import villagerMaleModel from '../models/villager_male.glb?model';
-import villagerFemaleModel from '../models/villager_female.glb?model';
-import propAxeModel from '../models/prop_axe.glb?model';
-import propKnifeModel from '../models/prop_knife.glb?model';
-import propScytheMaleModel from '../models/prop_scythe_male.glb?model';
-import propScytheFemaleModel from '../models/prop_scythe_female.glb?model';
-import millModel from '../models/mill.glb?model';
-import mill2Model from '../models/mill_2.glb?model';
-import mill3Model from '../models/mill_3.glb?model';
-import mill4Model from '../models/mill_4.glb?model';
-import lumberCampModel from '../models/lumber_camp.glb?model';
-import lumberCamp2Model from '../models/lumber_camp_2.glb?model';
-import lumberCamp3Model from '../models/lumber_camp_3.glb?model';
-import lumberCamp4Model from '../models/lumber_camp_4.glb?model';
-import houseModel from '../models/house.glb?model';
-import house2Model from '../models/house_2.glb?model';
-import house3Model from '../models/house_3.glb?model';
-import house4Model from '../models/house_4.glb?model';
-import townCenterModel from '../models/town_center.glb?model';
-import miningCampModel from '../models/mining_camp.glb?model';
-import treeSpruceModel from '../models/tree_spruce.glb?model';
-import treePineModel from '../models/tree_pine.glb?model';
-import treeOakModel from '../models/tree_oak.glb?model';
-import treeBirchModel from '../models/tree_birch.glb?model';
-import treeBirch2Model from '../models/tree_birch_2.glb?model';
-import treeBirch3Model from '../models/tree_birch_3.glb?model';
-import treePoplarModel from '../models/tree_poplar.glb?model';
-import treeMapleModel from '../models/tree_maple.glb?model';
-import treeOakOldModel from '../models/tree_oak_old.glb?model';
-import treeOakYoungModel from '../models/tree_oak_young.glb?model';
-import stone1Model from '../models/stone_1.glb?model';
-import stone2Model from '../models/stone_2.glb?model';
-import stone3Model from '../models/stone_3.glb?model';
-import gold1Model from '../models/gold_1.glb?model';
-import gold2Model from '../models/gold_2.glb?model';
-import gold3Model from '../models/gold_3.glb?model';
-import berryBush1Model from '../models/berry_bush_1.glb?model';
+import villagerMaleModel from '../models/villagers/male.glb?model';
+import villagerFemaleModel from '../models/villagers/female.glb?model';
+import propAxeModel from '../models/props/axe.glb?model';
+import propKnifeModel from '../models/props/knife.glb?model';
+import propScytheMaleModel from '../models/props/scythe_male.glb?model';
+import propScytheFemaleModel from '../models/props/scythe_female.glb?model';
+import millModel from '../models/buildings/mill.glb?model';
+import mill2Model from '../models/buildings/mill_2.glb?model';
+import mill3Model from '../models/buildings/mill_3.glb?model';
+import mill4Model from '../models/buildings/mill_4.glb?model';
+import lumberCampModel from '../models/buildings/lumber_camp.glb?model';
+import lumberCamp2Model from '../models/buildings/lumber_camp_2.glb?model';
+import lumberCamp3Model from '../models/buildings/lumber_camp_3.glb?model';
+import lumberCamp4Model from '../models/buildings/lumber_camp_4.glb?model';
+import houseModel from '../models/buildings/house.glb?model';
+import house2Model from '../models/buildings/house_2.glb?model';
+import house3Model from '../models/buildings/house_3.glb?model';
+import house4Model from '../models/buildings/house_4.glb?model';
+import townCenterModel from '../models/buildings/town_center.glb?model';
+import miningCampModel from '../models/buildings/mining_camp.glb?model';
+import treeSpruceModel from '../models/trees/spruce.glb?model';
+import treePineModel from '../models/trees/pine.glb?model';
+import treeOakModel from '../models/trees/oak.glb?model';
+import treeBirchModel from '../models/trees/birch.glb?model';
+import treeBirch2Model from '../models/trees/birch_2.glb?model';
+import treeBirch3Model from '../models/trees/birch_3.glb?model';
+import treePoplarModel from '../models/trees/poplar.glb?model';
+import treeMapleModel from '../models/trees/maple.glb?model';
+import treeOakOldModel from '../models/trees/oak_old.glb?model';
+import treeOakYoungModel from '../models/trees/oak_young.glb?model';
+import stone1Model from '../models/resources/stone_1.glb?model';
+import stone2Model from '../models/resources/stone_2.glb?model';
+import stone3Model from '../models/resources/stone_3.glb?model';
+import gold1Model from '../models/resources/gold_1.glb?model';
+import gold2Model from '../models/resources/gold_2.glb?model';
+import gold3Model from '../models/resources/gold_3.glb?model';
+import berryBush1Model from '../models/resources/berry_bush_1.glb?model';
 import { gizmoModel } from './gizmoModel';
 import { FLOWER_KINDS, flowerModel } from './flowerModel';
-import berryBush2Model from '../models/berry_bush_2.glb?model';
-import berryBush3Model from '../models/berry_bush_3.glb?model';
-import berryBush4Model from '../models/berry_bush_4.glb?model';
+import berryBush2Model from '../models/resources/berry_bush_2.glb?model';
+import berryBush3Model from '../models/resources/berry_bush_3.glb?model';
+import berryBush4Model from '../models/resources/berry_bush_4.glb?model';
 import { FARM_KINDS, FIELD_PARTS, farmModel } from '../../tools/models/farmsGen.mjs';
 
-/** Teile der Felder (src/models/field_*.glb, docs/BLENDER.md). */
-const FIELD_PART_FILES = import.meta.glob('../models/field_*.glb', { eager: true, query: '?model', import: 'default' }) as Record<string, { obj: string; mtl: string }>;
-const FIELD_PART_MODELS = Object.fromEntries(FIELD_PARTS.map((n) => [n, FIELD_PART_FILES[`../models/field_${n}.glb`]]));
-import deerModel from '../models/deer.glb?model';
-import hareModel from '../models/hare.glb?model';
-import cowModel from '../models/cow.glb?model';
-import sheepModel from '../models/sheep.glb?model';
-import goatModel from '../models/goat.glb?model';
-import boarModel from '../models/boar.glb?model';
+/** Teile der Felder (src/models/fields/*.glb, docs/BLENDER.md). */
+const FIELD_PART_FILES = import.meta.glob('../models/fields/*.glb', { eager: true, query: '?model', import: 'default' }) as Record<string, { obj: string; mtl: string }>;
+const FIELD_PART_MODELS = Object.fromEntries(FIELD_PARTS.map((n) => [n, FIELD_PART_FILES[`../models/fields/${n}.glb`]]));
+import deerModel from '../models/animals/deer.glb?model';
+import hareModel from '../models/animals/hare.glb?model';
+import cowModel from '../models/animals/cow.glb?model';
+import sheepModel from '../models/animals/sheep.glb?model';
+import goatModel from '../models/animals/goat.glb?model';
+import boarModel from '../models/animals/boar.glb?model';
 import birchLeafUrl from '../textures/birch_leaf.png';
-import rallyFlagModel from '../models/rally_flag.glb?model';
-import bowyerModel from '../models/bowyer.glb?model';
-import armoryModel from '../models/armory.glb?model';
-import markerArrowModel from '../models/marker_arrow.glb?model';
-import bowModel from '../models/bow.glb?model';
+import rallyFlagModel from '../models/props/rally_flag.glb?model';
+import bowyerModel from '../models/buildings/bowyer.glb?model';
+import armoryModel from '../models/buildings/armory.glb?model';
+import markerArrowModel from '../models/props/marker_arrow.glb?model';
+import bowModel from '../models/props/bow.glb?model';
 
 /** Materialien der Dorfbewohner und ihrer Werkzeuge - jedes Modell bringt seine mit. */
 const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
@@ -104,66 +104,66 @@ export const SHAPE = {
    * dem Boden. motion[3] = 1: genau auf dem Boden (Boden der Galerie).
    */
   flat: 4,
-  /** Mensch mit Armen und Beinen, läuft und arbeitet - Dorfbewohner (models/villager_male.obj). */
+  /** Mensch mit Armen und Beinen, läuft und arbeitet - Dorfbewohner (models/villagers/male.glb). */
   villager: 5,
-  /** Windmühle mit drehenden Flügeln (models/mill.obj). */
+  /** Windmühle mit drehenden Flügeln (models/buildings/mill.glb). */
   mill: 6,
-  /** Offener Holzschuppen mit Stammstapel (models/lumber_camp.obj). */
+  /** Offener Holzschuppen mit Stammstapel (models/buildings/lumber_camp.glb). */
   lumberCamp: 7,
-  /** Fachwerkhaus mit Satteldach (models/house.obj). */
+  /** Fachwerkhaus mit Satteldach (models/buildings/house.glb). */
   house: 8,
-  /** Halle mit Turm, Vorhalle und Fahne (models/town_center.obj). */
+  /** Halle mit Turm, Vorhalle und Fahne (models/buildings/town_center.glb). */
   townCenter: 9,
   /** Nur intern: Lebensbalken über einer Instanz mit `health`. */
   healthBar: 10,
-  /** Schuppen mit Steinen, Gold und Erzwagen (models/mining_camp.obj). */
+  /** Schuppen mit Steinen, Gold und Erzwagen (models/buildings/mining_camp.glb). */
   miningCamp: 11,
   // Vorkommen in der Landschaft - ab hier "natürliche" Objekte: eigene
   // Drehung je Instanz, keine Mindestgröße, keine Sortierung (undurchsichtig).
-  /** Fichte auf Holz-Tiles (models/tree_spruce.obj) - weitere Bäume ab 22. */
+  /** Fichte auf Holz-Tiles (models/trees/spruce.glb) - weitere Bäume ab 22. */
   tree: 12,
-  /** Felsbrocken auf Stein-Tiles (models/stone_1.obj) - weitere ab 29. */
+  /** Felsbrocken auf Stein-Tiles (models/resources/stone_1.glb) - weitere ab 29. */
   stoneRock: 13,
-  /** Erzfels mit Goldadern und Nuggets (models/gold_1.obj) - weitere ab 31. */
+  /** Erzfels mit Goldadern und Nuggets (models/resources/gold_1.glb) - weitere ab 31. */
   goldRock: 14,
-  /** Johannisbeerstrauch (models/berry_bush_1.obj) - weitere Sträucher ab 19. */
+  /** Johannisbeerstrauch (models/resources/berry_bush_1.glb) - weitere Sträucher ab 19. */
   berryBush: 15,
-  /** Fahne am Sammelpunkt eines Gebäudes (models/rally_flag.obj). */
+  /** Fahne am Sammelpunkt eines Gebäudes (models/props/rally_flag.glb). */
   rallyFlag: 16,
   /**
    * Staubwolke: runder, weicher Fleck, der zur Kamera zeigt - verankert in
    * der Welt (motion[0] = Höhe über Grund), Größe in Tiles.
    */
   dust: 17,
-  /** Wie `villager`, als Frau (models/villager_female.obj). */
+  /** Wie `villager`, als Frau (models/villagers/female.glb). */
   villagerFemale: 18,
-  /** Brombeere mit Ranken (models/berry_bush_2.obj). */
+  /** Brombeere mit Ranken (models/resources/berry_bush_2.glb). */
   berryBush2: 19,
-  /** Heidelbeeren, mehrere kleine Büsche (models/berry_bush_3.obj). */
+  /** Heidelbeeren, mehrere kleine Büsche (models/resources/berry_bush_3.glb). */
   berryBush3: 20,
-  /** Hoher Himbeerstrauch (models/berry_bush_4.obj). */
+  /** Hoher Himbeerstrauch (models/resources/berry_bush_4.glb). */
   berryBush4: 21,
-  /** Kiefer mit hohem, rötlichem Stamm (models/tree_pine.obj). */
+  /** Kiefer mit hohem, rötlichem Stamm (models/trees/pine.glb). */
   treePine: 22,
-  /** Eiche mit breiter Krone (models/tree_oak.obj). */
+  /** Eiche mit breiter Krone (models/trees/oak.glb). */
   treeOak: 23,
-  /** Birke mit zwei weißen Stämmen (models/tree_birch.obj). */
+  /** Birke mit zwei weißen Stämmen (models/trees/birch.glb). */
   treeBirch: 24,
-  /** Schmale, hohe Pappel (models/tree_poplar.obj). */
+  /** Schmale, hohe Pappel (models/trees/poplar.glb). */
   treePoplar: 25,
-  /** Ahorn mit runder, dichter Krone (models/tree_maple.obj). */
+  /** Ahorn mit runder, dichter Krone (models/trees/maple.glb). */
   treeMaple: 26,
-  /** Alte Eiche: knorriger Stamm mit Höhle, weit ausladend (models/tree_oak_old.obj). */
+  /** Alte Eiche: knorriger Stamm mit Höhle, weit ausladend (models/trees/oak_old.glb). */
   treeOakOld: 27,
-  /** Junge Eiche mit schlankem Stamm (models/tree_oak_young.obj). */
+  /** Junge Eiche mit schlankem Stamm (models/trees/oak_young.glb). */
   treeOakYoung: 28,
-  /** Flacher Haufen Felsbrocken (models/stone_2.obj). */
+  /** Flacher Haufen Felsbrocken (models/resources/stone_2.glb). */
   stoneRock2: 29,
-  /** Zwei hohe, gespaltene Felsen (models/stone_3.obj). */
+  /** Zwei hohe, gespaltene Felsen (models/resources/stone_3.glb). */
   stoneRock3: 30,
-  /** Erzhaufen mit Goldadern (models/gold_2.obj). */
+  /** Erzhaufen mit Goldadern (models/resources/gold_2.glb). */
   goldRock2: 31,
-  /** Hoher Erzfels mit Goldadern (models/gold_3.obj). */
+  /** Hoher Erzfels mit Goldadern (models/resources/gold_3.glb). */
   goldRock3: 32,
   /** Auswahlring unter einer Figur: flach aufs Gelände gelegt wie `flat`. */
   ring: 33,
@@ -189,33 +189,33 @@ export const SHAPE = {
   farmTomato: 68,
   farmPotato: 77,
   /**
-   * Wild zum Jagen (models/deer.obj, hare.obj, cow.obj, sheep.obj, goat.obj, boar.obj): motion = [Blickrichtung,
+   * Wild zum Jagen (models/animals/deer.glb, hare.obj, cow.obj, sheep.obj, goat.obj, boar.obj): motion = [Blickrichtung,
    * Phase, Pose (ANIMAL_POSE), 0] - siehe "beast" im Shader.
    */
   deer: 90,
   hare: 91,
-  /** Hängebirke: ein Stamm, volle Krone aus hängenden Zweigen (models/tree_birch_2.obj). */
+  /** Hängebirke: ein Stamm, volle Krone aus hängenden Zweigen (models/trees/birch_2.glb). */
   treeBirch2: 92,
-  /** Trauerbirke: gegabelter Stamm, Etagen aus Bögen mit langen Zweig-Vorhängen (models/tree_birch_3.obj). */
+  /** Trauerbirke: gegabelter Stamm, Etagen aus Bögen mit langen Zweig-Vorhängen (models/trees/birch_3.glb). */
   treeBirch3: 93,
   cow: 94,
   sheep: 95,
   goat: 96,
   boar: 97,
-  /** Bognerei: Werkstatt mit Werkbank, Bogenstäben und Zielscheibe (models/bowyer.obj). */
+  /** Bognerei: Werkstatt mit Werkbank, Bogenstäben und Zielscheibe (models/buildings/bowyer.glb). */
   bowyer: 98,
-  /** Ein Bogen - Symbol für den Vorrat an Bögen (models/bow.obj). */
+  /** Ein Bogen - Symbol für den Vorrat an Bögen (models/props/bow.glb). */
   bow: 99,
-  /** Waffenkammer: Steinhaus mit Waffengestell, Schilden und Pfeilfässern (models/armory.obj). */
+  /** Waffenkammer: Steinhaus mit Waffengestell, Schilden und Pfeilfässern (models/buildings/armory.glb). */
   armory: 100,
   /**
    * Hinweispfeil nach unten über einem Gebäude, dem ein Arbeiter fehlt
-   * (models/marker_arrow.obj). motion[1] hebt ihn in Tiles übers Dach, im
+   * (models/props/marker_arrow.glb). motion[1] hebt ihn in Tiles übers Dach, im
    * Shader wippt er.
    */
   markerArrow: 101,
   /**
-   * Werkzeuge als Anhänge (models/prop_*.obj): je Werkzeug und Körper eine
+   * Werkzeuge als Anhänge (models/props/*.glb): je Werkzeug und Körper eine
    * Form - sie leiht sich beim Zeichnen Gelenke und Clips des Körpers und
    * hängt an seiner rechten Hand (figureProps, docs/ANIMATION.md).
    */
@@ -358,12 +358,12 @@ export const CLIP_LIBRARIES_LOADED: Record<string, number> = {};
 (globalThis as { __clipLibraries?: Record<string, number> }).__clipLibraries = CLIP_LIBRARIES_LOADED;
 
 /**
- * Clips aus Blender (docs/ANIMATION.md, src/models/humanoid_clips.glb). Lässt
+ * Clips aus Blender (docs/ANIMATION.md, src/models/clips/humanoid.glb). Lässt
  * sich eine Bibliothek nicht lesen, stehen ihre Figuren still (Ruhelage) - und
  * der Rauchtest schlägt an (CLIP_LIBRARIES_LOADED).
  */
 export const CLIPS: Clip[] = readClips('humanoid', () => loadClips(humanoidClipsGlb, humanoidClipsManifest, HUMANOID));
-/** Clips der Tiere (src/models/quadruped_clips.glb). */
+/** Clips der Tiere (src/models/clips/quadruped.glb). */
 export const ANIMAL_CLIPS: Clip[] = readClips('quadruped', () => loadClips(quadrupedClipsGlb, quadrupedClipsManifest, QUADRUPED));
 const FLAG_CLIPS: Clip[] = readClips('flag', () => loadClips(flagClipsGlb, flagClipsManifest, FLAG));
 
@@ -398,10 +398,10 @@ const CLIP_LIBRARIES: {
       [SHAPE.sheep]: 'sheep', [SHAPE.goat]: 'goat', [SHAPE.boar]: 'boar',
     },
   },
-  // Mühlenflügel (src/models/mill_clips.glb): ein Clip "sails" für alle vier Mühlen.
+  // Mühlenflügel (src/models/clips/mill.glb): ein Clip "sails" für alle vier Mühlen.
   { rig: MILL, clips: readClips('mill', () => loadClips(millClipsGlb, millClipsManifest, MILL)),
     shapes: [SHAPE.mill, SHAPE.mill2, SHAPE.mill3, SHAPE.mill4] },
-  // Fahne am Sammelpunkt und auf dem Hauptgebäude (src/models/flag_clips.glb):
+  // Fahne am Sammelpunkt und auf dem Hauptgebäude (src/models/clips/flag.glb):
   // Clip "wave". Gemacht ist er für das Tuch am Sammelpunkt - ein längeres
   // (in Modell-Einheiten) schlägt entsprechend weiter aus.
   {
@@ -496,7 +496,7 @@ const FIELD_SOIL_METERS = '0.02';
 
 /**
  * Stufen des Werkstücks auf der Werkbank der Bognerei (Objekte "Craft.0" bis
- * "Craft.2" in src/models/bowyer.glb): grob behauen, ausgearbeitet,
+ * "Craft.2" in src/models/buildings/bowyer.glb): grob behauen, ausgearbeitet,
  * gespannter Bogen.
  */
 export const CRAFT_STAGES = 3;
@@ -856,7 +856,7 @@ vec3 clipSkin(vec3 p, int clip, float time, int bone) {
   return mix(clipBone(p, row, bone), clipBone(p, row + 1, bone), f - float(f0));
 }
 
-// Mühlenzeit für den Clip "sails" (mill_clips.glb): wo in der Schleife eine
+// Mühlenzeit für den Clip "sails" (clips/mill.glb): wo in der Schleife eine
 // Mühle mit Startstellung "phase" (millMotion) steht. Die Böen kommen im
 // Takt der Startstellung (3.1 * phase); die Drehung passt bis auf
 // höchstens 6.4 Grad - die vier Flügel sind nach einer Vierteldrehung gleich,
@@ -952,13 +952,13 @@ void main() {
     if (figure) {
       float phase = aMotion.y;
       int pose = int(aMotion.z + 0.5);
-      // Clip aus Blender (src/models/humanoid_clips.glb): Pose >=
+      // Clip aus Blender (src/models/clips/humanoid.glb): Pose >=
       // CLIP_POSE (Galerie) oder die Pose, die ein Clip ersetzt (uPoseClip).
       int clip = pose >= ${CLIP_POSE} ? pose - ${CLIP_POSE} : pose < 8 ? uPoseClip[pose] : -1;
       if (clip >= 0 && uClipRow[clip] < 0) clip = -1;
       if (clip >= 0) {
         float time = pose >= ${CLIP_POSE} ? phase : (phase - uPoseShift[pose]) * uPoseRate[pose];
-        // Werkzeuge nur, wenn der Clip sie braucht (props in humanoid_clips.json).
+        // Werkzeuge nur, wenn der Clip sie braucht (props in clips/humanoid.json).
         int props = uClipProps[clip];
         bool away = (part == P_TOOL && (props & 1) == 0) || (part == P_SCYTHE && (props & 2) == 0)
             || (part == P_KNIFE && (props & 4) == 0);
@@ -999,7 +999,7 @@ void main() {
     }
 
     if (beast) {
-      // Tiere: Clip aus Blender (src/models/quadruped_clips.glb) - Pose
+      // Tiere: Clip aus Blender (src/models/clips/quadruped.glb) - Pose
       // >= CLIP_POSE (Galerie) oder die Pose, die ein Clip dieser Art ersetzt.
       // Ohne Clip (Bibliothek nicht geladen) steht es still.
       float phase = aMotion.y;
@@ -2060,7 +2060,7 @@ interface Model {
   file?: string;
 }
 
-/** Datei eines Modells aus seiner Zeile `mtllib house.mtl` (vite.config.ts). */
+/** Datei eines Modells aus seiner Zeile `mtllib buildings/house.mtl` (vite.config.ts). */
 function modelFile(obj: string): string | undefined {
   const name = /^mtllib (.+)\.mtl$/m.exec(obj)?.[1];
   return name && name !== 'model' ? `${name}.glb` : undefined;
@@ -2689,7 +2689,7 @@ const FIGURE_PROPS: { bit: number; shapes: Record<number, number> }[] = [
 
 /**
  * Was eine Figur in der Hand hat - Bits aus PROP_BITS: die props des Clips,
- * den ihre Pose spielt (humanoid_clips.json). Ohne Clip keine - die Figur
+ * den ihre Pose spielt (clips/humanoid.json). Ohne Clip keine - die Figur
  * steht in Ruhelage und hat die Werkzeuge weggesteckt.
  */
 function propsOfPose(pose: number): number {

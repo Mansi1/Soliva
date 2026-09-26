@@ -379,11 +379,11 @@ const TREES: [string, number][] = [
 const SHOWCASE: Showcase[] = [
   people(false),
   people(true),
-  // Jeder Clip aus Blender (src/models/humanoid_clips.glb) - neue erscheinen
+  // Jeder Clip aus Blender (src/models/clips/humanoid.glb) - neue erscheinen
   // hier von selbst. Die Zeit ist die Clip-Zeit in Sekunden.
   ...[false, true].map((female) => showcase('Clips aus Blender', female ? 'Frau (Clips)' : 'Mann (Clips)',
     CLIPS.map((clip, i) => figure(clip.name, female, CLIP_POSE + i, 1, Math.PI * 0.25)), 240, 0.9)),
-  // Die Clips der Tiere (src/models/quadruped_clips.glb), je an der ersten Art,
+  // Die Clips der Tiere (src/models/clips/quadruped.glb), je an der ersten Art,
   // für die der Clip gilt - das Hoppeln am Hasen, das Traben an der Kuh.
   showcase('Clips aus Blender', 'Tiere (Clips)', ANIMAL_CLIPS.map((clip, i) =>
     animalClip((clip.species[0] ?? 'deer') as AnimalKind, clip.name, i)), 240, 0.6),

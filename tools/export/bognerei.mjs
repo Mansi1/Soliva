@@ -11,7 +11,7 @@
 // Objekte, die per Skalierung ein- und ausgeblendet werden.
 //
 // Daneben schreibt es <Ausgabe>.clips.json: je Clip Pose, Werkzeuge und den
-// Phasenbereich (wie in src/models/humanoid_clips.json).
+// Phasenbereich (wie in src/models/clips/humanoid.json).
 //
 // Aufruf: node tools/export/bognerei.mjs [frau] [Ausgabedatei]
 //   Standard: Bogner (Mann), tools/export/out/bognerei.glb
@@ -82,7 +82,7 @@ const partOf = (object) => {
   return hit ? hit[1] : 'torso';
 };
 
-const figure = readModel(female ? 'villager_female' : 'villager_male');
+const figure = readModel(female ? 'villagers/female' : 'villagers/male');
 // ponytail: nur starre Körper (Teilnamen); eine Hülle mit Knochen (j/vw) bräuchte die Gewichte hier.
 if (/^j /m.test(figure.obj)) throw new Error('bognerei.mjs kennt nur starre Körper - dieser hat Knochen (Armature)');
 const figureTris = parseObj(figure.obj);
@@ -227,7 +227,7 @@ const addNode = (node) => nodes.push(node) - 1;
 
 // Bognerei: alles außer den Markierungen und dem Werkstück; die drei Stufen
 // des Werkstücks als eigene Objekte.
-const shop = readModel('bowyer');
+const shop = readModel('buildings/bowyer');
 const shopTris = parseObj(shop.obj);
 const shopColors = parseMtl(shop.mtl);
 shopColors.set('Paint', PLAYER);
@@ -285,7 +285,7 @@ const figureNode = addNode({
   rotation: qAxis(Y, yaw),
   // Im Spiel ist die Figur 1.7 m groß (VILLAGER.size in src/world/catalog.ts).
   scale: [1.7 / H, 1.7 / H, 1.7 / H],
-  // Körperhöhe des Skeletts in Metern (`height` in humanoid_clips.json) - damit
+  // Körperhöhe des Skeletts in Metern (`height` in clips/humanoid.json) - damit
   // rechnet das Spiel die Verschiebung der Wurzel in Körperhöhen um.
   extras: { height: H },
   children: [boneNodes[0], figureMeshNode],

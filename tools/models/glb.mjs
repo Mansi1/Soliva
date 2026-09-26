@@ -1,4 +1,4 @@
-// Die Modelle des Spiels als glTF (src/models/<name>.glb, docs/BLENDER.md):
+// Die Modelle des Spiels als glTF (src/models/<ordner>/<name>.glb, docs/BLENDER.md):
 // Blender öffnet und speichert sie ohne Zusatz (Datei > Import/Export >
 // glTF 2.0). Das Spiel und die Werkzeuge lesen daraus weiter OBJ- und
 // MTL-Text - einmal gewandelt, beim Bauen (vite.config.ts, `?model`) bzw. in
@@ -17,7 +17,7 @@
 // Bildtexturen (baseColorTexture): das Bild steht als data:-URL in der MTL
 // (`map_Kd`), die Texturkoordinaten als `vt` im OBJ (v = 0 unten, wie in OBJ).
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 const models = new URL('../../src/models/', import.meta.url).pathname;
 
@@ -227,7 +227,12 @@ export function glbToObj(bytes, mtllib = 'model.mtl') {
   return { obj: `${lines.join('\n')}\n`, mtl: `${mtl.join('\n')}\n` };
 }
 
-/** src/models/<name>.glb als OBJ- und MTL-Text (für die Werkzeuge in Node). */
+/** Namen aller Modelle in `dir`, mit Ordner ("trees/oak") - ohne die Clips (clips/). */
+export function modelNames(dir = models) {
+  return readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('.glb') && !f.startsWith('clips/')).map((f) => f.slice(0, -4)).sort();
+}
+
+/** src/models/<name>.glb ("trees/oak") als OBJ- und MTL-Text (für die Werkzeuge in Node). */
 export function readModel(name, dir = models) {
   return glbToObj(readFileSync(`${dir}/${name}.glb`), `${name}.mtl`);
 }

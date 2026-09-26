@@ -4,12 +4,10 @@
 // der Knoten - so speichert Blender verschobene Objekte - werden eingerechnet.
 
 import assert from 'node:assert/strict';
-import { readdirSync } from 'node:fs';
 import { test } from 'node:test';
-import { gameName, glbToObj, objToGlb, readModel } from '../tools/models/glb.mjs';
-import { modelsDir } from './ids.mjs';
+import { gameName, glbToObj, modelNames, objToGlb, readModel } from '../tools/models/glb.mjs';
 
-const MODELS = readdirSync(modelsDir).filter((f) => f.endsWith('.glb') && !f.endsWith('_clips.glb')).map((f) => f.slice(0, -4));
+const MODELS = modelNames();
 
 test('jedes Modell lässt sich lesen und unverändert wieder schreiben', () => {
   assert.ok(MODELS.length > 0);
@@ -21,7 +19,7 @@ test('jedes Modell lässt sich lesen und unverändert wieder schreiben', () => {
 });
 
 test('aufgemalte Details (Bild "Detail…") kommen als map_detail mit Texturkoordinaten an', () => {
-  const { obj, mtl } = readModel('villager_male');
+  const { obj, mtl } = readModel('villagers/male');
   assert.match(mtl, /^map_detail data:image\/png;base64,/m);
   assert.doesNotMatch(mtl, /^map_Kd /m, 'Details dürfen keine Bildtextur werden');
   assert.match(obj, /^f \d+\/\d+ /m);

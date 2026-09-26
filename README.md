@@ -84,14 +84,14 @@ Blickwinkel bleibt wie die Blickrichtung beim Neuladen erhalten.
 
 ## Modelle
 
-Jedes Objekt des Spiels ist eine glTF-Datei: `src/models/<name>.glb`. Blender
+Jedes Objekt des Spiels ist eine glTF-Datei: `src/models/<ordner>/<name>.glb` (z. B. `trees/oak.glb`). Blender
 öffnet und speichert sie ohne Zusatz – zum Bearbeiten Datei → Import →
 glTF 2.0, danach Export → glTF 2.0 (glTF Binary) über dieselbe Datei. Es gibt
 keinen Export-Schritt, und zum Bauen braucht es kein Blender. Wie das Spiel
 die Dateien liest und welche Objektnamen etwas bedeuten: docs/BLENDER.md.
 
 Die Bewegungen stecken in Clip-Bibliotheken, ebenfalls glTF:
-`src/models/<skelett>_clips.glb`, dazu je eine `.json` mit den Angaben je
+`src/models/clips/<skelett>.glb`, dazu je eine `.json` mit den Angaben je
 Clip (docs/ANIMATION.md).
 
 Die Felder baut das Spiel beim Start selbst (`tools/models/farmsGen.mjs`) –

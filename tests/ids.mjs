@@ -5,7 +5,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readModel } from '../tools/models/glb.mjs';
+import { modelNames, readModel } from '../tools/models/glb.mjs';
 
 export const root = new URL('../', import.meta.url).pathname;
 export const modelsDir = join(root, 'src/models');
@@ -34,12 +34,12 @@ function glbNames(file) {
 /** Alle IDs, wie sie jetzt in src/models stehen. */
 export function collectIds(dir = modelsDir) {
   const models = {};
-  for (const f of readdirSync(dir).filter((f) => f.endsWith('.glb') && !f.endsWith('_clips.glb')).sort()) models[f.slice(0, -4)] = objectNames(f.slice(0, -4), dir);
+  for (const m of modelNames(dir)) models[m] = objectNames(m, dir);
   const clips = {};
-  for (const f of readdirSync(dir).filter((f) => f.endsWith('_clips.glb')).sort()) {
-    const name = f.slice(0, -'_clips.glb'.length);
-    const manifest = JSON.parse(readFileSync(join(dir, `${name}_clips.json`), 'utf8'));
-    const { bones, animations } = glbNames(join(dir, f));
+  for (const f of readdirSync(join(dir, 'clips')).filter((f) => f.endsWith('.glb')).sort()) {
+    const name = f.slice(0, -4);
+    const manifest = JSON.parse(readFileSync(join(dir, 'clips', `${name}.json`), 'utf8'));
+    const { bones, animations } = glbNames(join(dir, 'clips', f));
     clips[name] = {
       rig: manifest.rig,
       bones,

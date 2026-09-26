@@ -3,11 +3,10 @@
 // findet es z. B. keinen Eingang, keine Flügel, keine Bögen im Gestell. Läuft
 // mit `npm test`, auch einzeln: `npm run check:models`.
 //
-// Geprüft werden die Modelle in src/models/*.glb mit den Namen, wie das Spiel
+// Geprüft werden die Modelle in src/models/<ordner>/*.glb mit den Namen, wie das Spiel
 // sie liest (tools/models/glb.mjs: bis zum "#", Kopien ohne ".001").
 
-import { readdirSync } from 'node:fs';
-import { readModel } from './glb.mjs';
+import { modelNames, readModel } from './glb.mjs';
 
 const modelsDir = new URL('../../src/models/', import.meta.url).pathname;
 
@@ -18,16 +17,16 @@ const modelsDir = new URL('../../src/models/', import.meta.url).pathname;
  * Namensanfänge, die nicht vorkommen dürfen.
  */
 const RULES = [
-  { match: /^(house|lumber_camp|mill|mining_camp|town_center|bowyer|armory)/, needs: ['Entry'], why: 'Eingang, zu dem Dorfbewohner gehen' },
-  { match: /^mill/, needs: ['Sails'], why: 'Flügel, die sich drehen' },
-  { match: /^(town_center|rally_flag)$/, needs: ['Cloth'], why: 'Tuch, das weht' },
-  { match: /^bowyer$/, needs: ['Work.Stand', 'Work.Aim'], numbered: [['Craft', 3]], why: 'Werkbank und Stufen des Bogens' },
-  { match: /^armory$/, needs: ['Cut.Roof', 'Cut.Wall'], numbered: [['Stock', 100]], why: 'aufdeckbares Dach und 100 Bögen im Gestell' },
-  { match: /^berry_bush/, needs: ['Berry'], why: 'Beeren, die beim Pflücken verschwinden (die Nummer wählt nur den Zufall je Beere)' },
-  { match: /^tree_/, needs: ['Trunk', 'Trunk.Stump'], why: 'Stamm und Stumpf zum Absägen' },
-  { match: /^(boar|cow|deer|goat|hare|sheep)$/, needs: ['Leg.FL', 'Leg.FR', 'Leg.BL', 'Leg.BR', 'Head'], why: 'Beine und Kopf für die Knochen' },
+  { match: /^buildings\//, needs: ['Entry'], why: 'Eingang, zu dem Dorfbewohner gehen' },
+  { match: /^buildings\/mill/, needs: ['Sails'], why: 'Flügel, die sich drehen' },
+  { match: /^(buildings\/town_center|props\/rally_flag)$/, needs: ['Cloth'], why: 'Tuch, das weht' },
+  { match: /^buildings\/bowyer$/, needs: ['Work.Stand', 'Work.Aim'], numbered: [['Craft', 3]], why: 'Werkbank und Stufen des Bogens' },
+  { match: /^buildings\/armory$/, needs: ['Cut.Roof', 'Cut.Wall'], numbered: [['Stock', 100]], why: 'aufdeckbares Dach und 100 Bögen im Gestell' },
+  { match: /^resources\/berry_bush/, needs: ['Berry'], why: 'Beeren, die beim Pflücken verschwinden (die Nummer wählt nur den Zufall je Beere)' },
+  { match: /^trees\//, needs: ['Trunk', 'Trunk.Stump'], why: 'Stamm und Stumpf zum Absägen' },
+  { match: /^animals\//, needs: ['Leg.FL', 'Leg.FR', 'Leg.BL', 'Leg.BR', 'Head'], why: 'Beine und Kopf für die Knochen' },
   {
-    match: /^villager_/,
+    match: /^villagers\//,
     needs: ['Head', 'Load'],
     // Starr in Teilen (Knochen aus dem Namen) oder eine Hülle mit Knochen aus Blender (Armature).
     parts: ['Leg.L', 'Leg.L.Lower', 'Leg.R', 'Leg.R.Lower', 'Arm.L', 'Arm.L.Lower', 'Arm.R', 'Arm.R.Lower', 'Arm.R.Lower.Hand'],
@@ -35,9 +34,9 @@ const RULES = [
     forbids: ['Arm.R.Lower.Tool', 'Arm.R.Lower.Scythe', 'Knife'],
     why: 'Körperteile oder Knochen, Hand für die Werkzeuge; Werkzeuge sind eigene Modelle',
   },
-  { match: /^prop_axe$/, needs: ['Arm.R.Lower.Tool'], why: 'Beil an der Hand' },
-  { match: /^prop_scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
-  { match: /^prop_knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
+  { match: /^props\/axe$/, needs: ['Arm.R.Lower.Tool'], why: 'Beil an der Hand' },
+  { match: /^props\/scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
+  { match: /^props\/knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
 ];
 
 /** Objektnamen, Knochen (j) und ob jede Fläche ein Material hat. */
@@ -61,8 +60,7 @@ const has = (names, prefix) => names.some((n) => n === prefix || n.startsWith(`$
 
 export function checkModels(dir = modelsDir) {
   const problems = [];
-  for (const file of readdirSync(dir).filter((f) => f.endsWith('.glb') && !f.endsWith('_clips.glb')).sort()) {
-    const model = file.slice(0, -4);
+  for (const model of modelNames(dir)) {
     const { names, bones, bare } = read(dir, model);
     const say = (text) => problems.push(`${model}: ${text}`);
     if (bare) say(`${bare} Flächen ohne Material`);

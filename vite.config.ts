@@ -7,11 +7,12 @@ import defuss from 'defuss-vite';
 import { glbToObj } from './tools/models/glb.mjs';
 
 /**
- * `import house from '../models/house.glb?model'` - das Modell als { obj, mtl }-Text
- * (tools/models/glb.mjs). Die Zeile `mtllib house.mtl` im OBJ nennt die Datei (Galerie).
+ * `import house from '../models/buildings/house.glb?model'` - das Modell als { obj, mtl }-Text
+ * (tools/models/glb.mjs). Die Zeile `mtllib buildings/house.mtl` im OBJ nennt die Datei (Galerie).
  */
 function glbModels(): Plugin {
   const suffix = '.glb?model';
+  const models = join(import.meta.dirname, 'src/models');
   return {
     name: 'glb-model',
     enforce: 'pre',
@@ -19,7 +20,7 @@ function glbModels(): Plugin {
       if (!id.endsWith(suffix)) return null;
       const file = id.slice(0, -'?model'.length);
       this.addWatchFile(file);
-      return `export default ${JSON.stringify(glbToObj(readFileSync(file), `${basename(file, '.glb')}.mtl`))};`;
+      return `export default ${JSON.stringify(glbToObj(readFileSync(file), `${relative(models, file).slice(0, -4)}.mtl`))};`;
     },
   };
 }
@@ -60,7 +61,7 @@ function saveBillboards(): Plugin {
 export default defineConfig({
   // add the defuss() plugin to make JSX transpilation work
   plugins: [glbModels(), saveBillboards(), defuss()],
-  // Skelett-Clips aus Blender (src/models/*.glb) werden mit ?inline eingebettet.
+  // Skelett-Clips aus Blender (src/models/clips/*.glb) werden mit ?inline eingebettet.
   assetsInclude: ['**/*.glb'],
   build: {
     // Neben dem Spiel auch das L-System-Werkzeug (tools/lsystem/) und seine Galerie.

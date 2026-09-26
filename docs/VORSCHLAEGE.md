@@ -54,7 +54,7 @@ speichert ihn ohne Zusatz (Datei → Import / Export → glTF 2.0).
 - `tools/models/glb.mjs` liest und schreibt `.glb` ohne Bibliothek:
   `glbToObj()` macht daraus OBJ- und MTL-Text, `objToGlb()` den Weg zurück.
 - Ein Vite-Plugin (`vite.config.ts`) wandelt beim Bauen:
-  `import house from '../models/house.glb?model'` liefert `{ obj, mtl }`.
+  `import house from '../models/buildings/house.glb?model'` liefert `{ obj, mtl }`.
   So arbeiten Spiel, Felder und Symbole unverändert mit OBJ-Text weiter,
   und zur Laufzeit kostet es nichts.
 - **Namen:** Blender duldet keine doppelten Objektnamen und nummeriert sie

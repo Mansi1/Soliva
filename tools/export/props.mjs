@@ -1,5 +1,5 @@
 // Exportiert Mühle und Fahne am Sammelpunkt mit Skelett und Clip als glTF
-// (.glb) - Ausgangspunkt für src/models/mill_clips.glb und flag_clips.glb,
+// (.glb) - Ausgangspunkt für src/models/clips/mill.glb und clips/flag.glb,
 // heute zum Vergleich. Die Clips rechnen dieselben Formeln wie
 // bisher der Shader (src/gl/entityRenderer.ts, P_SAILS und P_CLOTH):
 //
@@ -46,7 +46,7 @@ function sidecar(name, fps, height, clips) {
 // --- Mühle ------------------------------------------------------------------
 
 {
-  const mill = readModel('mill');
+  const mill = readModel('buildings/mill');
   const tris = parseObj(mill.obj).filter((t) => !t.object.startsWith('Entry'));
   const colors = parseMtl(mill.mtl);
   colors.set('Paint', PLAYER);
@@ -80,7 +80,7 @@ function sidecar(name, fps, height, clips) {
 // --- Fahne am Sammelpunkt ---------------------------------------------------
 
 {
-  const flag = readModel('rally_flag');
+  const flag = readModel('props/rally_flag');
   const tris = parseObj(flag.obj);
   const colors = parseMtl(flag.mtl);
   colors.set('Paint', PLAYER);

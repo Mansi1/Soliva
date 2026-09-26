@@ -32,11 +32,11 @@ Phase 0 und Phase 1 sind fertig. Von Phase 2 ist der erste Teil fertig:
 - **Textur:** Die Bilder aller Clips liegen in Spalten zu 1024 Bildern.
   Mann und Frau brauchen zusammen 4118 Bilder, das passt auf jede
   WebGL2-Grafik.
-- **Größe:** `humanoid_clips.glb` hat 1,2 MB, vor allem durch `stand`
+- **Größe:** `clips/humanoid.glb` hat 1,2 MB, vor allem durch `stand`
   (34 s Schleife).
 
 - **Takt-Marken:** Der Ton beim Hacken, Pflücken, Mähen und Schnitzen kommt
-  aus `strike` des Clips in `humanoid_clips.json` (`VillagerWork.swing`). Über
+  aus `strike` des Clips in `clips/humanoid.json` (`VillagerWork.swing`). Über
   20 Minuten Arbeit kommt jeder Ton im selben Takt wie mit der Formel.
 - **IK für die Hände:** Die frühere `humanoid.blend` hatte IK-Ziele für beide
   Hände, aktiv in `carve` und `mow`. Ihr Ergebnis ist in die Clips gebacken;
@@ -45,7 +45,7 @@ Phase 0 und Phase 1 sind fertig. Von Phase 2 ist der erste Teil fertig:
 
 **Werkzeuge sind Anhänge:** Beil, Sense und Zugmesser stecken nicht mehr in
 den Körpern, sondern sind eigene Modelle an der rechten Hand
-(`src/models/prop_*.glb`). Sie erscheinen je nach den `props` des Clips, den
+(`src/models/props/*.glb`). Sie erscheinen je nach den `props` des Clips, den
 die Figur gerade spielt. Das Bild ist Pixel für Pixel wie vorher (alle Posen
 von Mann und Frau). Die eine Ausnahme ist das Zugmesser der Frau: Es war
 bisher für ihren Handabstand eigens gebaut und wird jetzt aus dem des Mannes
@@ -58,8 +58,8 @@ Tier-Zweig, die Flügel- und die Tuch-Formel samt ihren Uniforms (`uShoulder`,
 `uElbow`, `uStride`, `uLegs`, `uNeck`, `uGraze`, `uSide`, `uHub`) und die
 Hilfen `swingAround`, `swingSideways`, `swingAt`. Der Vertex-Shader hat 648
 statt 941 Zeilen. Die Maße der Modelle (Hüfte, Knie, Nabe, Beine, Hals ...)
-bleiben - mit ihnen werden die Clips gebacken. `mow_pose.json` und
-`carve_pose.json` bleiben ebenfalls: `tools/export/poses.mjs` und
+bleiben - mit ihnen werden die Clips gebacken. `poses/mow.json` und
+`poses/carve.json` bleiben ebenfalls: `tools/export/poses.mjs` und
 `npm run check:anim` rechnen damit.
 
 - **Ohne Clip:** Fehlt eine Bibliothek, stehen ihre Figuren in Ruhelage still,
@@ -72,7 +72,7 @@ bleiben - mit ihnen werden die Clips gebacken. `mow_pose.json` und
 Offen in Phase 2: Schichten (`walk` + `carry`).
 
 **Phase 3 ist fertig: Alle sechs Tiere spielen Clips aus
-`src/models/quadruped_clips.glb`** (Reh, Hase, Kuh, Schaf, Ziege,
+`src/models/clips/quadruped.glb`** (Reh, Hase, Kuh, Schaf, Ziege,
 Wildschwein).
 
 - **Gleichstand:** Alle Clips stimmen auf den Bildern mit der Formel überein,
@@ -85,11 +85,11 @@ Wildschwein).
 - **Je Art gebacken:** Beim Äsen senkt jede Art den Kopf so weit, bis ihr Maul
   den Boden erreicht. Der Knochen `neck` wird dafür auf ihr eigenes `uGraze`
   gebracht. Erlegt liegt sie so hoch, wie ihr Körper halb breit ist.
-- **Größe:** `quadruped_clips.glb` hat 0,3 MB, vor allem durch `graze`
+- **Größe:** `clips/quadruped.glb` hat 0,3 MB, vor allem durch `graze`
   (35,4 s Schleife).
 
 **Phase 4 ist fertig: Mühlenflügel und Fahne spielen Clips** aus
-`src/models/mill_clips.glb` (Clip `sails`) und `flag_clips.glb` (Clip `wave`).
+`src/models/clips/mill.glb` (Clip `sails`) und `clips/flag.glb` (Clip `wave`).
 
 - **Gleichstand:** Die Fahne weicht an den Eckpunkten des Tuchs um 0,03 cm
   ab. Die Böen der Flügel sind exakt. Die Stellung der Flügel weicht bis 6,4°
@@ -124,12 +124,12 @@ Die Clip-Bibliotheken sind selbst die Quelle.
 
 ```
  1. KÖRPER (docs/BLENDER.md)
-    src/models/villager_male.glb, src/models/villager_female.glb
+    src/models/villagers/male.glb, src/models/villagers/female.glb
                                    (Teilnamen wie Arm.L.Lower + Materialnamen)
 
  2. BEWEGUNGEN - je Skelett eine Bibliothek, eingecheckt
-    src/models/humanoid_clips.glb      Skelett + alle Clips (gebackene Bilder, 30 fps)
-    src/models/humanoid_clips.json     je Clip: Länge, Werkzeuge, Pose, Takt ... (von Hand)
+    src/models/clips/humanoid.glb      Skelett + alle Clips (gebackene Bilder, 30 fps)
+    src/models/clips/humanoid.json     je Clip: Länge, Werkzeuge, Pose, Takt ... (von Hand)
     ebenso quadruped, mill, flag
             │
             ▼
@@ -148,9 +148,9 @@ Die Clip-Bibliotheken sind selbst die Quelle.
 
 | Art | Dateien | Bearbeiten? |
 |---|---|---|
-| Bewegung | `src/models/*_clips.glb` | in Blender (Import/Export glTF), siehe unten |
-| Angaben je Clip | `src/models/*_clips.json` | von Hand |
-| Körperform | `src/models/villager_*.glb` | in Blender (Import/Export glTF) |
+| Bewegung | `src/models/clips/*.glb` | in Blender (Import/Export glTF), siehe unten |
+| Angaben je Clip | `src/models/clips/*.json` | von Hand |
+| Körperform | `src/models/villagers/*.glb` | in Blender (Import/Export glTF) |
 | Spiel-Logik | `src/gl/clips.ts`, `src/gl/entityRenderer.ts` | als Code |
 | Prüfen | `tools/blender/parity*.mjs` (`npm run check:anim`), `tools/export/*` (glTF-Vorschau) | – |
 
@@ -158,13 +158,13 @@ Die Clip-Bibliotheken sind selbst die Quelle.
 
 | Ich will … | Wo |
 |---|---|
-| eine Bewegung ändern | `humanoid_clips.glb` bzw. `quadruped_clips.glb` (Tiere) → die Animation gleichen Namens |
-| Mühlenflügel oder Fahne ändern | `mill_clips.glb` → `sails`, `flag_clips.glb` → `wave` |
+| eine Bewegung ändern | `clips/humanoid.glb` bzw. `clips/quadruped.glb` (Tiere) → die Animation gleichen Namens |
+| Mühlenflügel oder Fahne ändern | `clips/mill.glb` → `sails`, `clips/flag.glb` → `wave` |
 | einen neuen Clip | neue Animation im `.glb` und ein Eintrag in `clips` der `.json` |
 | festlegen, welche Pose ein Clip ersetzt | `pose` des Clips in der `.json` |
-| einen Clip nur für bestimmte Tiere | `species` des Clips in `quadruped_clips.json` (z. B. `["hare"]`) |
-| die Form eines Körpers ändern | `src/models/villager_*.glb` in Blender |
-| ein Werkzeug ändern oder neu anhängen | `src/models/prop_*.glb` in Blender, `FIGURE_PROPS` in `entityRenderer.ts`, siehe „Werkzeuge anhängen“ |
+| einen Clip nur für bestimmte Tiere | `species` des Clips in `clips/quadruped.json` (z. B. `["hare"]`) |
+| die Form eines Körpers ändern | `src/models/villagers/*.glb` in Blender |
+| ein Werkzeug ändern oder neu anhängen | `src/models/props/*.glb` in Blender, `FIGURE_PROPS` in `entityRenderer.ts`, siehe „Werkzeuge anhängen“ |
 | einen Clip ansehen | Galerie → „Clips aus Blender“ |
 
 **Drei Regeln halten es zusammen:**
@@ -179,7 +179,7 @@ Die Clip-Bibliotheken sind selbst die Quelle.
 
 ## Werkzeuge anhängen
 
-Ein Werkzeug ist ein eigenes kleines Modell (`src/models/prop_<name>.glb`),
+Ein Werkzeug ist ein eigenes kleines Modell (`src/models/props/<name>.glb`),
 in Metern, mit dem Ursprung in der Mitte der rechten Hand in Ruhelage (Arm
 hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
 
@@ -189,7 +189,7 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
   dessen Unterarm. Das Modell ist nur einmal geladen, auch wenn zwei Körper
   es nutzen.
 - **Wann es zu sehen ist,** entscheiden die `props` des Clips
-  (`humanoid_clips.json`). `figureProps()` in `entityRenderer.ts` gibt für
+  (`clips/humanoid.json`). `figureProps()` in `entityRenderer.ts` gibt für
   eine Figur die passenden Anhänge als Instanzen. Welt, Galerie und Symbole
   zeichnen sie mit. Ohne Clip keine - die Figur steht in Ruhelage.
 - **Zweihändig:** Das Zugmesser hängt an beiden Unterarmen, der Shader mischt
@@ -199,19 +199,19 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
 
 **Ein neues Werkzeug (z. B. den Bogen):**
 
-1. In Blender bauen: `src/models/prop_axe.glb` importieren, ändern und als
-   `src/models/prop_<name>.glb` exportieren. Der Ursprung ist die Mitte der
+1. In Blender bauen: `src/models/props/axe.glb` importieren, ändern und als
+   `src/models/props/<name>.glb` exportieren. Der Ursprung ist die Mitte der
    rechten Hand, die Objekte heißen `Arm.R.Lower.Tool…`.
 2. In `entityRenderer.ts`: je Körper eine Form in `SHAPE`, ein Eintrag in
    `MODELS` mit `body`, ein Bit in `PROP_BITS` (`clips.ts`) und ein Eintrag
    in `FIGURE_PROPS`. Die Teile heißen wie beim Beil (`Arm.R.Lower.Tool…`),
    damit der Shader sie am rechten Unterarm führt.
 3. Den Namen in `props` der Clips eintragen, die es brauchen
-   (`humanoid_clips.json`).
+   (`clips/humanoid.json`).
 
 ## So wird jetzt gearbeitet
 
-1. Blender: Datei → Import → glTF 2.0, z. B. `src/models/humanoid_clips.glb`.
+1. Blender: Datei → Import → glTF 2.0, z. B. `src/models/clips/humanoid.glb`.
    Jeder Clip ist eine Animation (Action) mit dem Namen wie im Spiel:
    `stand`, `walk`, `chop`, `pick`, `mow`, `carve`.
 2. Bearbeiten, dann Datei → Export → glTF 2.0 (glTF Binary) über dieselbe
@@ -221,7 +221,7 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
    die Tiere bis 0,9 cm. Vor dem ersten echten Export die
    Animations-Einstellungen so wählen, dass `npm run check:anim` wie vorher
    bleibt - das ist noch nicht herausgefunden (docs/OFFEN.md).
-3. Die Angaben je Clip stehen in `<name>_clips.json` unter `clips` und werden
+3. Die Angaben je Clip stehen in `clips/<name>.json` unter `clips` und werden
    von Hand gepflegt; `frames` und `duration` müssen zur Animation passen:
    - `props`: die Werkzeuge in der Hand (`axe`, `scythe`, `knife`)
    - `pose`: welche Pose des Spiels der Clip ersetzt (0 stehen, 1 gehen,
@@ -256,7 +256,7 @@ Alles, was sich bewegt, rechnet der Vertex-Shader in
   starres Skinning mit einem Knochen je Eckpunkt.
 - **Formeln statt Keyframes.** Die Gelenkwinkel folgen je Pose aus der Phase
   (`pose == 1` … `pose == 5`). Zwei Posen haben ihre Werte in JSON
-  ausgelagert: `mow_pose.json` und `carve_pose.json`.
+  ausgelagert: `poses/mow.json` und `poses/carve.json`.
 - **Vier Zahlen je Instanz.** `motion = [Blickrichtung, Phase, Pose, Ladung]`.
   Gebäude, Bäume und Felder deuten dieselben vier Zahlen je nach Art anders.
 
@@ -311,14 +311,14 @@ Bewegungen. Künftig gilt:
    und Clip (die Drehpunkte unterscheiden sich), die Clip-Daten gibt es aber
    nur einmal.
 2. **Eine Clip-Bibliothek je Skelett.** Die Clips liegen in eigenen Dateien
-   (`humanoid_clips.glb`, `quadruped_clips.glb`), getrennt von den Körpern
+   (`clips/humanoid.glb`, `clips/quadruped.glb`), getrennt von den Körpern
    (`villager_male.glb` …). Ein neuer Körper bekommt alle Clips sofort. Ein
    verbesserter Clip wirkt auf alle Körper.
 3. **Werkzeuge und Waffen als Anhänge.** Die Hände bekommen Sockel-Knochen
    (`hand.R`, `hand.L`). Beil, Spitzhacke, Hacke, Sense, Zugmesser, Speer und
    Bogen sind eigene kleine Modelle und werden je Tätigkeit angehängt. Welches
    Werkzeug ein Clip braucht, steht in `props` des Clips
-   (`humanoid_clips.json`). Beispiele:
+   (`clips/humanoid.json`). Beispiele:
    - `chop` mit Beil (Holz), Spitzhacke (Stein, Gold) oder Hacke (Pflügen):
      ein Clip, drei Werkzeuge.
    - Der fertige Bogen auf der Werkbank, im Gestell der Waffenkammer, im
@@ -362,8 +362,8 @@ prozedural, weil Richtung, Zufall oder Physik erst zur Laufzeit feststehen.
 | Tragen (Last wächst mit der Ladung) | Teil `Load`, skaliert mit `motion[3]` | Knochen `load`, Skalierung aus dem Instanzwert | 2 |
 | Hacken, Pflügen, Speerwurf | Pose 2, Beil (`P_TOOL`) | Clip `chop` (Beil sichtbar) | 2 |
 | Pflücken, Säen, Jäten, Zerlegen (kniend, der Rock staucht sich) | Pose 3, eigene Rock-Formel | Clip `pick`, Rock über Gewichte an den Oberschenkeln | 2 |
-| Mähen | Pose 4, `mow_pose.json`, Sense in Ruhelage zurückgerechnet | Clip `mow`, Sense an beiden Händen per IK | 2 |
-| Schnitzen | Pose 5, `carve_pose.json`, Zugmesser an beiden Unterarmen überblendet | Clip `carve`, Hände per IK auf dem Stab | 2 (Pilot in 1) |
+| Mähen | Pose 4, `poses/mow.json`, Sense in Ruhelage zurückgerechnet | Clip `mow`, Sense an beiden Händen per IK | 2 |
+| Schnitzen | Pose 5, `poses/carve.json`, Zugmesser an beiden Unterarmen überblendet | Clip `carve`, Hände per IK auf dem Stab | 2 (Pilot in 1) |
 | Werkzeug je Tätigkeit (Beil, Sense, Messer) | Teile im Shader auf einen Punkt gedrückt | Werkzeugknochen je Clip auf 0 skaliert | 2 |
 | Blickrichtung, Versatz je Figur | `motion[0]`, Phase + id | bleibt, Zeitversatz je Figur | – |
 
@@ -436,12 +436,12 @@ Umgesetzt wie unten beschrieben, mit diesen Abweichungen:
   Clip passt auf jeden Körper mit denselben Knochennamen: Mann 1,76 m, Frau
   1,72 m.
 - **Körper:** Die Körper sind `.glb` aus Blender
-  (`src/models/villager_*.glb`). Gewichte liest das Spiel daraus nicht. Der Shader leitet je Eckpunkt
+  (`src/models/villagers/*.glb`). Gewichte liest das Spiel daraus nicht. Der Shader leitet je Eckpunkt
   den Knochen aus der Teilnummer ab (`boneOf()`). Das Zugmesser verteilt er
   wie bisher auf beide Unterarme. Weiche Gewichte aus Blender folgen in
   Phase 2.
 - **Was glTF nicht trägt:** Clip-Länge und Werkzeuge stehen im Manifest
-  `<name>_clips.json`, das `tools/blender/export_clips.py` aus den Custom
+  `clips/<name>.json`, das `tools/blender/export_clips.py` aus den Custom
   Properties schreibt.
 - **Zeit:** Die Pose-Zeit wird zur Clip-Zeit. Beim Schnitzen gilt
   (Phase − 7,854) / 6. So beginnt jeder Zug wie bei der Formel, und der Ton aus
@@ -502,7 +502,7 @@ Bildrate mit 500 Dorfbewohnern gleich bleibt.
 8. **Weg damit - erledigt:** die Posen 0–5 im Shader und die Uniforms, die
    nur sie brauchten (`uShoulder`, `uElbow`, `uStride`). `uHip`, `uKnee`,
    `uArm` und `uLoadAnchor` bleiben (Rock, Knien, Zugmesser, Last).
-   `mow_pose.json` und `carve_pose.json` bleiben für den Export und
+   `poses/mow.json` und `poses/carve.json` bleiben für den Export und
    `check:anim`. Die Werkzeuge sind Anhänge, `villagers.mjs` gibt es nicht
    mehr (docs/BLENDER.md).
 

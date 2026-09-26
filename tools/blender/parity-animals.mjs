@@ -1,4 +1,4 @@
-// Vergleicht die Clips der Tiere aus Blender (src/models/quadruped_clips.glb +
+// Vergleicht die Clips der Tiere aus Blender (src/models/clips/quadruped.glb +
 // .json) mit der Formel des Shaders (Zweig "beast" in
 // src/gl/entityRenderer.ts, hier Zeile für Zeile nachgebaut) - für jede Art mit
 // jedem ihrer Clips, an den vier Hufen bzw. Pfoten, am Maul und vorn und
@@ -26,8 +26,8 @@ execFileSync('npx', ['tsc', `${root}src/gl/clips.ts`, '--ignoreConfig', '--outDi
 writeFileSync(`${out}/package.json`, '{"type":"module"}\n');
 const { loadClips, bakeClip, QUADRUPED, QUADRUPED_BONE } = await import(`${out}/clips.js`);
 
-const glb = readFileSync(`${root}src/models/quadruped_clips.glb`);
-const manifest = JSON.parse(readFileSync(`${root}src/models/quadruped_clips.json`, 'utf8'));
+const glb = readFileSync(`${root}src/models/clips/quadruped.glb`);
+const manifest = JSON.parse(readFileSync(`${root}src/models/clips/quadruped.json`, 'utf8'));
 const clips = loadClips(`data:model/gltf-binary;base64,${glb.toString('base64')}`, manifest, QUADRUPED);
 const bones = QUADRUPED.bones.length;
 
@@ -87,7 +87,7 @@ const lerp3 = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 
 let worstAll = 0;
 for (const kind of SPECIES) {
-  const tris = parseObj(readModel(kind).obj);
+  const tris = parseObj(readModel(`animals/${kind}`).obj);
   const J = measureAnimal(tris);
   const local = ([x, y, z]) => [z / J.H, x / J.H, (y - J.minY) / J.H];
   // Messpunkte: je Bein der tiefste Punkt, am Kopf der vorderste (Maul), am

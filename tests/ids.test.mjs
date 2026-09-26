@@ -24,13 +24,13 @@ test('keine Knochen, Clips oder Posen der Clip-Bibliotheken gehen verloren', () 
 test('der Vergleich erkennt Verluste', () => {
   // Gegenprobe: ein Name, ein Knochen, eine Pose weg - alles muss auffallen.
   const broken = structuredClone(now);
-  broken.models.armory = broken.models.armory.filter((n) => n !== 'Stock.42');
-  broken.models.house = broken.models.house.filter((n) => n !== 'Entry');
+  broken.models['buildings/armory'] = broken.models['buildings/armory'].filter((n) => n !== 'Stock.42');
+  broken.models['buildings/house'] = broken.models['buildings/house'].filter((n) => n !== 'Entry');
   broken.clips.humanoid.bones = broken.clips.humanoid.bones.filter((b) => b !== 'forearm.R');
   delete broken.clips.humanoid.clips.carve.pose;
   broken.clips.quadruped.clips.hop.species = [];
   const lost = lostIds(now, broken).join('\n');
-  for (const text of ['armory: 1 Namen weg - Stock.42', 'house: 1 Namen weg - Entry', 'Knochen weg - forearm.R', 'Clip carve ersetzt Pose keine statt 5', 'Clip hop gilt nicht mehr für hare']) {
+  for (const text of ['buildings/armory: 1 Namen weg - Stock.42', 'buildings/house: 1 Namen weg - Entry', 'Knochen weg - forearm.R', 'Clip carve ersetzt Pose keine statt 5', 'Clip hop gilt nicht mehr für hare']) {
     assert.ok(lost.includes(text), `nicht erkannt: ${text}\n${lost}`);
   }
 });
@@ -39,6 +39,6 @@ test('Neues ist kein Verlust', (t) => {
   const added = newIds(before, now);
   if (added.length) t.diagnostic(`neu seit dem festgeschriebenen Stand (npm run test:update-ids): ${added.join(', ')}`);
   const grown = structuredClone(now);
-  grown.models.house.push('Lantern.Neu');
+  grown.models['buildings/house'].push('Lantern.Neu');
   assert.deepEqual(lostIds(now, grown), []);
 });

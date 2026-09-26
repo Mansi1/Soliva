@@ -15,7 +15,7 @@ Was danach noch zu tun bleibt, grob nach Wichtigkeit.
   (`lsystem-blattebenen`, eigener Worktree unter `.agents/worktree`) ändert
   ebenfalls `tools/README.md`, dessen Anfang hier neu geschrieben wurde.
 - **Clips in Blender bearbeiten - Export-Einstellungen finden.** Die
-  Clip-Bibliotheken (`src/models/*_clips.glb`) sind seit dem 25.09.2026 die
+  Clip-Bibliotheken (`src/models/clips/*.glb`) sind seit dem 25.09.2026 die
   Quelle. Zur Probe durch Blender (Import, sofort Export mit den Vorgaben)
   wichen die Hände danach bis 7 cm von der Formel ab (`chop`, vorher
   0,5 cm), die Tiere bis 0,9 cm (vorher 0,01 cm) - Blender rechnet die
@@ -60,7 +60,7 @@ in docs/ANIMATION.md unter „Stand“ festhalten.
 2. **Schichten** (`walk` für die Beine, `carry` oder `aim` für die Arme):
    Das baut auf Schritt 1 auf und nutzt denselben zweiten Clip, gewichtet je
    Knochen statt je Figur. Erster Fall: Tragen beim Gehen.
-3. **Clips verkleinern:** `humanoid_clips.glb` hat 1,2 MB, vor allem wegen
+3. **Clips verkleinern:** `clips/humanoid.glb` hat 1,2 MB, vor allem wegen
    `stand` (34 s Schleife, jedes Bild voll gespeichert). Die Schleife soll
    kürzer werden oder weniger Bilder haben. `npm run check:anim` muss dabei
    halten.

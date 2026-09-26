@@ -7,8 +7,8 @@
 import { readFileSync } from 'node:fs';
 
 const models = new URL('../../src/models/', import.meta.url).pathname;
-const MOW = JSON.parse(readFileSync(`${models}mow_pose.json`, 'utf8'));
-const CARVE = JSON.parse(readFileSync(`${models}carve_pose.json`, 'utf8'));
+const MOW = JSON.parse(readFileSync(`${models}poses/mow.json`, 'utf8'));
+const CARVE = JSON.parse(readFileSync(`${models}poses/carve.json`, 'utf8'));
 
 const mix = (a, b, t) => a + (b - a) * t;
 const smoothstep = (a, b, x) => {

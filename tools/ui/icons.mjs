@@ -9,8 +9,8 @@ import { readModel } from '../models/glb.mjs';
 const out = process.argv[2] ?? new URL('../../src/icons', import.meta.url).pathname;
 const load = (name) => readModel(name);
 const data = {
-  wood: load('tree_oak'), berries: load('berry_bush_1'), gold: load('gold_1'), stone: load('stone_1'),
-  male: load('villager_male'), female: load('villager_female'),
+  wood: load('trees/oak'), berries: load('resources/berry_bush_1'), gold: load('resources/gold_1'), stone: load('resources/stone_1'),
+  male: load('villagers/male'), female: load('villagers/female'),
 };
 const page = readFileSync(new URL('./icons.html', import.meta.url), 'utf8')
   .replace('<script src="icondata.js"></script>', `<script>const D=${JSON.stringify(data)};</script>`);

@@ -12,30 +12,29 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 ## Wo was liegt
 
 ```
-src/models/                           Modelle - je Objekt eine .glb, eingecheckt
-  villager_male, villager_female
-  town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-  mill(_2.._4), bowyer, armory
-  tree_spruce, tree_pine, tree_oak(_young, _old), tree_birch(_2, _3),
-  tree_maple, tree_poplar
-  berry_bush_1..4, stone_1..3, gold_1..3
-  deer, hare, cow, sheep, goat, boar
-  prop_axe, prop_knife, prop_scythe_male/_female, bow, rally_flag, marker_arrow
-  field_stake, field_cord, field_wheat_leaf,
-  field_wheat_stalk(_light, _dark), field_corn_1, field_corn_2,
-  field_tomato, field_potato, field_hop
-  humanoid, quadruped, mill, flag _clips.glb + .json
-                                      Bewegungen - je Skelett eine Bibliothek
+src/models/                 Modelle - je Objekt eine .glb, eingecheckt
+  villagers/                male, female
+  buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
+                            mill(_2.._4), bowyer, armory
+  trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
+  resources/                berry_bush_1..4, stone_1..3, gold_1..3
+  animals/                  deer, hare, cow, sheep, goat, boar
+  props/                    axe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
+  fields/                   stake, cord, wheat_leaf, wheat_stalk(_light, _dark),
+                            corn_1, corn_2, tomato, potato, hop
+  clips/                    humanoid, quadruped, mill, flag - je .glb + .json
+                            Bewegungen - je Skelett eine Bibliothek
+  poses/                    mow.json, carve.json - Posen für tools/export/poses.mjs
 ```
 
-Das Spiel liest ein Modell mit `import house from '../models/house.glb?model'`.
+Das Spiel liest ein Modell mit `import house from '../models/buildings/house.glb?model'`.
 Beim Bauen wandelt `vite.config.ts` die Datei in OBJ- und MTL-Text
 (`tools/models/glb.mjs`) - damit arbeiten Spiel und Werkzeuge weiter; in Node
-liefert `readModel('house')` dasselbe.
+liefert `readModel('buildings/house')` dasselbe.
 
 ## Ein Modell bearbeiten
 
-1. Blender: Datei → Import → glTF 2.0, z. B. `src/models/house.glb`
+1. Blender: Datei → Import → glTF 2.0, z. B. `src/models/buildings/house.glb`
    (Einstellungen wie vorgegeben).
 2. Bearbeiten: Objekte verschieben, drehen, skalieren, im Edit Mode formen,
    neue Objekte anlegen, Materialfarben ändern. Lage, Drehung und Größe
@@ -121,7 +120,7 @@ früher verloren geht (`tests/ids.snapshot.json`). Die Regeln stehen in
 ## Ein neues Modell
 
 1. In Blender bauen - neu oder aus einem importierten Modell als Vorlage -
-   und als `src/models/<name>.glb` exportieren (glTF Binary).
+   und als `src/models/<ordner>/<name>.glb` exportieren (glTF Binary).
 2. Im Spiel eintragen: `import bakeryModel from '../models/bakery.glb?model'`,
    Form in `SHAPE` und Eintrag in `MODELS` (`src/gl/entityRenderer.ts`), bei
    einem Gebäude dazu seine Klasse in `src/world/building/`.
@@ -140,21 +139,21 @@ Unterschied. Die Skripte und `.blend`-Dateien stehen in der Git-Geschichte.
 ## Felder
 
 Ein Feld sind Tausende Pflanzen - als eine Blender-Datei wären das 20 000
-Objekte. In `src/models/` liegen deshalb die **Teile** (`field_*.glb`), das
+Objekte. In `src/models/` liegen deshalb die **Teile** (`fields/*.glb`), das
 Spiel stellt sie beim Start auf (`tools/models/farmsGen.mjs`): wo jede
 Pflanze steht, wie hoch, geneigt und gedreht - mit denselben Zufallszahlen
 wie früher, die Felder sehen aus wie vorher.
 
 | Datei | wird im Spiel |
 |---|---|
-| `field_stake` | Pflock am Rand, so wie er ist |
-| `field_cord` | Schnur - 1 m lang entlang x, gestreckt von Pflock zu Pflock |
-| `field_wheat_leaf` | Blatt am Boden - 1 m nach oben, gestreckt auf 0,35–0,6 m und schräg gestellt |
-| `field_wheat_stalk`, `_light`, `_dark` | Halm mit Ähre (drei Farben: 30 %, 55 %, 15 %) - Halm 1 m, gestreckt auf 0,8–1,05 m und geneigt, die Ähre sitzt darüber |
-| `field_corn_1`, `field_corn_2` | Maispflanze mit einem bzw. zwei Kolben, 2,2 m - gedreht; was über 2 m liegt (Stängelspitze, Rispe), wächst mit der Höhe der Pflanze (2,0–2,45 m) |
-| `field_tomato` | Tomatenstaude am Holzpfahl mit drei Rispen, 1,45 m - gedreht, vier je Pflanzplatz |
-| `field_potato` | Kartoffelstaude mit weißen Blüten, 0,5 m - gedreht, sechs je Pflanzplatz |
-| `field_hop` | Hopfenrebe, die sich an einem Draht mit Pfahl hochwindet, 3,2 m, mit Dolden - gedreht, zwei je Pflanzplatz |
+| `fields/stake` | Pflock am Rand, so wie er ist |
+| `fields/cord` | Schnur - 1 m lang entlang x, gestreckt von Pflock zu Pflock |
+| `fields/wheat_leaf` | Blatt am Boden - 1 m nach oben, gestreckt auf 0,35–0,6 m und schräg gestellt |
+| `fields/wheat_stalk`, `_light`, `_dark` | Halm mit Ähre (drei Farben: 30 %, 55 %, 15 %) - Halm 1 m, gestreckt auf 0,8–1,05 m und geneigt, die Ähre sitzt darüber |
+| `fields/corn_1`, `fields/corn_2` | Maispflanze mit einem bzw. zwei Kolben, 2,2 m - gedreht; was über 2 m liegt (Stängelspitze, Rispe), wächst mit der Höhe der Pflanze (2,0–2,45 m) |
+| `fields/tomato` | Tomatenstaude am Holzpfahl mit drei Rispen, 1,45 m - gedreht, vier je Pflanzplatz |
+| `fields/potato` | Kartoffelstaude mit weißen Blüten, 0,5 m - gedreht, sechs je Pflanzplatz |
+| `fields/hop` | Hopfenrebe, die sich an einem Draht mit Pfahl hochwindet, 3,2 m, mit Dolden - gedreht, zwei je Pflanzplatz |
 
 Halm, Blatt und Schnur werden entlang ihrer Achse gestreckt, quer dazu
 behalten sie ihre Dicke. Wer eine Maispflanze in Blender ändert: Blätter und
