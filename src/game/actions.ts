@@ -63,14 +63,19 @@ export class PlayerActions {
 
 
   /**
-   * Linksklick ohne Ziehen: Dorfbewohner, sonst Gebäude, sonst Vorkommen, sonst
-   * nichts. Mit Umschalt (`add`) kommt es zur Auswahl dazu oder fällt heraus;
+   * Linksklick ohne Ziehen: Dorfbewohner, sonst Tier, Gebäude, Vorkommen,
+   * Blume, sonst nichts. Mit Umschalt (`add`) kommt es zur Auswahl dazu oder fällt heraus;
    * ein Doppelklick (`same`) auf ein Gebäude wählt alle gleichartigen in der Nähe.
    */
   clickSelect(px: number, py: number, add: boolean, same = false) {
     const villager = this.picker.villager(px, py);
-    this.selection.resource = null;
-    if (villager) {
+    const animal = villager ? undefined : this.picker.animal(px, py);
+    this.selection.clearSingle();
+    if (animal) {
+      this.selection.clearBuildings();
+      this.selection.villagers.clear();
+      this.selection.animal = animal.id;
+    } else if (villager) {
       this.selection.clearBuildings();
       if (!add) this.selection.villagers.clear();
       if (add && this.selection.villagers.has(villager.id)) this.selection.villagers.delete(villager.id);
@@ -97,6 +102,7 @@ export class PlayerActions {
       } else if (!add) {
         this.selection.clearBuildings();
         if (this.world.resourceInfo(x, y)) this.selection.resource = { x, y };
+        else this.selection.flower = this.picker.flower(px, py) ?? null;
       }
     }
     this.ui.refreshSelection();
@@ -108,7 +114,7 @@ export class PlayerActions {
     const [top, bottom] = y0 < y1 ? [y0, y1] : [y1, y0];
     if (!add) this.selection.villagers.clear();
     this.selection.clearBuildings();
-    this.selection.resource = null;
+    this.selection.clearSingle();
     for (const v of this.world.villagers) {
       const s = this.picker.villagerScreen(v);
       if (s.x >= left && s.x <= right && s.y >= top && s.y <= bottom) this.selection.villagers.add(v.id);
@@ -209,7 +215,7 @@ export class PlayerActions {
       return;
     }
     this.selection.clearBuildings();
-    this.selection.resource = null;
+    this.selection.clearSingle();
     let target: { x: number; y: number };
     if (all) {
       this.selection.villagers.clear();
@@ -249,7 +255,7 @@ export class PlayerActions {
     const next = centers[(current + 1) % centers.length];
 
     this.selection.villagers.clear();
-    this.selection.resource = null;
+    this.selection.clearSingle();
     this.selection.selectBuildings([this.world.anchorOf(next)], this.world.anchorOf(next));
     // Mitte des Gebäudes in die Bildmitte - mit seiner Geländehöhe, sonst
     // säße es auf einem Hügel ein gutes Stück über der Mitte.

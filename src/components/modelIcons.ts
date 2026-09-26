@@ -6,7 +6,7 @@
 // einmal; der Ausschnitt um das, was gezeichnet wurde, wird als Bild-URL
 // zurückgegeben. Die Dorfbewohner tragen die Spielerfarbe.
 
-import { ANIMAL_POSE, BUILDING_HEADING, EntityRenderer, POSE, SHAPE, figureProps, type EntityInstance } from '../gl/entityRenderer';
+import { ANIMAL_POSE, BUILDING_HEADING, EntityRenderer, FLOWERS, POSE, SHAPE, figureProps, type EntityInstance } from '../gl/entityRenderer';
 import { groundToWorld, snapCamera } from '../gl/iso';
 import { ANIMALS, BUILDINGS, type AnimalKind, type BuildingType, type DepositType, type ResourceKind } from '../world/catalog';
 import { cropIcon } from './cropIcons';
@@ -178,6 +178,12 @@ export function animalIcon(kind: AnimalKind, dead = false): string {
     x: -0.5, y: -0.5, size: def.height, color: [0, 0, 0], shape: def.shape, alpha: 1,
     motion: [-Math.PI / 4, 0, dead ? ANIMAL_POSE.dead : ANIMAL_POSE.graze, 0],
   }]);
+}
+
+/** Blume der Art `kind` (Index in FLOWER_KINDS), in ihrer Blütenfarbe. */
+export function flowerIcon(kind: number, color: RGB): string {
+  return cached(`flower:${kind}`, [0, 0, 0], () =>
+    [{ x: -0.5, y: -0.5, size: 0.6, color, shape: FLOWERS[kind], alpha: 1, motion: [0.4, 0, 0, 1] }]);
 }
 
 /** Rohstoff im Vorrat als Symbol - z. B. Bogen mit Pfeil im Panel der Waffenkammer. */

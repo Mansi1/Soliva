@@ -11,9 +11,9 @@ import './SelectionPanel.css';
 import './buttons.css';
 import { formatDuration } from '../format';
 import {
-  CROP_ORDER, CROPS, player, type BuildingType, type CropType, type DepositType,
+  CROP_ORDER, CROPS, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
 } from '../world/catalog';
-import { buildingIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
+import { animalIcon, buildingIcon, flowerIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
 
 /** Werkstatt fürs Panel: wer dort arbeitet (fehlt, wenn niemand), was er tut, Fortschritt des Bogens. */
@@ -99,6 +99,20 @@ export type SelectionView =
       gatherers: number;
       max: number;
     }
+  | {
+      kind: 'animal';
+      type: AnimalKind;
+      label: string;
+      dead: boolean;
+      /** Was es gerade tut: äst, zieht umher, flieht, erlegt. */
+      doing: string;
+      hp: number;
+      maxHp: number;
+      /** Erlegt: Nahrung am Kadaver. */
+      food: number;
+      maxFood: number;
+    }
+  | { kind: 'flower'; name: string; flower: number; color: [number, number, number] }
   | { kind: 'empty' }
   | {
       kind: 'villagers';
@@ -282,6 +296,40 @@ function Resource({ v }: { v: Extract<SelectionView, { kind: 'resource' }> }) {
   );
 }
 
+function Animal({ v }: { v: Extract<SelectionView, { kind: 'animal' }> }) {
+  return (
+    <>
+      <div class="sel-title">{v.label} <span class="muted">{v.doing}</span></div>
+      <div class="sel-body">
+        <Portrait src={animalIcon(v.type, v.dead)} hp={v.dead ? undefined : v.hp} maxHp={v.maxHp} />
+        <div class="sel-info">
+          {v.dead ? (
+            <>
+              <div>Nahrung <b>{Math.ceil(v.food)}/{v.maxFood}</b></div>
+              <Bar percent={(v.food / v.maxFood) * 100} />
+            </>
+          ) : <div>Gibt erlegt <b>{v.maxFood}</b> Nahrung</div>}
+          <div class="muted">
+            Wähle Dorfbewohner und klicke mit rechts darauf, um es {v.dead ? 'zu zerlegen' : 'zu jagen'}.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Flower({ v }: { v: Extract<SelectionView, { kind: 'flower' }> }) {
+  return (
+    <>
+      <div class="sel-title">{v.name} <span class="muted">Blume</span></div>
+      <div class="sel-body">
+        <Portrait src={flowerIcon(v.flower, v.color)} />
+        <div class="sel-info"><div class="muted">Blüht auf der Wiese - schön anzusehen, sonst zu nichts nütze.</div></div>
+      </div>
+    </>
+  );
+}
+
 function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) {
   return (
     <>
@@ -310,6 +358,8 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
     case 'buildings': return <Buildings v={view} />;
     case 'building': return <Building v={view} />;
     case 'resource': return <Resource v={view} />;
+    case 'animal': return <Animal v={view} />;
+    case 'flower': return <Flower v={view} />;
     case 'empty':
       return <><div class="sel-title">Leer</div><div class="muted">Hier ist nichts mehr zu holen.</div></>;
     case 'villagers': return <Villagers v={view} />;

@@ -310,7 +310,10 @@ const ground = new Ground(mapGen, world, renderer, camera);
 world.groundAt = (x, y) => ground.groundAt(x, y);
 
 /** Was unter dem Zeiger liegt: Welt-Punkt, Tile, Dorfbewohner, Vorkommen (game/Picker.ts). */
-const picker = new Picker(world, resources, camera, ground, () => simulation.blend);
+/** Tierarten weit draußen ausgeblendet (Einstellung animalsBelow). */
+const hideAnimal = (kind: string) => camera.tileSize < (settings.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT);
+const picker = new Picker(world, resources, camera, ground, () => simulation.blend, flowers,
+  { animal: (kind) => !hideAnimal(kind), flowers: () => renderer.flowerObjects });
 
 /** Was der Spieler tut: auswählen, Befehle, bauen, ausbilden, abreißen (game/actions.ts). */
 const actions = new PlayerActions({ world, camera, selection, placement, picker, sound }, {
@@ -746,8 +749,7 @@ function collectOverlay(blend: number) {
     flowers.instances(visible, world, overlay);
   }
   const hovered = pointer.tile ? world.at(pointer.tile.x, pointer.tile.y)?.anchor : undefined;
-  worldInstances(world, visible, overlay, blend, selection, hovered,
-    (kind) => camera.tileSize < (settings.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT));
+  worldInstances(world, visible, overlay, blend, selection, hovered, hideAnimal);
   selectionOverlay(world, selection, blend, overlay);
   const tile = pointer.tile;
   if (placement.placingType !== null && tile) {
