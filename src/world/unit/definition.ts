@@ -6,6 +6,8 @@ export interface AnimalDefinition<T extends string = string> {
   /** Kennung der Art, gleich der Klasse in snake_case: 'deer' ↔ Deer. */
   type: T;
   label: string;
+  /** Was es für die Natur leistet - fürs Auswahl-Panel. */
+  info: string;
   /** Modell (SHAPE) */
   shape: number;
   /** Höhe in Tiles (1 Tile = 5 m) - der Hase etwas größer als echt, sonst sähe man ihn kaum. */

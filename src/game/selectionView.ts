@@ -171,7 +171,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     }
     const def = animal.definition;
     return {
-      kind: 'animal', type: animal.kind, label: def.label, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
+      kind: 'animal', type: animal.kind, label: def.label, info: def.info, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
       hp: animal.hp, maxHp: def.hp, food: animal.food, maxFood: def.food,
     };
   }

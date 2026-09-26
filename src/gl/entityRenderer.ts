@@ -630,7 +630,7 @@ export interface EntityInstance {
    * Die Welt setzt es nur für Ausgewähltes, wie in AoE2.
    */
   health?: number;
-  /** Nahrung 0..1 - gesetzt (nur mit `health`), kommt unter den Lebensbalken ein Nahrungsbalken mit Fleisch davor. */
+  /** Nahrung 0..1 - gesetzt (nur mit `health`), kommt direkt unter den Lebensbalken ein Nahrungsbalken. */
   food?: number;
 }
 
@@ -1804,37 +1804,10 @@ void main() {
     float health = vRoof;
     vec2 size = vec2(vParams.z, vWorld.z);
     vec2 px = vWorld.xy * size;
-    if (vColor.r > 0.5) {
-      // Nahrungsbalken: links ein Stueck Fleisch (Keule mit Knochen) im
-      // Quadrat der Hoehe, rechts daneben der Balken in Gold, halb so hoch.
-      float icon = size.y;
-      if (px.x < icon) {
-        vec2 q = px / icon;
-        vec2 m = q - vec2(0.4);
-        m = vec2(m.x + m.y, m.y - m.x) * 0.7071;
-        float meat = (length(m / vec2(0.4, 0.28)) - 1.0) * 0.28;
-        vec2 b = q - vec2(0.55);
-        float t = clamp(dot(b, vec2(0.7071)), 0.0, 0.3);
-        float bone = min(length(b - vec2(0.7071) * t) - 0.07,
-            min(length(q - vec2(0.8, 0.95)) - 0.09, length(q - vec2(0.95, 0.8)) - 0.09));
-        float d = min(meat, bone);
-        if (d > 0.0) discard;
-        vec3 c = d > -0.07 ? vec3(0.05) : meat < bone ? vec3(0.72, 0.24, 0.16) : vec3(0.95, 0.91, 0.82);
-        fragColor = vec4(c, 1.0);
-        return;
-      }
-      vec2 bs = vec2(size.x - icon * 2.1, size.y * 0.5);
-      vec2 bp = vec2(px.x - icon * 1.05, px.y - size.y * 0.25);
-      if (bp.x < 0.0 || bp.x > bs.x || bp.y < 0.0 || bp.y > bs.y) discard;
-      float bEdge = min(min(bp.x, bs.x - bp.x), min(bp.y, bs.y - bp.y));
-      float bBorder = max(1.0, bs.y * 0.2);
-      vec3 bColor = bEdge < bBorder ? vec3(0.05) : bp.x <= health * bs.x ? vec3(0.93, 0.72, 0.2) : vec3(0.12);
-      fragColor = vec4(bColor, bEdge < bBorder ? 0.9 : 1.0);
-      return;
-    }
     float edge = min(min(px.x, size.x - px.x), min(px.y, size.y - px.y));
     float border = max(1.0, size.y * 0.2);
-    vec3 fill = health > 0.5
+    // Nahrungsbalken (Rot 1): Gold statt Gruen bis Rot.
+    vec3 fill = vColor.r > 0.5 ? vec3(0.93, 0.72, 0.2) : health > 0.5
         ? mix(vec3(0.95, 0.85, 0.2), vec3(0.3, 0.85, 0.35), (health - 0.5) * 2.0)
         : mix(vec3(0.9, 0.2, 0.15), vec3(0.95, 0.85, 0.2), health * 2.0);
     vec3 color = edge < border ? vec3(0.05) : vWorld.x <= health ? fill : vec3(0.12);
@@ -3720,8 +3693,8 @@ export class EntityRenderer {
 
   /**
    * Ein Lebensbalken für Instanz `e`: verankert über ihrem höchsten Punkt.
-   * Mit `food` darunter der Nahrungsbalken, links davor das Fleisch - der
-   * Lebensbalken rückt dann um dessen Höhe nach oben.
+   * Mit `food` direkt darunter der Nahrungsbalken - der Lebensbalken rückt
+   * dann um eine Balkenhöhe nach oben.
    */
   private writeBar(
       d: Float32Array, o: number, e: EntityInstance,
@@ -3740,8 +3713,6 @@ export class EntityRenderer {
       ? clamp(pixelsPerTile * 0.6, 22 * pixelRatio, 36 * pixelRatio)
       : clamp(size * pixelsPerTile * 0.8, 40 * pixelRatio, 110 * pixelRatio);
     const height = (figure ? 4 : 6) * pixelRatio;
-    // Nahrung: doppelt so hoch fürs Fleisch, der Balken selbst mittig darin.
-    const foodHeight = 2 * height;
 
     d.fill(0, o, o + STRIDE);
     d[o] = e.x;
@@ -3750,12 +3721,10 @@ export class EntityRenderer {
     d[o + 2] = food ? 1 : 0;
     d[o + 5] = SHAPE.healthBar;
     d[o + 6] = 1;
-    // Das Rechteck liegt mittig: links das Fleisch, rechts ebenso viel frei -
-    // so steht der Balken bündig unter dem Lebensbalken.
-    d[o + 7] = food ? width + 2.1 * foodHeight : width;
+    d[o + 7] = width;
     d[o + 8] = Math.max(0, Math.min(1, (food ? e.food : e.health) ?? 1));
     d[o + 9] = top;
-    d[o + 10] = food ? foodHeight : height;
-    d[o + 11] = 5 * pixelRatio + (!food && e.food !== undefined ? 0.75 * foodHeight + 2 * pixelRatio : 0);
+    d[o + 10] = height;
+    d[o + 11] = 5 * pixelRatio + (!food && e.food !== undefined ? height : 0);
   }
 }
