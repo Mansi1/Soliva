@@ -112,7 +112,7 @@ export type SelectionView =
       food: number;
       maxFood: number;
     }
-  | { kind: 'flower'; name: string; flower: number; color: [number, number, number] }
+  | { kind: 'flower'; name: string; latin: string; info: string; flower: number; color: [number, number, number] }
   | { kind: 'empty' }
   | {
       kind: 'villagers';
@@ -321,10 +321,13 @@ function Animal({ v }: { v: Extract<SelectionView, { kind: 'animal' }> }) {
 function Flower({ v }: { v: Extract<SelectionView, { kind: 'flower' }> }) {
   return (
     <>
-      <div class="sel-title">{v.name} <span class="muted">Blume</span></div>
+      <div class="sel-title">{v.name} <span class="muted">{v.latin}</span></div>
       <div class="sel-body">
         <Portrait src={flowerIcon(v.flower, v.color)} />
-        <div class="sel-info"><div class="muted">Blüht auf der Wiese - schön anzusehen, sonst zu nichts nütze.</div></div>
+        <div class="sel-info">
+          <div>{v.info}</div>
+          <div class="muted">Wildblume - schön anzusehen, sammeln kann man sie nicht.</div>
+        </div>
       </div>
     </>
   );

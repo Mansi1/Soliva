@@ -14,6 +14,9 @@ type RGB01 = [number, number, number];
 
 export interface FlowerKind {
   name: string;
+  /** Wissenschaftlicher Name und ein paar Sätze fürs Auswahl-Panel. */
+  latin: string;
+  info: string;
   /** Zahl der Blütenblätter - 0: Klee, ein rundes Köpfchen. */
   petals: number;
   petal: RGB01;
@@ -24,11 +27,11 @@ export interface FlowerKind {
 
 /** Gänseblümchen, Butterblume, Mohn, Kornblume, Klee - Reihenfolge und Farben wie im Gelände-Shader. */
 export const FLOWER_KINDS: readonly FlowerKind[] = [
-  { name: 'Gänseblümchen', petals: 10, petal: [0.97, 0.97, 0.94], heart: [0.98, 0.78, 0.15], heartSize: 0.32 },
-  { name: 'Butterblume', petals: 5, petal: [1.0, 0.86, 0.12], heart: [0.85, 0.62, 0.08], heartSize: 0.22 },
-  { name: 'Mohn', petals: 4, petal: [0.9, 0.16, 0.12], heart: [0.12, 0.08, 0.08], heartSize: 0.26 },
-  { name: 'Kornblume', petals: 8, petal: [0.3, 0.45, 0.95], heart: [0.2, 0.2, 0.55], heartSize: 0.2 },
-  { name: 'Klee', petals: 0, petal: [0.92, 0.5, 0.72], heart: [0.8, 0.35, 0.58], heartSize: 0 },
+  { name: 'Gänseblümchen', latin: 'Bellis perennis', info: 'Blüht fast das ganze Jahr und schließt sich nachts und bei Regen. Die Blüte ist eigentlich ein Körbchen aus Hunderten winziger Einzelblüten.', petals: 10, petal: [0.97, 0.97, 0.94], heart: [0.98, 0.78, 0.15], heartSize: 0.32 },
+  { name: 'Butterblume', latin: 'Ranunculus acris', info: 'Der Scharfe Hahnenfuß glänzt, als wäre er lackiert. Frisch ist er giftig, darum lässt das Vieh ihn stehen - im Heu wird er harmlos.', petals: 5, petal: [1.0, 0.86, 0.12], heart: [0.85, 0.62, 0.08], heartSize: 0.22 },
+  { name: 'Mohn', latin: 'Papaver rhoeas', info: 'Klatschmohn wächst gern am Acker. Eine Blüte hält nur ein, zwei Tage, doch seine Samen bleiben Jahrzehnte im Boden keimfähig.', petals: 4, petal: [0.9, 0.16, 0.12], heart: [0.12, 0.08, 0.08], heartSize: 0.26 },
+  { name: 'Kornblume', latin: 'Centaurea cyanus', info: 'Kam mit dem Getreide und blüht zwischen den Halmen. Ihr Blau ist unter den Wiesenblumen selten - Bienen und Hummeln fliegen darauf.', petals: 8, petal: [0.3, 0.45, 0.95], heart: [0.2, 0.2, 0.55], heartSize: 0.2 },
+  { name: 'Klee', latin: 'Trifolium pratense', info: 'Rotklee holt Stickstoff aus der Luft in den Boden und macht ihn fruchtbar. Gutes Futter fürs Vieh, und Hummeln lieben den Nektar.', petals: 0, petal: [0.92, 0.5, 0.72], heart: [0.8, 0.35, 0.58], heartSize: 0 },
 ];
 
 /** Höhe der Blüte über dem Boden (Modell-Einheiten, Breite der Blätter = 1). */

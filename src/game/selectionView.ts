@@ -177,7 +177,8 @@ export function selectionView(world: World, selection: Selection, resources: Res
   }
   if (selection.flower) {
     const kind = FLOWERS.indexOf(selection.flower.shape);
-    return { kind: 'flower', name: FLOWER_KINDS[kind].name, flower: kind, color: selection.flower.color };
+    const { name, latin, info } = FLOWER_KINDS[kind];
+    return { kind: 'flower', name, latin, info, flower: kind, color: selection.flower.color };
   }
   if (selection.villagers.size > 0) {
     const chosen = selection.chosenVillagers();
