@@ -210,7 +210,7 @@ export class GameUi {
    * Mauszeiger je nach Lage: im Baumodus ein Feld-Zeiger, mit ausgewähltem
    * Hauptgebäude die Sammelpunkt-Fahne, mit ausgewählten Dorfbewohnern über
    * einem Vorkommen das Werkzeug - Axt für Holz, Spitzhacke für Stein und
-   * Gold, Beeren für Beeren. Sonst das Fadenkreuz.
+   * Gold, Beeren für Beeren. Sonst über Auswählbarem die Hand, sonst das Fadenkreuz.
    */
   updateCursor() {
     const { world, selection, placement, pointer, canvas } = this.state;
@@ -228,6 +228,7 @@ export class GameUi {
       const found = world.remainingAt(tx, ty);
       if (found.type && found.amount > 0 && !world.at(tx, ty)) cursor = GATHER_CURSOR[found.type];
     }
+    if (cursor === 'crosshair' && pointer.selectable) cursor = 'pointer';
     if (canvas.style.cursor !== cursor) canvas.style.cursor = cursor;
   }
 }
