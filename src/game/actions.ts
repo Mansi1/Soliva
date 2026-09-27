@@ -8,6 +8,7 @@
 import type { Sound } from '../audio';
 import { CROPS, type BuildingType, type CropType } from '../world/catalog';
 import type { UnitProducer } from '../world/building';
+import { workplace } from '../world/villagers';
 import type { World } from '../world/world';
 import type { Camera } from './Camera';
 import type { Picker } from './Picker';
@@ -111,7 +112,7 @@ export class PlayerActions {
     this.ui.refreshSelection();
   }
 
-  /** Aufziehen eines Rechtecks: alle Dorfbewohner darin. */
+  /** Aufziehen eines Rechtecks: alle Dorfbewohner darin - ohne Werkstatt-Arbeiter, sie gehorchen nicht. */
   boxSelect(x0: number, y0: number, x1: number, y1: number, add: boolean) {
     const [left, right] = x0 < x1 ? [x0, x1] : [x1, x0];
     const [top, bottom] = y0 < y1 ? [y0, y1] : [y1, y0];
@@ -119,6 +120,7 @@ export class PlayerActions {
     this.selection.clearBuildings();
     this.selection.clearSingle();
     for (const v of this.world.villagers) {
+      if (workplace(v.task)) continue;
       const s = this.picker.villagerScreen(v);
       if (s.x >= left && s.x <= right && s.y >= top && s.y <= bottom) this.selection.villagers.add(v.id);
     }

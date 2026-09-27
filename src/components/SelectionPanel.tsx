@@ -123,7 +123,7 @@ export type SelectionView =
       /** Fürs Porträt: Frau oder Mann (der erste). */
       female: boolean;
       /** Genau einer: Name, Frau oder Mann, was er gerade tut. */
-      single?: { name: string; role: string; doing: string };
+      single?: { name: string; role: string; doing: string; worker: boolean };
       count: number;
       label: string;
       names: string;
@@ -368,10 +368,10 @@ function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) 
           {v.single
             ? <div>{v.single.doing}</div>
             : <>{v.activities.map(([text, n]) => <div>{n}× {text}</div>)}</>}
-          <div class="muted">
+          {v.single?.worker ? <div class="muted">Nimmt keine Befehle an, solange zugeteilt - in der Werkstatt entlassen.</div> : <div class="muted">
             Rechtsklick auf Holz, Stein, Gold oder Beeren: sammeln · auf ein Tier: jagen · auf ein Feld: bestellen ·
             auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Fischerhütte: fischen · sonst: hingehen
-          </div>
+          </div>}
         </div>
       </div>
     </>
