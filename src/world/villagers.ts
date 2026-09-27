@@ -168,7 +168,7 @@ export class VillagerWork {
   }
 
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
-  private blockedAt(x: number, y: number): boolean {
+  blockedAt(x: number, y: number): boolean {
     const anchor = this.world.occupied.get(key(x, y));
     // Über Felder geht man hinweg - Bauern arbeiten ja darauf.
     if (anchor !== undefined) return !this.world.building(anchor)?.isFarm();

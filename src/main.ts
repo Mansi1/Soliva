@@ -612,6 +612,10 @@ const CHEATS: Record<string, () => void> = {
   iamtheking: () => {
     for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.stock[kind] += 30000;
   },
+  // Am Mauszeiger; wo keiner stehen kann (Wasser, Wald, Gebäude), passiert nichts.
+  ineedhelp: () => {
+    if (pointer.tile) world.spawnVillagers(pointer.tile.x, pointer.tile.y, 20);
+  },
 };
 
 const cheatInput = document.getElementById('cheat') as HTMLInputElement;

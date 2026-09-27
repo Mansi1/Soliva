@@ -643,13 +643,39 @@ export class World {
     const spread = (this.nextId % 5) * 0.4 - 0.8;
     const x = building.x + 0.5 + r + spread * 0.5;
     const y = building.y + 0.5 + r - spread * 0.5;
+    const villager = this.addVillager(x, y);
+    this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
+    if (building.rallyPoint) this.work.command(new Set([villager.id]), building.rallyPoint.x, building.rallyPoint.y);
+    this.dirty = true;
+  }
+
+  private addVillager(x: number, y: number): Villager {
     // Etwa jeder zweite ist eine Frau.
     const female = Math.random() < 0.5;
     const villager = new Villager(this.nextId++, x, y, this.freeName(female), female);
     this.villagers.push(villager);
-    this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
-    if (building.rallyPoint) this.work.command(new Set([villager.id]), building.rallyPoint.x, building.rallyPoint.y);
-    this.dirty = true;
+    return villager;
+  }
+
+  /**
+   * Cheat: `count` Dorfbewohner auf freien Tiles rund um (x, y), ohne Kosten und
+   * Bevölkerungsgrenze. Ist (x, y) selbst nicht begehbar, keiner. Gibt die Zahl zurück.
+   */
+  spawnVillagers(x: number, y: number, count: number): number {
+    if (this.work.blockedAt(x, y)) return 0;
+    let placed = 0;
+    // Ring um Ring nach außen; ponytail: Luftlinie, nicht erreichbar geprüft - ein Tile hinter einem Fluss zählt mit.
+    for (let r = 0; r <= 4 && placed < count; r++) {
+      for (let dy = -r; dy <= r && placed < count; dy++) {
+        for (let dx = -r; dx <= r && placed < count; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || this.work.blockedAt(x + dx, y + dy)) continue;
+          this.addVillager(x + dx + 0.5, y + dy + 0.5);
+          placed++;
+        }
+      }
+    }
+    if (placed > 0) this.dirty = true;
+    return placed;
   }
 
   /** Schritt Richtung Ziel. true, sobald er bis auf `reach` heran ist. */
