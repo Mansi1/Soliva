@@ -77,10 +77,39 @@ gewählte Welt unter `pgm.seed`.
 | `Alt` + rechte Maustaste ziehen | Blickwinkel: hoch/runter neigen (20°–70°), links/rechts eine Vierteldrehung |
 | `Alt` + `↑` / `↓` | steiler / flacher neigen |
 | `Alt` + `←` / `→` | Vierteldrehung nach links / rechts |
+| `F3` / `F10` / `M` | Pause / Menü / Ton an und aus |
+| `Enter` | Cheat eingeben (siehe unten) |
 
 `Alt` ist auf dem Mac die Option-Taste; unter Windows geht auch `AltGr`. Der
 Blickwinkel bleibt wie die Blickrichtung beim Neuladen erhalten.
-| `F3` / `F10` / `M` | Pause / Menü / Ton an und aus |
+
+## Cheats
+
+`Enter` öffnet unten in der Mitte ein Eingabefeld: Cheat eintippen, mit
+`Enter` ausführen, `Esc` bricht ab. Groß-/Kleinschreibung und Leerzeichen
+zählen nicht. Wirkt ein Cheat, erscheint eine grüne Meldung, sonst passiert
+nichts.
+
+| Cheat | Wirkung |
+|---|---|
+| `iam the king` | je +30.000 Nahrung, Holz, Stein und Gold, Bevölkerungsgrenze +100 |
+| `i need help` | 20 Dorfbewohner rund um den Mauszeiger – nur auf begehbarem Boden; über Wasser, Wald oder Gebäuden nichts |
+| `muh` / `muh muh` | eine Kuh am Mauszeiger – nicht auf Wasser, Gebirge, Schnee oder in Gebäuden |
+| `speedy gonzales` | an/aus, siehe unten |
+
+`speedy gonzales` schaltet ein; noch einmal eingegeben schaltet es wieder
+aus. Solange es an ist:
+
+- Dorfbewohner kommen ohne Ausbildungszeit aus dem Hauptgebäude.
+- Ein ganzes Feld wird auf einmal gepflügt und gesät und ist sofort reif.
+- Jedes Tier fällt mit einem Treffer.
+- Beim Ernten, Holzfällen, Beerenpflücken und Zerlegen ist die Ladung sofort
+  voll; abgeliefert wird wie sonst.
+
+Neu säen kostet auch dann 2 Holz je Furche; Stein und Gold werden normal
+abgebaut. Die Bevölkerungsgrenze aus `iam the king` und `speedy gonzales`
+stehen nicht im Spielstand – nach dem Laden sind sie weg. Die Cheats stehen
+in `src/main.ts` (`CHEATS`).
 
 ## Modelle
 
