@@ -53,11 +53,6 @@ export interface Rig<J = never> {
 
 /** Was ein Clip in der Hand braucht - Bits wie im Shader (uClipProps). */
 export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4 };
-/**
- * Bit in uClipProps: der Clip kniet - der Rock wird bis zum Boden gestaucht
- * (Knochen allein können das nicht).
- */
-export const KNEEL_BIT = 8;
 
 type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];
@@ -84,7 +79,7 @@ export interface Clip {
    * Griff zu hören ist (Custom Property `strike` der Action) - leer: keiner.
    */
   strike: number[];
-  /** Kniend: der Rock wird gestaucht (KNEEL_BIT). */
+  /** Kniend: die Figur sinkt, bis das Knie den Boden berührt (HUMANOID.rootZ). */
   kneel: boolean;
   /** Tiere: nur für diese Arten (ANIMALS-Schlüssel wie 'hare') - leer: für alle. */
   species: string[];
@@ -345,7 +340,7 @@ export const HUMANOID: Rig<Joints> = {
   // Gehen: die Frau schreitet im langen Rock kürzer (uStride auf die Oberschenkel).
   scale: (clip, _joints, options): Record<string, number> => (clip.pose === 1 && (options.stride ?? 1) !== 1
     ? { 'thigh.L': options.stride!, 'thigh.R': options.stride! } : {}),
-  // Kniend: so tief, dass das Knie dieses Körpers den Boden berührt (-(uKnee - 0.04), wie der Rock im Shader).
+  // Kniend: so tief, dass das Knie dieses Körpers den Boden berührt.
   rootZ: (clip, joints) => (clip.kneel ? -(joints.knee - 0.04) : null),
 };
 

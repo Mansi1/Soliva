@@ -1,0 +1,17 @@
+{
+  "rig": "humanoid",
+  "height": 1.763,
+  "fps": 30.0,
+  "clips": [
+    {
+      "name": "sit",
+      "frames": 121,
+      "duration": 4.0,
+      "props": [],
+      "kneel": false,
+      "pose": 6,
+      "phase_period": 4.0,
+      "phase_shift": 0.0
+    }
+  ]
+}

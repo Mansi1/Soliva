@@ -531,6 +531,8 @@
    "Shield",
    "Shield.Stripe",
    "Stave",
+   "Stool",
+   "Stool.Leg",
    "Target",
    "Target.Leg",
    "Target.Ring",
@@ -544,6 +546,8 @@
    "Window.Frame",
    "Window.Shutter",
    "Work.Aim",
+   "Work.Face",
+   "Work.Seat",
    "Work.Stand"
   ],
   "buildings/fisher_hut": [
@@ -2015,6 +2019,12 @@
    "Ear",
    "Stalk"
   ],
+  "flowers/flower": [
+   "Blossom",
+   "Leaf",
+   "Shadow",
+   "Stem"
+  ],
   "props/axe": [
    "Arm.R.Lower.Tool.Edge",
    "Arm.R.Lower.Tool.Grip",
@@ -2972,14 +2982,9 @@
    "Trunk.Stump"
   ],
   "villagers/female": [
-   "Apron",
    "Apron.Band",
    "Apron.Bow.L",
    "Apron.Bow.R",
-   "Apron.Hem",
-   "Apron.Pocket",
-   "Apron.Tie.L",
-   "Apron.Tie.R",
    "Arm.L",
    "Arm.L.Cuff",
    "Arm.L.Lower",
@@ -3034,6 +3039,7 @@
    "Head.Nose",
    "Head.Nostril.L",
    "Head.Nostril.R",
+   "Hips",
    "Leg.L",
    "Leg.L.Lower.Shin",
    "Leg.L.Lower.Shoe",
@@ -3050,10 +3056,7 @@
    "Load.Top",
    "Neck",
    "Necklace",
-   "Necklace.Pendant",
-   "Skirt",
-   "Skirt.Fold",
-   "Skirt.Petticoat"
+   "Necklace.Pendant"
   ],
   "villagers/male": [
    "Body",
@@ -3160,6 +3163,35 @@
      "props": [
       "knife"
      ]
+    }
+   }
+  },
+  "humanoid_sit": {
+   "rig": "humanoid",
+   "bones": [
+    "forearm.L",
+    "forearm.R",
+    "head",
+    "humanoid",
+    "lowerBody",
+    "root",
+    "shin.L",
+    "shin.R",
+    "shoulder.L",
+    "shoulder.R",
+    "thigh.L",
+    "thigh.R",
+    "upperArm.L",
+    "upperArm.R",
+    "upperBody"
+   ],
+   "animations": [
+    "sit"
+   ],
+   "clips": {
+    "sit": {
+     "pose": 6,
+     "props": []
     }
    }
   },

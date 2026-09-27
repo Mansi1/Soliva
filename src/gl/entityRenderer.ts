@@ -15,6 +15,8 @@ import {
 import { uploadTerrainParams } from './terrainRenderer';
 import humanoidClipsGlb from '../models/clips/humanoid.glb?inline';
 import humanoidClipsManifest from '../models/clips/humanoid.json';
+import sitClipsGlb from '../models/clips/humanoid_sit.glb?inline';
+import sitClipsManifest from '../models/clips/humanoid_sit.json';
 import quadrupedClipsGlb from '../models/clips/quadruped.glb?inline';
 import quadrupedClipsManifest from '../models/clips/quadruped.json';
 import millClipsGlb from '../models/clips/mill.glb?inline';
@@ -22,7 +24,7 @@ import millClipsManifest from '../models/clips/mill.json';
 import flagClipsGlb from '../models/clips/flag.glb?inline';
 import flagClipsManifest from '../models/clips/flag.json';
 import {
-  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
+  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
   type Clip, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
@@ -382,7 +384,11 @@ export const CLIP_LIBRARIES_LOADED: Record<string, number> = {};
  * sich eine Bibliothek nicht lesen, stehen ihre Figuren still (Ruhelage) - und
  * der Rauchtest schlägt an (CLIP_LIBRARIES_LOADED).
  */
-export const CLIPS: Clip[] = readClips('humanoid', () => loadClips(humanoidClipsGlb, humanoidClipsManifest, HUMANOID));
+export const CLIPS: Clip[] = [
+  ...readClips('humanoid', () => loadClips(humanoidClipsGlb, humanoidClipsManifest, HUMANOID)),
+  // Eigene Datei, damit humanoid.glb nicht durch Blender muss (docs/OFFEN.md, Export-Einstellungen).
+  ...readClips('humanoid_sit', () => loadClips(sitClipsGlb, sitClipsManifest, HUMANOID)),
+];
 /** Clips der Tiere (src/models/clips/quadruped.glb). */
 export const ANIMAL_CLIPS: Clip[] = readClips('quadruped', () => loadClips(quadrupedClipsGlb, quadrupedClipsManifest, QUADRUPED));
 const FLAG_CLIPS: Clip[] = readClips('flag', () => loadClips(flagClipsGlb, flagClipsManifest, FLAG));
@@ -603,6 +609,8 @@ export const POSE = {
   scythe: 4,
   /** An der Werkbank einen Bogenstab schnitzen: beide Hände ziehen das Zugmesser heran. */
   carve: 5,
+  /** Auf dem Hocker der Werkstatt sitzen und warten. */
+  sit: 6,
 } as const;
 
 export interface EntityInstance {
@@ -671,11 +679,10 @@ layout(location = 9) in vec3 aBones;    // Figuren mit Knochen: Knochen a + 1, b
 
 /** Untergrenze für die Größe, damit Gebäude beim Herauszoomen sichtbar bleiben. */
 uniform float uMinSizeTiles;
-// Maße der Figur in Koerperhoehen - aus dem Modell abgelesen: Hüfte (Rock,
-// Knochen des Rumpfs), Knie (wie tief sie kniet), Abstand der Unterarme von
-// der Mitte (Zugmesser zwischen beiden Händen). Bewegt wird sie von den Clips.
+// Maße der Figur in Koerperhoehen - aus dem Modell abgelesen: Hüfte
+// (Hosenboden, Knochen des Rumpfs), Abstand der Unterarme von der Mitte
+// (Zugmesser zwischen beiden Händen). Bewegt wird sie von den Clips.
 uniform float uHip;
-uniform float uKnee;
 uniform float uArm;
 // Anhänge (Werkzeuge): Mitte der rechten Hand des Körpers in Ruhelage
 // (Modell-Einheiten) und wie weit das Zugmesser auf seinen Handabstand
@@ -710,7 +717,7 @@ uniform float uTime;
 // (Zeilen einer 3x4-Matrix). uClipRow: erste Zeile des Clips für diese Figur,
 // -1 = nicht gebacken. uPoseClip: welcher Clip eine Pose spielt (-1: keiner,
 // die Figur steht still), Clip-Zeit = (Phase - uPoseShift) * uPoseRate. uClipProps: Bits
-// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS), kniend ${KNEEL_BIT} (KNEEL_BIT).
+// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS).
 uniform highp sampler2D uClipTex;
 uniform int   uClipRow[${MAX_CLIPS}];
 uniform int   uClipFrames[${MAX_CLIPS}];
@@ -858,7 +865,7 @@ vec3 clipBone(vec3 p, int row, int bone) {
 
 // Drehung der Schultern gegen die Hüfte (Radiant) zur Zeit "time": aus der
 // Matrix des Oberkörpers, dessen Vorwärts-Achse sie zur Seite dreht (Zeile 1,
-// Spalte 0 = sin). Der Rock schwingt damit mit.
+// Spalte 0 = sin). Der Hosenboden schwingt damit mit.
 float clipTwist(int clip, float time) {
   int frames = uClipFrames[clip];
   float f = mod(time * uClipFps[clip], float(frames - 1));
@@ -989,18 +996,9 @@ void main() {
         } else {
           // Die Last waechst mit der Ladung aus dem Ruecken heraus.
           if (part == P_LOAD) p = uLoadAnchor + (p - uLoadAnchor) * aMotion.w;
-          // Rock und Hosenboden schwingen etwas mit, wenn sich die Schultern
-          // gegen die Hüfte drehen - vor dem Stauchen.
+          // Der Hosenboden schwingt etwas mit, wenn sich die Schultern
+          // gegen die Hüfte drehen.
           if (part == P_TORSO && p.z <= uHip && aBones.x < 0.5) p.y += clipTwist(clip, time) * 0.25 * (uHip - p.z);
-          if ((props & ${KNEEL_BIT}) != 0 && part == P_TORSO && p.z <= uHip && aBones.x < 0.5) {
-            // Kniend: der Rock staucht sich bis zum Boden und legt sich vorn
-            // über das aufgestellte Knie - so tief, wie die Knochen die Figur
-            // senken (das Knie auf dem Boden: -(uKnee - 0.04)).
-            float kneelBob = -(uKnee - 0.04);
-            float below = (uHip - p.z) / uHip;
-            p.z = uHip - (uHip - p.z) * (uHip + kneelBob) / (uHip - 0.02);
-            p.x += below * 0.14;
-          }
           if (part == P_KNIFE) {
             // Zweihändig: nach der Lage zwischen den Händen auf beide Unterarme verteilt.
             float k = clamp((p.y + uArm) / (2.0 * uArm), 0.0, 1.0);
@@ -2086,6 +2084,8 @@ interface Model {
   stockSlots: number;
   /** Werkstatt: wo der Arbeiter steht und wohin er schaut (Modell-Einheiten: vorn, links). */
   work?: { stand: [number, number]; aim: [number, number]; boat?: [number, number] };
+  /** Werkstatt: Hocker, auf dem der Arbeiter wartet, und wohin er dort schaut ("Work.Seat", "Work.Face"). */
+  seat?: { stand: [number, number]; aim: [number, number] };
   /** Figuren: Mitte der rechten Hand in Ruhelage (Modell-Einheiten) - dort hängen Werkzeuge. */
   hand: [number, number, number];
   /** Breite bzw. Höhe in Datei-Einheiten (Metern), auf die das Modell gebracht ist. */
@@ -2505,10 +2505,13 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
   }
   const stand = markerAt(markerPoints('Work.Stand'));
   const aim = markerAt(markerPoints('Work.Aim'));
+  const seat = markerAt(markerPoints('Work.Seat'));
+  const face = markerAt(markerPoints('Work.Face'));
   return {
     file: typeof obj === 'string' ? modelFile(obj) : undefined,
     entry: markerAt(entryPoints),
     work: stand && aim && { stand, aim, boat: markerAt(markerPoints('Work.Boat')) },
+    seat: seat && face && { stand: seat, aim: face },
     stockSlots,
     vertices: new Float32Array(v),
     floats,
@@ -2794,17 +2797,19 @@ export function modelEntry(shape: number, x: number, y: number, size: number, he
 }
 
 /**
- * Platz an der Werkbank einer Werkstatt in der Welt: wo der Arbeiter steht
- * und wohin er schaut. Undefined, wenn das Modell ihn nicht markiert.
+ * Platz an der Werkbank (bzw. mit `seat` auf dem Hocker) einer Werkstatt in
+ * der Welt: wo der Arbeiter steht und wohin er schaut. Undefined, wenn das
+ * Modell ihn nicht markiert.
  */
-export function modelWorkSpot(shape: number, x: number, y: number, size: number, heading: number):
+export function modelWorkSpot(shape: number, x: number, y: number, size: number, heading: number, which: 'work' | 'seat' = 'work'):
     { x: number; y: number; aimX: number; aimY: number; boat?: { x: number; y: number } } | undefined {
   const m = MODEL_BY_SHAPE.get(shape);
-  if (!m?.model.work) return undefined;
-  const { stand: s, aim: a, boat: b } = m.model.work;
-  const stand = modelToWorld(m, s, x, y, size, heading);
-  const aim = modelToWorld(m, a, x, y, size, heading);
-  return { ...stand, aimX: aim.x, aimY: aim.y, boat: b && modelToWorld(m, b, x, y, size, heading) };
+  const spot = m?.model[which];
+  if (!m || !spot) return undefined;
+  const stand = modelToWorld(m, spot.stand, x, y, size, heading);
+  const aim = modelToWorld(m, spot.aim, x, y, size, heading);
+  const boat = which === 'work' ? m.model.work?.boat : undefined;
+  return { ...stand, aimX: aim.x, aimY: aim.y, boat: boat && modelToWorld(m, boat, x, y, size, heading) };
 }
 
 /** Wie viele Bögen im Modell sichtbar gestapelt werden können (Waffenkammer), sonst 0. */
@@ -3191,7 +3196,7 @@ export class EntityRenderer {
           u.rows[i] = rows;
           u.frames[i] = clip.frames;
           u.fps[i] = clip.fps;
-          u.props[i] = clip.props | (clip.kneel ? KNEEL_BIT : 0);
+          u.props[i] = clip.props;
           u.rate[i] = clip.phaseRate;
           u.shift[i] = clip.phaseShift;
           // Welche Pose ein Clip ersetzt, steht im Clip selbst (Custom Property
@@ -3634,7 +3639,6 @@ export class EntityRenderer {
       gl.uniform3fv(this.location('uSocket'), b.model.hand);
       gl.uniform1f(this.location('uKnifeScale'), Math.abs(b.model.hand[1]) * b.model.meters / KNIFE_HALF_SPAN);
       gl.uniform1f(this.location('uHip'), b.model.hip);
-      gl.uniform1f(this.location('uKnee'), b.model.knee);
       gl.uniform1f(this.location('uArm'), b.model.arm);
       gl.uniform1f(this.location('uModelTop'), m.model.top);
       gl.uniform1f(this.location('uMeters'), b.model.meters);

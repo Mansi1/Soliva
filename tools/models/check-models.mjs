@@ -20,7 +20,7 @@ const RULES = [
   { match: /^buildings\//, needs: ['Entry'], why: 'Eingang, zu dem Dorfbewohner gehen' },
   { match: /^buildings\/mill/, needs: ['Sails'], why: 'Flügel, die sich drehen' },
   { match: /^(buildings\/town_center|props\/rally_flag)$/, needs: ['Cloth'], why: 'Tuch, das weht' },
-  { match: /^buildings\/bowyer$/, needs: ['Work.Stand', 'Work.Aim'], numbered: [['Craft', 3]], why: 'Werkbank und Stufen des Bogens' },
+  { match: /^buildings\/bowyer$/, needs: ['Work.Stand', 'Work.Aim', 'Work.Seat', 'Work.Face'], numbered: [['Craft', 3]], why: 'Werkbank, Hocker und Stufen des Bogens' },
   { match: /^buildings\/armory$/, needs: ['Cut.Roof', 'Cut.Wall'], numbered: [['Stock', 100]], why: 'aufdeckbares Dach und 100 Bögen im Gestell' },
   { match: /^resources\/berry_bush/, needs: ['Berry'], why: 'Beeren, die beim Pflücken verschwinden (die Nummer wählt nur den Zufall je Beere)' },
   { match: /^trees\//, needs: ['Trunk', 'Trunk.Stump'], why: 'Stamm und Stumpf zum Absägen' },

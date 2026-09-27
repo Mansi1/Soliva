@@ -26,9 +26,11 @@ Phase 0 und Phase 1 sind fertig. Von Phase 2 ist der erste Teil fertig:
   (`uStride` 0,6 auf die Oberschenkel). Beim Knien liegt ihr Knie mit ihrer
   eigenen Kniehöhe auf dem Boden.
 - **Was im Shader nachgebildet wird, weil Knochen es nicht tragen:**
-  - Der Rock schwingt mit der Drehung der Schultern (`clipTwist`, gelesen
+  - Der Hosenboden schwingt mit der Drehung der Schultern (`clipTwist`, gelesen
     aus der Matrix des Oberkörpers).
-  - Beim Knien staucht sich der Rock (`kneel`).
+  - Die Frau trägt seit 27.09.2026 Hose statt Rock; das Stauchen des Rocks
+    beim Knien ist aus dem Shader entfernt. `kneel` senkt nur noch die
+    Figur, bis das Knie den Boden berührt (`HUMANOID.rootZ`).
 - **Textur:** Die Bilder aller Clips liegen in Spalten zu 1024 Bildern.
   Mann und Frau brauchen zusammen 4118 Bilder, das passt auf jede
   WebGL2-Grafik.
@@ -225,11 +227,11 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
    von Hand gepflegt; `frames` und `duration` müssen zur Animation passen:
    - `props`: die Werkzeuge in der Hand (`axe`, `scythe`, `knife`)
    - `pose`: welche Pose des Spiels der Clip ersetzt (0 stehen, 1 gehen,
-     2 hacken, 3 pflücken, 4 mähen, 5 schnitzen; Tiere: 0 äsen, 1 gehen,
+     2 hacken, 3 pflücken, 4 mähen, 5 schnitzen, 6 sitzen; Tiere: 0 äsen, 1 gehen,
      5 fliehen, 6 erlegt)
    - `phase_period`, `phase_shift`: welcher Bereich der Spiel-Phase eine
      Schleife ist. Die Clip-Zeit ist (Phase − shift) × Dauer / period.
-   - `kneel`: `true`, wenn der Rock beim Knien gestaucht wird
+   - `kneel`: `true`, wenn die Figur kniet (sie sinkt, bis das Knie den Boden berührt)
    - `strike`: Clip-Zeiten in Sekunden, zu denen der Hieb bzw. Griff zu
      hören ist (z. B. `chop`: `[0.775]`). Wer einen Clip umbaut, verschiebt
      die Marken mit.
@@ -237,7 +239,16 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
      (liegt auf der Seite); `graze` oben in der Datei ist, wie weit das Reh
      den Kopf senkt - das Spiel bringt den Knochen `neck` je Art auf ihre
      Halslänge.
-4. `npm run check:anim` zeigt, wie weit ein Clip von der alten Formel
+4. **Neuer Clip, ohne `humanoid.glb` anzufassen:** eigene Datei daneben
+   (so `clips/humanoid_sit.glb` + `.json` mit `sit`), in
+   `src/gl/entityRenderer.ts` an `CLIPS` gehängt. In Blender
+   `humanoid.glb` importieren, die NLA-Spuren und die übrigen Actions aus der
+   Szene löschen (sonst legt der Export sie zu einer Animation zusammen),
+   neue Action anlegen, nur das Skelett exportieren
+   (`export_animation_mode="ACTIONS"`, `use_selection`). Die Knochen
+   heißen wie im Skelett, die Ruhelage bleibt gleich; höchstens 8 Clips je
+   Figur (`MAX_CLIPS`).
+5. `npm run check:anim` zeigt, wie weit ein Clip von der alten Formel
    abweicht; `npm test`, dass kein Knochen, Clip oder keine Pose verloren
    ging. In der Galerie zeigen „Clips aus Blender“ jeden Clip.
 
