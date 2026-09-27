@@ -12,7 +12,7 @@ import type { RGB } from '../functions/Color';
 import {
   PROJECT_GLSL, bindScreen, cameraDirection, groundToWorld, setCameraUniforms, viewGroundV, viewRotation, viewZScreen, worldToGround, type GpuCamera,
 } from './iso';
-import { uploadTerrainParams } from './terrainRenderer';
+import { link, uploadTerrainParams } from './terrainRenderer';
 import humanoidClipsGlb from '../models/clips/humanoid.glb?inline';
 import humanoidClipsManifest from '../models/clips/humanoid.json';
 import sitClipsGlb from '../models/clips/humanoid_sit.glb?inline';
@@ -1884,18 +1884,6 @@ void main() {
 }
 `;
 
-function compile(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
-  const shader = gl.createShader(type)!;
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Entity-Shader lässt sich nicht übersetzen:\n${log}`);
-  }
-  return shader;
-}
-
 /** Klotz mit Walmdach: vier Wände und vier Dachdreiecke zum First in der Mitte. */
 function buildingMesh(): Float32Array {
   const corners = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -3069,17 +3057,7 @@ export class EntityRenderer {
   private puffs: EntityInstance[] = [];
 
   constructor(private gl: WebGL2RenderingContext) {
-    const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX_SOURCE);
-    const fragment = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT_SOURCE);
-    this.program = gl.createProgram()!;
-    gl.attachShader(this.program, vertex);
-    gl.attachShader(this.program, fragment);
-    gl.linkProgram(this.program);
-    if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-      throw new Error(`Entity-Programm lässt sich nicht linken:\n${gl.getProgramInfoLog(this.program)}`);
-    }
-    gl.deleteShader(vertex);
-    gl.deleteShader(fragment);
+    this.program = link(gl, VERTEX_SOURCE, FRAGMENT_SOURCE);
 
     this.instanceBuffer = gl.createBuffer()!;
     this.building = this.createMesh(buildingMesh());
