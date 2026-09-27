@@ -607,18 +607,24 @@ function showZoom() {
   devPanel.showZoom(camera);
 }
 
-/** Cheats wie in AoE2 - Leerzeichen und Groß-/Kleinschreibung zählen nicht. */
-const CHEATS: Record<string, () => void> = {
+/**
+ * Cheats wie in AoE2 - Leerzeichen und Groß-/Kleinschreibung zählen nicht.
+ * Jeder gibt die Meldung zurück, wenn er gewirkt hat, sonst nichts.
+ */
+const CHEATS: Record<string, () => string | undefined> = {
   iamtheking: () => {
     for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.stock[kind] += 30000;
+    return '+30.000 Nahrung, Holz, Stein und Gold';
   },
   // Am Mauszeiger; wo keiner stehen kann (Wasser, Wald, Gebäude), passiert nichts.
   ineedhelp: () => {
-    if (pointer.tile) world.spawnVillagers(pointer.tile.x, pointer.tile.y, 20);
+    const count = pointer.tile ? world.spawnVillagers(pointer.tile.x, pointer.tile.y, 20) : 0;
+    return count > 0 ? `${count} Dorfbewohner zur Hilfe` : undefined;
   },
   // Noch einmal eingegeben schaltet es wieder ab.
   speedygonzales: () => {
     world.instantTraining = !world.instantTraining;
+    return `Ausbildung ohne Wartezeit ${world.instantTraining ? 'an' : 'aus'}`;
   },
 };
 
@@ -627,7 +633,8 @@ cheatInput.addEventListener('keydown', (e) => {
   // Getippt wird hier, nicht im Spiel: die Spieltasten (keyboard.ts) bekommen nichts ab.
   e.stopPropagation();
   if (e.key !== 'Enter' && e.key !== 'Escape') return;
-  if (e.key === 'Enter') CHEATS[cheatInput.value.toLowerCase().replace(/\s+/g, '')]?.();
+  const message = e.key === 'Enter' ? CHEATS[cheatInput.value.toLowerCase().replace(/\s+/g, '')]?.() : undefined;
+  if (message) ui.hint(`Cheat: ${message}`, true);
   ui.refreshResources();
   cheatInput.value = '';
   cheatInput.blur();

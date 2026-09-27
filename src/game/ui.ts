@@ -155,10 +155,11 @@ export class GameUi {
     this.refreshSelection();
   }
 
-  /** Kurzer Hinweis, warum etwas nicht geht - mit Fehlerton. */
-  hint(text: string) {
-    this.state.sound.play('error', 0.6);
+  /** Kurzer Hinweis, warum etwas nicht geht - mit Fehlerton. `ok`: stattdessen eine Erfolgsmeldung, grün (Cheats). */
+  hint(text: string, ok = false) {
+    this.state.sound.play(ok ? 'click' : 'error', 0.6);
     this.hintEl.textContent = text;
+    this.hintEl.classList.toggle('ok', ok);
     this.hintEl.classList.add('show');
     clearTimeout(this.hintTimer);
     this.hintTimer = window.setTimeout(() => this.hintEl.classList.remove('show'), HINT_MS);

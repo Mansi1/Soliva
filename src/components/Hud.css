@@ -199,6 +199,11 @@
 #hint.show {
   opacity: 1;
 }
+#hint.ok {
+  background: rgba(30, 100, 50, 0.85);
+  border-color: rgba(140, 255, 170, 0.5);
+  color: #d9ffe2;
+}
 #cheat {
   position: absolute;
   bottom: 214px;
