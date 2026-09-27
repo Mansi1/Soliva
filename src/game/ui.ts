@@ -34,6 +34,8 @@ export interface UiHooks {
   selectIdle(all: boolean): void;
   train(count: number): void;
   demolish(): void;
+  /** Arbeiter der Werkstatt entlassen. */
+  dismiss(): void;
   setFieldCrop(crop: CropType): void;
   /** Bild im Auswahl-Panel: zum Ausgewählten springen. */
   focusSelection(): void;
@@ -97,6 +99,7 @@ export class GameUi {
       if (action === 'train') hooks.train(e.shiftKey ? 5 : 1);
       if (action === 'demolish') hooks.demolish();
       if (action === 'trap') this.setPlacing('fish_trap');
+      if (action === 'dismiss') hooks.dismiss();
       if (action === 'crop' && button?.dataset.crop) hooks.setFieldCrop(button.dataset.crop as CropType);
     });
   }

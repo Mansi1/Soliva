@@ -157,6 +157,16 @@ export class VillagerWork {
     return null;
   }
 
+  /** Entlässt den Arbeiter der Werkstatt: er geht zur Tür hinaus und steht dort untätig. */
+  dismiss(anchor: string): Villager | undefined {
+    const shop = this.world.building(anchor);
+    const worker = this.world.villagers.find((v) => v.task.kind === 'craft' && v.task.building === anchor);
+    if (!shop || !worker) return undefined;
+    const entry = modelEntry(shop.model, shop.x, shop.y, shop.definition.size, BUILDING_HEADING);
+    worker.assign(entry ? { kind: 'move', x: entry.x, y: entry.y } : { kind: 'idle' });
+    return worker;
+  }
+
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
   private blockedAt(x: number, y: number): boolean {
     const anchor = this.world.occupied.get(key(x, y));

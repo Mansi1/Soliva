@@ -394,7 +394,7 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
 
 /** Ein Befehlsknopf: Bild, Taste, Tooltip und was er in main.ts auslöst. */
 interface Command {
-  action: 'train' | 'crop' | 'demolish' | 'trap';
+  action: 'train' | 'crop' | 'demolish' | 'trap' | 'dismiss';
   title: string;
   /** Bild-URL - oder das Abriss-Symbol. */
   icon: string | 'demolish';
@@ -433,6 +433,9 @@ export function commandsFor(view: SelectionView): Command[] {
           action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
           title: `Reuse bauen - ${view.trapCost.cost}\nIns Wasser nahe der Hütte; der Fischer leert sie mit dem Boot`,
         } satisfies Command] : []),
+        ...(view.workshop?.worker
+          ? [{ action: 'dismiss' as const, icon: villagerIcon(false, rgb()), title: `${view.workshop.worker} entlassen - geht hinaus und ist wieder frei` }]
+          : []),
         demolish(false),
       ];
     case 'buildings':

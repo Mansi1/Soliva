@@ -134,6 +134,7 @@ const ui = new GameUi({ world, selection, placement, pointer, resources, sound, 
   selectIdle: (all) => actions.selectIdle(all),
   train: (count) => actions.trainVillagers(count),
   demolish: () => actions.demolishSelected(),
+  dismiss: () => actions.dismissWorker(),
   setFieldCrop: (crop) => actions.setFieldCrop(crop),
   focusSelection: () => actions.focusSelection(),
 }, player.color.toRGB());

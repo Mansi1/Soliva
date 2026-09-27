@@ -296,6 +296,18 @@ export class PlayerActions {
     this.ui.refreshResources();
   }
 
+  /** Den Arbeiter der ausgewählten Werkstatt entlassen - danach ist er ausgewählt. */
+  dismissWorker() {
+    const shop = this.selection.focused();
+    const worker = shop && this.world.dismiss(shop.anchor);
+    if (!worker) return;
+    this.selection.clearBuildings();
+    this.selection.villagers.clear();
+    this.selection.villagers.add(worker.id);
+    this.sound.play('click');
+    this.ui.refreshSelection();
+  }
+
   /** Frucht fürs ganze Feld der ausgewählten Feldstücke - darauf wird gemeinsam gesät. */
   setFieldCrop(crop: CropType) {
     if (!CROPS[crop]) return;

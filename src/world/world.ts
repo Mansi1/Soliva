@@ -588,6 +588,11 @@ export class World {
     return this.work.command(ids, x, y);
   }
 
+  /** Entlässt den Arbeiter dieser Werkstatt (villagers.ts) - gibt ihn zurück. */
+  dismiss(anchor: string): Villager | undefined {
+    return this.work.dismiss(anchor);
+  }
+
   /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
   hunt(ids: ReadonlySet<number>, animal: Animal) {
     this.work.hunt(ids, animal);
