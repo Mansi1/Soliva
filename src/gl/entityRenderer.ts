@@ -1946,6 +1946,17 @@ const PARTS: [prefix: string, part: number][] = [
   ['Craft', 32],
 ];
 
+/** Teil eines Objekts (PARTS), je Name einmal gesucht - ein Feld hat Tausende Halme, und jede Furche misst am ganzen Feld. */
+const PART_OF = new Map<string, number>();
+function partOf(object: string): number {
+  let part = PART_OF.get(object);
+  if (part === undefined) {
+    part = PARTS.find(([prefix]) => object.startsWith(prefix))?.[1] ?? 0;
+    PART_OF.set(object, part);
+  }
+  return part;
+}
+
 /** Materialien, die zur Laufzeit gefärbt werden - aMaterial.w im Shader. */
 const MATERIAL_ROLE: Record<string, number> = {
   Tunic: 1, // Instanzfarbe (Dorfbewohner)
@@ -2183,9 +2194,10 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
   // markieren nur Stellen - nicht zeichnen, nicht mitmessen.
   const all = typeof obj === 'string' ? parseObj(obj) : obj;
   const isMarker = (object: string) => object.startsWith('Entry') || object.startsWith('Work.');
-  const markerPoints = (prefix: string) => all.filter((t) => t.object.startsWith(prefix)).flatMap((t) => t.points);
+  const markers = all.filter((t) => isMarker(t.object));
+  const markerPoints = (prefix: string) => markers.filter((t) => t.object.startsWith(prefix)).flatMap((t) => t.points);
   const entryPoints = markerPoints('Entry');
-  const triangles = all.filter((t) => !isMarker(t.object));
+  const triangles = markers.length ? all.filter((t) => !isMarker(t.object)) : all;
   const colors = parseMtl(mtl);
   const images = parseMtlImages(mtl);
   // Aufgemalt (Augen, Nähte ...): liegt über Farbe und Muster, siehe aDetail.
@@ -2204,7 +2216,6 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
       maxY = Math.max(maxY, p[1]);
     }
   }
-  const partOf = (object: string) => PARTS.find(([prefix]) => object.startsWith(prefix))?.[1] ?? 0;
   // Plätze für Bögen im Vorrat (Waffenkammer): die höchste Nummer + 1.
   const stockSlots = triangles.reduce((n, t) => (t.object.startsWith('Stock') ? Math.max(n, stockNumber(t.object) + 1) : n), 0);
 
@@ -2371,6 +2382,24 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
     const layerHere = detail && t.uvs ? imageLayer(detail, [1, 1, 1]) : -1;
     if (layerHere >= 0 && detailLayer >= 0 && layerHere !== detailLayer) throw new Error(`${t.object}: nur ein Detail-Bild je Modell`);
     if (layerHere >= 0) detailLayer = layerHere;
+    // Beeren: je Beere (Objekt) ein fester Zufall im Nachkomma-Teil, siehe P_BERRY.
+    const partValue = part === 14 ? 14 + berryRandom(berryNumber(t.object)) * 0.45
+      // Bögen im Vorrat: ihre Reihenfolge, die Mitte ihres Anteils.
+      : part === 29 ? 29 + ((stockNumber(t.object) + 0.5) / stockSlots) * 0.45
+      // Werkstück: seine Stufe, die Mitte ihres Anteils.
+      : part === 32 ? 32 + ((craftStage(t.object) + 0.5) / CRAFT_STAGES) * 0.45
+      // Feldpflanzen: ihre Reihenfolge beim Ernten, siehe P_CROP.
+      : part === 20 || part === 21 ? part + furrowValue(t.object)
+      // Schnur an einer Tile-Kante, siehe P_EDGE.
+      : part === 22 ? 22 + edgeValue(t.object)
+      // Bäume: alles außer dem Stamm verschwindet beim Absägen als Ganzes.
+      : sawable && !t.object.startsWith('Trunk') ? 15 + (bottom.get(t.index) ?? 0) * 0.45
+      // Stumpf (16), sein Deckel (17), der Boden des Stamms (18).
+      : sawable && t.object.startsWith('Trunk.Stump') ? (onCut(t) ? 17 : 16)
+      : sawable && onCut(t) ? 18
+      // Stammstück (19 + Ansatzhöhe): über dem Schnitt verschwindet es ganz.
+      : sawable ? 19 + (bottom.get(t.index) ?? 0) * 0.45
+      : part;
     for (const k of inward.has(t.index) && isLog(t) ? [0, 2, 1] : [0, 1, 2]) {
       const p = t.points[k];
       const [x, y, z] = local(p);
@@ -2382,24 +2411,6 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
         const across = d[0] * card.b[0] + d[1] * card.b[1] + d[2] * card.b[2];
         rgb = [(across - card.b0) / card.bLen, (along - card.a0) / card.aLen, card.seed];
       }
-      // Beeren: je Beere (Objekt) ein fester Zufall im Nachkomma-Teil, siehe P_BERRY.
-      const partValue = part === 14 ? 14 + berryRandom(berryNumber(t.object)) * 0.45
-        // Bögen im Vorrat: ihre Reihenfolge, die Mitte ihres Anteils.
-        : part === 29 ? 29 + ((stockNumber(t.object) + 0.5) / stockSlots) * 0.45
-        // Werkstück: seine Stufe, die Mitte ihres Anteils.
-        : part === 32 ? 32 + ((craftStage(t.object) + 0.5) / CRAFT_STAGES) * 0.45
-        // Feldpflanzen: ihre Reihenfolge beim Ernten, siehe P_CROP.
-        : part === 20 || part === 21 ? part + furrowValue(t.object)
-        // Schnur an einer Tile-Kante, siehe P_EDGE.
-        : part === 22 ? 22 + edgeValue(t.object)
-        // Bäume: alles außer dem Stamm verschwindet beim Absägen als Ganzes.
-        : sawable && !t.object.startsWith('Trunk') ? 15 + (bottom.get(t.index) ?? 0) * 0.45
-        // Stumpf (16), sein Deckel (17), der Boden des Stamms (18).
-        : sawable && t.object.startsWith('Trunk.Stump') ? (onCut(t) ? 17 : 16)
-        : sawable && onCut(t) ? 18
-        // Stammstück (19 + Ansatzhöhe): über dem Schnitt verschwindet es ganz.
-        : sawable ? 19 + (bottom.get(t.index) ?? 0) * 0.45
-        : part;
       const vertex = [x, y, z, partValue, rgb[0], rgb[1], rgb[2], vertexRole];
       if (floats >= 10) vertex.push(...(layerHere >= 0 ? t.uvs![k] : [-1, -1]));
       if (floats === 13) vertex.push(...boneSlots(t.bones?.[k]));
@@ -2569,6 +2580,24 @@ function fieldModels(kind: (typeof FARM_KINDS)[number], base: number) {
   });
 }
 
+/**
+ * Die Furchen einer Feldart, gebaut erst beim ersten Zugriff auf ein `model`:
+ * alle Felder zusammen sind rund 1,3 Mio. Dreiecke, und eine neue Welt hat
+ * noch keins.
+ * ponytail: baut beim ersten Feld einer Art synchron (einmaliges Stocken);
+ * auf Leerlauf-Vorbauen umstellen, wenn das Stocken beim Bauen stört.
+ */
+function lazyFieldModels(kind: (typeof FARM_KINDS)[number], base: number) {
+  let rows: ReturnType<typeof fieldModels> | undefined;
+  return Array.from({ length: FIELD_FURROWS }, (_, row) => ({
+    shape: base + row,
+    scale: 1,
+    get model() {
+      return (rows ??= fieldModels(kind, base))[row].model;
+    },
+  }));
+}
+
 /** Wie viele Pflanzen die Fassungen eines Felds zeigen: voll, dann für die beiden LOD-Stufen. */
 const FIELD_DETAIL = [1, 0.3, 0.1];
 
@@ -2629,7 +2658,7 @@ const MODELS: {
   { shape: SHAPE.bow, model: loadModel(bowModel.obj, bowModel.mtl, 'height'), scale: 1 },
   { shape: SHAPE.armory, model: loadModel(armoryModel.obj, armoryModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.markerArrow, model: loadModel(markerArrowModel.obj, markerArrowModel.mtl, 'height'), scale: 1 },
-  ...FARM_KINDS.flatMap((kind, i) => fieldModels(kind, FIELD_BASES[i])),
+  ...FARM_KINDS.flatMap((kind, i) => lazyFieldModels(kind, FIELD_BASES[i])),
   ...natural(SHAPE.tree, treeSpruceModel.obj, treeSpruceModel.mtl, TREE_METERS),
   ...natural(SHAPE.treePine, treePineModel.obj, treePineModel.mtl, TREE_METERS),
   ...natural(SHAPE.treeOak, treeOakModel.obj, treeOakModel.mtl, TREE_METERS),
@@ -2965,12 +2994,20 @@ export class EntityRenderer {
     this.building = this.createMesh(buildingMesh());
     this.flat = this.createMesh(flatMesh());
     this.quad = this.createMesh(new Float32Array([0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0]));
-    this.models = MODELS.map((m) => ({
-      ...m,
-      mesh: this.createMesh(m.model.vertices, m.model.floats),
-      lodMeshes: (m.model.lods ?? []).map((l) => this.createMesh(l, m.model.floats)),
-      list: [],
-    }));
+    // Hochgeladen beim ersten Zeichnen - Felder baut erst dieser Zugriff (lazyFieldModels).
+    this.models = MODELS.map((m) => {
+      let meshes: { mesh: Mesh; lodMeshes: Mesh[] } | undefined;
+      const upload = () => meshes ??= {
+        mesh: this.createMesh(m.model.vertices, m.model.floats),
+        lodMeshes: (m.model.lods ?? []).map((l) => this.createMesh(l, m.model.floats)),
+      };
+      return {
+        shape: m.shape, scale: m.scale, stride: m.stride, body: m.body, list: [],
+        get model() { return m.model; },
+        get mesh() { return upload().mesh; },
+        get lodMeshes() { return upload().lodMeshes; },
+      };
+    });
     for (const m of this.models) this.modelByShape.set(m.shape, m);
 
     gl.useProgram(this.program);

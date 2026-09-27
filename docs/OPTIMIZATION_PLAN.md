@@ -51,6 +51,7 @@ Reihenfolge innerhalb der Phase beliebig; jeder Punkt ist isoliert mergebar.
 
 **Stand 2026-09-26:**
 - **Umgesetzt:** 2.1, 2.4, 2.5, 2.10 (`MODELS.find` → Map, `FIELDS` → Set, Prop-Body und Pose-Props nachgeschlagen), aus 2.9 `uFlat` nur bei `flatCount > 0`, aus 4.5 der Komparator ohne `Math.hypot`. Screenshots vorher/nachher gleich (Abweichung im Rauschen der Animationen), Zählwerte im Bench unverändert.
+- **Außerhalb des Plans, Ladezeit (2026-09-27):** Feld-Modelle (~1,3 Mio. Dreiecke) werden erst beim ersten Zugriff gebaut (`lazyFieldModels`), jeder `EntityRenderer` lädt ein Mesh erst beim ersten Zeichnen hoch. `partOf` ist je Objektname gemerkt. Erstes Bild auf dem Dev-Server (M1) von ~5,7 s auf ~1,3–1,4 s. Die Mesh-Daten sind Byte für Byte gleich.
 - **Bewusst nicht:**
   - 2.2: Ein grober Vorlauf kann schmale Grate überspringen, das Ergebnis wäre also nicht garantiert gleich. Nach 2.1 ist der Nutzen zudem klein.
   - 2.8: Ein kleinerer Faktor baut den Index-Puffer beim Zoomen neu, das bedeutet je Stufe einen Ruckler.

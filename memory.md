@@ -18,7 +18,10 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 ## Messen
 
 - 2026-09-26, M4, Stand `6b5b5bd`: Alle Bench-Szenen laufen mit 60 fps und `frameMsMax` 16,8 ms, auch `zoom-wechsel`. Der Zoom ist auf diesem Rechner nicht langsam, Gewinne im Gelände-Shader zeigt der Bench hier nicht.
-- 2026-09-26, M4: Größenordnungen je Bild - `weit-leer` 144 Draw-Calls, 0,87 Mio. Gelände-Eckpunkte; `stadt` rund 3 Mio. Modell-Eckpunkte; `zoom-wechsel` rund 95.000 neue Gelände-Texel; ein Pick (`pickMs`) 0,2-0,3 ms. Die erste Sekunde nach dem Laden hat eine Long Task von ~1,7 s - nie mitmessen.
+- 2026-09-26, M4: Größenordnungen je Bild - `weit-leer` 144 Draw-Calls, 0,87 Mio. Gelände-Eckpunkte; `stadt` rund 3 Mio. Modell-Eckpunkte; `zoom-wechsel` rund 95.000 neue Gelände-Texel; ein Pick (`pickMs`) 0,2-0,3 ms. Die erste Sekunde nach dem Laden hat eine lange Long Task - nie mitmessen.
+- 2026-09-27, M1, Dev-Server: Erstes Bild nach ~1,3 s (Bench-Welt) bzw. ~1,4 s (Demo), vorher ~5,7 s. Danach kostet die Ladezeit: Modelle parsen (`loadModel`), `bakeClips` je `EntityRenderer` (Spiel und Symbol-Bühne backen dieselben Clips doppelt), Symbole der Befehlsleiste (`readPixels`/`toDataURL`). Messen per CDP-Profiler (`Profiler.start` vor `page.goto`).
+- 2026-09-27: Die Demo baut ihre Felder im ersten Bild, in dem eins sichtbar ist - ~0,5-1 s Stocken. Kosten je Feldart etwa zu gleichen Teilen: `farmModel` erzeugt OBJ-Text (~60 MB für alle), `parseObj` liest ihn wieder, `loadModel` misst je Furche das ganze Feld (9×).
+- 2026-09-27: Auch auf diesem Rechner (M1) schwankt `stadt` zwischen Läufen desselben Codes zwischen 28 und 60 fps, bei gleichen Draw-Calls und Eckpunkten.
 - 2026-09-26: `baseline.json` stammt von vor den Optimierungen (`6b5b5bd`). Nach der nächsten bewussten Messung neu setzen.
 - 2026-09-26, M4: Screenshot-Rauschen zweier Läufe desselben Codes (angehalten, 1280×800, DPR 1): 0,004-0,095 % der Pixel, einzelne Pixel bis 237 Farbstufen (Animationen). Darunter gilt ein Bild als gleich.
 - 2026-09-26, M4: `stadt` zeigt reproduzierbar eine einzelne `frameMsMax`-Spitze von 50-90 ms, auch auf `main` ohne Änderung (91,7 ms) - kein Befund gegen eine Änderung, Ursache noch offen.
