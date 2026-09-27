@@ -257,13 +257,14 @@ world.onEvent = worldSounds(sound, camera, (x, y) => ground.heightAt(x, y));
 
 // --- Flaches Gelände ----------------------------------------------------------
 
-/** Mit der Leertaste flachgelegt - bleibt, bis man sie oder den Knopf am Reif erneut drückt. */
+/** Flachgelegt per Leertaste oder Knopf am Reif - bleibt, bis man eins davon erneut drückt. */
 let flatOn = false;
 const flatButton = document.getElementById('flat')!;
 
 function toggleFlat() {
   flatOn = !flatOn;
-  flatButton.hidden = !flatOn;
+  flatButton.classList.toggle('on', flatOn);
+  flatButton.setAttribute('aria-pressed', String(flatOn));
 }
 
 flatButton.addEventListener('click', toggleFlat);

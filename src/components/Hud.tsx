@@ -82,10 +82,10 @@ function SoundButton() {
   );
 }
 
-/** Gelände flach (Leertaste) - nur sichtbar, solange es an ist; ein Klick schaltet es aus (main.ts). */
+/** Gelände flach an/aus (Leertaste) - leuchtet, solange es an ist (Klasse on, main.ts). */
 function FlatButton() {
   return (
-    <button id="flat" type="button" title="Gelände flach - aus mit Klick oder Leertaste" hidden>
+    <button id="flat" type="button" title="Gelände flach (Leertaste)" aria-pressed="false">
       <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"
         stroke-linecap="round" stroke-linejoin="round">
         <path d="M2 11l5-6 3 3 2-2 6 5" stroke-dasharray="2 2.2" />
@@ -162,7 +162,7 @@ function TurnIcon({ flip }: { flip?: boolean }) {
  * Minimap wie in AoE4, ohne Kasten: die runde Karte in einem Holzreif mit
  * Nägeln, drumherum die Windrose - frei über dem Spielfeld. Außen am Reif
  * hängen kleine runde Holzknöpfe auf den Diagonalen: oben Speichern und Menü
- * (mountMinimapMenu), unten links der Ton und, solange an, das flache Gelände,
+ * (mountMinimapMenu), unten links der Ton und das flache Gelände,
  * unten rechts das Drehen.
  */
 function Minimap() {
