@@ -5,7 +5,6 @@
 // statisch an der Klasse: `static definition`.
 
 import type { BuildingType, CropType, ResourceKind } from '../catalog';
-import type { Bowyer } from './Bowyer';
 import type { BuildingDefinition } from './definition';
 import type { Farm } from './Farm';
 import type { StorageBuilding } from './StorageBuilding';
@@ -27,6 +26,8 @@ export interface BuildingSave {
   r?: [number, number];
   /** Farm: nächste Frucht, Tiles, je Furche [Frucht, gepflügt, gesät, Wuchs, Nahrung, bezahlt]. */
   f?: { p: CropType; t?: number; r: [CropType, number, number, number, number, boolean][] };
+  /** Reuse: wie voll sie ist, 0..1. */
+  fl?: number;
 }
 
 /** Was beim Bauen mitgegeben werden kann - jede Klasse nimmt, was sie braucht. */
@@ -124,8 +125,8 @@ export abstract class BuildingBase {
     return false;
   }
 
-  /** Eine Werkstatt, in der ein Dorfbewohner arbeitet (die Bognerei)? */
-  isWorkshop(): this is Bowyer {
+  /** Eine Werkstatt, in der genau ein Dorfbewohner arbeitet (Bognerei, Fischerhütte)? */
+  isWorkshop(): boolean {
     return false;
   }
 

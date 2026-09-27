@@ -5,12 +5,13 @@
 
 import type { FarmView, SelectionView, TrainView, WorkshopView } from '../components/SelectionPanel';
 import { RESOURCE_TYPE_LABEL } from '../map';
-import type { Building, UnitProducer } from '../world/building';
+import { FishTrap, type Building, type UnitProducer } from '../world/building';
 import {
-  CROPS, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
+  BUILDINGS, CROPS, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import type { World } from '../world/world';
+import { workplace } from '../world/villagers';
 import type { Selection } from './Selection';
 
 /** Was auf einem Feld gerade dran ist - fürs Panel. */
@@ -46,11 +47,16 @@ function farmView(world: World, building: Building): FarmView {
   };
 }
 
+/** "10 Holz, 50 Nahrung". */
+function costText(cost: Partial<Record<ResourceKind, number>>): string {
+  return Object.entries(cost).map(([r, n]) => `${n} ${RESOURCE_LABEL[r as ResourceKind]}`).join(', ');
+}
+
 /** Knopf zum Ausbilden: Kosten und ob man sie hat. */
 function trainView(world: World): TrainView {
   return {
     label: VILLAGER.label,
-    cost: Object.entries(VILLAGER.cost).map(([r, n]) => `${n} ${RESOURCE_LABEL[r as ResourceKind]}`).join(', '),
+    cost: costText(VILLAGER.cost),
     affordable: world.canAffordVillager(),
   };
 }
@@ -108,6 +114,12 @@ export function selectionView(world: World, selection: Selection, resources: Res
       workshop: building.isWorkshop() ? workshopView(world, building) : undefined,
       weapons: def.weaponCapacity > 0
         ? { bows: world.armoryStock().get(building.anchor) ?? 0, capacity: def.weaponCapacity }
+        : undefined,
+      trapCost: building.type === 'fisher_hut'
+        ? { cost: costText(BUILDINGS.fish_trap.cost), affordable: world.affordable('fish_trap') }
+        : undefined,
+      trap: building instanceof FishTrap
+        ? { fish: building.fish, max: FISHING.trapFish, fullIn: (1 - building.fill) * FISHING.trapFillTime }
         : undefined,
       trainer: building.isUnitProducer()
         ? {
@@ -174,12 +186,16 @@ export function selectionView(world: World, selection: Selection, resources: Res
 
 /** Werkstatt: wer dort arbeitet, was er tut, wie weit der Bogen ist. */
 function workshopView(world: World, building: Building): WorkshopView {
-  const worker = world.villagers.find((v) => v.task.kind === 'craft' && v.task.building === building.anchor);
-  if (!worker || worker.task.kind !== 'craft') return {};
+  const role = building.type === 'fisher_hut' ? 'Fischer' : 'Bogner';
+  const worker = world.villagers.find((v) => workplace(v.task) === building.anchor);
+  if (!worker) return { role };
   const task = worker.task;
+  const busy = (task.kind === 'craft' && task.step === 'carve' && worker.carryType !== 'wood')
+    || (task.kind === 'fish' && (task.step === 'angle' || task.step === 'empty'));
   return {
+    role,
     worker: worker.name,
     doing: world.describe(worker),
-    percent: task.step === 'carve' && worker.carryType !== 'wood' ? Math.floor(task.progress * 100) : undefined,
+    percent: busy && 'progress' in task ? Math.floor(task.progress * 100) : undefined,
   };
 }

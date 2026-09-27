@@ -8,9 +8,9 @@ import { BUILDING_HEADING, CLIPS, POSE, modelEntry, modelWorkSpot } from '../gl/
 import type { Clip } from '../gl/clips';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { findPath, lineOfSight } from './pathfinding';
-import { furrowFood, type Building, type Farm } from './building';
+import { FishTrap, furrowFood, type Building, type Farm } from './building';
 import {
-  BOWYER, CROPS, FARM_RATE, HUNT, MAX_GATHERERS, PLOUGH_TIME, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
+  BOWYER, CROPS, FARM_RATE, FISHING, HUNT, MAX_GATHERERS, PLOUGH_TIME, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
 import type { Animal, Task, Villager } from './unit';
@@ -50,6 +50,15 @@ export function strikesBetween(clip: Clip, fromPhase: number, toPhase: number): 
   return count;
 }
 
+/** Die Werkstatt, in der er arbeitet (Bognerei, Fischerhütte) - oder keine. */
+export function workplace(task: Task): string | undefined {
+  return task.kind === 'craft' || task.kind === 'fish' ? task.building : undefined;
+}
+
+/** Schritte des Fischers, in denen das Boot auf dem Wasser ist bzw. gezogen wird. */
+export const AFLOAT: ReadonlySet<string> = new Set(['row', 'empty', 'return']);
+export const DRAGGING: ReadonlySet<string> = new Set(['launch', 'land']);
+
 export class VillagerWork {
   /**
    * Was ein Tile vom Gelände her versperrt, gemerkt: 0 frei, 1 Wasser,
@@ -74,13 +83,15 @@ export class VillagerWork {
     if (target?.isWorkshop()) {
       // Wie in Stronghold arbeitet in einer Werkstatt genau einer.
       const anchor = target.anchor;
-      const taken = this.world.villagers.some((v) => !ids.has(v.id) && v.task.kind === 'craft' && v.task.building === anchor);
+      const taken = this.world.villagers.some((v) => !ids.has(v.id) && workplace(v.task) === anchor);
       if (taken) return `In der ${target.label} arbeitet schon jemand`;
       const [worker, ...rest] = selected;
       for (const v of rest) {
-        if (v.task.kind === 'craft' && v.task.building === anchor) v.assign({ kind: 'idle' });
+        if (workplace(v.task) === anchor) v.assign({ kind: 'idle' });
       }
-      worker.assign({ kind: 'craft', building: anchor, step: 'fetch', progress: 0 });
+      worker.assign(target.type === 'fisher_hut'
+        ? { kind: 'fish', building: anchor, step: 'choose', progress: 0, fish: 0 }
+        : { kind: 'craft', building: anchor, step: 'fetch', progress: 0 });
       return rest.length > 0 ? `In der ${target.label} arbeitet nur einer` : null;
     }
     if (target?.isFarm()) {
@@ -148,10 +159,22 @@ export class VillagerWork {
 
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
   private blockedAt(x: number, y: number): boolean {
-    const k = key(x, y);
-    const anchor = this.world.occupied.get(k);
+    const anchor = this.world.occupied.get(key(x, y));
     // Über Felder geht man hinweg - Bauern arbeiten ja darauf.
     if (anchor !== undefined) return !this.world.building(anchor)?.isFarm();
+    const t = this.terrainAt(x, y);
+    if (t === 2) return !this.world.deposits.isExhausted(x, y) && !this.world.deposits.isFelled(x, y);
+    return t === 1;
+  }
+
+  /** Wo das Boot nicht hinkommt: alles außer Wasser. Über Reusen fährt es hinweg. */
+  private dryAt(x: number, y: number): boolean {
+    return this.terrainAt(x, y) !== 1;
+  }
+
+  /** Gelände eines Tiles, gemerkt (terrainBlock): 0 frei, 1 Wasser, 2 Baum/Fels. */
+  private terrainAt(x: number, y: number): number {
+    const k = key(x, y);
     let t = this.terrainBlock.get(k);
     if (t === undefined) {
       const found = this.world.terrain.resourceAt(x, y);
@@ -160,8 +183,7 @@ export class VillagerWork {
       if (this.terrainBlock.size > 200_000) this.terrainBlock.clear();
       this.terrainBlock.set(k, t);
     }
-    if (t === 2) return !this.world.deposits.isExhausted(x, y) && !this.world.deposits.isFelled(x, y);
-    return t === 1;
+    return t;
   }
 
   /**
@@ -169,8 +191,8 @@ export class VillagerWork {
    * gesucht, wenn das Ziel neu ist oder der Weg inzwischen versperrt ist.
    * Gibt es keinen Weg, geht er geradeaus (wie früher), statt stehen zu bleiben.
    */
-  private waypoint(v: Villager, tx: number, ty: number, reach: number): { x: number; y: number } {
-    const blocked = (x: number, y: number) => this.blockedAt(x, y);
+  private waypoint(v: Villager, tx: number, ty: number, reach: number, afloat: boolean): { x: number; y: number } {
+    const blocked = afloat ? (x: number, y: number) => this.dryAt(x, y) : (x: number, y: number) => this.blockedAt(x, y);
     // Neu suchen: neues Ziel, oder die Strecke zum nächsten Wegpunkt ist
     // inzwischen versperrt (z. B. ein neues Gebäude).
     const stale = !v.pathTarget || Math.hypot(v.pathTarget.x - tx, v.pathTarget.y - ty) > 0.3
@@ -186,7 +208,8 @@ export class VillagerWork {
     return v.path && v.path.length > 0 ? v.path[0] : { x: tx, y: ty };
   }
 
-  private walk(v: Villager, tx: number, ty: number, reach: number, dt: number): boolean {
+  /** Schritt zum Ziel; `afloat`: im Boot, nur über Wasser - er steht dabei im Boot. */
+  private walk(v: Villager, tx: number, ty: number, reach: number, dt: number, afloat = false): boolean {
     const d = Math.hypot(tx - v.x, ty - v.y);
     // Mit etwas Spielraum - sonst bliebe nach dem letzten Schritt ein
     // Rundungsrest, und er käme nie an.
@@ -196,7 +219,7 @@ export class VillagerWork {
       return true;
     }
     // Um Hindernisse herum: zum nächsten Wegpunkt, zuletzt aufs Ziel zu.
-    const next = this.waypoint(v, tx, ty, reach);
+    const next = this.waypoint(v, tx, ty, reach, afloat);
     const final = next.x === tx && next.y === ty;
     const dx = next.x - v.x;
     const dy = next.y - v.y;
@@ -206,7 +229,7 @@ export class VillagerWork {
     v.y += (dy / dn) * step;
     v.heading = Math.atan2(dy, dx);
     v.stride += step;
-    v.pose = POSE.walk;
+    v.pose = afloat ? POSE.stand : POSE.walk;
     this.world.markDirty();
     // Angekommen ist er erst im nächsten Tick: sonst ginge ein kurzer Weg im
     // selben Tick in die Arbeitspose über, und er rutschte statt zu gehen.
@@ -517,6 +540,136 @@ export class VillagerWork {
     this.world.markDirty();
   }
 
+  /**
+   * Fischer: ist eine Reuse in Reichweite der Hütte voll, holt er das Boot,
+   * zieht es ins Wasser, rudert hin, leert sie und bringt den Fang übers
+   * Wasser und an Land zum Netz der Hütte. Sonst angelt er am Ufer.
+   */
+  private tickFisher(v: Villager, task: Extract<Task, { kind: 'fish' }>, dt: number) {
+    const hut = this.world.building(task.building);
+    if (!hut) {
+      v.task = { kind: 'idle' };
+      return;
+    }
+    const spot = modelWorkSpot(hut.model, hut.x, hut.y, hut.definition.size, BUILDING_HEADING)
+      ?? { x: hut.x + 0.5, y: hut.y + 1.1, aimX: hut.x + 0.5, aimY: hut.y + 0.5, boat: undefined };
+    const boat = spot.boat ?? { x: hut.x + 0.5, y: hut.y + 1.1 };
+    const trap = task.trap ? this.world.building(task.trap) : undefined;
+    const shore = task.shore;
+    v.problem = null;
+    if (task.step === 'choose' || !shore) {
+      const full = this.fullTrap(hut, v);
+      const place = this.shore(hut, full);
+      if (!place) {
+        v.problem = 'Kein Ufer in der Nähe der Fischerhütte';
+        return;
+      }
+      Object.assign(task, { step: full ? 'boat' : 'shore', trap: full?.anchor, shore: place, progress: 0 });
+      return;
+    }
+    switch (task.step) {
+      case 'shore':
+      case 'angle':
+        // Ist inzwischen eine Reuse voll, lässt er die Angel und holt das Boot.
+        if (this.fullTrap(hut, v)) {
+          task.step = 'choose';
+          return;
+        }
+        if (!this.walk(v, shore.x, shore.y, 0.05, dt)) return;
+        task.step = 'angle';
+        v.heading = Math.atan2(shore.wy - v.y, shore.wx - v.x);
+        task.progress += dt / FISHING.rodTime;
+        if (task.progress >= 1) Object.assign(task, { step: 'net', progress: 0, fish: FISHING.rodFood });
+        this.world.markDirty();
+        return;
+      case 'boat':
+        if (this.walk(v, boat.x, boat.y, 0.05, dt)) task.step = 'launch';
+        return;
+      case 'launch':
+        // Er zieht das Boot hinter sich her bis ins Wasser (render.ts).
+        if (this.walk(v, shore.wx, shore.wy, 0.05, dt)) task.step = 'row';
+        return;
+      case 'row':
+        if (!trap) task.step = 'return';
+        else if (this.walk(v, trap.x + 0.5, trap.y + 0.5, 0.35, dt, true)) task.step = 'empty';
+        return;
+      case 'empty':
+        if (!(trap instanceof FishTrap)) {
+          task.step = 'return';
+          return;
+        }
+        v.heading = Math.atan2(trap.y + 0.5 - v.y, trap.x + 0.5 - v.x);
+        task.progress += dt / FISHING.emptyTime;
+        if (task.progress < 1) return;
+        if (trap.isFull) {
+          trap.fill = 0;
+          task.fish = FISHING.trapFood;
+        }
+        Object.assign(task, { step: 'return', progress: 0 });
+        this.world.markDirty();
+        return;
+      case 'return':
+        if (this.walk(v, shore.wx, shore.wy, 0.05, dt, true)) task.step = 'land';
+        return;
+      case 'land':
+        if (this.walk(v, boat.x, boat.y, 0.05, dt)) task.step = task.fish > 0 ? 'net' : 'choose';
+        return;
+      case 'net':
+        // Den Fisch ins Netz an der Hütte - das ist die Nahrung.
+        if (!this.walk(v, spot.x, spot.y, 0.05, dt)) return;
+        v.heading = Math.atan2(spot.aimY - v.y, spot.aimX - v.x);
+        this.world.stock.food += task.fish;
+        this.world.onEvent?.({ kind: 'deliver', x: v.x, y: v.y });
+        Object.assign(task, { step: 'choose', fish: 0, trap: undefined });
+        this.world.markDirty();
+        return;
+    }
+  }
+
+  /** Die nächste volle Reuse in Reichweite der Hütte, die kein anderer Fischer leert. */
+  private fullTrap(hut: Building, v: Villager): FishTrap | undefined {
+    let best: FishTrap | undefined;
+    let bestDistance: number = FISHING.range;
+    for (const b of this.world.allBuildings()) {
+      if (!(b instanceof FishTrap) || !b.isFull) continue;
+      const d = Math.hypot(b.x - hut.x, b.y - hut.y);
+      if (d > bestDistance) continue;
+      if (this.world.villagers.some((u) => u !== v && u.task.kind === 'fish' && u.task.trap === b.anchor)) continue;
+      best = b;
+      bestDistance = d;
+    }
+    return best;
+  }
+
+  /**
+   * Stelle am Ufer nahe der Hütte: ein begehbares Tile neben Wasser - an
+   * Land (x, y) knapp vor der Kante, im Wasser (wx, wy) knapp dahinter. Mit
+   * `toward` die, von der aus Hütte und Reuse zusammen am nächsten liegen.
+   * ponytail: gleiches Gewässer wird nicht geprüft; liegt die Reuse in einem
+   * anderen See, fährt das Boot geradeaus - Wasser-Zusammenhang prüfen, wenn
+   * das auf echten Karten vorkommt.
+   */
+  private shore(hut: Building, toward?: Building): { x: number; y: number; wx: number; wy: number } | undefined {
+    let best: { x: number; y: number; wx: number; wy: number } | undefined;
+    let bestScore = Infinity;
+    const R = FISHING.range;
+    for (let dy = -R; dy <= R; dy++) {
+      for (let dx = -R; dx <= R; dx++) {
+        const [x, y] = [hut.x + dx, hut.y + dy];
+        if (this.terrainAt(x, y) !== 1) continue;
+        for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+          if (this.blockedAt(nx, ny)) continue;
+          const score = Math.hypot(nx - hut.x, ny - hut.y) + (toward ? Math.hypot(x - toward.x, y - toward.y) : 0);
+          if (score >= bestScore) continue;
+          bestScore = score;
+          const [ex, ey] = [x - nx, y - ny];
+          best = { x: nx + 0.5 + ex * 0.4, y: ny + 0.5 + ey * 0.4, wx: nx + 0.5 + ex * 0.58, wy: ny + 0.5 + ey * 0.58 };
+        }
+      }
+    }
+    return best;
+  }
+
   /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
   hunt(ids: ReadonlySet<number>, animal: Animal) {
     for (const v of this.world.villagers) {
@@ -632,6 +785,10 @@ export class VillagerWork {
 
       case 'craft':
         this.tickCrafter(v, task, dt);
+        return;
+
+      case 'fish':
+        this.tickFisher(v, task, dt);
         return;
 
       case 'deliver': {
@@ -762,6 +919,19 @@ export class VillagerWork {
           case 'carve': return v.carryType === 'wood'
             ? 'bringt Holz zur Werkbank' + load
             : `schnitzt einen Bogen (${Math.floor(v.task.progress * 100)} %)`;
+        }
+      case 'fish':
+        switch (v.task.step) {
+          case 'choose': return 'fischt';
+          case 'shore': return 'geht zum Ufer angeln';
+          case 'angle': return `angelt (${Math.floor(v.task.progress * 100)} %)`;
+          case 'boat': return 'holt das Boot';
+          case 'launch': return 'zieht das Boot ins Wasser';
+          case 'row': return 'rudert zur Reuse';
+          case 'empty': return 'leert die Reuse';
+          case 'return': return v.task.fish > 0 ? 'rudert mit dem Fang zurück' : 'rudert zurück';
+          case 'land': return 'zieht das Boot an Land';
+          case 'net': return 'bringt den Fisch ins Netz';
         }
       case 'farm': {
         const building = this.world.building(v.task.building);

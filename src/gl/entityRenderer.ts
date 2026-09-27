@@ -86,6 +86,11 @@ import birchLeafUrl from '../textures/birch_leaf.png';
 import rallyFlagModel from '../models/props/rally_flag.glb?model';
 import bowyerModel from '../models/buildings/bowyer.glb?model';
 import armoryModel from '../models/buildings/armory.glb?model';
+import fisherHutModel from '../models/buildings/fisher_hut.glb?model';
+import fishTrapModel from '../models/fields/fish_trap.glb?model';
+import fisherBoatModel from '../models/props/fisher_boat.glb?model';
+import herringModel from '../models/props/herring.glb?model';
+import fishingRodModel from '../models/props/fishing_rod.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
 import bowModel from '../models/props/bow.glb?model';
 
@@ -244,6 +249,17 @@ export const SHAPE = {
   gizmoDiscX: 125,
   gizmoDiscY: 126,
   gizmoDiscZ: 127,
+  /** Fischerhütte mit Steg, Netz und Fischfass (models/buildings/fisher_hut.glb). */
+  fisherHut: 128,
+  /** Reuse im Wasser (models/fields/fish_trap.glb) - Wasserlinie siehe FISH_TRAP_DRAFT. */
+  fishTrap: 129,
+  /** Ruderboot des Fischers (models/props/fisher_boat.glb), Bug nach vorn. */
+  fisherBoat: 130,
+  /** Anhänge des Fischers wie die Werkzeuge oben: Hering und Angel, je Körper. */
+  propFish: 131,
+  propFishFemale: 132,
+  propRod: 133,
+  propRodFemale: 134,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -307,10 +323,13 @@ const SHAPE_RING = SHAPE.ring;
 /** Anhänge der Dorfbewohner (Werkzeuge) - gezeichnet wie Figuren, mit deren Gelenken und Clips. */
 const PROP_SHAPES: number[] = [
   SHAPE.propAxe, SHAPE.propAxeFemale, SHAPE.propScythe, SHAPE.propScytheFemale, SHAPE.propKnife, SHAPE.propKnifeFemale,
+  SHAPE.propFish, SHAPE.propFishFemale, SHAPE.propRod, SHAPE.propRodFemale,
 ];
+/** Im Shader: ist die Form ein Anhang? Zwei Bereiche - dazwischen liegen die Blumen. */
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}))`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
-const FIGURE_TEST = `(shape == ${SHAPE.villager} || shape == ${SHAPE.villagerFemale} || (shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}))`;
+const FIGURE_TEST = `(shape == ${SHAPE.villager} || shape == ${SHAPE.villagerFemale} || ${PROP_TEST})`;
 
 /** Alle Bäume - sie werden gefällt und kippen um. */
 export const TREES: number[] = [
@@ -928,7 +947,7 @@ void main() {
     // y nach links, z nach oben, Boden bei 0. Figuren sind auf Koerperhoehe 1
     // gebracht, Gebaeude auf Breite 1 (siehe loadModel()).
     bool figure = ${FIGURE_TEST};
-    bool prop = shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale};
+    bool prop = ${PROP_TEST};
     bool beast = ${BEASTS.map((n) => `shape == ${n}`).join(' || ')};
     bool natural = ${NATURAL.map((n) => `shape == ${n}`).join(' || ')};
     bool field = ${FIELD_TEST};
@@ -2062,7 +2081,7 @@ interface Model {
   /** Waffenkammer: so viele Bögen passen sichtbar hinein (Objekte "Stock.<n>"). */
   stockSlots: number;
   /** Werkstatt: wo der Arbeiter steht und wohin er schaut (Modell-Einheiten: vorn, links). */
-  work?: { stand: [number, number]; aim: [number, number] };
+  work?: { stand: [number, number]; aim: [number, number]; boat?: [number, number] };
   /** Figuren: Mitte der rechten Hand in Ruhelage (Modell-Einheiten) - dort hängen Werkzeuge. */
   hand: [number, number, number];
   /** Breite bzw. Höhe in Datei-Einheiten (Metern), auf die das Modell gebracht ist. */
@@ -2485,7 +2504,7 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
   return {
     file: typeof obj === 'string' ? modelFile(obj) : undefined,
     entry: markerAt(entryPoints),
-    work: stand && aim && { stand, aim },
+    work: stand && aim && { stand, aim, boat: markerAt(markerPoints('Work.Boat')) },
     stockSlots,
     vertices: new Float32Array(v),
     floats,
@@ -2622,6 +2641,8 @@ const FLOWER_MODEL = (() => {
   return loadModel(obj, mtl, 'width', true);
 })();
 const PROP_KNIFE = loadModel(propKnifeModel.obj, villagerMtl, 'meters');
+const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
+const PROP_ROD = loadModel(fishingRodModel.obj, fishingRodModel.mtl, 'meters');
 
 const MODELS: {
   shape: number; model: Model; scale: number; stride?: number;
@@ -2657,6 +2678,13 @@ const MODELS: {
   { shape: SHAPE.bowyer, model: loadModel(bowyerModel.obj, bowyerModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.bow, model: loadModel(bowModel.obj, bowModel.mtl, 'height'), scale: 1 },
   { shape: SHAPE.armory, model: loadModel(armoryModel.obj, armoryModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.fisherHut, model: loadModel(fisherHutModel.obj, fisherHutModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.fishTrap, model: loadModel(fishTrapModel.obj, fishTrapModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.fisherBoat, model: loadModel(fisherBoatModel.obj, fisherBoatModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.propFish, model: PROP_FISH, scale: 1.7, body: SHAPE.villager },
+  { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
+  { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },
+  { shape: SHAPE.propRodFemale, model: PROP_ROD, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.markerArrow, model: loadModel(markerArrowModel.obj, markerArrowModel.mtl, 'height'), scale: 1 },
   ...FARM_KINDS.flatMap((kind, i) => lazyFieldModels(kind, FIELD_BASES[i])),
   ...natural(SHAPE.tree, treeSpruceModel.obj, treeSpruceModel.mtl, TREE_METERS),
@@ -2742,6 +2770,18 @@ export function figureProps(figure: EntityInstance): EntityInstance[] {
     .map((p) => ({ ...figure, shape: p.shapes[figure.shape], health: undefined }));
 }
 
+/** Was der Fischer in der Hand hat - statt der Werkzeuge seines Clips (figureProps). */
+const HELD = {
+  fish: { [SHAPE.villager]: SHAPE.propFish, [SHAPE.villagerFemale]: SHAPE.propFishFemale },
+  rod: { [SHAPE.villager]: SHAPE.propRod, [SHAPE.villagerFemale]: SHAPE.propRodFemale },
+} as Record<string, Record<number, number>>;
+
+/** Anhang eines Fischers: Hering, Angel oder nichts - das Beil der Clips steckt er weg. */
+export function figureHolding(figure: EntityInstance, item: 'fish' | 'rod' | null): EntityInstance[] {
+  const shape = item && HELD[item][figure.shape];
+  return shape ? [{ ...figure, shape, health: undefined }] : [];
+}
+
 /**
  * Eingang eines Gebäudes in der Welt: Mitte (x, y wie EntityInstance, also
  * Tile-Anker), Größe und Blickrichtung wie beim Zeichnen. Undefined, wenn das
@@ -2757,12 +2797,13 @@ export function modelEntry(shape: number, x: number, y: number, size: number, he
  * und wohin er schaut. Undefined, wenn das Modell ihn nicht markiert.
  */
 export function modelWorkSpot(shape: number, x: number, y: number, size: number, heading: number):
-    { x: number; y: number; aimX: number; aimY: number } | undefined {
+    { x: number; y: number; aimX: number; aimY: number; boat?: { x: number; y: number } } | undefined {
   const m = MODEL_BY_SHAPE.get(shape);
   if (!m?.model.work) return undefined;
-  const stand = modelToWorld(m, m.model.work.stand, x, y, size, heading);
-  const aim = modelToWorld(m, m.model.work.aim, x, y, size, heading);
-  return { ...stand, aimX: aim.x, aimY: aim.y };
+  const { stand: s, aim: a, boat: b } = m.model.work;
+  const stand = modelToWorld(m, s, x, y, size, heading);
+  const aim = modelToWorld(m, a, x, y, size, heading);
+  return { ...stand, aimX: aim.x, aimY: aim.y, boat: b && modelToWorld(m, b, x, y, size, heading) };
 }
 
 /** Wie viele Bögen im Modell sichtbar gestapelt werden können (Waffenkammer), sonst 0. */

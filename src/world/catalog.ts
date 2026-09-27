@@ -167,5 +167,15 @@ export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0 };
  */
 export const BOWYER = { wood: 10, craftTime: 20 };
 
+/**
+ * Fischerei: Reusen füllen sich in `trapFillTime` Sekunden, geleert bringen
+ * sie `trapFood` Nahrung. Ohne volle Reuse angelt der Fischer am Ufer: alle
+ * `rodTime` Sekunden ein Fisch, `rodFood` Nahrung. `trapFish`: so viele Fische
+ * liegen in einer vollen Reuse (Stock.<n> im Modell). `range`: so weit (Tiles)
+ * von der Hütte dürfen Reusen und das Ufer liegen. `emptyTime`: Sekunden an
+ * der Reuse.
+ */
+export const FISHING = { trapFillTime: 180, trapFood: 5, trapFish: 5, rodTime: 60, rodFood: 1, range: 8, emptyTime: 2 };
+
 /** Höchstens so viele Dorfbewohner stehen gleichzeitig in der Warteschlange eines Hauptgebäudes. */
 export const MAX_TRAINING_QUEUE = 25;

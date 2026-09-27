@@ -15,7 +15,7 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   villagers/                male, female
   buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-                            mill(_2.._4), bowyer, armory
+                            mill(_2.._4), bowyer, armory, fisher_hut
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar

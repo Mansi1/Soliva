@@ -8,10 +8,10 @@ import { uniqueName } from './names';
 import { POSE, animationTime } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { reliefZ } from '../noise';
-import { BUILDINGS, FIELD_ROWS, RESOURCE_KINDS, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
+import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
 import type { BuildingType, CropType, DepositType, ResourceKind, Resources } from './catalog';
 import {
-  buildingFromSave, createBuilding, furrowPosition, maskCovers, CENTER_TILE,
+  buildingFromSave, createBuilding, furrowPosition, maskCovers, CENTER_TILE, FishTrap,
   type Building, type Farm, type UnitProducer,
 } from './building';
 import { readSave, writeSave, type LoadedSave, type SaveData } from './save';
@@ -209,7 +209,7 @@ export class World {
     let idle = 0;
     for (const v of this.villagers) {
       if (v.task.kind === 'gather') counts[YIELD[v.task.type]]++;
-      else if (v.task.kind === 'farm' || v.task.kind === 'hunt') counts.food++;
+      else if (v.task.kind === 'farm' || v.task.kind === 'hunt' || v.task.kind === 'fish') counts.food++;
       else if (v.task.kind === 'craft') counts.bows++;
       else if (v.task.kind === 'idle') idle++;
     }
@@ -412,7 +412,14 @@ export class World {
     for (const [tx, ty] of this.footprintTiles(x, y, type)) {
       if (this.occupied.has(key(tx, ty))) return 'Hier steht schon etwas';
       const tile = this.terrain.getTile(tx, ty);
-      if (!def.terrain.includes(tile.tileType)) return `${def.label} braucht festen Boden`;
+      if (!def.terrain.includes(tile.tileType)) return `${def.label} braucht ${def.terrain.includes('water') ? 'Wasser' : 'festen Boden'}`;
+    }
+
+    // Fischerei: die Hütte ans Wasser, Reusen in ihre Nähe (FISHING.range).
+    if (type === 'fisher_hut' && !this.waterNear(x, y)) return 'Die Fischerhütte gehört ans Wasser';
+    if (type === 'fish_trap' && ![...this.buildings.values()].some((b) => b.type === 'fisher_hut'
+        && Math.hypot(b.x - x, b.y - y) <= FISHING.range)) {
+      return 'Eine Reuse gehört in die Nähe einer Fischerhütte';
     }
 
     // Felder (oben) folgen dem Gelände - nur Gebäude brauchen ebenen Boden.
@@ -422,6 +429,18 @@ export class World {
 
     if (!this.affordable(type)) return 'Zu wenig Rohstoffe';
     return null;
+  }
+
+  /** Liegt Wasser höchstens FISHING.range / 2 Tiles von (x, y)? */
+  private waterNear(x: number, y: number): boolean {
+    const r = FISHING.range / 2;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const t = this.terrain.getTile(x + dx, y + dy).tileType;
+        if (t === 'water' || t === 'deep_water') return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -497,7 +516,7 @@ export class World {
     // ein anderes Lager oder bleibt mit seiner Ladung stehen.
     for (const v of this.villagers) {
       const t = v.task;
-      if ((t.kind === 'deliver' || t.kind === 'farm' || t.kind === 'craft') && t.building === anchor) v.task = { kind: 'idle' };
+      if ((t.kind === 'deliver' || t.kind === 'farm' || t.kind === 'craft' || t.kind === 'fish') && t.building === anchor) v.task = { kind: 'idle' };
     }
     this.dirty = true;
   }
@@ -589,7 +608,14 @@ export class World {
     this.time += dt;
     this.lastDt = dt;
     if (this.ruins.length > 0) this.ruins = this.ruins.filter((r) => this.time - r.at < RUIN_DURATION);
-    for (const b of this.buildings.values()) if (b.isUnitProducer()) this.tickTraining(b, dt);
+    for (const b of this.buildings.values()) {
+      if (b.isUnitProducer()) this.tickTraining(b, dt);
+      // Reusen füllen sich von allein; voll gespeichert wird sie sofort.
+      if (b instanceof FishTrap && !b.isFull) {
+        b.fill = Math.min(1, b.fill + dt / FISHING.trapFillTime);
+        if (b.isFull) this.dirty = true;
+      }
+    }
     if (this.deposits.regrow(dt, this.time)) this.dirty = true;
     if (this.farming.grow(dt)) this.dirty = true;
     if (this.wildlife.tick(dt, this.animalSurroundings)) this.dirty = true;
