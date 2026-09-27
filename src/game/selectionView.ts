@@ -179,7 +179,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     const kind = FLOWERS.indexOf(selection.flower.shape);
     const { name, latin, info, wiki } = FLOWER_KINDS[kind];
     // Das Foto legt `npm run fetch:flowers` ab (tools/ui/flower-photos.mjs).
-    return { kind: 'flower', name, latin, info, wiki, photo: `/assets/blumen/${name}.webp`, flower: kind, color: selection.flower.color };
+    return { kind: 'flower', name, latin, info, wiki, photo: `/assets/blumen/${name}.webp`, flower: kind };
   }
   if (selection.villagers.size > 0) {
     const chosen = selection.chosenVillagers();

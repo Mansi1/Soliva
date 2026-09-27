@@ -21,7 +21,7 @@ const PHOTOS = {
 
 // Prüfung: jede Art in FLOWER_KINDS hat hier ein Foto und umgekehrt.
 const model = readFileSync(new URL('../../src/gl/flowerModel.ts', import.meta.url), 'utf8');
-const kinds = [...model.matchAll(/\{ name: '([^']+)'/g)].map((m) => m[1]);
+const kinds = [...model.matchAll(/ name: '([^']+)'/g)].map((m) => m[1]);
 if (kinds.sort().join() !== Object.keys(PHOTOS).sort().join()) {
   throw new Error(`FLOWER_KINDS (${kinds.join(', ')}) passt nicht zu PHOTOS (${Object.keys(PHOTOS).join(', ')})`);
 }

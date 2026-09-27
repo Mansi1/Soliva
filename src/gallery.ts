@@ -222,10 +222,8 @@ function meadow(label: string, kinds: number[]): Exhibit {
     return v - Math.floor(v);
   };
   const plant = (out: EntityInstance[], x: number, y: number, kind: number, i: number) => {
-    const petal = FLOWER_KINDS[kind].petal;
     out.push({ x: x - 0.5, y: y - 0.5, size: FLOWER_SIZE * (0.8 + 0.45 * rnd(i, 3)), shape: FLOWERS[kind], alpha: 1,
-      color: [Math.round(petal[0] * 255), Math.round(petal[1] * 255), Math.round(petal[2] * 255)],
-      motion: [rnd(i, 4) * Math.PI * 2, 0, 0, 1] });
+      color: [0, 0, 0], motion: [rnd(i, 4) * Math.PI * 2, 0, 0, 1] });
   };
   return {
     label,
@@ -253,12 +251,11 @@ function meadow(label: string, kinds: number[]): Exhibit {
 
 /** Eine einzelne Blume, zum genauen Ansehen - in echter Größe wie auf der Wiese. */
 function oneFlower(kind: number): Exhibit {
-  const petal = FLOWER_KINDS[kind].petal;
   return {
     label: FLOWER_KINDS[kind].name,
     draw: (_t, x, y, out) => {
-      out.push({ x: x - 0.5, y: y - 0.5, size: FLOWER_SIZE, shape: FLOWERS[kind], alpha: 1,
-        color: [Math.round(petal[0] * 255), Math.round(petal[1] * 255), Math.round(petal[2] * 255)], motion: [0.6, 0, 0, 1] });
+      out.push({ x: x - 0.5, y: y - 0.5, size: FLOWER_SIZE, shape: FLOWERS[kind], alpha: 1, color: [0, 0, 0],
+        motion: [0.6, 0, 0, 1] });
     },
   };
 }

@@ -70,7 +70,7 @@ import gold2Model from '../models/resources/gold_2.glb?model';
 import gold3Model from '../models/resources/gold_3.glb?model';
 import berryBush1Model from '../models/resources/berry_bush_1.glb?model';
 import { gizmoModel } from './gizmoModel';
-import { FLOWER_KINDS } from './flowerModel';
+import { FLOWER_KINDS, flowerTexture } from './flowerModel';
 import berryBush2Model from '../models/resources/berry_bush_2.glb?model';
 import berryBush3Model from '../models/resources/berry_bush_3.glb?model';
 import berryBush4Model from '../models/resources/berry_bush_4.glb?model';
@@ -481,22 +481,16 @@ const LEAF_TEX_SIZE = 256;
 const LEAF_CARD_ROLE = 13;
 /** Rolle der Astkarten (Birke): ein ganzer Ast mit hängenden Zweigen und kleinen Blättern. */
 const BRANCH_CARD_ROLE = 14;
-/** Rolle der Blütenkarten (Blumen): der Shader malt die Blüte darauf (blossomCard). */
+/** Rolle der Blütenkarten (Blumen): die Blüte als Textur darauf (blossomCard). */
 const BLOSSOM_CARD_ROLE = 19;
 /** Rolle der Schattenkarten (Blumen): ein weicher dunkler Fleck unter der Blüte. */
 const FLOWER_SHADOW_ROLE = 21;
 /** Materialien der Karten, auf die der Shader malt - sie tragen (u, v, Zufall) statt einer Farbe. */
 const CARD_MATERIALS = new Set(['LeafCard', 'BranchCard', 'BlossomCard', 'FlowerShadow']);
 
-/** Die Arten als GLSL-Tabelle, aus FLOWER_KINDS - Index = Form - SHAPE.flowerDaisy. */
-const glslList = (type: string, values: string[]) => `${type}[${values.length}](${values.join(', ')})`;
-const glslVec3 = ([r, g, b]: readonly number[]) => `vec3(${r.toFixed(3)}, ${g.toFixed(3)}, ${b.toFixed(3)})`;
-const FLOWER_GLSL = `
-const float FLOWER_PETALS[${FLOWER_KINDS.length}] = ${glslList('float', FLOWER_KINDS.map((k) => k.petals.toFixed(1)))};
-const vec3 FLOWER_PETAL[${FLOWER_KINDS.length}] = ${glslList('vec3', FLOWER_KINDS.map((k) => glslVec3(k.petal)))};
-const vec3 FLOWER_HEART[${FLOWER_KINDS.length}] = ${glslList('vec3', FLOWER_KINDS.map((k) => glslVec3(k.heart)))};
-const float FLOWER_HEART_SIZE[${FLOWER_KINDS.length}] = ${glslList('float', FLOWER_KINDS.map((k) => k.heartSize.toFixed(3)))};
-`;
+/** Schicht der Blüten-Textur je Art in uModelImages, als GLSL-Tabelle - Index = Form - SHAPE.flowerDaisy. */
+const FLOWER_LAYERS = FLOWER_KINDS.map((k) => imageLayer(flowerTexture(k.type), [1, 1, 1]));
+const FLOWER_GLSL = `const float FLOWER_LAYER[${FLOWER_LAYERS.length}] = float[${FLOWER_LAYERS.length}](${FLOWER_LAYERS.map((l) => l.toFixed(1)).join(', ')});`;
 /** Materialien, aus denen eine Krone besteht - daraus Mitte und Ausdehnung (Model.canopy). */
 const FOLIAGE_MATERIALS = new Set(['Paint', 'LeafDark', 'LeafLight', 'Needle', 'NeedleDark', 'LeafCard', 'BranchCard']);
 
@@ -1712,37 +1706,33 @@ ${FLOWER_GLSL}
 // Deckung der Blütenkarte am Rand der Blüte - geht ins Alpha (main).
 float gCardAlpha = 1.0;
 
-// Blütenkarte einer Blume: Blütenblätter mit Fugen und Wölbung, eine gewölbte
-// Mitte mit Glanzpunkt, Klee als Köpfchen aus Tupfen - wie die gemalten Blumen
-// im Gelände (flower() in terrainShader.ts). base = (u, v, Zufall); was
-// außerhalb der Blüte liegt, wird verworfen.
-vec3 blossomCard(vec3 base, int shape) {
+// Blütenkarte einer Blume: die Blüte als Textur (flowerTexture, gemalt von
+// tools/models/create-flower-blossoms.ts), je Blume um ihren Zufall gedreht,
+// dazu ein Glanzpunkt zur Sonne (sun, Länge 1; contrast wie uLight.y).
+// base = (u, v, Zufall); was außerhalb der Blüte liegt, wird verworfen.
+vec3 blossomCard(vec3 base, int shape, vec3 sun, float contrast) {
   int k = clamp(shape - ${SHAPE.flowerDaisy}, 0, ${FLOWER_KINDS.length - 1});
-  float petals = FLOWER_PETALS[k];
-  float heartSize = FLOWER_HEART_SIZE[k];
-  // Die Blüte füllt die Karte fast bis an den Rand.
-  vec2 q = (base.xy - 0.5) * 2.0 / 0.95;
-  float d = length(q);
-  // Ein Pixel in Einheiten der Blüte - für weiche, aber scharfe Ränder.
-  float px = max(fwidth(d), 1e-4);
-  float a = atan(q.y, q.x) + base.z * 6.2832;
-  float rim = petals > 0.0 ? 0.5 + 0.5 * pow(abs(cos(a * petals * 0.5)), 0.6) : 0.8;
-  gCardAlpha = smoothstep(rim + px, rim - px, d);
+  // Achsen der Karte (+u, +v) in der Welt, aus den Bildschirm-Ableitungen -
+  // vor dem discard, sonst sind sie undefiniert.
+  vec3 dpx = dFdx(vWorld), dpy = dFdy(vWorld);
+  vec2 dux = dFdx(base.xy), duy = dFdy(base.xy);
+  float det = dux.x * duy.y - dux.y * duy.x;
+  vec3 axisU = normalize((dpx * duy.y - dpy * dux.y) * sign(det) + 1e-9);
+  vec3 axisV = normalize((dpy * dux.x - dpx * duy.x) * sign(det) + 1e-9);
+  vec2 q = base.xy - 0.5;
+  float a = base.z * 6.2832;
+  vec2 uv = mat2(cos(a), sin(a), -sin(a), cos(a)) * q + 0.5;
+  vec4 t = texture(uModelImages, vec3(uv.x, 1.0 - uv.y, FLOWER_LAYER[k]));
+  // Außerhalb des Kreises holte die gedrehte Karte die Nachbarkachel (REPEAT).
+  gCardAlpha = dot(q, q) > 0.25 ? 0.0 : t.a;
   if (gCardAlpha < 0.02) discard;
-  // Licht von einer festen Seite der Karte - sie steht je Blume anders gedreht.
-  vec2 toSun = normalize(vec2(-0.45, 0.35));
-  float facing = dot(q, toSun) / max(d, 1e-3);
-  // Blütenblätter: zur Mitte hin tiefer (dunkler), außen heller, dazu die
-  // Wölbung zur Sonne und dunkle Fugen zwischen den Blättern.
-  vec3 col = FLOWER_PETAL[k] * (0.72 + 0.3 * d) * (0.9 + 0.22 * facing * min(d, 1.0));
-  if (petals > 0.0) col *= 0.82 + 0.18 * smoothstep(0.0, 0.35, abs(cos(a * petals * 0.5)));
-  else col *= 0.85 + 0.3 * step(0.5, fract((q.x + q.y) * 3.0) * fract((q.x - q.y) * 3.0) * 4.0);
-  // Die Mitte als kleine Kuppel mit Glanzpunkt.
-  float h = smoothstep(heartSize + px, heartSize - px, d);
-  vec3 hc = FLOWER_HEART[k] * (0.75 + 0.45 * clamp(1.0 - length(q / max(heartSize, 1e-3) - toSun * 0.4), 0.0, 1.0));
-  col = mix(col, hc, h);
-  float gloss = smoothstep(0.22, 0.0, length(q - toSun * max(heartSize, 0.35) * 0.9));
-  return mix(col, vec3(1.0), gloss * 0.35);
+  // Die Textur ist vormultipliziert - so filtert der Rand ohne grauen Saum.
+  vec3 col = t.rgb / t.a;
+  // Glanz: steht die Sonne hoch, in der Mitte, steht sie tief, zu ihr hin am
+  // Rand der Mitte. Bei bedecktem Himmel (contrast 0) keiner.
+  vec2 sunOnCard = vec2(dot(sun, axisU), dot(sun, axisV));
+  float gloss = smoothstep(0.22, 0.0, length(q * 2.0 / 0.95 - sunOnCard * 0.315));
+  return mix(col, vec3(1.0), gloss * 0.35 * contrast);
 }
 
 // Zur Kamera, in Weltkoordinaten - hängt von der Blickrichtung ab.
@@ -1850,7 +1840,7 @@ void main() {
   else if (uPlain == 1 && vTex != ${BLOSSOM_CARD_ROLE} && vTex != ${FLOWER_SHADOW_ROLE}) base = vColor;
   else if (vTex == ${IMAGE_ROLE}) base = vSawn > 0.5 ? treeTexture(vec3(0.86, 0.71, 0.48)) : imageTexture(base);
   else if (vTex >= ${FIGURE_TEX.cloth} && vTex <= ${FIGURE_TEX.skin}) base = figureTexture(base);
-  else if (vTex == ${BLOSSOM_CARD_ROLE}) base = blossomCard(base, shape);
+  else if (vTex == ${BLOSSOM_CARD_ROLE}) base = blossomCard(base, shape, uSunDir, uLight.y);
   else if (vTex == ${FLOWER_SHADOW_ROLE}) {
     // Schatten der Blüte auf dem Gras: rund und weich, zur Mitte am dunkelsten.
     gCardAlpha = 0.6 * (1.0 - smoothstep(0.3, 0.85, length(base.xy - 0.5) * 2.0));

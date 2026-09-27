@@ -114,7 +114,7 @@ export type SelectionView =
       food: number;
       maxFood: number;
     }
-  | { kind: 'flower'; name: string; latin: string; info: string; wiki: string; photo: string; flower: number; color: [number, number, number] }
+  | { kind: 'flower'; name: string; latin: string; info: string; wiki: string; photo: string; flower: number }
   | { kind: 'empty' }
   | {
       kind: 'villagers';
