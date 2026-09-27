@@ -8,6 +8,7 @@ sie brauchen keinen Export; ebenso die Clip-Bibliotheken `src/models/clips/*.glb
 | --- | --- |
 | `npm run gen:ui` | `src/icons/*.png`: Symbole der Rohstoffleiste und ihre Holztextur |
 | `npm run gen:flower-blossoms` | `src/models/flowers/textures/*.webp`: die Blüten der Blumen von oben (`models/create-flower-blossoms.ts`), ohne Licht - `blossomCard` im Shader legt sie auf die Blütenkarte |
+| `npm run download:flower-photos` | `src/models/flowers/photos/*.webp`: Fotos der Blumen aus Wikipedia fürs Auswahl-Panel (`models/download-flower-photos.ts`), vorhandene bleiben |
 
 - `models/glb.mjs` - liest und schreibt die Modelle (`.glb` ↔ OBJ/MTL-Text), mit den Regeln für
   Objektnamen; `models/check-models.mjs` prüft die Namen mit Bedeutung (`npm run check:models`)

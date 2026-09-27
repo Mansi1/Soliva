@@ -6,7 +6,7 @@
 // Die Farben sind mit der Deckung vormultipliziert (blossomCard teilt wieder):
 // Sonst mischt die GPU beim Filtern das Schwarz der durchsichtigen Pixel als
 // grauen Saum in den Rand. Das WebP schreibt der Headless-Chrome
-// (canvas.toDataURL wie tools/ui/flower-photos.mjs), so braucht es keinen Encoder.
+// (canvas.toDataURL wie tools/models/download-flower-photos.ts), so braucht es keinen Encoder.
 //
 // Aufruf: npm run gen:flower-blossoms
 

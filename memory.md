@@ -8,7 +8,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-26, Mac (M4): Headless-Chrome aus `tools/ui/browser.mjs` rendert über Metal auf der echten GPU (`ANGLE Metal Renderer: Apple M4`), kein Software-Renderer; `EXT_disjoint_timer_query_webgl2` ist vorhanden. Messwerte aus Playwright sind echt.
 - 2026-09-27: Es gibt auch einen Mac mit M1 (`ANGLE Metal Renderer: Apple M1`). `baseline.json` stammt nicht von ihm - dort nur `main` gegen Branch im selben Lauf vergleichen, nicht gegen die Basis. `stadt` erreicht auf dem M1 keine 60 fps (29-48 fps im Median, stark schwankend).
 - Bench, Rauchtest und Screenshots brauchen den laufenden Dev-Server (`npm run dev`, http://localhost:5173). Für einen zweiten Stand (Worktree) einen eigenen Port nehmen (`npx vite --port 5188`) und die Adresse übergeben: `node tools/perf/bench.mjs http://localhost:5188`.
-- 2026-09-27: Wikimedia antwortet bei schnellen Folgen von Bild-Downloads mit 429 - `tools/ui/flower-photos.mjs` wartet und versucht es erneut.
+- 2026-09-27: Wikimedia antwortet bei schnellen Folgen von Bild-Downloads mit 429 - `tools/models/download-flower-photos.ts` wartet und versucht es erneut.
 
 - 2026-09-27: Mehrere Modelle in einer Blender-Szene: Blender hängt `.001` an gleiche Objekt- *und Materialnamen* (`Tunic.001`, `Skin.001`). Materialnamen bestimmen das Aussehen im Spiel - vor dem Export je Modell die Namen gegen `git show HEAD:<glb>` vergleichen oder ein Modell je Szene.
 - 2026-09-26: Modelle aus Blender (auch per `blender-mcp`) mit `export_normals=False` exportieren. Mit Normalen wurde `villagers/male.glb` 4× so groß (118 → 508 KB), das Spiel liest nur POSITION.

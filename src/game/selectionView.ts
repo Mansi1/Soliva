@@ -5,7 +5,7 @@
 
 import type { FarmView, SelectionView, TrainView, WorkshopView } from '../components/SelectionPanel';
 import { FLOWERS } from '../gl/entityRenderer';
-import { FLOWER_KINDS } from '../gl/flowerModel';
+import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { FishTrap, type Building, type UnitProducer } from '../world/building';
 import {
@@ -177,9 +177,8 @@ export function selectionView(world: World, selection: Selection, resources: Res
   }
   if (selection.flower) {
     const kind = FLOWERS.indexOf(selection.flower.shape);
-    const { name, latin, info, wiki } = FLOWER_KINDS[kind];
-    // Das Foto legt `npm run fetch:flowers` ab (tools/ui/flower-photos.mjs).
-    return { kind: 'flower', name, latin, info, wiki, photo: `/assets/blumen/${name}.webp`, flower: kind };
+    const { type, name, latin, info, wiki } = FLOWER_KINDS[kind];
+    return { kind: 'flower', name, latin, info, wiki, photo: flowerPhoto(type), flower: kind };
   }
   if (selection.villagers.size > 0) {
     const chosen = selection.chosenVillagers();

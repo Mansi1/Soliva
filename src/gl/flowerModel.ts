@@ -11,6 +11,7 @@
 
 
 export const BASE_FLOWER_TEXTURE_URL = new URL('../models/flowers/textures/', import.meta.url);
+export const BASE_FLOWER_PHOTO_URL = new URL('../models/flowers/photos/', import.meta.url);
 
 
 
@@ -23,13 +24,16 @@ export type FlowerType = 'daisy' | 'buttercup' | 'poppy' | 'cornflower' | 'clove
  */
 export const flowerTexture = (type: FlowerType) => new URL(`../models/flowers/textures/${type}.webp`, import.meta.url).href;
 
+/** Foto der Art fürs Auswahl-Panel (aus Wikipedia, tools/models/download-flower-photos.ts) - dieselbe Form wie flowerTexture. */
+export const flowerPhoto = (type: FlowerType) => new URL(`../models/flowers/photos/${type}.webp`, import.meta.url).href;
+
 export interface FlowerKind {
   type: FlowerType;
   name: string;
   /** Wissenschaftlicher Name und ein paar Sätze fürs Auswahl-Panel. */
   latin: string;
   info: string;
-  /** Artikel in der deutschen Wikipedia - ein Foto daraus lädt tools/ui/flower-photos.mjs. */
+  /** Artikel in der deutschen Wikipedia - ein Foto daraus lädt tools/models/download-flower-photos.ts. */
   wiki: string;
 }
 
