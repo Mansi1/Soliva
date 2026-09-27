@@ -2019,6 +2019,12 @@
    "Ear",
    "Stalk"
   ],
+  "flowers/flower": [
+   "Blossom",
+   "Leaf",
+   "Shadow",
+   "Stem"
+  ],
   "props/axe": [
    "Arm.R.Lower.Tool.Edge",
    "Arm.R.Lower.Tool.Grip",
