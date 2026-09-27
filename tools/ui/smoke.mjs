@@ -152,7 +152,7 @@ check('Galerie zeigt Animationen', (await page.$$('.gal-chip')).length > 0);
 // Bewegt wird alles von Clips aus Blender - eine leere Bibliothek hieße: diese
 // Figuren stehen still (window.__clipLibraries, entityRenderer.ts).
 const clipLibraries = await page.evaluate(() => window.__clipLibraries ?? {});
-const emptyLibraries = ['humanoid', 'quadruped', 'mill', 'flag'].filter((n) => !(clipLibraries[n] > 0));
+const emptyLibraries = ['humanoid', 'humanoid_sit', 'quadruped', 'mill', 'flag'].filter((n) => !(clipLibraries[n] > 0));
 check('Clips aus Blender geladen', emptyLibraries.length === 0,
   emptyLibraries.length ? `leer: ${emptyLibraries.join(', ')}` : Object.entries(clipLibraries).map(([n, c]) => `${n} ${c}`).join(', '));
 

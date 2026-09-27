@@ -501,11 +501,13 @@ export class VillagerWork {
       const armory = this.nearestDropSite(v, 'bows');
       if (!armory) {
         v.problem = 'Keine Waffenkammer für den Bogen - baue eine';
+        this.sitDown(v, shop, dt);
         return;
       }
       // Alle voll: er wartet mit dem Bogen, bis Platz ist - erst dann geht er los.
       if (v.inside <= 0 && this.world.stock.bows >= this.world.weaponCapacity()) {
         v.problem = 'Alle Waffenkammern sind voll - baue noch eine';
+        this.sitDown(v, shop, dt);
         return;
       }
       v.problem = null;
@@ -516,11 +518,13 @@ export class VillagerWork {
       const store = this.nearestDropSite(v, 'wood');
       if (!store) {
         v.problem = 'Kein Lager für Holz - baue ein Holzlager';
+        this.sitDown(v, shop, dt);
         return;
       }
       // Erst losgehen, wenn es genug gibt - sonst wartet er an der Werkbank.
       if (v.inside <= 0 && !this.world.canPay({ wood: BOWYER.wood })) {
         v.problem = `Zu wenig Holz im Vorrat (${BOWYER.wood} je Bogen)`;
+        this.sitDown(v, shop, dt);
         return;
       }
       v.problem = null;
@@ -678,6 +682,14 @@ export class VillagerWork {
       }
     }
     return best;
+  }
+
+  /** Keine Arbeit in der Werkstatt: er setzt sich auf den Hocker und wartet. */
+  private sitDown(v: Villager, shop: Building, dt: number) {
+    const seat = modelWorkSpot(shop.model, shop.x, shop.y, shop.definition.size, BUILDING_HEADING, 'seat');
+    if (!seat || !this.walk(v, seat.x, seat.y, 0.05, dt)) return;
+    v.heading = Math.atan2(seat.aimY - v.y, seat.aimX - v.x);
+    v.pose = POSE.sit;
   }
 
   /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */

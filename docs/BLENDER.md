@@ -22,7 +22,7 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   props/                    axe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
   fields/                   stake, cord, wheat_leaf, wheat_stalk(_light, _dark),
                             corn_1, corn_2, tomato, potato, hop
-  clips/                    humanoid, quadruped, mill, flag - je .glb + .json
+  clips/                    humanoid, humanoid_sit, quadruped, mill, flag - je .glb + .json
                             Bewegungen - je Skelett eine Bibliothek
   poses/                    mow.json, carve.json - Posen für tools/export/poses.mjs
 ```
@@ -99,6 +99,7 @@ Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 |---|---|
 | `Entry` | Eingang - dorthin gehen Dorfbewohner, wird nicht gezeichnet |
 | `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei) |
+| `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei) |
 | `Leg.L`, `Leg.L.Lower`, `Arm.R`, `Arm.R.Lower`, `Head`, `Load` ... | Körperteile der Figuren - an ihnen hängen die Knochen |
 | `Leg.FL/FR/BL/BR`, `Head` | Beine und Kopf der Tiere |
 | `Arm.R.Lower.Tool…`, `…Scythe…`, `Knife…` | Werkzeuge an der Hand |
