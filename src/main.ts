@@ -29,7 +29,7 @@ import {
 import { World } from './world/world';
 import { worldInstances } from './world/render';
 import { Selection } from './game/Selection';
-import { Camera } from './game/Camera';
+import { Camera, ZOOM_LEVELS } from './game/Camera';
 import { GameUi } from './game/ui';
 import { steerCamera } from './game/cameraControl';
 import { startPoint } from './game/startPoint';
@@ -56,7 +56,7 @@ import { FlowerField } from './world/flowers';
 import { Sound } from './audio';
 import { addRenderStats, renderStatsFrame, setRenderInfo, startRenderStats, withoutRenderStats } from './renderStats';
 import { Music } from './music';
-import { currentSeed, deleteSave, switchWorld, takeStartRequest } from './worlds';
+import { currentSeed, deleteSave, gameUrl, switchWorld, takeStartRequest } from './worlds';
 
 // Erst Spielfeld-Canvas und Oberfläche (components/Hud.tsx) - danach werden
 // ihre Teile hier über ihre IDs gefunden.
@@ -73,7 +73,7 @@ const pointer = new Pointer();
 /** Zoom beim Start: CSS-Pixel je Tile. */
 const DEFAULT_ZOOM = 32;
 /** Kamera: Bildmitte, Zoomstufe, Sichtfläche (game/Camera.ts). */
-const camera = new Camera(DEFAULT_ZOOM);
+const camera = new Camera(ZOOM_LEVELS[(gameUrl?.zoom ?? 0) - 1] ?? DEFAULT_ZOOM);
 
 function applyCanvasSize() {
   camera.fitWindow();
@@ -98,14 +98,15 @@ applyCanvasSize();
 
 // Die Adresse bleibt "/": Welt und Stelle stehen nicht mehr darin. Alte Links
 // (/<seed>/<x>-<y>?zoom=) werden aufgeräumt; die Welt wählt man im Hauptmenü.
-if (window.location.pathname !== '/' || window.location.search) window.history.replaceState(null, '', '/');
+// Nur /game/<seed> zum Testen bleibt stehen (worlds.ts).
+if (!gameUrl && (window.location.pathname !== '/' || window.location.search)) window.history.replaceState(null, '', '/');
 
 const seed = currentSeed();
 const mapGen = new MapGenerator(seed);
 const terrain = new Terrain(mapGen, seed);
 const world = new World(terrain, seed);
 
-const { x: startX, y: startY } = startPoint(world, terrain, seed);
+const { x: startX, y: startY } = gameUrl?.at ?? startPoint(world, terrain, seed);
 // Holzfäller arbeiten am liegenden Stamm - wie lang der ist, weiß die Darstellung.
 world.treeLength = (x, y) => resources.treeLengthAt(x, y);
 const resources = new ResourceField(terrain, mapGen);

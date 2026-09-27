@@ -5,6 +5,9 @@
 // dass sie gleich ins Spiel geht (neu oder weiter) statt ins Hauptmenü.
 // Dazu die Liste der Spielstände fürs Laden-Menü - das Format und den Ort
 // der Spielstände kennt world/save.ts.
+// Ausnahme zum Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5> geht direkt
+// in diese Welt an diese Stelle, ohne Hauptmenü und ohne sich die Welt zu
+// merken. Ohne Seed (/game) eine Zufallswelt - ihr Name kommt in die Adresse.
 
 import { readSave, saveKey, seedOfKey } from './world/save';
 
@@ -19,8 +22,27 @@ const START_KEY = 'pgm.start';
 /** Wie die Seite nach dem Wechsel der Welt beginnt. */
 export type StartRequest = 'new' | 'continue';
 
-/** Die zuletzt gewählte Welt. */
+/** Welt und Stelle aus /game/<seed>?lat=&lng=&zoom= - null bei jeder anderen Adresse. */
+export const gameUrl = parseGameUrl();
+
+function parseGameUrl() {
+  const match = window.location.pathname.match(/^\/game(?:\/([^/]*))?\/?$/);
+  if (!match) return null;
+  const seed = decodeURIComponent(match[1] ?? '') || randomSeed();
+  const params = new URLSearchParams(window.location.search);
+  const num = (key: string) => (params.get(key) ? Number(params.get(key)) : NaN);
+  const [lat, lng, zoom] = [num('lat'), num('lng'), num('zoom')];
+  window.history.replaceState(null, '', `/game/${encodeURIComponent(seed)}${window.location.search}`);
+  return {
+    seed,
+    at: Number.isFinite(lat) && Number.isFinite(lng) ? { x: lng, y: lat } : null,
+    zoom: Number.isInteger(zoom) ? zoom : null,
+  };
+}
+
+/** Die Welt aus der Adresse, sonst die zuletzt gewählte. */
 export function currentSeed(): string {
+  if (gameUrl) return gameUrl.seed;
   try {
     return localStorage.getItem(SEED_KEY) || DEFAULT_SEED;
   } catch {
@@ -107,6 +129,7 @@ export function switchWorld(seed: string, request: StartRequest) {
 
 /** Wie diese Seite beginnen soll, wenn eine andere Welt gewählt wurde. Der Vermerk gilt nur einmal. */
 export function takeStartRequest(): StartRequest | null {
+  if (gameUrl) return 'continue';
   try {
     const request = sessionStorage.getItem(START_KEY);
     sessionStorage.removeItem(START_KEY);
