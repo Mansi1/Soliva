@@ -456,6 +456,10 @@ export class VillagerWork {
     if (!this.walk(v, spot.x, spot.y, 0.05, dt)) return;
     v.heading = Math.atan2(spot.aimY - v.y, spot.aimX - v.x);
     this.world.markDirty();
+    if (working && this.world.speedy) {
+      this.finishField(building, phase);
+      return;
+    }
 
     // Eine kürzere Furche (über weniger Tiles) ist schneller gepflügt und gesät.
     const length = building.furrowCells(task.row).length / 3;
@@ -484,6 +488,23 @@ export class VillagerWork {
     f.food -= take;
     v.carrying += take;
     if (v.carrying >= VILLAGER.capacity - 1e-6) task.delivering = true;
+  }
+
+  /** Cheat "speedy gonzales": die Phase auf dem ganzen Feld auf einmal - die Ernte gleich in den Vorrat. */
+  private finishField(building: Farm, phase: FarmPhase) {
+    for (const { f } of this.world.farming.furrows(this.world.farmGroup(building))) {
+      if (phase === 'plough') f.plough = 1;
+      if (phase === 'sow' && f.sown < 1) {
+        if (!f.paid && !this.world.canPay(RESEED_COST)) continue;
+        if (!f.paid) this.world.pay(RESEED_COST);
+        f.paid = true;
+        f.sown = 1;
+      }
+      if (phase === 'harvest') {
+        this.world.stock.food += f.food;
+        f.food = 0;
+      }
+    }
   }
 
   /**
@@ -779,9 +800,15 @@ export class VillagerWork {
       v.carrying = 0;
       v.carryType = 'food';
     }
-    const take = Math.min(HUNT.butcherRate * dt, a.food, VILLAGER.capacity - v.carrying);
-    a.food -= take;
-    v.carrying += take;
+    if (this.world.speedy) {
+      // Cheat "speedy gonzales": das ganze Tier auf einmal, gleich in den Vorrat.
+      this.world.stock.food += a.food;
+      a.food = 0;
+    } else {
+      const take = Math.min(HUNT.butcherRate * dt, a.food, VILLAGER.capacity - v.carrying);
+      a.food -= take;
+      v.carrying += take;
+    }
     this.world.markDirty();
     if (v.carrying >= VILLAGER.capacity - 1e-6 || a.food <= 1e-6) task.delivering = true;
   }
@@ -906,6 +933,12 @@ export class VillagerWork {
           if (this.world.deposits.fell(task.x, task.y, away + jitter, this.world.now)) {
             this.world.onEvent?.({ kind: 'treeFall', x: task.x + 0.5, y: task.y + 0.5 });
           }
+        }
+        // Cheat "speedy gonzales": der ganze Baum oder Strauch auf einmal, gleich in den Vorrat.
+        if (this.world.speedy && (task.type === 'wood' || task.type === 'berries')) {
+          this.world.stock[YIELD[task.type]] += this.world.deposits.take(task.x, task.y, Infinity, this.world.now);
+          this.world.markDirty();
+          return;
         }
         const wanted = Math.min(VILLAGER.gatherRate[task.type] * dt, VILLAGER.capacity - v.carrying);
         v.carrying += this.world.deposits.take(task.x, task.y, wanted, this.world.now);

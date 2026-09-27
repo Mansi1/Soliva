@@ -82,8 +82,12 @@ export class World {
   private nextId = 1;
 
   stock: Resources = initialResources();
-  /** Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit. Nicht im Spielstand. */
-  instantTraining = false;
+  /**
+   * Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit, ein ganzes Feld
+   * auf einmal gepflügt, gesät oder geerntet, ein Baum, Strauch oder Tier auf
+   * einmal - Nahrung und Holz gleich in den Vorrat (villagers.ts). Nicht im Spielstand.
+   */
+  speedy = false;
   /** Cheat "iam the king": so viel mehr Platz als die Häuser geben. Nicht im Spielstand. */
   bonusHousing = 0;
   villagers: Villager[] = [];
@@ -640,7 +644,7 @@ export class World {
     const pop = this.population();
     // Bevölkerungsgrenze erreicht: die Ausbildung wartet, bis ein Haus steht.
     if (pop.used >= pop.cap) return;
-    if (!building.train(this.instantTraining ? Infinity : dt)) return;
+    if (!building.train(this.speedy ? Infinity : dt)) return;
 
     // Er tritt an der Vorderkante des Gebäudes heraus - zur Kamera hin.
     const r = building.definition.footprint / 2 + 0.4;
