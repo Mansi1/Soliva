@@ -53,13 +53,6 @@ export interface Rig<J = never> {
 
 /** Was ein Clip in der Hand braucht - Bits wie im Shader (uClipProps). */
 export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4 };
-/**
- * Bit in uClipProps: der Clip kniet - der Rock wird bis zum Boden gestaucht
- * (Knochen allein können das nicht).
- */
-export const KNEEL_BIT = 8;
-/** Bit in uClipProps: der Clip sitzt - der Rock liegt auf den Oberschenkeln und fällt ab dem Knie. */
-export const SIT_BIT = 16;
 
 type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];
@@ -86,10 +79,8 @@ export interface Clip {
    * Griff zu hören ist (Custom Property `strike` der Action) - leer: keiner.
    */
   strike: number[];
-  /** Kniend: der Rock wird gestaucht (KNEEL_BIT). */
+  /** Kniend: die Figur sinkt, bis das Knie den Boden berührt (HUMANOID.rootZ). */
   kneel: boolean;
-  /** Sitzend: der Rock liegt auf den Oberschenkeln (SIT_BIT). */
-  sit: boolean;
   /** Tiere: nur für diese Arten (ANIMALS-Schlüssel wie 'hare') - leer: für alle. */
   species: string[];
   /** Tiere: liegt auf der Seite (erlegt) - so hoch, wie der Körper des Tiers breit ist. */
@@ -117,7 +108,7 @@ interface Manifest {
   clips: {
     name: string; frames: number; duration: number; props?: string[];
     /** Angaben je Clip (von Hand in der .json gepflegt) - können fehlen. */
-    pose?: number; phase_period?: number; phase_shift?: number; kneel?: boolean; sit?: boolean; strike?: number[];
+    pose?: number; phase_period?: number; phase_shift?: number; kneel?: boolean; strike?: number[];
     /** Tiere: nur für diese Arten (leer: alle) und ob es auf der Seite liegt. */
     species?: string[]; lying?: boolean;
   }[];
@@ -309,7 +300,6 @@ export function loadClips(glbDataUrl: string, manifest: Manifest, rig: Rig<any> 
       phaseRate: period ? meta.duration / period : 1,
       phaseShift: meta.phase_shift ?? 0,
       kneel: meta.kneel === true,
-      sit: meta.sit === true,
       strike: meta.strike ?? [],
       species: meta.species ?? [],
       lying: meta.lying === true,
@@ -350,7 +340,7 @@ export const HUMANOID: Rig<Joints> = {
   // Gehen: die Frau schreitet im langen Rock kürzer (uStride auf die Oberschenkel).
   scale: (clip, _joints, options): Record<string, number> => (clip.pose === 1 && (options.stride ?? 1) !== 1
     ? { 'thigh.L': options.stride!, 'thigh.R': options.stride! } : {}),
-  // Kniend: so tief, dass das Knie dieses Körpers den Boden berührt (-(uKnee - 0.04), wie der Rock im Shader).
+  // Kniend: so tief, dass das Knie dieses Körpers den Boden berührt.
   rootZ: (clip, joints) => (clip.kneel ? -(joints.knee - 0.04) : null),
 };
 

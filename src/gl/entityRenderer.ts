@@ -24,7 +24,7 @@ import millClipsManifest from '../models/clips/mill.json';
 import flagClipsGlb from '../models/clips/flag.glb?inline';
 import flagClipsManifest from '../models/clips/flag.json';
 import {
-  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, SIT_BIT, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
+  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
   type Clip, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
@@ -679,11 +679,10 @@ layout(location = 9) in vec3 aBones;    // Figuren mit Knochen: Knochen a + 1, b
 
 /** Untergrenze für die Größe, damit Gebäude beim Herauszoomen sichtbar bleiben. */
 uniform float uMinSizeTiles;
-// Maße der Figur in Koerperhoehen - aus dem Modell abgelesen: Hüfte (Rock,
-// Knochen des Rumpfs), Knie (wie tief sie kniet), Abstand der Unterarme von
-// der Mitte (Zugmesser zwischen beiden Händen). Bewegt wird sie von den Clips.
+// Maße der Figur in Koerperhoehen - aus dem Modell abgelesen: Hüfte
+// (Hosenboden, Knochen des Rumpfs), Abstand der Unterarme von der Mitte
+// (Zugmesser zwischen beiden Händen). Bewegt wird sie von den Clips.
 uniform float uHip;
-uniform float uKnee;
 uniform float uArm;
 // Anhänge (Werkzeuge): Mitte der rechten Hand des Körpers in Ruhelage
 // (Modell-Einheiten) und wie weit das Zugmesser auf seinen Handabstand
@@ -718,7 +717,7 @@ uniform float uTime;
 // (Zeilen einer 3x4-Matrix). uClipRow: erste Zeile des Clips für diese Figur,
 // -1 = nicht gebacken. uPoseClip: welcher Clip eine Pose spielt (-1: keiner,
 // die Figur steht still), Clip-Zeit = (Phase - uPoseShift) * uPoseRate. uClipProps: Bits
-// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS), kniend ${KNEEL_BIT} (KNEEL_BIT), sitzend ${SIT_BIT} (SIT_BIT).
+// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS).
 uniform highp sampler2D uClipTex;
 uniform int   uClipRow[${MAX_CLIPS}];
 uniform int   uClipFrames[${MAX_CLIPS}];
@@ -866,7 +865,7 @@ vec3 clipBone(vec3 p, int row, int bone) {
 
 // Drehung der Schultern gegen die Hüfte (Radiant) zur Zeit "time": aus der
 // Matrix des Oberkörpers, dessen Vorwärts-Achse sie zur Seite dreht (Zeile 1,
-// Spalte 0 = sin). Der Rock schwingt damit mit.
+// Spalte 0 = sin). Der Hosenboden schwingt damit mit.
 float clipTwist(int clip, float time) {
   int frames = uClipFrames[clip];
   float f = mod(time * uClipFps[clip], float(frames - 1));
@@ -997,26 +996,9 @@ void main() {
         } else {
           // Die Last waechst mit der Ladung aus dem Ruecken heraus.
           if (part == P_LOAD) p = uLoadAnchor + (p - uLoadAnchor) * aMotion.w;
-          // Rock und Hosenboden schwingen etwas mit, wenn sich die Schultern
-          // gegen die Hüfte drehen - vor dem Stauchen.
+          // Der Hosenboden schwingt etwas mit, wenn sich die Schultern
+          // gegen die Hüfte drehen.
           if (part == P_TORSO && p.z <= uHip && aBones.x < 0.5) p.y += clipTwist(clip, time) * 0.25 * (uHip - p.z);
-          if ((props & ${KNEEL_BIT}) != 0 && part == P_TORSO && p.z <= uHip && aBones.x < 0.5) {
-            // Kniend: der Rock staucht sich bis zum Boden und legt sich vorn
-            // über das aufgestellte Knie - so tief, wie die Knochen die Figur
-            // senken (das Knie auf dem Boden: -(uKnee - 0.04)).
-            float kneelBob = -(uKnee - 0.04);
-            float below = (uHip - p.z) / uHip;
-            p.z = uHip - (uHip - p.z) * (uHip + kneelBob) / (uHip - 0.02);
-            p.x += below * 0.14;
-          }
-          if ((props & ${SIT_BIT}) != 0 && part == P_TORSO && p.z <= uHip && aBones.x < 0.5) {
-            // Sitzend: der Rock klappt um die Hüfte nach vorn auf die
-            // Oberschenkel - vorn liegt er oben, hinten darunter, sie sitzt
-            // darauf - und fällt ab dem Knie senkrecht.
-            float below = uHip - p.z;
-            float thigh = uHip - uKnee;
-            p = below < thigh ? vec3(below, p.y, uHip + p.x) : vec3(thigh + p.x, p.y, uHip - (below - thigh));
-          }
           if (part == P_KNIFE) {
             // Zweihändig: nach der Lage zwischen den Händen auf beide Unterarme verteilt.
             float k = clamp((p.y + uArm) / (2.0 * uArm), 0.0, 1.0);
@@ -3214,7 +3196,7 @@ export class EntityRenderer {
           u.rows[i] = rows;
           u.frames[i] = clip.frames;
           u.fps[i] = clip.fps;
-          u.props[i] = clip.props | (clip.kneel ? KNEEL_BIT : 0) | (clip.sit ? SIT_BIT : 0);
+          u.props[i] = clip.props;
           u.rate[i] = clip.phaseRate;
           u.shift[i] = clip.phaseShift;
           // Welche Pose ein Clip ersetzt, steht im Clip selbst (Custom Property
@@ -3657,7 +3639,6 @@ export class EntityRenderer {
       gl.uniform3fv(this.location('uSocket'), b.model.hand);
       gl.uniform1f(this.location('uKnifeScale'), Math.abs(b.model.hand[1]) * b.model.meters / KNIFE_HALF_SPAN);
       gl.uniform1f(this.location('uHip'), b.model.hip);
-      gl.uniform1f(this.location('uKnee'), b.model.knee);
       gl.uniform1f(this.location('uArm'), b.model.arm);
       gl.uniform1f(this.location('uModelTop'), m.model.top);
       gl.uniform1f(this.location('uMeters'), b.model.meters);
