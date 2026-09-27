@@ -23,6 +23,9 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - `main` folgt `upstream` (Mansi1/procedurally-generated-map). PR-Branches werden nach `origin` (kyr0/soliva) gepusht, die PRs laufen gegen `upstream`.
 - 2026-09-27, Checkout von Mansi1 (M1): Hier ist `origin` selbst Mansi1/procedurally-generated-map - Branch dorthin pushen (HTTPS mit `gh auth git-credential`, SSH ist gesperrt), PR gegen `main`.
 
+- 2026-09-27: `main.ts` räumt die Adresse beim Start auf (`history.replaceState`). Adress-Schalter nur über `startParams` lesen, das vorher gelesen wird. Prüfschalter: `?festesLicht` (Sonne wie früher, kein Wetter), `?regen` (Dauerregen), `?ohneEffekte` (keine Post-Effekte). Nur mit `?festesLicht&ohneEffekte` ist das Bild mit dem vor dem Lichtsystem vergleichbar.
+- 2026-09-27: Der Gelände-Cache (RGBA8) speichert die Farbe geteilt durch `CACHE_HEADROOM` (1,5), weil das Licht jetzt erst im Bild dazukommt. Ohne das werden helle Felsfarben auf der Schattenseite zu dunkel. Wer Farben im Cache ausliest, muss mit `uCacheGain` multiplizieren. Der Alpha-Kanal ist belegt: Tiefe im Flachwasser 0..1 für die Brandung, 1 = Land oder tiefes Wasser.
+
 ## Messen
 
 - 2026-09-26, M4, Stand `6b5b5bd`: Alle Bench-Szenen laufen mit 60 fps und `frameMsMax` 16,8 ms, auch `zoom-wechsel`. Der Zoom ist auf diesem Rechner nicht langsam, Gewinne im Gelände-Shader zeigt der Bench hier nicht.

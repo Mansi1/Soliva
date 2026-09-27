@@ -15,6 +15,21 @@
 import { TERRAIN_PARAMS } from '../noise';
 
 /**
+ * Wohin "der Bildschirm" gerade zeichnet, je Kontext: null ist das Canvas,
+ * während der Post-Effekte die Szene (gl/postRenderer.ts setzt es).
+ */
+export const screens = new WeakMap<WebGL2RenderingContext, WebGLFramebuffer | null>();
+
+/**
+ * Zurück zum Bildschirm, nachdem man selbst einen Framebuffer gebunden hat
+ * (Gelände-Cache, Baumbilder) - nicht mit null, das wäre am Post-Effekt
+ * vorbei direkt ins Canvas.
+ */
+export function bindScreen(gl: WebGL2RenderingContext) {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, screens.get(gl) ?? null);
+}
+
+/**
  * Bildhöhe einer senkrechten Tile-Länge, in Einheiten von v. Bei 30°
  * Blickwinkel ist das cos(30°) / sin(30°) * (1/√2) = √6 / 2.
  */

@@ -7,6 +7,7 @@
 import { MAX_FLAT_ZONES } from '../world/flatten';
 import { NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS } from '../noise';
 import {
+  CACHE_HEADROOM,
   DISPLAY_FRAGMENT_SOURCE,
   FILL_FRAGMENT_SOURCE,
   FILL_VERTEX_SOURCE,
@@ -15,6 +16,7 @@ import {
 import {
   MAX_RELIEF,
   Z_SCREEN_MAX,
+  bindScreen,
   setCameraUniforms,
   setViewUniforms,
   viewGroundV,
@@ -24,6 +26,7 @@ import {
   type GpuCamera,
 } from './iso';
 import type { Color } from '../functions/Color';
+import { CLASSIC_LIGHT, setLightUniforms, type Light } from './light';
 import { addRenderStats } from '../renderStats';
 
 /** Reihenfolge muss zu den B_*-Konstanten im Shader passen. */
@@ -140,7 +143,7 @@ export const FLOWER_OBJECT_PIXELS = 64;
 /** Rand um den Bildschirm, damit beim Verschieben nichts Ungefülltes ins Bild rutscht. */
 const CACHE_MARGIN = 64;
 
-function link(gl: WebGL2RenderingContext, vertexSource: string, fragmentSource: string): WebGLProgram {
+export function link(gl: WebGL2RenderingContext, vertexSource: string, fragmentSource: string): WebGLProgram {
   const vertex = compile(gl, gl.VERTEX_SHADER, vertexSource);
   const fragment = compile(gl, gl.FRAGMENT_SHADER, fragmentSource);
   const program = gl.createProgram()!;
@@ -252,6 +255,8 @@ export class TerrainRenderer {
     uploadTerrainParams(gl, (name) => this.location(name));
     gl.uniform1i(this.location('uCache'), 1);
     gl.uniform1i(this.location('uCachePrev'), 3);
+    gl.uniform1i(this.location('uNormal'), 4);
+    gl.uniform1i(this.location('uNormalPrev'), 8);
     gl.uniform1i(this.location('uFields'), 2);
     gl.uniform1f(this.location('uFieldSize'), FIELD_WINDOW);
 
@@ -326,6 +331,10 @@ export class TerrainRenderer {
 
   /** Nur für Tests: 0 = Bild, 1 = Höhe, 2 = Hangneigung. */
   debugMode = 0;
+  /** Sonne und Himmel (gl/light.ts) - die Übersichtskarte bleibt bei der festen Sonne. */
+  light: Light = CLASSIC_LIGHT;
+  /** Uhr der Brandung in Sekunden - MapRenderer setzt sie, die Übersichtskarte steht bei 0. */
+  time = 0;
 
   /** Äcker (siehe setFields): Textur, ihre linke obere Ecke in Tiles, ob welche da sind. */
   private fields: WebGLTexture;
@@ -345,6 +354,11 @@ export class TerrainRenderer {
     gl.bindTexture(gl.TEXTURE_2D, this.fields);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, FIELD_WINDOW, FIELD_WINDOW, gl.RGBA, gl.UNSIGNED_BYTE, data);
     gl.activeTexture(gl.TEXTURE0);
+  }
+
+  /** Äcker für andere Shader (Gras wächst dort nicht): Textur, Ecke in Tiles, ob welche da sind. */
+  get fieldWindow(): { texture: WebGLTexture; origin: { x: number; y: number }; active: boolean } {
+    return { texture: this.fields, origin: this.fieldOrigin, active: this.fieldActive };
   }
 
   /** Markiertes Tile in Weltkoordinaten, oder null. */
@@ -426,14 +440,24 @@ export class TerrainRenderer {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    // Die Normale daneben, im selben Ringpuffer (fragNormal im Befüll-Shader).
+    gl.bindTexture(gl.TEXTURE_2D, b.normal);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, width, height, 0, gl.RG, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.activeTexture(gl.TEXTURE0);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, b.framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, b.texture, 0);
-    // Noch nicht befüllte Texel in der Hintergrundfarbe statt Speicherresten.
-    gl.clearColor(0.05, 0.08, 0.14, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, b.normal, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+      throw new Error('Gelände-Cache: Framebuffer mit Farbe und Normale ist unvollständig');
+    }
+    // Noch nicht befüllte Texel in der Hintergrundfarbe statt Speicherresten, flach.
+    gl.clearBufferfv(gl.COLOR, 0, [0.05, 0.08, 0.14, 1]);
+    gl.clearBufferfv(gl.COLOR, 1, [0.5, 0.5, 0, 0]);
+    bindScreen(gl);
 
     b.width = width;
     b.height = height;
@@ -514,6 +538,9 @@ export class TerrainRenderer {
     const filter = this.debugMode ? gl.NEAREST : gl.LINEAR;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, b.texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+    gl.bindTexture(gl.TEXTURE_2D, b.normal);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
     gl.activeTexture(gl.TEXTURE0);
@@ -675,7 +702,7 @@ export class TerrainRenderer {
 
     gl.disable(gl.SCISSOR_TEST);
     gl.bindVertexArray(null);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    bindScreen(gl);
     // Geländeerzeugung ist teuer (ein Bild voll ~180 ms) - neu berechnete Texel.
     addRenderStats('terrainTexels', spent + spentRest);
     return spent + spentRest;
@@ -830,9 +857,17 @@ export class TerrainRenderer {
     gl.bindTexture(gl.TEXTURE_2D, active.texture);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, prev.texture);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, active.normal);
+    gl.activeTexture(gl.TEXTURE8);
+    gl.bindTexture(gl.TEXTURE_2D, prev.normal);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.fields);
     gl.activeTexture(gl.TEXTURE0);
+    // Im Debug-Modus stehen gepackte Zahlen im Cache - die bleiben unbeleuchtet.
+    setLightUniforms(gl, (name) => this.location(name), this.debugMode ? CLASSIC_LIGHT : this.light);
+    gl.uniform1f(this.location('uCacheGain'), this.debugMode ? 1 : CACHE_HEADROOM);
+    gl.uniform1f(this.location('uTime'), this.time);
     gl.uniform1f(this.location('uFieldActive'), this.fieldActive ? 1 : 0);
     gl.uniform2f(this.location('uFieldOrigin'), this.fieldOrigin.x, this.fieldOrigin.y);
 
@@ -891,6 +926,8 @@ export class TerrainRenderer {
 /** Ein Gelände-Cache: Textur, Fenster im Ringpuffer und was darin noch fehlt. */
 interface CacheBuffer {
   texture: WebGLTexture;
+  /** Normale des Reliefs je Texel (RG8), am selben Framebuffer. */
+  normal: WebGLTexture;
   framebuffer: WebGLFramebuffer;
   width: number;
   height: number;
@@ -917,6 +954,7 @@ interface CacheBuffer {
 function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
   return {
     texture: gl.createTexture()!,
+    normal: gl.createTexture()!,
     framebuffer: gl.createFramebuffer()!,
     width: 0,
     height: 0,

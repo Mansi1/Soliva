@@ -88,6 +88,9 @@ export class SettingsMenu {
   private showDebug = createRef<HTMLInputElement>();
   private idleFps = createRef<HTMLInputElement>();
   private minimapFps = createRef<HTMLInputElement>();
+  private fxaa = createRef<HTMLInputElement>();
+  private colorGrading = createRef<HTMLInputElement>();
+  private bloom = createRef<HTMLInputElement>();
   /** Nur im Spiel: Hauptmenü, Pause, Speichern, Weiter spielen - aus dem Hauptmenü heraus stattdessen Zurück. */
   private pauseRow = createRef<HTMLDivElement>();
   private gameButtons = createRef<HTMLDivElement>();
@@ -242,6 +245,26 @@ export class SettingsMenu {
             Die Minimap wird nur 10-mal je Sekunde gezeichnet - sie bewegt sich langsam, man sieht es kaum.
             Aus: so oft wie das Spiel.
           </p>
+          <label class="menu-row">
+            <span>Kantenglättung (FXAA)</span>
+            <input type="checkbox" ref={this.fxaa}
+              onInput={(e: Event) => this.change({ fxaa: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <label class="menu-row">
+            <span>Farbgebung</span>
+            <input type="checkbox" ref={this.colorGrading}
+              onInput={(e: Event) => this.change({ colorGrading: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <label class="menu-row">
+            <span>Glühen (Bloom)</span>
+            <input type="checkbox" ref={this.bloom}
+              onInput={(e: Event) => this.change({ bloom: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <p class="menu-hint">
+            Effekte über dem fertigen Bild: Kantenglättung gegen Treppenstufen, Farbgebung mit etwas mehr Kontrast,
+            leicht warm und zum Rand dunkler, Glühen um helle Stellen. Alle aus: das Bild geht ohne Umweg auf
+            den Schirm - Regen läuft trotzdem.
+          </p>
         </section>
         <section>
           <div class="menu-row">
@@ -327,6 +350,9 @@ export class SettingsMenu {
     this.showDebug.current.checked = s.showDebug;
     this.idleFps.current.checked = s.idleFps;
     this.minimapFps.current.checked = s.minimapFps;
+    this.fxaa.current.checked = s.fxaa;
+    this.colorGrading.current.checked = s.colorGrading;
+    this.bloom.current.checked = s.bloom;
   }
 
   /** Alle Einstellungen auf ihre Vorgaben - nach Rückfrage. */
