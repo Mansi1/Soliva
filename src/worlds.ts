@@ -5,11 +5,11 @@
 // dass sie gleich ins Spiel geht (neu oder weiter) statt ins Hauptmenü.
 // Dazu die Liste der Spielstände fürs Laden-Menü - das Format und den Ort
 // der Spielstände kennt world/save.ts.
-// Ausnahme zum Testen: /game/<seed>/<stand>?lat=<y>&lng=<x>&zoom=<1-5> geht
-// direkt in diese Welt an diese Stelle, ohne Hauptmenü und ohne sich die Welt
-// zu merken. Ohne Seed (/game) eine Zufallswelt - ihr Name kommt in die
-// Adresse. Mit <stand> beginnt sie jedes Mal mit public/savegame/<seed>/<stand>.json
-// (entry.ts) - so bleiben Test-Spielstände gleich.
+// Ausnahme zum Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&save=<base64>
+// geht direkt in diese Welt an diese Stelle, ohne Hauptmenü und ohne sich die
+// Welt zu merken. Ohne Seed (/game) eine Zufallswelt - ihr Name kommt in die
+// Adresse. Mit save (Spielstand-JSON als base64url) beginnt sie jedes Mal mit
+// diesem Stand - so passt ein Test-Spielstand in einen Link, ohne Datei im Repo.
 
 import { readSave, saveKey, seedOfKey } from './world/save';
 
@@ -24,24 +24,31 @@ const START_KEY = 'pgm.start';
 /** Wie die Seite nach dem Wechsel der Welt beginnt. */
 export type StartRequest = 'new' | 'continue';
 
-/** Welt, Stand und Stelle aus /game/<seed>/<stand>?lat=&lng=&zoom= - null bei jeder anderen Adresse. */
+/** Welt und Stelle aus /game/<seed>?lat=&lng=&zoom=&save= - null bei jeder anderen Adresse. */
 export const gameUrl = parseGameUrl();
 
 function parseGameUrl() {
-  const match = window.location.pathname.match(/^\/game(?:\/([^/]*)(?:\/([^/]+))?)?\/?$/);
+  const match = window.location.pathname.match(/^\/game(?:\/([^/]*))?\/?$/);
   if (!match) return null;
   const seed = decodeURIComponent(match[1] ?? '') || randomSeed();
   const params = new URLSearchParams(window.location.search);
   const num = (key: string) => (params.get(key) ? Number(params.get(key)) : NaN);
   const [lat, lng, zoom] = [num('lat'), num('lng'), num('zoom')];
-  const save = match[2] ? decodeURIComponent(match[2]) : null;
-  window.history.replaceState(null, '', `/game/${encodeURIComponent(seed)}${save ? `/${encodeURIComponent(save)}` : ''}${window.location.search}`);
+  const save = params.get('save');
+  // Fehlerhafter Stand: laut scheitern statt still eine leere Welt zeigen.
+  if (save) localStorage.setItem(saveKey(seed), JSON.stringify(JSON.parse(fromBase64(save))));
+  window.history.replaceState(null, '', `/game/${encodeURIComponent(seed)}${window.location.search}`);
   return {
     seed,
-    save,
     at: Number.isFinite(lat) && Number.isFinite(lng) ? { x: lng, y: lat } : null,
     zoom: Number.isInteger(zoom) ? zoom : null,
   };
+}
+
+/** base64 oder base64url (UTF-8) als Text - ein '+' kommt aus der Adresse als Leerzeichen. */
+function fromBase64(text: string): string {
+  const binary = atob(text.replace(/[- ]/g, '+').replace(/_/g, '/'));
+  return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
 }
 
 /** Die Welt aus der Adresse, sonst die zuletzt gewählte. */
@@ -107,17 +114,12 @@ export function isDemo(seed: string): boolean {
   return seed.toLowerCase() === DEMO_SEED.toLowerCase();
 }
 
-/**
- * Einen mitgelieferten Spielstand als Spielstand der Welt ablegen: die Demo
- * aus public/savegame/<seed klein>.json, einen Test-Stand aus
- * public/savegame/<seed klein>/<stand>.json. false, wenn es keinen gibt.
- */
-export async function installSave(seed: string, save?: string | null): Promise<boolean> {
-  const file = encodeURIComponent(seed.toLowerCase()) + (save ? `/${encodeURIComponent(save)}` : '');
+/** Den Demo-Spielstand als Spielstand der Welt "Demo" ablegen; false, wenn es nicht ging. */
+export async function installDemo(): Promise<boolean> {
   try {
-    const response = await fetch(`/savegame/${file}.json`);
+    const response = await fetch('/savegame/demo.json');
     if (!response.ok) return false;
-    localStorage.setItem(saveKey(seed), JSON.stringify(await response.json()));
+    localStorage.setItem(saveKey(DEMO_SEED), JSON.stringify(await response.json()));
     return true;
   } catch {
     return false;
