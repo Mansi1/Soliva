@@ -2813,11 +2813,11 @@ function modelToWorld(m: { scale: number }, [f, l]: [number, number], x: number,
   return { x: x + 0.5 + (fx * f - fy * l) * s, y: y + 0.5 + (fy * f + fx * l) * s };
 }
 
-/** Mitte eines Modells in Ruhelage (Modell-Einheiten: vorn, links, oben) - je Form einmal ausgerechnet. */
-const modelCenters = new Map<number, [number, number, number]>();
-function modelCenter(m: { model: Model }, shape: number): [number, number, number] {
-  let c = modelCenters.get(shape);
-  if (!c) {
+/** Quader eines Modells in Ruhelage (Modell-Einheiten: vorn, links, oben) - je Form einmal ausgerechnet. */
+const modelBoxes = new Map<number, { lo: number[]; hi: number[] }>();
+function modelBox(m: { model: Model }, shape: number): { lo: number[]; hi: number[] } {
+  let box = modelBoxes.get(shape);
+  if (!box) {
     const { vertices: v, floats } = m.model;
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < v.length; i += floats) {
@@ -2826,10 +2826,55 @@ function modelCenter(m: { model: Model }, shape: number): [number, number, numbe
         hi[k] = Math.max(hi[k], v[i + k]);
       }
     }
-    c = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
-    modelCenters.set(shape, c);
+    box = { lo, hi };
+    modelBoxes.set(shape, box);
   }
-  return c;
+  return box;
+}
+
+/** Mitte eines Modells in Ruhelage (Modell-Einheiten: vorn, links, oben). */
+function modelCenter(m: { model: Model }, shape: number): [number, number, number] {
+  const { lo, hi } = modelBox(m, shape);
+  return [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+}
+
+/**
+ * Quader eines Modells in Tiles je Einheit der Instanzgröße (vorn, links,
+ * oben; Ursprung in der Tile-Mitte, vor der Drehung um `heading`). Für das
+ * Anklicken von Gebäuden an Dach und Wand.
+ */
+export function modelBounds(shape: number): { lo: number[]; hi: number[] } | undefined {
+  const m = MODEL_BY_SHAPE.get(shape);
+  if (!m) return undefined;
+  const { lo, hi } = modelBox(m, shape);
+  return { lo: lo.map((v) => v * m.scale), hi: hi.map((v) => v * m.scale) };
+}
+
+/**
+ * Trifft die Gerade durch p und q ein Dreieck des Modells (Ruhelage)? p, q in
+ * den Einheiten von modelBounds. Möller-Trumbore, beide Seiten der Dreiecke.
+ */
+export function modelRayHit(shape: number, p: readonly number[], q: readonly number[]): boolean {
+  const m = MODEL_BY_SHAPE.get(shape);
+  if (!m) return false;
+  const { vertices: v, floats } = m.model;
+  const [ox, oy, oz] = [p[0] / m.scale, p[1] / m.scale, p[2] / m.scale];
+  const [dx, dy, dz] = [(q[0] - p[0]) / m.scale, (q[1] - p[1]) / m.scale, (q[2] - p[2]) / m.scale];
+  for (let i = 0; i + 3 * floats <= v.length; i += 3 * floats) {
+    const j = i + floats, k = i + 2 * floats;
+    const e1x = v[j] - v[i], e1y = v[j + 1] - v[i + 1], e1z = v[j + 2] - v[i + 2];
+    const e2x = v[k] - v[i], e2y = v[k + 1] - v[i + 1], e2z = v[k + 2] - v[i + 2];
+    const hx = dy * e2z - dz * e2y, hy = dz * e2x - dx * e2z, hz = dx * e2y - dy * e2x;
+    const det = e1x * hx + e1y * hy + e1z * hz;
+    if (Math.abs(det) < 1e-12) continue;
+    const sx = ox - v[i], sy = oy - v[i + 1], sz = oz - v[i + 2];
+    const a = (sx * hx + sy * hy + sz * hz) / det;
+    if (a < 0 || a > 1) continue;
+    const cx = sy * e1z - sz * e1y, cy = sz * e1x - sx * e1z, cz = sx * e1y - sy * e1x;
+    const b = (dx * cx + dy * cy + dz * cz) / det;
+    if (b >= 0 && a + b <= 1) return true;
+  }
+  return false;
 }
 
 /**

@@ -220,11 +220,8 @@ export class GameUi {
     } else if (selection.focused()?.isUnitProducer()) {
       cursor = RALLY_CURSOR;
     } else if (selection.villagers.size > 0 && pointer.tile) {
-      // Zeigt der Zeiger auf ein Objekt (Baumkrone, Fels), gilt dessen Feld.
-      const { x, y } = pointer.tile;
-      const own = world.resourceInfo(x, y);
-      const target = world.at(x, y) || (own && own.type !== 'wood') ? null : pointer.object;
-      const [tx, ty] = target ? [target.x, target.y] : [x, y];
+      // Worauf ein Klick zielt (Picker.target) - Gebäude, Baumkrone, Fels.
+      const { x: tx, y: ty } = pointer.object ?? pointer.tile;
       const found = world.remainingAt(tx, ty);
       if (found.type && found.amount > 0 && !world.at(tx, ty)) cursor = GATHER_CURSOR[found.type];
     }

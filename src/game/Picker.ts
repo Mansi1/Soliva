@@ -3,8 +3,8 @@
 // mit Geländehöhe, das Tile, der nächste Dorfbewohner, ein Tier, eine Blume,
 // ein Vorkommen am Objekt (Baumkrone, Fels) - und worauf ein Klick damit zielt.
 
-import { animalCenter, modelSize, TREES, type EntityInstance } from '../gl/entityRenderer';
-import { pickWorld, visibleWorldRect, worldToScreen } from '../gl/iso';
+import { animalCenter, buildingHeading, modelBounds, modelRayHit, modelSize, TREES, type EntityInstance } from '../gl/entityRenderer';
+import { groundToWorld, pickWorld, viewZScreen, visibleWorldRect, worldToScreen } from '../gl/iso';
 import { addRenderStats } from '../renderStats';
 import { VILLAGER } from '../world/catalog';
 import type { FlowerField } from '../world/flowers';
@@ -162,15 +162,73 @@ export class Picker {
   }
 
   /**
-   * Tile, auf das ein Klick zielt: ein Vorkommen am Objekt getroffen, sonst der
-   * Boden. Liegt direkt auf dem angeklickten Feld ein Strauch, Stein oder Gold,
-   * gewinnt der - auch wenn eine Baumspitze davor ins Bild ragt.
+   * Gebäude, dessen Modell unter dem Zeiger steht - auch an Dach und Wand,
+   * nicht nur am Grundriss. Der Sichtstrahl wird in das Modell gedreht wie
+   * beim Zeichnen und gegen seine Dreiecke geprüft (Ruhelage - bewegte Teile
+   * wie Mühlenflügel zählen, wo sie ohne Bewegung stünden). Der vorderste
+   * gewinnt; `depth` wie bei resourceObject (Bildschirm-y des Fußpunkts, größer = weiter vorn).
+   */
+  private building(px: number, py: number): { x: number; y: number; depth: number } | undefined {
+    const v = this.camera.view();
+    // Punkt des Strahls in Höhe z: (ax + dx·z, ay + dy·z) - wie pickWorld.
+    const a = groundToWorld((px - v.width / 2) / v.tileSize, (py - v.height / 2) / v.tileSize);
+    const d = groundToWorld(0, viewZScreen());
+    let best: { x: number; y: number; depth: number } | undefined;
+    for (const b of this.world.allBuildings()) {
+      const box = modelBounds(b.model);
+      if (!box) continue;
+      const s = b.definition.size;
+      const cx = b.x + 0.5;
+      const cy = b.y + 0.5;
+      const ground = this.ground.heightAt(cx, cy);
+      // Strahl zwischen Unter- und Oberkante des Modells, in Modell-Achsen
+      // (vorn, links, oben) und Einheiten von modelBounds.
+      const h = buildingHeading(b.model);
+      const [c, sn] = [Math.cos(h), Math.sin(h)];
+      const local = (z: number) => {
+        const x = v.centerX + a.x + d.x * z - cx;
+        const y = v.centerY + a.y + d.y * z - cy;
+        return [(c * x + sn * y) / s, (-sn * x + c * y) / s, (z - ground) / s];
+      };
+      const p = local(ground + box.lo[2] * s);
+      const q = local(ground + box.hi[2] * s);
+      // Erst der Quader (billig): Strecke p..q gegen das Rechteck lo..hi, je Achse ein Streifen.
+      let t0 = 0, t1 = 1;
+      for (let k = 0; k < 2 && t0 <= t1; k++) {
+        const [lo, hi, dk] = [box.lo[k], box.hi[k], q[k] - p[k]];
+        if (Math.abs(dk) < 1e-9) {
+          if (p[k] < lo || p[k] > hi) t0 = 2;
+          continue;
+        }
+        const [ta, tb] = [(lo - p[k]) / dk, (hi - p[k]) / dk];
+        t0 = Math.max(t0, Math.min(ta, tb));
+        t1 = Math.min(t1, Math.max(ta, tb));
+      }
+      // Dann die Dreiecke des Modells - der Hof daneben und die Luft über ihm zählen nicht.
+      if (t0 > t1 || !modelRayHit(b.model, p, q)) continue;
+      const depth = worldToScreen(v, cx, cy, ground).y;
+      if (!best || depth > best.depth) best = { x: b.x, y: b.y, depth };
+    }
+    return best;
+  }
+
+  /**
+   * Tile, auf das ein Klick zielt: ein Gebäude oder Vorkommen am Objekt
+   * getroffen (das vorderste), sonst der Boden. Liegt direkt auf dem
+   * angeklickten Feld ein Gebäude, Strauch, Stein oder Gold, gewinnt das -
+   * auch wenn eine Baumspitze davor ins Bild ragt.
    */
   target(px: number, py: number): { x: number; y: number } {
     const tile = this.tile(px, py);
     if (this.world.at(tile.x, tile.y)) return tile;
     const own = this.world.resourceInfo(tile.x, tile.y);
     if (own && own.type !== 'wood') return tile;
-    return this.resourceObject(px, py) ?? tile;
+    const object = this.resourceObject(px, py);
+    const house = this.building(px, py);
+    if (house && (!object
+        || house.depth >= worldToScreen(this.camera.view(), object.x + 0.5, object.y + 0.5, this.ground.heightAt(object.x + 0.5, object.y + 0.5)).y)) {
+      return house;
+    }
+    return object ?? tile;
   }
 }

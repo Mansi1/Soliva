@@ -746,10 +746,11 @@ minimapCanvas.addEventListener('mouseleave', () => devPanel.showMinimapPointer()
 function updateHoveredTile(mouseX: number, mouseY: number): boolean {
   pointer.pixel = { x: mouseX, y: mouseY };
   // Nur mit ausgewählten Dorfbewohnern zählt, worauf der Zeiger zeigt.
-  pointer.setObject(selection.villagers.size > 0 ? picker.resourceObject(mouseX, mouseY) : undefined);
+  const target = picker.target(mouseX, mouseY);
+  pointer.setObject(selection.villagers.size > 0 ? target : undefined);
   const tile = picker.tile(mouseX, mouseY);
   const tileChanged = pointer.setTile(tile);
-  updateSelectable(picker.target(mouseX, mouseY));
+  updateSelectable(target);
   if (!tileChanged) return false;
   devPanel.showTile({ ...terrain.getTile(tile.x, tile.y), x: tile.x, y: tile.y });
   updateHoverInfo();
