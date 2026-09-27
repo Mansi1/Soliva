@@ -177,6 +177,7 @@
   pointer-events: none;
 }
 #paused[hidden],
+#flat[hidden],
 .panel[hidden] {
   display: none;
 }

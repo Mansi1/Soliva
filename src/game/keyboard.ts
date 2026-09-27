@@ -1,5 +1,5 @@
 // keyboard.ts
-// Die Tastatur: welche Tasten gehalten werden (WASD, Pfeile, Leertaste - die
+// Die Tastatur: welche Tasten gehalten werden (WASD, Pfeile - die
 // fragt die Spielschleife je Bild ab) und welche Taste was auslöst - nach der
 // Tabelle in controls.ts. Was ein Befehl im Spiel tut, liefert main.ts als
 // KeyCommands.
@@ -44,6 +44,8 @@ export interface KeyCommands {
   chooseCrop(index: number): void;
   /** Taste eines Gebäudes im Baumenü. */
   build(type: BuildingType): void;
+  /** Leertaste: Gelände flach an oder aus. */
+  toggleFlat(): void;
   /** Enter: die Cheat-Eingabe öffnen. */
   openCheat(): void;
 }
@@ -104,7 +106,7 @@ export class Keyboard {
     }
     this.held.add(key);
     if (e.key === ' ') {
-      // Leertaste gedrückt halten legt das Gelände flach (Spielschleife). Sonst
+      // Leertaste schaltet das flache Gelände um (controls.ts). Sonst
       // scrollt die Seite oder ein fokussierter Knopf wird ausgelöst - bei
       // Knöpfen erst beim Loslassen, darum auch der Fokus weg.
       e.preventDefault();

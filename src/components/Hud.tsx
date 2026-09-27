@@ -82,6 +82,20 @@ function SoundButton() {
   );
 }
 
+/** Gelände flach (Leertaste) - nur sichtbar, solange es an ist; ein Klick schaltet es aus (main.ts). */
+function FlatButton() {
+  return (
+    <button id="flat" type="button" title="Gelände flach - aus mit Klick oder Leertaste" hidden>
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 11l5-6 3 3 2-2 6 5" stroke-dasharray="2 2.2" />
+        <path d="M10 9v5M7.5 11.5 10 14l2.5-2.5" />
+        <path d="M2 17h16" />
+      </svg>
+    </button>
+  );
+}
+
 /**
  * Eine Spitze der Windrose: zeigt von der Mitte nach außen, halb dunkel, halb
  * hell, hinten eingekerbt. Oben und unten liegt die dunkle Hälfte links bzw.
@@ -148,7 +162,8 @@ function TurnIcon({ flip }: { flip?: boolean }) {
  * Minimap wie in AoE4, ohne Kasten: die runde Karte in einem Holzreif mit
  * Nägeln, drumherum die Windrose - frei über dem Spielfeld. Außen am Reif
  * hängen kleine runde Holzknöpfe auf den Diagonalen: oben Speichern und Menü
- * (mountMinimapMenu), unten links der Ton, unten rechts das Drehen.
+ * (mountMinimapMenu), unten links der Ton und, solange an, das flache Gelände,
+ * unten rechts das Drehen.
  */
 function Minimap() {
   // Maße wie in Hud.css: Rahmen 332 px, Karte 244 px, Mitte bei 166. Außen
@@ -191,6 +206,7 @@ function Minimap() {
       <RingSlot deg={225} id="minimap-save" />
       <RingSlot deg={315} id="minimap-menu" />
       <RingSlot deg={135}><SoundButton /></RingSlot>
+      <RingSlot deg={158}><FlatButton /></RingSlot>
       <RingSlot deg={112}>
         <div id="zoom-level" class="minimap-zoom" title="Zoomstufe - Mausrad oder Q / E">Zoom 3</div>
       </RingSlot>
