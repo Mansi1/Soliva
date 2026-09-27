@@ -571,6 +571,10 @@ const keyboard = new Keyboard({
   tiltStep: (step) => tiltBy(step * TILT_STEP),
   // Wie die Pfeile unter der Minimap: rechts = was rechts liegt, kommt nach oben.
   turn: (direction) => faceDirection(directionAt(direction === 1 ? -1 : 1)),
+  resetView: () => {
+    faceDirection('N');
+    tiltBy(TILT_DEFAULT - tiltTarget);
+  },
   cancel: () => ui.cancel(),
   demolish: () => actions.demolishSelected(),
   home: () => actions.cycleTownCenter(),

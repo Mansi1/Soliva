@@ -26,6 +26,8 @@ export interface KeyCommands {
   tiltStep(step: 1 | -1): void;
   /** Alt + Pfeil rechts/links: eine Vierteldrehung (1 = nach rechts, -1 = nach links). */
   turn(direction: 1 | -1): void;
+  /** R: Blickrichtung Norden, Blickwinkel wie zu Beginn. */
+  resetView(): void;
   /** Esc im Spiel: Untermenü zu, Baumodus aus, sonst Auswahl aufheben. */
   cancel(): void;
   demolish(): void;
