@@ -18,6 +18,8 @@ import { cropIcon } from './cropIcons';
 
 /** Werkstatt fürs Panel: wer dort arbeitet (fehlt, wenn niemand), was er tut, Fortschritt des Bogens. */
 export interface WorkshopView {
+  /** "Bogner", "Fischer". */
+  role: string;
   worker?: string;
   doing?: string;
   percent?: number;
@@ -71,6 +73,10 @@ export type SelectionView =
       workshop?: WorkshopView;
       /** Waffenkammer: so viele Waffen liegen darin, so viele passen hinein. */
       weapons?: { bows: number; capacity: number };
+      /** Fischerhütte: Knopf "Reuse bauen" - Kosten und ob man sie hat. */
+      trapCost?: { cost: string; affordable: boolean };
+      /** Reuse: Fische darin, wie viele hineinpassen, Sekunden, bis sie voll ist (0: voll). */
+      trap?: { fish: number; max: number; fullIn: number };
       trainer?: {
         queue: number;
         max: number;
@@ -184,13 +190,13 @@ function Buildings({ v }: { v: Extract<SelectionView, { kind: 'buildings' }> }) 
 }
 
 /** Werkstatt: der Arbeiter und sein Bogen - oder wie man einen hinschickt. */
-function WorkshopDetails({ workshop }: { workshop: WorkshopView }) {
+function WorkshopDetails({ workshop, label }: { workshop: WorkshopView; label: string }) {
   if (!workshop.worker) {
-    return <div class="muted">Niemand arbeitet hier - Rechtsklick mit einem Dorfbewohner auf die Bognerei.</div>;
+    return <div class="muted">Niemand arbeitet hier - Rechtsklick mit einem Dorfbewohner auf die {label}.</div>;
   }
   return (
     <>
-      <div>Bogner: <b>{workshop.worker}</b> - {workshop.doing}</div>
+      <div>{workshop.role}: <b>{workshop.worker}</b> - {workshop.doing}</div>
       {workshop.percent !== undefined ? <Bar percent={workshop.percent} /> : null}
     </>
   );
@@ -207,7 +213,13 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
           {v.storedResources ? <div class="muted">Lager für {v.storedResources}</div> : null}
           {v.housing ? <div class="muted">+{v.housing} Bevölkerung</div> : null}
           {v.farm ? <FarmDetails farm={v.farm} /> : null}
-          {v.workshop ? <WorkshopDetails workshop={v.workshop} /> : null}
+          {v.workshop ? <WorkshopDetails workshop={v.workshop} label={v.label} /> : null}
+          {v.trap ? (
+            <>
+              <div>Fische: <b>{v.trap.fish}/{v.trap.max}</b></div>
+              <div class="muted">{v.trap.fullIn > 0 ? `Voll in ${formatDuration(v.trap.fullIn)}` : 'Voll - wartet auf den Fischer'}</div>
+            </>
+          ) : null}
           {v.weapons ? (
             <div class="sel-stock">
               <span class="sel-stock-icon"><img src={stockIcon('bows')} alt="" width="34" height="34" draggable={false} /></span>
@@ -285,7 +297,7 @@ function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) 
             : <>{v.activities.map(([text, n]) => <div>{n}× {text}</div>)}</>}
           <div class="muted">
             Rechtsklick auf Holz, Stein, Gold oder Beeren: sammeln · auf ein Tier: jagen · auf ein Feld: bestellen ·
-            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · sonst: hingehen
+            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Fischerhütte: fischen · sonst: hingehen
           </div>
         </div>
       </div>
@@ -314,7 +326,7 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
 
 /** Ein Befehlsknopf: Bild, Taste, Tooltip und was er in main.ts auslöst. */
 interface Command {
-  action: 'train' | 'crop' | 'demolish';
+  action: 'train' | 'crop' | 'demolish' | 'trap';
   title: string;
   /** Bild-URL - oder das Abriss-Symbol. */
   icon: string | 'demolish';
@@ -349,6 +361,10 @@ export function commandsFor(view: SelectionView): Command[] {
       return [
         ...(view.farm ? cropCommands(view.farm.plan) : []),
         ...(view.trainer ? [trainCommand(view.trainer.train)] : []),
+        ...(view.trapCost ? [{
+          action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
+          title: `Reuse bauen - ${view.trapCost.cost}\nIns Wasser nahe der Hütte; der Fischer leert sie mit dem Boot`,
+        } satisfies Command] : []),
         demolish(false),
       ];
     case 'buildings':

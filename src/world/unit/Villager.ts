@@ -36,7 +36,22 @@ export type Task =
    * (`fetch`), schnitzt an der Werkbank (`carve`, Fortschritt 0..1) und trägt
    * den Bogen zur nächsten Waffenkammer (`deliver`) - dann von vorn.
    */
-  | { kind: 'craft'; building: string; step: 'fetch' | 'carve' | 'deliver'; progress: number };
+  | { kind: 'craft'; building: string; step: 'fetch' | 'carve' | 'deliver'; progress: number }
+  /**
+   * Fischer der Fischerhütte `building`. Mit Boot zur vollen Reuse `trap`:
+   * Boot holen (`boat`), ins Wasser ziehen (`launch`), hinrudern (`row`),
+   * leeren (`empty`), zurückrudern (`return`), an Land ziehen (`land`). Ohne
+   * volle Reuse zum Ufer (`shore`) und angeln (`angle`). Den Fang (`fish`
+   * Nahrung) legt er ins Netz (`net`), dann sucht er neu (`choose`).
+   * `shore`: Stelle am Ufer - an Land (x, y) und im Wasser (wx, wy).
+   * `progress` 0..1: Angeln bzw. Leeren.
+   */
+  | {
+      kind: 'fish'; building: string; step: FishStep; progress: number; fish: number;
+      trap?: string; shore?: { x: number; y: number; wx: number; wy: number };
+    };
+
+export type FishStep = 'choose' | 'boat' | 'launch' | 'row' | 'empty' | 'return' | 'land' | 'shore' | 'angle' | 'net';
 
 export class Villager extends UnitBase {
   carrying = 0;

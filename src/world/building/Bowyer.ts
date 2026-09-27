@@ -21,7 +21,7 @@ export class Bowyer extends BuildingBase {
     hp: 600,
   });
 
-  override isWorkshop(): this is Bowyer {
+  override isWorkshop(): boolean {
     return true;
   }
 }

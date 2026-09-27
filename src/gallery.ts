@@ -11,7 +11,7 @@
 
 import {
   ANIMAL_CLIPS, ANIMAL_POSE, BUILDING_HEADING, CLIPS, CLIP_POSE, EntityRenderer, FALL_LYING, FIELDS, FLOWERS, POSE, SHAPE, animationTime, setAnimationTime, setAnimationsPaused,
-  buildingHeading, figureProps, frozenMillMotion, millMotion, modelWorkSpot,
+  buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelWorkSpot,
   type EntityInstance,
 } from './gl/entityRenderer';
 import {
@@ -55,6 +55,24 @@ function figure(label: string, female: boolean, pose: number, rate: number, head
         motion: [heading, pose === POSE.stand ? t : t * rate, pose, load], accent: WOOD,
       };
       out.push(f, ...figureProps(f));
+    },
+  };
+}
+
+/** Fischer mit Angel oder Fang in der Hand, dazu nach Wunsch das Boot, das er zieht. */
+function fisher(label: string, female: boolean, pose: number, item: 'fish' | 'rod' | null, drag = false): Exhibit {
+  return {
+    label,
+    draw: (t, x, y, out) => {
+      const h = -Math.PI / 4;
+      const f: EntityInstance = {
+        x: x - 0.5, y: y - 0.5, size: VILLAGER.size * ZOOMED, color: PLAYER,
+        shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1, motion: [h, pose === POSE.stand ? t : t * 6, pose, 0],
+      };
+      // Wie im Spiel (world/render.ts): Bug an der linken Hand, das Boot hinter ihm.
+      const [bx, by] = [x - Math.cos(h) * 0.74 * ZOOMED * 0.55 - Math.sin(h) * 0.15, y - Math.sin(h) * 0.74 * ZOOMED * 0.55 + Math.cos(h) * 0.15];
+      if (drag) out.push({ x: bx - 0.5, y: by - 0.5, size: (1.73 / 5) * ZOOMED, color: PLAYER, shape: SHAPE.fisherBoat, alpha: 1, motion: [h, 0, 0, 0] });
+      out.push(f, ...figureHolding(f, item));
     },
   };
 }
@@ -284,6 +302,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       model('Hauptgebäude', SHAPE.townCenter, BUILDINGS.town_center.size),
       ...[SHAPE.house, SHAPE.house2, SHAPE.house3, SHAPE.house4].map((s, i) => model(`Haus ${i + 1}`, s, BUILDINGS.house.size)),
       model('Minenlager', SHAPE.miningCamp, BUILDINGS.mining_camp.size),
+      model('Fischerhütte', SHAPE.fisherHut, BUILDINGS.fisher_hut.size),
       model('Bognerei', SHAPE.bowyer, BUILDINGS.bowyer.size),
       model('Waffenkammer', SHAPE.armory, BUILDINGS.armory.size),
       model('Sammelpunkt', SHAPE.rallyFlag, 0.54),
@@ -398,6 +417,15 @@ const SHOWCASE: Showcase[] = [
   building('Haus', BUILDINGS.house.models!, BUILDINGS.house.size, 220, 0.7),
   building('Holzlager', BUILDINGS.lumber_camp.models!, BUILDINGS.lumber_camp.size, 220, 0.6),
   building('Minenlager', [SHAPE.miningCamp], BUILDINGS.mining_camp.size, 200, 0.7),
+  building('Fischerhütte', [SHAPE.fisherHut], BUILDINGS.fisher_hut.size, 200, 0.7),
+  showcase('Gebäude', 'Fischerei', [
+    model('Boot', SHAPE.fisherBoat, (1.73 / 5) * ZOOMED),
+    model('Reuse', SHAPE.fishTrap, BUILDINGS.fish_trap.size * 2, [BUILDING_HEADING, 0, 0, 0]),
+    model('Reuse · voll', SHAPE.fishTrap, BUILDINGS.fish_trap.size * 2, [BUILDING_HEADING, 1, 0, 0]),
+    fisher('angelt', false, POSE.stand, 'rod'),
+    fisher('mit Fisch', true, POSE.walk, 'fish'),
+    fisher('zieht das Boot', false, POSE.walk, 'fish', true),
+  ], 300, 0.6),
   // Mit dem Bogner an der Werkbank, wie im Spiel.
   {
     ...showcase('Gebäude', 'Bognerei', [

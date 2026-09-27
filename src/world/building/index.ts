@@ -5,9 +5,10 @@
 //
 //   BuildingBase (abstrakt)       Lage, Trefferpunkte, Variante, speichern
 //    ├─ UnitProducer (abstrakt)   bildet Einheiten aus  ── TownCenter
-//    ├─ StorageBuilding (abstr.)  nimmt Rohstoffe an   ── LumberCamp, MiningCamp, Mill, Armory
+//    ├─ StorageBuilding (abstr.)  nimmt Rohstoffe an   ── LumberCamp, MiningCamp, Mill, FisherHut, Armory
 //    ├─ House                     Wohnraum
 //    ├─ Bowyer                    Werkstatt: ein Bogner macht Bögen aus Holz
+//    ├─ FishTrap                  Reuse im Wasser - gebaut über die Fischerhütte
 //    └─ Farm                      Feld mit Furchen
 
 import type { BuildingDefinition } from './definition';
@@ -19,18 +20,20 @@ import { House } from './House';
 import { LumberCamp } from './LumberCamp';
 import { MiningCamp } from './MiningCamp';
 import { Mill } from './Mill';
+import { FisherHut } from './FisherHut';
+import { FishTrap } from './FishTrap';
 import { Bowyer } from './Bowyer';
 import { Armory } from './Armory';
 import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE, type Furrow } from './Farm';
 
 export {
-  BuildingBase, UnitProducer, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, Armory,
+  BuildingBase, UnitProducer, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, Armory,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
   type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type TrainableUnit,
 };
 
-/** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs. */
-export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, Armory] as const;
+/** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs (ohne Taste: nicht darin). */
+export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, Armory, FisherHut, FishTrap] as const;
 
 /** Kennung einer Gebäudeart, z. B. 'lumber_camp'. */
 export type BuildingType = (typeof BUILDING_CLASSES)[number]['definition']['type'];
@@ -48,7 +51,7 @@ export const BUILDINGS = Object.fromEntries(BUILDING_CLASSES.map((c) => [c.defin
   Record<BuildingType, BuildingDefinition>;
 
 /** Reihenfolge im Baumenü. */
-export const BUILDING_ORDER: BuildingType[] = BUILDING_CLASSES.map((c) => c.definition.type);
+export const BUILDING_ORDER: BuildingType[] = BUILDING_CLASSES.filter((c) => c.definition.key).map((c) => c.definition.type);
 
 /** Ist das eine bekannte Art? Für Speicherstände. */
 export function isBuildingType(type: string): type is BuildingType {

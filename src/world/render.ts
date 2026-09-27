@@ -5,16 +5,18 @@
 // gelesen.
 
 import {
-  ANIMAL_POSE, BUILDING_HEADING, POSE, SHAPE, buildingHeading, figureProps, frozenMillMotion, millMotion, modelSize, modelStockSlots,
+  ANIMAL_POSE, BUILDING_HEADING, POSE, SHAPE, buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelSize, modelStockSlots,
+  modelWorkSpot,
   type EntityInstance,
 } from '../gl/entityRenderer';
 import { RESOURCE_TYPE_COLORS } from '../map';
 import { reliefZ } from '../noise';
-import { furrowPosition } from './building';
-import { BUILDINGS, CROPS, VILLAGER, player, type DepositType, type ResourceKind } from './catalog';
+import { FishTrap, furrowPosition } from './building';
+import { BUILDINGS, CROPS, FISHING, VILLAGER, player, type DepositType, type ResourceKind } from './catalog';
 import {
   RUIN_COLLAPSE, RUIN_COLLAPSE_START, RUIN_DURATION, RUIN_FADE_START, RUIN_FLIGHT, RUIN_SHAKE,
 } from './ruin';
+import { AFLOAT, DRAGGING, workplace } from './villagers';
 import { STRIDE_LENGTH, WORK_TEMPO, type ViewRect, type World } from './world';
 
 /** Farbe des Hinweispfeils über einem Gebäude ohne Arbeiter. */
@@ -22,6 +24,18 @@ const MARKER_COLOR: [number, number, number] = [255, 205, 40];
 /** Höhe des Hinweispfeils in Tiles (1.5 m) und sein Abstand über dem Dach. */
 const MARKER_SIZE = 0.3;
 const MARKER_GAP = 0.12;
+
+/**
+ * Boot des Fischers (props/fisher_boat.glb): Breite und Länge in Tiles (1
+ * Tile = 5 m), wie tief der tiefste Punkt unter der Wasserlinie liegt und wie
+ * hoch der Boden darüber, auf dem der Fischer steht.
+ */
+const BOAT_SIZE = 1.73 / 5;
+const BOAT_LENGTH = 3.7 / 5;
+const BOAT_KEEL = -0.33 / 5;
+const BOAT_FLOOR = 0.06 / 5;
+/** Reuse (fields/fish_trap.glb): Anteil ihrer Breite unter der Wasserlinie. */
+const TRAP_DRAFT = 1.05 / 4.12;
 
 /** Farbe von Staub und Schutt beim Einsturz. */
 const DUST_COLOR: [number, number, number] = [214, 200, 172];
@@ -64,10 +78,13 @@ export function worldInstances(
   const crafting = new Map<string, number>();
   // Werkstätten mit Arbeiter - über den anderen steht ein Hinweispfeil.
   const staffed = new Set<string>();
+  // Fischerhütten, deren Boot gerade unterwegs ist - sonst liegt es an der Hütte.
+  const boatOut = new Set<string>();
   for (const v of world.villagers) {
-    if (v.task.kind !== 'craft') continue;
-    staffed.add(v.task.building);
-    if (v.task.step === 'carve' && v.carryType !== 'wood') crafting.set(v.task.building, v.task.progress);
+    const at = workplace(v.task);
+    if (at) staffed.add(at);
+    if (v.task.kind === 'fish' && (AFLOAT.has(v.task.step) || DRAGGING.has(v.task.step))) boatOut.add(v.task.building);
+    if (v.task.kind === 'craft' && v.task.step === 'carve' && v.carryType !== 'wood') crafting.set(v.task.building, v.task.progress);
   }
   const now = world.timeAt(blend);
 
@@ -104,12 +121,21 @@ export function worldInstances(
       // Jede Mühle dreht in ihrem eigenen Takt; Felder zeigen Wuchs und Rest.
       motion: def.model === SHAPE.mill ? millMotion(building.x, building.y)
         : def.model === SHAPE.bowyer ? [BUILDING_HEADING, crafting.get(building.anchor) ?? -1, 0, 0]
+        // Reuse: Fisch um Fisch, wie sie sich füllt (Stock.0-4 im Modell).
+        : building instanceof FishTrap ? [BUILDING_HEADING, building.fish / FISHING.trapFish, 0, 0]
         : armory.has(building.anchor) && modelStockSlots(building.model) > 0
           ? armoryMotion(building.model, armory.get(building.anchor)!, def.weaponCapacity,
               building.anchor === hovered || !!selection?.buildings.has(building.anchor))
         : undefined,
       health: selection?.buildings.has(building.anchor) ? building.health : undefined,
+      // Reusen liegen zum Teil unter Wasser.
+      ground: building.type === 'fish_trap' ? -TRAP_DRAFT * def.size : undefined,
     });
+    // Das Boot liegt an der Hütte, solange es nicht unterwegs ist - längs der Hütte.
+    if (building.type === 'fisher_hut' && !boatOut.has(building.anchor)) {
+      const at = modelWorkSpot(building.model, building.x, building.y, def.size, BUILDING_HEADING)?.boat;
+      if (at) out.push(boatAt(at.x, at.y, BUILDING_HEADING + Math.PI / 2, world.groundAt?.(at.x, at.y)));
+    }
     // Arbeiter fehlt: ein Pfeil nach unten über dem Dach, der sich langsam dreht.
     if (building.isWorkshop() && !staffed.has(building.anchor)) {
       const top = (modelSize(building.model)?.height ?? 1) * def.size;
@@ -147,8 +173,24 @@ export function worldInstances(
       health: selection?.villagers.has(v.id) ? v.hp / VILLAGER.hp : undefined,
       accent: v.carryType ? RESOURCE_TYPE_COLORS[LOAD_LOOK[v.carryType]].toRGB() : undefined,
     };
-    // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip).
-    out.push(figure, ...figureProps(figure));
+    const fishing = v.task.kind === 'fish' ? v.task : undefined;
+    if (!fishing) {
+      // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip).
+      out.push(figure, ...figureProps(figure));
+      continue;
+    }
+    // Fischer: im Boot steht er auf dessen Boden; an Land zieht er es mit der
+    // linken Hand hinter sich her. In der rechten die Angel oder der Fang.
+    const h = v.heading;
+    if (AFLOAT.has(fishing.step)) {
+      figure.ground = BOAT_FLOOR;
+      out.push(boatAt(x, y, h, BOAT_KEEL));
+    } else if (DRAGGING.has(fishing.step)) {
+      const [bx, by] = [x - Math.cos(h) * BOAT_LENGTH * 0.55 - Math.sin(h) * 0.05, y - Math.sin(h) * BOAT_LENGTH * 0.55 + Math.cos(h) * 0.05];
+      out.push(boatAt(bx, by, h, world.groundAt?.(bx, by)));
+    }
+    const rod = fishing.step === 'shore' || fishing.step === 'angle';
+    out.push(figure, ...figureHolding(figure, rod ? 'rod' : fishing.fish > 0 ? 'fish' : null));
   }
   for (const a of world.wildlife.animals) {
     if (hideAnimal(a.definition.type)) continue;
@@ -169,6 +211,14 @@ export function worldInstances(
     });
   }
   return out;
+}
+
+/** Das Boot des Fischers mit der Mitte auf (x, y), Bug in Richtung `heading`. */
+function boatAt(x: number, y: number, heading: number, ground?: number): EntityInstance {
+  return {
+    x: x - 0.5, y: y - 0.5, size: BOAT_SIZE, color: player.color.toRGB(), shape: SHAPE.fisherBoat, alpha: 1,
+    motion: [heading, 0, 0, 0], ground,
+  };
 }
 
 /** Waffenkammer: Füllstand der Gestelle (Anteil der Plätze) und offen, wenn der Zeiger darauf steht oder sie ausgewählt ist. */

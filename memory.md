@@ -9,6 +9,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - Bench, Rauchtest und Screenshots brauchen den laufenden Dev-Server (`npm run dev`, http://localhost:5173).
 
 - 2026-09-26: Modelle aus Blender (auch per `blender-mcp`) mit `export_normals=False` exportieren. Mit Normalen wurde `villagers/male.glb` 4× so groß (118 → 508 KB), das Spiel liest nur POSITION.
+- 2026-09-27: Die Fischerei-Modelle (`fisher_hut`, `fish_trap`, `fisher_boat`, `fishing_rod`, `herring`) kamen aus trimesh: Z oben, Vorderseite -Y, ohne glTF-Drehung, ohne `Entry`. Sie liegen dann im Spiel auf der Seite. Gedreht mit `glbToObj` → (x, z, -y) → `objToGlb`, Marker als kleine Würfel ergänzt. Bei jedem neuen GLB den `generator` prüfen. Neue Fassungen aus trimesh brauchen die Drehung wieder.
+- 2026-09-27: `render.ts` rechnet mit Maßen aus den Fischerei-Modellen (`BOAT_*`, `TRAP_DRAFT`). Wer Boot oder Reuse neu exportiert, muss sie nachziehen.
 - 2026-09-26, M4: `stadt`-fps schwanken zwischen Läufen desselben Codes zwischen 50 und 60 (Median je Lauf). Einzelläufe belegen nichts. Nur abwechselnd A/B/A/B messen (Datei tauschen, 4 s warten, `npm run bench`).
 
 ## Repo
