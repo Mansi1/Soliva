@@ -6,6 +6,14 @@
 // beschreiben.
 
 import { PROJECT_GLSL } from './iso';
+import { LIGHT_GLSL } from './light';
+
+/**
+ * Der Cache speichert die Farbe durch diesen Faktor geteilt: das Licht kommt
+ * erst im Bild dazu, und helle Farben (Fels, Schnee) dürfen vorher über 1
+ * liegen - wie früher, als das Licht vor dem Klemmen auf 0..1 kam.
+ */
+export const CACHE_HEADROOM = 1.5;
 import { FLATTEN_GLSL } from '../world/flatten';
 
 /**
@@ -280,7 +288,11 @@ precision highp float;
 precision highp int;
 precision highp usampler2DArray;
 
-out vec4 fragColor;
+layout(location = 0) out vec4 fragColor;
+// Normale des Reliefs (xy * 0.5 + 0.5, z oben ergibt sich) - das Licht darauf
+// rechnet erst das Bild (DISPLAY_FRAGMENT_SOURCE), so wandert die Sonne,
+// ohne dass der Cache neu befüllt wird.
+layout(location = 1) out vec2 fragNormal;
 
 ${TERRAIN_COMMON}
 ${PROJECT_GLSL}
@@ -403,6 +415,12 @@ float speckle(vec2 tile, float density, float chance, float radius, out float pi
 // (0..1). Die Texturen tragen es ein, das Feinrelief spart diese Stellen aus
 // - sonst liegt das Körnungsrauschen von Gras und Sand auch auf ihnen.
 float gPropMask = 0.0;
+
+// Normale eines Gegenstands am Boden (Stein, Muschel) und ihr Anteil - geht
+// mit der Relief-Normale ins Licht des Bildes, so wölben sie sich heraus
+// und drehen mit der Sonne. Die Texturen setzen sie (stoneShape, beachProp).
+vec3 gPropNormal = vec3(0.0, 0.0, 1.0);
+float gPropNormalWeight = 0.0;
 
 // Richtung zur Sonne in der Bodenebene - wie SUN beim Relief (links oben).
 const vec2 SUN_XY = vec2(-0.45, 0.35);
@@ -614,6 +632,10 @@ vec3 forestTexture(vec3 c, vec2 tile, float ds, float height) {
 // Unregelmäßiger, kantiger Stein wie die Steinmodelle: welliger Umriss,
 // helle flache Oberseite, Seitenfacetten je nach Lage zur Sonne hell oder
 // dunkel, feine Körnung. q in Steinradien, seed 0..1.
+// Kontaktschatten: ein schmaler dunkler Saum rund um einen Gegenstand, wo er
+// auf dem Boden aufliegt - ohne Richtung, er hält ihn am Boden.
+#define CONTACT(q) (0.7 * (1.0 - smoothstep(0.8, 1.15, length(q))))
+
 vec4 stoneShape(vec2 q, float seed, vec3 base, vec2 toSun, float sharp) {
   float a = atan(q.y, q.x);
   float R = 0.8 + 0.13 * sin(a * 3.0 + seed * 6.3) + 0.08 * sin(a * 5.0 + seed * 17.0);
@@ -623,9 +645,18 @@ vec4 stoneShape(vec2 q, float seed, vec3 base, vec2 toSun, float sharp) {
   float k = 6.0 + floor(seed * 3.0);
   float off = seed * 3.0;
   float fa = (floor((a + off) / 6.2832 * k) + 0.5) / k * 6.2832 - off;
-  float side = 0.6 + 0.42 * dot(vec2(cos(fa), sin(fa)), toSun);
-  float top = smoothstep(R * 0.52, R * 0.42, d) * sharp;
-  vec3 col = base * mix(mix(0.9, side, sharp), 1.12, top);
+  // Ein Kiesel, der auf dem Boden liegt: gewölbt wie eine flache Kuppel,
+  // leicht facettiert - die Normale macht im Bild Licht- und Schattenseite
+  // (gPropNormal). Hier bleibt nur ein Rest der festen Sonne für die
+  // Übersichtskarte ohne Relief, dazu dunkler, wo er auf dem Boden aufliegt.
+  float side = 0.9 + 0.08 * dot(vec2(cos(fa), sin(fa)), toSun);
+  vec3 col = base * mix(0.9, side, sharp);
+  vec2 radial = q / R;
+  float h = sqrt(max(0.0, 1.0 - dot(radial, radial)));
+  vec2 slope = mix(radial, vec2(cos(fa), sin(fa)) * length(radial), 0.35);
+  gPropNormal = normalize(vec3(slope, max(h, 0.2) * 0.75));
+  gPropNormalWeight = max(gPropNormalWeight, mask * sharp);
+  col *= mix(0.72, 1.0, smoothstep(R, R * 0.65, d));
   col *= 0.92 + 0.16 * hash21(floor(q * 5.0) + seed * 31.0);
   // Glanz an der Kante der Oberseite zur Sonne.
   float edge = smoothstep(0.1, 0.0, abs(d - R * 0.47)) * max(dot(q / max(d, 1e-3), toSun), 0.0) * sharp;
@@ -643,10 +674,10 @@ float sandGrain(vec2 p, float ds) {
 vec3 sandSurface(vec3 c, vec2 tile, float ds) {
   c *= 1.0 + snoise(L_MICRO, tile * 0.3 + vec2(8.0, 1.0)) * 0.04;
   c = mix(c, c * vec3(1.05, 1.0, 0.9), smoothstep(-0.2, 0.6, snoise(L_DETAIL, tile * 0.12 + vec2(3.0, 3.0))) * 0.5);
-  c *= 1.0 + sandGrain(tile, ds) * 0.07;
+  c *= 1.0 + sandGrain(tile, ds) * 0.045;
   float pick;
   float grain = speckle(tile, 10.0, 0.12, 0.015, pick) * detailFade(0.02, ds);
-  c = mix(c, pick < 0.7 ? vec3(1.0, 0.97, 0.9) : c * 0.75, grain * 0.6);
+  c = mix(c, pick < 0.7 ? vec3(1.0, 0.97, 0.9) : c * 0.87, grain * 0.6);
   return c;
 }
 
@@ -672,7 +703,7 @@ vec4 desertProp(vec2 tile, float ds, out float shadow) {
   float mask;
   if (kind < 0.75 && kind >= 0.45) {
     // Stein: Sandstein oder grau, gewölbt.
-    shadow = smoothstep(1.0, 0.5, length(q + toSun * 0.4)) * sharp * fade;
+    shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.4)), CONTACT(q)) * sharp * fade;
     vec3 base = hash21(cell + 2.2) < 0.5 ? vec3(0.66, 0.52, 0.38) : vec3(0.58, 0.56, 0.52);
     vec4 st = stoneShape(q, hash21(cell + 4.4), base, toSun, sharp);
     col = st.rgb;
@@ -707,16 +738,17 @@ vec4 beachProp(vec2 tile, float ds, out float shadow) {
   if (fade <= 0.0) return vec4(0.0);
   vec2 cell = floor(tile * 3.0);
   vec2 rnd = hash22(cell);
-  if (rnd.x >= 0.05) return vec4(0.0);
-  bool shell = hash21(cell + 5.3) < 0.35;
-  float r = shell ? 0.04 + 0.025 * rnd.y : 0.045 + 0.05 * rnd.y;
+  if (rnd.x >= 0.08) return vec4(0.0);
+  bool shell = hash21(cell + 5.3) < 0.6;
+  // Muscheln klein und verschieden groß: meist kleine, ab und zu eine größere.
+  float r = shell ? 0.04 + 0.035 * pow(hash21(cell + 9.1), 1.5) : 0.045 + 0.05 * rnd.y;
   vec2 center = (cell + 0.2 + 0.6 * hash22(cell + 3.1)) / 3.0;
   vec2 q = (tile - center) / r;
   float d = length(q);
   if (d > 1.7) return vec4(0.0);
   vec2 toSun = normalize(SUN_XY);
   float sharp = detailFade(r * 0.5, ds);
-  shadow = smoothstep(1.0, 0.5, length(q + toSun * 0.35)) * sharp * fade;
+  shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.35)), CONTACT(q)) * sharp * fade;
   vec3 col;
   float mask;
   if (shell) {
@@ -729,7 +761,11 @@ vec4 beachProp(vec2 tile, float ds, out float shadow) {
     float pick = hash21(cell + 8.8);
     vec3 base = pick < 0.4 ? vec3(0.97, 0.95, 0.9) : pick < 0.7 ? vec3(0.95, 0.72, 0.68) : vec3(0.9, 0.8, 0.62);
     float ribs = 0.8 + 0.2 * abs(cos(a * 7.0));
-    col = base * ribs * (0.85 + 0.25 * dot(q, toSun) * 0.5);
+    col = base * ribs;
+    // Gewölbt, die Rippen als leichte Wellen quer dazu.
+    vec2 up = q * 0.7 + vec2(cos(a * 7.0 + rot), sin(a * 7.0 + rot)) * 0.12;
+    gPropNormal = normalize(vec3(up, 1.0));
+    gPropNormalWeight = max(gPropNormalWeight, mask * sharp);
   } else {
     float pick = hash21(cell + 2.2);
     vec3 base = pick < 0.45 ? vec3(0.55, 0.53, 0.5) : pick < 0.75 ? vec3(0.8, 0.77, 0.72) : vec3(0.62, 0.5, 0.42);
@@ -743,9 +779,11 @@ vec4 beachProp(vec2 tile, float ds, out float shadow) {
 // Strand: feine Körnung, Rippel, nasser dunkler Saum zum Wasser, Kiesel
 // und Muscheln, angespültes Treibgut.
 vec3 beachTexture(vec3 c, vec2 tile, float ds, float height) {
-  c = sandSurface(c, tile, ds);
   float wet = 1.0 - smoothstep(uSeaLevel, uSeaLevel + (uShoreLevel - uSeaLevel) * 0.45, height);
-  c = mix(c, c * vec3(0.72, 0.7, 0.66), wet * 0.8);
+  // Nasser Sand ist glatt: die Körnung läuft zum Wasser hin aus - sonst endet
+  // das grobe Muster hart an der Wasserlinie.
+  c = mix(sandSurface(c, tile, ds), c, wet * 0.7);
+  c = mix(c, c * vec3(0.72, 0.7, 0.66), wet * 0.5);
   float pick;
   float shadow;
   vec4 prop = beachProp(tile, ds, shadow);
@@ -788,7 +826,7 @@ vec4 rockProp(vec2 tile, float ds, out float shadow) {
   if (fade <= 0.0 || !propCell(tile, 2.5, 0.1, 0.06, 0.14, q, r, id)) return vec4(0.0);
   vec2 toSun = normalize(SUN_XY);
   float sharp = detailFade(r * 0.5, ds);
-  shadow = smoothstep(1.0, 0.5, length(q + toSun * 0.4)) * sharp * fade;
+  shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.4)), CONTACT(q)) * sharp * fade;
   vec3 base = vec3(0.55, 0.53, 0.5) * (0.85 + 0.3 * hash21(id + 2.2));
   vec4 st = stoneShape(q, hash21(id + 4.4), base, toSun, sharp);
   return vec4(st.rgb, st.a * fade);
@@ -802,7 +840,7 @@ vec4 snowProp(vec2 tile, float ds, out float shadow) {
   if (fade <= 0.0 || !propCell(tile, 2.0, 0.05, 0.06, 0.13, q, r, id)) return vec4(0.0);
   vec2 toSun = normalize(SUN_XY);
   float sharp = detailFade(r * 0.5, ds);
-  shadow = smoothstep(1.0, 0.5, length(q + toSun * 0.4)) * sharp * fade;
+  shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.4)), CONTACT(q)) * sharp * fade;
   vec4 st = stoneShape(q, hash21(id + 4.4), vec3(0.42, 0.41, 0.42), toSun, sharp);
   float cap = smoothstep(0.1, 0.5, dot(q, toSun) + 0.3) * smoothstep(0.85, 0.55, length(q));
   vec3 col = mix(st.rgb, vec3(0.95, 0.97, 1.0), cap * sharp);
@@ -887,6 +925,7 @@ vec3 biomeBase(int biome, float height, float variation) {
 }
 
 void main() {
+  fragNormal = vec2(0.5);
   // Welt-Tiles je Geraete-Pixel, waagerecht gemessen. Auf Haengen ist es
   // mehr, fuer Detailstufe und Schattierung reicht die Naeherung.
   float step = 1.0 / uPixelsPerTile;
@@ -912,6 +951,11 @@ void main() {
 
   bool isWater = biome == B_DEEP_WATER || biome == B_WATER;
   vec3 color;
+  // Flachwasser: Tiefe 0..1 über das Band vor dem Ufer - im Alpha-Kanal, die
+  // Brandung im Bild läuft daran entlang. 1: Land oder tiefes Wasser.
+  float shoal = 1.0;
+  // An Land: wie nah an der Wasserlinie, 1 direkt daran (siehe unten).
+  float shoreWet = 0.0;
   // Anteil Sand (Strand, Wüste) - dort wird die Hangschattierung sanfter,
   // sonst zieht das Höhenrauschen dunkle Schlieren durch den Sand.
   float sandy = 0.0;
@@ -926,6 +970,26 @@ void main() {
 
     float surf = pow(clamp(1.0 - depth / 0.16, 0.0, 1.0), 2.0) * 0.42;
     color = mix(color, uSurf, surf);
+
+    // Flaches Wasser ist durchsichtig: darunter der nasse Sand des Strands,
+    // je tiefer, desto mehr Wasser darüber. An der Wasserlinie ist es nur
+    // Sand - so geht es ohne Kante in den nassen Sand an Land über. Das
+    // Rauschen lässt den Sand unregelmäßig ins Wasser reichen, statt der
+    // glatten Höhenlinie zu folgen.
+    float shallow = (uShoreLevel - uSeaLevel) * 0.35;
+    float under = uSeaLevel - height
+        - abs(snoise(L_FRINGE, tile * 0.6 + vec2(11.0, 5.0))) * shallow * 0.35;
+    if (under < shallow) {
+      // Über Sand wirkt flaches Wasser hell türkis - der Sand zeigt sich in
+      // Helligkeit und Struktur, nicht im Farbton (Gelb und Blau gemischt
+      // ergäbe Schlamm). Erst direkt an der Linie der Sand selbst.
+      vec3 sand = beachTexture(biomeBase(B_BEACH, height, variation), tile, detailStep, height);
+      float seen = exp(-max(under, 0.0) / shallow * 2.5);
+      vec3 turquoise = vec3(0.6, 0.84, 0.82) * (dot(sand, vec3(0.299, 0.587, 0.114)) / 0.55);
+      color = mix(mix(color, turquoise, seen), sand, smoothstep(0.45, 1.0, seen));
+    }
+    // Ohne das Rauschen: die Brandung folgt der echten Wasserlinie.
+    shoal = clamp((uSeaLevel - height) / (shallow * 3.0), 0.0, 1.0);
   } else {
     // Weiche, ausgefranste Übergänge statt harter Biom-Kanten. Die Anteile
     // (Wald, Wüste, Strand, Fels) hängen nur stetig von Höhe, Feuchte und
@@ -970,11 +1034,20 @@ void main() {
       }
     }
 
+    // An der Wasserlinie nasser, glatter Sand - gleich welcher Boden. Sonst
+    // endet das Muster von Wüste oder Wiese hart am Wasser (der Sand unter
+    // Wasser ist glatt, siehe oben).
+    shoreWet = 1.0 - smoothstep(uSeaLevel, uSeaLevel + (uShoreLevel - uSeaLevel) * 0.45, height);
+    if (shoreWet > 0.0) {
+      vec3 wetSand = biomeBase(B_BEACH, height, variation) * vec3(0.86, 0.85, 0.83);
+      color = mix(color, wetSand, shoreWet * 0.85);
+    }
+
     {
       // Feinrelief beleuchten: Normale aus dem Anstieg des Bump-Musters,
       // Licht wie beim Gelände von links oben. So wirkt der Boden körnig und
       // plastisch statt glatt bemalt. Weit draußen blendet es aus.
-      float bumpFade = detailFade(0.12, detailStep) * (1.0 - gPropMask);
+      float bumpFade = detailFade(0.12, detailStep) * (1.0 - gPropMask) * (1.0 - shoreWet);
       if (bumpFade > 0.0) {
         float sandShare = max(beach, desert);
         float e = max(detailStep * 0.75, 0.004);
@@ -984,7 +1057,7 @@ void main() {
         // Gras und Schnee zart, Sand etwas mehr, Laub und Fels kräftiger.
         float k = mix(0.018, 0.04, wood);
         k = mix(k, 0.05, rock);
-        k = mix(k, 0.02, sandShare * (1.0 - rock));
+        k = mix(k, 0.012, sandShare * (1.0 - rock));
         k = mix(k, 0.022, snow);
         vec3 bn = normalize(vec3(-(bx - b0) / e * k, -(by - b0) / e * k, 1.0));
         vec3 sun = normalize(vec3(SUN_XY, 0.82));
@@ -1005,21 +1078,26 @@ void main() {
   float shade = tanh(((height - hRight) + (height - hDown)) * uShadeGain / step);
   // Im Flachland gedämpft, sonst zeichnet sie jede kleine Welle der Wiese nach.
   float lowland = mix(uLowlandShade, 1.0, smoothstep(uMountainFoot - 0.15, uMountainFoot, height));
-  color *= 1.0 + shade * (isWater ? 0.08 : mix(0.42, 0.18, sandy) * lowland);
+  // Zur Wasserlinie hin wie auf dem Wasser - sonst springt die Helligkeit dort.
+  color *= 1.0 + shade * (isWater ? 0.08 : mix(mix(0.42, 0.18, sandy) * lowland, 0.08, shoreWet));
 
-  // Licht auf das Relief. Die Hangneigung oben ist nur ein Schattierungs-
-  // effekt der Hoehenwerte; hier zaehlt die Neigung der tatsaechlich
-  // angehobenen Flaeche, damit Sonnen- und Schattenseiten der Berge zur
-  // Geometrie passen. Licht von links oben im Bild, wie in AoE2.
+  // Normale des Reliefs fürs Licht. Die Hangneigung oben ist nur ein
+  // Schattierungseffekt der Hoehenwerte; hier zaehlt die Neigung der
+  // tatsaechlich angehobenen Flaeche, damit Sonnen- und Schattenseiten der
+  // Berge zur Geometrie passen. Wasser und Karte ohne Relief bleiben flach.
+  // ponytail: Feinrelief, Hangschattierung und Blumen oben bleiben mit der
+  // festen Sonne (SUN_XY) eingebrannt - ins Licht nehmen, wenn die wandernde
+  // Sonne daran sichtbar falsch wirkt.
   if (uReliefScale > 0.0 && !isWater) {
     float z = reliefZ(height);
     vec3 normal = normalize(vec3(
         (z - reliefZ(hRight)) / step,
         (z - reliefZ(hDown)) / step,
         1.0 / uReliefScale));
-    const vec3 SUN = vec3(-0.45, 0.35, 0.82);
-    float lambert = dot(normal, normalize(SUN)) / normalize(SUN).z;
-    color *= clamp(mix(1.0, lambert, 0.85), 0.45, 1.3);
+    // Zur Wasserlinie hin flach wie das Wasser; Steine und Muscheln wölben sich heraus.
+    normal = normalize(mix(normal, vec3(0.0, 0.0, 1.0), shoreWet));
+    normal = normalize(mix(normal, gPropNormal, gPropNormalWeight));
+    fragNormal = normal.xy * 0.5 + 0.5;
   }
 
   if (uDebug != 0) {
@@ -1033,10 +1111,12 @@ void main() {
     if (uDebug == 7) value = ridgedNoise(n * 2.2, 4, 0.5) * 2.0 - 1.0;
     float u = clamp((value + 1.0) * 0.5, 0.0, 1.0) * 255.0;
     fragColor = vec4(floor(u) / 255.0, fract(u), 0.0, 1.0);
+    // Gepackte Werte - das Licht im Bild darf sie nicht verändern (flach, feste Sonne).
+    fragNormal = vec2(0.5);
     return;
   }
 
-  fragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+  fragColor = vec4(clamp(color / ${CACHE_HEADROOM.toFixed(1)}, 0.0, 1.0), shoal);
 }
 `;
 
@@ -1050,6 +1130,11 @@ in vec2 vPrevTexel;
 out vec4 fragColor;
 
 uniform sampler2D uCache;
+uniform sampler2D uNormal;      // Normale je Texel (fragNormal beim Befüllen)
+uniform sampler2D uNormalPrev;  // ... des alten Caches
+uniform float uCacheGain;       // CACHE_HEADROOM, im Debug-Modus 1 (gepackte Werte)
+uniform float uTime;            // Sekunden, steht in der Pause - für die Brandung
+${LIGHT_GLSL}
 // Alter Cache beim Wechsel der Zoomstufe: Anteil (0 = aus), Lage im
 // Ringpuffer und der fertige Bereich (Texel ab Fenster-Ecke: u0, v0, u1, v1).
 uniform sampler2D uCachePrev;
@@ -1108,10 +1193,29 @@ vec3 soilColor(vec2 world, vec3 ground, float step) {
 void main() {
   float step = 1.0 / uPixelsPerTile;
   vec2 tile = vWorld;
-  vec3 color = texture(uCache, vCache).rgb;
+  vec4 cached = texture(uCache, vCache);
+  vec2 slope = texture(uNormal, vCache).rg;
   if (uPrevMix > 0.0 && all(greaterThanEqual(vPrevTexel, uPrevReady.xy)) && all(lessThan(vPrevTexel, uPrevReady.zw))) {
-    vec3 before = texture(uCachePrev, (vPrevTexel + uPrevWindowMod) / uPrevCacheSize).rgb;
-    color = mix(color, before, uPrevMix);
+    vec2 prev = (vPrevTexel + uPrevWindowMod) / uPrevCacheSize;
+    cached = mix(cached, texture(uCachePrev, prev), uPrevMix);
+    slope = mix(slope, texture(uNormalPrev, prev).rg, uPrevMix);
+  }
+  vec3 color = cached.rgb * uCacheGain;
+
+  // Brandung im Flachwasser (Tiefe 0..1 im Alpha des Caches): eine Schaum-
+  // linie schwappt vor und zurück, dahinter ein dünner Wasserfilm, weiter
+  // draußen laufen schwache Wellen aufs Ufer zu. Je Stelle am Ufer versetzt.
+  float d = cached.a;
+  if (d < 0.99 && uCacheGain > 1.0) {
+    float phase = sin(vWorld.x * 0.7) * 1.3 + sin(vWorld.y * 0.9) * 1.1;
+    // Zum Meer hin eine klare Kante, zum Sand hin läuft der Schaum breit aus -
+    // kein harter weißer Rand am Sand.
+    float swash = 0.06 + 0.045 * sin(uTime * 0.9 + phase);
+    float line = d > swash ? 1.0 - smoothstep(0.0, 0.02, d - swash) : 1.0 - smoothstep(0.0, 0.07, swash - d);
+    // Der Film läuft zur Linie hin aus - an Land gibt es keinen, sonst entstünde dort eine Kante.
+    float film = smoothstep(0.0, 0.015, d) * (1.0 - smoothstep(0.0, swash, d));
+    float waves = (1.0 - smoothstep(0.0, 0.05, fract(d * 3.0 + uTime * 0.12))) * (1.0 - d);
+    color = mix(color, vec3(0.95, 0.97, 0.97), line * 0.38 + film * 0.12 + waves * 0.1);
   }
 
   if (uFieldActive > 0.5) {
@@ -1129,6 +1233,15 @@ void main() {
       }
     }
   }
+
+  // Sonne auf das Relief: flacher Boden bleibt, wie er ist, Hänge zur Sonne
+  // werden heller, abgewandte dunkler (so war es früher eingebrannt). Unter
+  // Wolken (Kontrast < 1) flacher, dazu Helligkeit und Farbe des Himmels.
+  vec2 xy = slope * 2.0 - 1.0;
+  vec3 normal = vec3(xy, sqrt(max(0.0, 1.0 - dot(xy, xy))));
+  float lambert = dot(normal, uSunDir) / max(uSunDir.z, 0.1);
+  float direct = clamp(mix(1.0, lambert, 0.85), 0.45, 1.3);
+  color *= mix(1.0, direct, uLight.y) * uLight.x * uSunColor;
 
   // Markiertes Tile: heller Rahmen mit dunklem Saum nach innen
   if (uHoverActive > 0.5) {

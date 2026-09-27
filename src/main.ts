@@ -45,6 +45,7 @@ import { hoverDescription, type HoverTarget } from './game/hoverInfo';
 import { Compass, directionAt, isDirection, northAngle, rotateToFace } from './game/Compass';
 import { TurnAnimation } from './game/TurnAnimation';
 import { Ground } from './game/Ground';
+import { Lighting } from './game/Lighting';
 import { worldSounds } from './game/worldSounds';
 import { minimapDots, placementOverlay, selectionOverlay } from './game/overlay';
 import { mountGame } from './components/Hud';
@@ -96,6 +97,8 @@ function resize() {
 
 applyCanvasSize();
 
+// Schalter zum Prüfen (?festesLicht, ?regen, ?ohneEffekte) - gelesen, bevor die Adresse aufgeräumt wird.
+const startParams = new URLSearchParams(window.location.search);
 // Die Adresse bleibt "/": Welt und Stelle stehen nicht mehr darin. Alte Links
 // (/<seed>/<x>-<y>?zoom=) werden aufgeräumt; die Welt wählt man im Hauptmenü.
 // Nur /game/<seed> zum Testen bleibt stehen (worlds.ts).
@@ -303,6 +306,14 @@ window.addEventListener('beforeunload', () => world.save());
 
 const renderer = new MapRenderer(canvas, seed, camera.tileSize, camera.pixelRatio);
 const minimap = new MiniMap(minimapCanvas, seed, camera.pixelRatio);
+/**
+ * Sonne und Wetter (game/Lighting.ts). Mit ?festesLicht in der Adresse steht
+ * die Sonne wie früher - zum Vergleichen von Screenshots; mit ?regen regnet
+ * es ohne Pause - zum Ansehen des Regens.
+ */
+const lighting = startParams.has('festesLicht') ? null : new Lighting(seed);
+const alwaysRain = startParams.has('regen');
+renderer.postEnabled = !startParams.has('ohneEffekte');
 
 camera.moveTo(startX, startY);
 
@@ -860,6 +871,13 @@ function loop(now: number) {
     mark = t;
   };
   simulation.advance(paused || start.isOpen() ? 0 : dt * settings.speed, (step) => world.tick(step));
+  if (lighting) {
+    lighting.update(paused || start.isOpen() ? 0 : dt * settings.speed);
+    renderer.light = lighting.frame();
+    renderer.rain = lighting.rain;
+  }
+  if (alwaysRain) renderer.rain = 1;
+  renderer.setEffects(settings.fxaa, settings.colorGrading, settings.bloom);
   lap('simMs');
 
   ground.update(now);
@@ -935,6 +953,9 @@ setRenderInfo(() => {
     idleFps: settings.idleFps,
     minimapFps: settings.minimapFps,
     billboards: settings.billboards,
+    fxaa: settings.fxaa,
+    colorGrading: settings.colorGrading,
+    bloom: settings.bloom,
     tilt: settings.tilt,
     facing: settings.facing,
   };

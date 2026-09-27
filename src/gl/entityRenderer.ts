@@ -10,7 +10,7 @@
 
 import type { RGB } from '../functions/Color';
 import {
-  PROJECT_GLSL, cameraDirection, groundToWorld, setCameraUniforms, viewGroundV, viewRotation, viewZScreen, worldToGround, type GpuCamera,
+  PROJECT_GLSL, bindScreen, cameraDirection, groundToWorld, setCameraUniforms, viewGroundV, viewRotation, viewZScreen, worldToGround, type GpuCamera,
 } from './iso';
 import { uploadTerrainParams } from './terrainRenderer';
 import humanoidClipsGlb from '../models/clips/humanoid.glb?inline';
@@ -28,6 +28,7 @@ import {
   type Clip, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
+import { CLASSIC_LIGHT, LIGHT_GLSL, setLightUniforms, type Light } from './light';
 import { addRenderStats } from '../renderStats';
 import { FLATTEN_GLSL, MAX_FLAT_ZONES } from '../world/flatten';
 import { parseMtl, parseMtlImages, parseObj, parseObjBones, type BoneWeight, type ObjTriangle, type RGB01 } from './obj';
@@ -1746,8 +1747,10 @@ vec3 blossomCard(vec3 base, int shape) {
 
 // Zur Kamera, in Weltkoordinaten - hängt von der Blickrichtung ab.
 uniform vec3 uToCamera;
-// Licht von links oben im Bild - dieselbe Sonne wie im Gelände-Shader.
-const vec3 SUN = vec3(-0.45, 0.35, 0.82);
+// Dieselbe Sonne wie im Gelände-Shader (gl/light.ts).
+${LIGHT_GLSL}
+// Wie hell eine Fläche unter bedecktem Himmel ist (Kontrast 0) - ohne Richtung.
+const float OVERCAST_LIGHT = 0.95;
 
 void main() {
   if (uBillboard == 1) {
@@ -1759,7 +1762,9 @@ void main() {
     // Die Verschiebung hält dabei die scharfe Stufe statt der nächstkleineren.
     vec4 t = texture(uBillboardTex, vBillboardUV, -0.7);
     if (t.a < 0.2) discard;
-    fragColor = vec4(t.rgb / t.a, t.a);
+    // Gebacken mit der festen Sonne (CLASSIC_LIGHT) - hier nur Helligkeit
+    // und Farbe des Himmels, die Richtung bleibt. Weit weg fällt das nicht auf.
+    fragColor = vec4(t.rgb / t.a * uLight.x * uSunColor, t.a);
     return;
   }
   int shape = int(vParams.x + 0.5);
@@ -1870,16 +1875,16 @@ void main() {
     // Sonne von hinten durch den Kronenrand scheint, leuchtet es gelbgrün
     // durch (Durchscheinen).
     vec3 n = normalize(mix(normal, normalize(vBent), 0.7));
-    float sun = dot(n, normalize(SUN));
+    float sun = dot(n, uSunDir);
     float occlusion = mix(0.5, 1.05, smoothstep(0.15, 1.0, vFoliage));
-    float lit = (0.42 + 0.72 * max(sun, 0.0)) * occlusion;
-    float through = pow(max(-sun, 0.0), 1.5) * smoothstep(0.6, 1.0, vFoliage) * 0.35;
-    fragColor = vec4(base * lit + base * vec3(0.9, 1.15, 0.45) * through, alpha);
+    float lit = mix(OVERCAST_LIGHT, 0.42 + 0.72 * max(sun, 0.0), uLight.y) * occlusion;
+    float through = pow(max(-sun, 0.0), 1.5) * smoothstep(0.6, 1.0, vFoliage) * 0.35 * uLight.y;
+    fragColor = vec4((base * lit + base * vec3(0.9, 1.15, 0.45) * through) * uLight.x * uSunColor, alpha);
     return;
   }
 
-  float light = 0.45 + 0.75 * max(dot(normal, normalize(SUN)), 0.0);
-  fragColor = vec4(base * light, alpha * gCardAlpha);
+  float light = mix(OVERCAST_LIGHT, 0.45 + 0.75 * max(dot(normal, uSunDir), 0.0), uLight.y) * uLight.x;
+  fragColor = vec4(base * light * uSunColor, alpha * gCardAlpha);
 }
 `;
 
@@ -2994,6 +2999,8 @@ export class EntityRenderer {
   private flat: Mesh;
   /** Abtastschritt für die Bodenhöhe - MapRenderer setzt den des Geländegitters. */
   groundStep = 1;
+  /** Sonne und Himmel (gl/light.ts) - MapRenderer setzt sie je Bild, sonst die feste Sonne. */
+  light: Light = CLASSIC_LIGHT;
   /** Eingeebnete Flächen unter Gebäuden (siehe world/flatten.ts). */
   flatZones = new Float32Array(MAX_FLAT_ZONES * 4);
   flatCount = 0;
@@ -3432,7 +3439,7 @@ export class EntityRenderer {
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, resolved);
       saveBillboard(gl, shape, band, ppt);
     }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    bindScreen(gl);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -3590,6 +3597,8 @@ export class EntityRenderer {
 
     setCameraUniforms(gl, (name) => this.location(name), camera, this.targetSize ?? gl.canvas);
     gl.uniform3fv(this.location('uToCamera'), cameraDirection());
+    // Baumbilder (targetSize) mit der festen Sonne - sie leben länger als ein Wetter.
+    setLightUniforms(gl, (name) => this.location(name), this.targetSize ? CLASSIC_LIGHT : this.light);
     gl.uniform1f(this.location('uMinSizeTiles'), minSizeTiles);
     gl.uniform1i(this.location('uSilhouette'), 0);
     gl.uniform1f(this.location('uGroundStep'), this.groundStep);

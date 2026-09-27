@@ -1,7 +1,9 @@
 import { MAX_FLAT_ZONES, packZones, type FlatZone } from './world/flatten';
 import { Color, type RGB } from './functions/Color';
-import { EntityRenderer, type EntityInstance, type StaticBatch } from './gl/entityRenderer';
+import { EntityRenderer, animationTime, type EntityInstance, type StaticBatch } from './gl/entityRenderer';
 import { FLOWER_OBJECT_PIXELS, TerrainRenderer } from './gl/terrainRenderer';
+import type { Light } from './gl/light';
+import { PostRenderer } from './gl/postRenderer';
 import {
   screenToGround,
   setViewElevation,
@@ -361,12 +363,23 @@ const MIN_TILE_SIZE = 1;
 export class MapRenderer {
   private terrain: TerrainRenderer;
   private entities: EntityRenderer;
+  /** Post-Effekte hinter der ganzen Szene (FXAA, Glühen, Farbe, Regen). */
+  private post: PostRenderer;
+  /** Ohne Post-Effekte zeichnet die Szene direkt ins Canvas (Prüfschalter ?ohneEffekte). */
+  postEnabled = true;
   /**
    * Stärke des Reliefs, 1 = voll, gegen 0 flach. Zum Flachlegen, um hinter
    * Berge zu sehen. Nie ganz 0: das wäre für den Cache "kein Relief" und
    * würde ihn neu befüllen.
    */
   relief = 1;
+
+  /** Sonne und Himmel für Gelände und Modelle (game/Lighting.ts) - die Übersichtskarte bleibt bei der festen Sonne. */
+  set light(light: Light) {
+    this.terrain.light = light;
+    this.entities.light = light;
+  }
+
   /**
    * CSS-Pixel je Tile, in denen der Gelände-Cache gerade berechnet ist. Beim
    * weichen Zoomen bleibt er stehen und wird nur gestreckt - neu berechnet
@@ -405,6 +418,19 @@ export class MapRenderer {
   ) {
     this.terrain = new TerrainRenderer(canvas, seed, TERRAIN_PALETTE);
     this.entities = new EntityRenderer(this.terrain.context);
+    this.post = new PostRenderer(this.terrain.context, () => this.pixelRatio);
+  }
+
+  /** Regen vor der Kamera, 0..1 (game/Lighting.ts). */
+  set rain(amount: number) {
+    this.post.rain = amount;
+  }
+
+  /** Welche Post-Effekte laufen (Einstellungen). */
+  setEffects(fxaa: boolean, grading: boolean, bloom: boolean) {
+    this.post.fxaa = fxaa;
+    this.post.grading = grading;
+    this.post.bloom = bloom;
   }
 
   /**
@@ -491,11 +517,19 @@ export class MapRenderer {
         : null;
 
     // Nichts gezeichnet: das letzte Bild bleibt stehen - ohne Figuren darüber.
-    if (!this.terrain.render(camera)) return false;
+    // Alle Effekte aus und kein Regen: direkt ins Canvas, ohne Umweg.
+    const post = this.postEnabled && this.post.active;
+    if (post) this.post.begin();
+    this.terrain.time = animationTime();
+    if (!this.terrain.render(camera)) {
+      this.post.cancel();
+      return false;
+    }
     // Mindestens acht Geräte-Pixel: kleiner wird ein Gebäude auf der
     // herausgezoomten Karte zum Einzelpunkt und ist nicht mehr zu erkennen.
     this.entities.groundStep = this.terrain.gridCell;
     this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
+    if (post) this.post.end();
     return true;
   }
 }
