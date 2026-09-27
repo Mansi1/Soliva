@@ -4,6 +4,7 @@ import { EntityRenderer, animationTime, type EntityInstance, type StaticBatch } 
 import { FLOWER_OBJECT_PIXELS, TerrainRenderer } from './gl/terrainRenderer';
 import type { Light } from './gl/light';
 import { PostRenderer } from './gl/postRenderer';
+import { GrassRenderer } from './gl/grassRenderer';
 import {
   screenToGround,
   setViewElevation,
@@ -365,6 +366,8 @@ export class MapRenderer {
   private entities: EntityRenderer;
   /** Post-Effekte hinter der ganzen Szene (FXAA, Glühen, Farbe, Regen). */
   private post: PostRenderer;
+  /** Grashalme in der Wiese, nur herangezoomt. */
+  private grass: GrassRenderer;
   /** Ohne Post-Effekte zeichnet die Szene direkt ins Canvas (Prüfschalter ?ohneEffekte). */
   postEnabled = true;
   /**
@@ -419,6 +422,8 @@ export class MapRenderer {
     this.terrain = new TerrainRenderer(canvas, seed, TERRAIN_PALETTE);
     this.entities = new EntityRenderer(this.terrain.context);
     this.post = new PostRenderer(this.terrain.context, () => this.pixelRatio);
+    const grass = TILE_TYPE_GRADIENT.grass;
+    this.grass = new GrassRenderer(this.terrain.context, grass[0].toRGB(), grass[1].toRGB());
   }
 
   /** Regen vor der Kamera, 0..1 (game/Lighting.ts). */
@@ -528,6 +533,11 @@ export class MapRenderer {
     // Mindestens acht Geräte-Pixel: kleiner wird ein Gebäude auf der
     // herausgezoomten Karte zum Einzelpunkt und ist nicht mehr zu erkennen.
     this.entities.groundStep = this.terrain.gridCell;
+    // Gras in den Tiefenpuffer des Geländes, vor den Modellen - undurchsichtig, ohne Sortieren.
+    this.grass.render(camera, this.tileSize, {
+      light: this.terrain.light, time: this.terrain.time, gridCell: this.terrain.gridCell,
+      flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
+    });
     this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
     if (post) this.post.end();
     return true;

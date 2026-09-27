@@ -356,6 +356,11 @@ export class TerrainRenderer {
     gl.activeTexture(gl.TEXTURE0);
   }
 
+  /** Äcker für andere Shader (Gras wächst dort nicht): Textur, Ecke in Tiles, ob welche da sind. */
+  get fieldWindow(): { texture: WebGLTexture; origin: { x: number; y: number }; active: boolean } {
+    return { texture: this.fields, origin: this.fieldOrigin, active: this.fieldActive };
+  }
+
   /** Markiertes Tile in Weltkoordinaten, oder null. */
   hoverTile: { x: number; y: number } | null = null;
   /** Ausschnitt der Hauptansicht in Geräte-Pixeln dieses Canvas - nur für die Minimap. */

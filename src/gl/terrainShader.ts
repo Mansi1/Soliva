@@ -201,6 +201,44 @@ float reliefZ(float h) {
  * Geraete-Pixel, und ist ein Ringpuffer: das Fenster wandert mit der Kamera,
  * Texel werden reihum wiederverwendet.
  */
+/**
+ * Biome: Nummern, Klima (Feuchte, Temperatur) und welches Biom ein Punkt hat -
+ * für das Gelände (Befüllen) und das Gras (grassRenderer.ts). Braucht TERRAIN_COMMON.
+ */
+export const BIOME_GLSL = `
+// Biome (Reihenfolge = TILE_TYPE_GRADIENT)
+const int B_DEEP_WATER = 0;
+const int B_WATER = 1;
+const int B_BEACH = 2;
+const int B_DESERT = 3;
+const int B_GRASS = 4;
+const int B_FOREST = 5;
+const int B_MOUNTAIN = 6;
+const int B_SNOW = 7;
+
+
+void climate(vec2 n, float height, out float moisture, out float temperature) {
+  float fringeX = fbmRaw(L_FRINGE, n * uFringeFrequency, 2, 0.5);
+  float fringeY = fbmRaw(L_FRINGE, n * uFringeFrequency + vec2(31.7, -12.4), 2, 0.5);
+
+  moisture = fbm(L_MOIST, n * 0.6 + 1000.0, 4, 0.55) + fringeX * uFringeStrength;
+  float raw = fbm(L_TEMP, n * 0.35 - 1000.0, 3, 0.5) + fringeY * uFringeStrength;
+  temperature = raw - max(0.0, height) * uLapseRate;
+}
+
+int classify(float height, float moisture, float temperature) {
+  if (height < uDeepWaterLevel) return B_DEEP_WATER;
+  if (height < uSeaLevel) return B_WATER;
+  if (height < uShoreLevel) return B_BEACH;
+  if (height > uPeakLevel) return temperature < uSnowTemperature ? B_SNOW : B_MOUNTAIN;
+  if (height > uHillLevel) return B_MOUNTAIN;
+  if (temperature < uTundraTemperature) return B_SNOW;
+  if (temperature > 0.25 && moisture < -0.1) return B_DESERT;
+  if (moisture > 0.1) return B_FOREST;
+  return B_GRASS;
+}
+`;
+
 const CACHE_GLSL = `
 uniform vec2 uWindowStart;  // (u, v) der Fenster-Ecke
 uniform vec2 uWindowMod;    // wo diese Ecke in der Textur liegt, in Texeln
@@ -318,38 +356,7 @@ uniform vec3 uWaterRamp[4];
 uniform vec3 uSurf;
 
 
-// Biome (Reihenfolge = TILE_TYPE_GRADIENT)
-const int B_DEEP_WATER = 0;
-const int B_WATER = 1;
-const int B_BEACH = 2;
-const int B_DESERT = 3;
-const int B_GRASS = 4;
-const int B_FOREST = 5;
-const int B_MOUNTAIN = 6;
-const int B_SNOW = 7;
-
-
-void climate(vec2 n, float height, out float moisture, out float temperature) {
-  float fringeX = fbmRaw(L_FRINGE, n * uFringeFrequency, 2, 0.5);
-  float fringeY = fbmRaw(L_FRINGE, n * uFringeFrequency + vec2(31.7, -12.4), 2, 0.5);
-
-  moisture = fbm(L_MOIST, n * 0.6 + 1000.0, 4, 0.55) + fringeX * uFringeStrength;
-  float raw = fbm(L_TEMP, n * 0.35 - 1000.0, 3, 0.5) + fringeY * uFringeStrength;
-  temperature = raw - max(0.0, height) * uLapseRate;
-}
-
-int classify(float height, float moisture, float temperature) {
-  if (height < uDeepWaterLevel) return B_DEEP_WATER;
-  if (height < uSeaLevel) return B_WATER;
-  if (height < uShoreLevel) return B_BEACH;
-  if (height > uPeakLevel) return temperature < uSnowTemperature ? B_SNOW : B_MOUNTAIN;
-  if (height > uHillLevel) return B_MOUNTAIN;
-  if (temperature < uTundraTemperature) return B_SNOW;
-  if (temperature > 0.25 && moisture < -0.1) return B_DESERT;
-  if (moisture > 0.1) return B_FOREST;
-  return B_GRASS;
-}
-
+${BIOME_GLSL}
 // Höhen-Band eines Bioms - Gegenstück zu heightBand() in map.ts
 vec2 heightBand(int biome) {
   if (biome == B_DEEP_WATER) return vec2(-1.0, uDeepWaterLevel);
@@ -504,6 +511,9 @@ vec4 flower(vec2 tile, float ds, float bloom, out float shadow) {
 // Wiese: große hellere und dunklere Flächen, trockene Stellen, Grasbüschel,
 // einzelne Halme, ausgetretene Erde und Blumen. bloom (0..1): wie viele
 // Blumen - zu Strand, Wüste, Wald und Fels hin keine.
+// Kiesel oder trockenes Blatt im Gras - weiter unten, nach stoneShape.
+vec4 grassProp(vec2 tile, float ds, out float shadow);
+
 vec3 grassTexture(vec3 c, vec2 tile, float ds, float moisture, float bloom) {
   c *= 1.0 + snoise(L_DETAIL, tile * 0.07 + vec2(11.3, 5.1)) * 0.09;
   float dry = smoothstep(0.2, 0.9, snoise(L_MICRO, tile * 0.05 + vec2(-40.0, 12.0)) - moisture * 0.8);
@@ -514,6 +524,19 @@ vec3 grassTexture(vec3 c, vec2 tile, float ds, float moisture, float bloom) {
   c *= 1.0 + max(blades, 0.0) * 0.06;
   float worn = smoothstep(0.62, 0.8, snoise(L_MICRO, tile * 0.18 + vec2(55.0, 91.0)));
   c = mix(c, vec3(0.48, 0.40, 0.28) * (0.92 + 0.16 * blades), worn * 0.5);
+  // Aus der Nähe mehr Abwechslung: hellere Moospolster, dunkle satte Flecken
+  // (Klee), hier und da ein Kiesel oder ein trockenes Blatt. Das Moos läuft
+  // breit und ausgefranst ins Gras aus - kein klarer Rand.
+  float fray = snoise(L_MICRO, tile * 4.0 + vec2(9.0, -2.0)) * 0.15;
+  float moss = smoothstep(0.2, 0.85, snoise(L_DETAIL, tile * 0.45 + vec2(-17.0, 33.0)) + fray);
+  c = mix(c, c * vec3(1.12, 1.16, 0.82) + vec3(0.03, 0.04, 0.0), moss * 0.45);
+  float lush = smoothstep(0.35, 0.8, snoise(L_MICRO, tile * 0.35 + vec2(70.0, -12.0)));
+  c = mix(c, c * vec3(0.78, 0.9, 0.7), lush * 0.4);
+  float bitShadow;
+  vec4 bit = grassProp(tile, ds, bitShadow);
+  c *= 1.0 - bitShadow * 0.3;
+  c = mix(c, bit.rgb, bit.a);
+  gPropMask = max(gPropMask, bit.a);
   if (bloom > 0.0 && uPixelsPerTile < uFlowerObjectPixels) {
     float shadow;
     vec4 f = flower(tile, ds, bloom, shadow);
@@ -634,7 +657,7 @@ vec3 forestTexture(vec3 c, vec2 tile, float ds, float height) {
 // dunkel, feine Körnung. q in Steinradien, seed 0..1.
 // Kontaktschatten: ein schmaler dunkler Saum rund um einen Gegenstand, wo er
 // auf dem Boden aufliegt - ohne Richtung, er hält ihn am Boden.
-#define CONTACT(q) (0.7 * (1.0 - smoothstep(0.8, 1.15, length(q))))
+#define CONTACT(q) (0.9 * (1.0 - smoothstep(0.8, 1.2, length(q))))
 
 vec4 stoneShape(vec2 q, float seed, vec3 base, vec2 toSun, float sharp) {
   float a = atan(q.y, q.x);
@@ -657,10 +680,34 @@ vec4 stoneShape(vec2 q, float seed, vec3 base, vec2 toSun, float sharp) {
   gPropNormal = normalize(vec3(slope, max(h, 0.2) * 0.75));
   gPropNormalWeight = max(gPropNormalWeight, mask * sharp);
   col *= mix(0.72, 1.0, smoothstep(R, R * 0.65, d));
+  // Klein und unscharf trotzdem erkennbar: dunkler als der Sand ringsum.
+  col *= mix(0.72, 1.0, sharp);
   col *= 0.92 + 0.16 * hash21(floor(q * 5.0) + seed * 31.0);
   // Glanz an der Kante der Oberseite zur Sonne.
   float edge = smoothstep(0.1, 0.0, abs(d - R * 0.47)) * max(dot(q / max(d, 1e-3), toSun), 0.0) * sharp;
   return vec4(mix(col, vec3(1.0), edge * 0.25), mask);
+}
+
+vec4 grassProp(vec2 tile, float ds, out float shadow) {
+  shadow = 0.0;
+  float fade = detailFade(0.06, ds);
+  vec2 q; float r; vec2 id;
+  if (fade <= 0.0 || !propCell(tile, 3.0, 0.03, 0.035, 0.06, q, r, id)) return vec4(0.0);
+  vec2 toSun = normalize(SUN_XY);
+  float sharp = detailFade(r * 0.5, ds);
+  shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.35)), CONTACT(q)) * sharp * fade;
+  if (hash21(id + 5.3) < 0.55) {
+    vec4 st = stoneShape(q, hash21(id + 4.4), hash21(id + 2.2) < 0.5 ? vec3(0.56, 0.54, 0.5) : vec3(0.6, 0.5, 0.4), toSun, sharp);
+    return vec4(st.rgb, st.a * fade);
+  }
+  // Trockenes Blatt: länglich, braun bis gelb, mit Mittelrippe.
+  float turn = hash21(id + 7.1) * 6.2832;
+  vec2 p = mat2(cos(turn), sin(turn), -sin(turn), cos(turn)) * q;
+  float leaf = smoothstep(1.0, 0.85, length(p * vec2(1.0, 2.2)));
+  vec3 col = mix(vec3(0.5, 0.33, 0.16), vec3(0.72, 0.6, 0.3), hash21(id + 3.3));
+  col *= 1.0 - (1.0 - smoothstep(0.0, 0.12, abs(p.y))) * 0.3;
+  shadow *= 0.5;
+  return vec4(col, leaf * sharp * fade);
 }
 
 // Feine Sandkörnung (etwa -1..1): viele kleine Körner, scharf wie die
@@ -760,8 +807,10 @@ vec4 beachProp(vec2 tile, float ds, out float shadow) {
     mask = mix(smoothstep(1.0, 0.8, d), fan, sharp);
     float pick = hash21(cell + 8.8);
     vec3 base = pick < 0.4 ? vec3(0.97, 0.95, 0.9) : pick < 0.7 ? vec3(0.95, 0.72, 0.68) : vec3(0.9, 0.8, 0.62);
-    float ribs = 0.8 + 0.2 * abs(cos(a * 7.0));
-    col = base * ribs;
+    // Kräftige Rippen und ein dunkler Rand - so hebt sie sich auch klein vom Sand ab.
+    float ribs = 0.65 + 0.35 * abs(cos(a * 7.0));
+    float inside = smoothstep(0.0, 0.18, 1.3 - length(p + vec2(0.0, 0.6))) * smoothstep(0.0, 0.2, 1.1 - abs(a));
+    col = base * ribs * mix(0.55, 1.0, mix(1.0, inside, sharp));
     // Gewölbt, die Rippen als leichte Wellen quer dazu.
     vec2 up = q * 0.7 + vec2(cos(a * 7.0 + rot), sin(a * 7.0 + rot)) * 0.12;
     gPropNormal = normalize(vec3(up, 1.0));
