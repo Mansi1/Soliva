@@ -6,12 +6,14 @@
 
 import {
   ANIMAL_POSE, BUILDING_HEADING, POSE, SHAPE, buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelSize, modelStockSlots,
-  modelWorkSpot,
+  animationTime, modelWorkSpot,
   type EntityInstance,
 } from '../gl/entityRenderer';
 import { RESOURCE_TYPE_COLORS } from '../map';
 import { reliefZ } from '../noise';
+import { DETAIL_TILE_SIZE, PARTICLE, type ParticleSources } from '../particles';
 import { FishTrap, furrowPosition } from './building';
+import { hash } from './resources';
 import { BUILDINGS, CROPS, FISHING, VILLAGER, player, type DepositType, type ResourceKind } from './catalog';
 import {
   RUIN_COLLAPSE, RUIN_COLLAPSE_START, RUIN_DURATION, RUIN_FADE_START, RUIN_FLIGHT, RUIN_SHAKE,
@@ -64,6 +66,7 @@ export function worldInstances(
   selection?: { villagers: ReadonlySet<number>; buildings: ReadonlySet<string>; animal?: number | null },
   hovered?: string,
   hideAnimal: (kind: string) => boolean = () => false,
+  particles?: ParticleSources,
 ): EntityInstance[] {
   const margin = 4;
   const x0 = view.x - margin;
@@ -71,7 +74,19 @@ export function worldInstances(
   const x1 = view.x + view.width + margin;
   const y1 = view.y + view.height + margin;
 
-  ruinInstances(world, x0, y0, x1, y1, out, blend);
+  ruinInstances(world, x0, y0, x1, y1, out, blend, particles);
+  // Eben gebaut: ringsum spritzt Dreck, nach allen vier Seiten, reichlich.
+  if (particles && particles.tileSize >= DETAIL_TILE_SIZE) {
+    for (const d of world.digs) {
+      if (d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;
+      for (let i = 0; i < 4; i++) {
+        const [dx, dy] = [Math.cos(i * Math.PI / 2 + 0.4), Math.sin(i * Math.PI / 2 + 0.4)];
+        const [px, py] = [d.x + dx * d.size * 0.45, d.y + dy * d.size * 0.45];
+        particles.push(PARTICLE.dirt, px, py, world.groundAt?.(px, py) ?? 0, 0.1, dx, dy, 0, 2,
+            Math.floor(d.x * 131 + d.y * 17) + i * 7919, 0, 16);
+      }
+    }
+  }
   const armory = world.armoryStock();
   // Bognereien: wie weit der Bogen auf der Werkbank ist - nur solange der
   // Bogner daran arbeitet (sein Holz liegt auf der Bank), sonst ist sie leer.
@@ -92,6 +107,12 @@ export function worldInstances(
     if (building.x < x0 || building.x > x1 || building.y < y0 || building.y > y1) continue;
     const def = building.definition;
     if (building.isFarm()) {
+      // Über einem Teil der Feldstücke summen ein, zwei Bienen.
+      if (particles && particles.tileSize >= DETAIL_TILE_SIZE && hash(building.x, building.y, 70) < 0.3) {
+        const [bx, by] = [building.x + 0.5, building.y + 0.5];
+        particles.push(PARTICLE.bee, bx, by, world.groundAt?.(bx, by) ?? 0, 0.8, 0, 0, 0, 1,
+            Math.floor(hash(building.x, building.y, 71) * 16777216), 0, hash(building.x, building.y, 72) < 0.5 ? 1 : 2);
+      }
       // Je Furche eine Instanz, jede mit ihrer Frucht und ihrem Stand.
       const farm = building;
       const { outline, ground } = world.fieldLook(building);
@@ -173,6 +194,7 @@ export function worldInstances(
       health: selection?.villagers.has(v.id) ? v.hp / VILLAGER.hp : undefined,
       accent: v.carryType ? RESOURCE_TYPE_COLORS[LOAD_LOOK[v.carryType]].toRGB() : undefined,
     };
+    if (particles && particles.tileSize >= DETAIL_TILE_SIZE) workParticles(world, v, x, y, particles);
     const fishing = v.task.kind === 'fish' ? v.task : undefined;
     if (!fishing) {
       // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip).
@@ -211,8 +233,57 @@ export function worldInstances(
       health: selection?.animal === a.id ? a.hp / def.hp : undefined,
       food: selection?.animal === a.id ? a.food / def.food : undefined,
     });
+    // Dreck wie beim Pflügen: am Maul, wenn es äst; hinter den Hufen, wenn es flieht.
+    if (particles && particles.tileSize >= DETAIL_TILE_SIZE && (pose === ANIMAL_POSE.graze || pose === ANIMAL_POSE.flee)) {
+      const [fx, fy] = [Math.cos(a.heading), Math.sin(a.heading)];
+      const flee = pose === ANIMAL_POSE.flee;
+      const reach = def.height * (flee ? -0.5 : 0.6);
+      const [px, py] = [x + fx * reach, y + fy * reach];
+      particles.push(PARTICLE.dirt, px, py, world.groundAt?.(px, py) ?? 0, 0.06,
+          flee ? -fx : fx, flee ? -fy : fy, 0, 1, a.id + 100000, 0, flee ? 8 : 4);
+    }
   }
   return out;
+}
+
+/** Wie weit vor dem Angler die Schnur ins Wasser taucht, in Tiles (Angel 2.5 m, schräg gehalten). */
+const LINE_REACH = 0.45;
+
+/**
+ * Was bei der Arbeit fliegt (gl/particleRenderer.ts): Späne vor dem
+ * Holzfäller, Dreck vor dem pflügenden Bauern, Blätter am Beerenstrauch,
+ * Spritzer an der Angelschnur, Gischt um das fahrende Boot. Im Takt der
+ * Arbeit, nicht je Schlag - der Shader verteilt sie über die Zeit.
+ */
+function workParticles(world: World, v: World['villagers'][number], x: number, y: number, out: ParticleSources) {
+  const t = v.task;
+  const [fx, fy] = [Math.cos(v.heading), Math.sin(v.heading)];
+  const ground = (px: number, py: number) => world.groundAt?.(px, py) ?? 0;
+  if (t.kind === 'gather' && t.type === 'wood' && v.pose === POSE.work) {
+    const [px, py] = [x + fx * 0.12, y + fy * 0.12];
+    out.push(PARTICLE.chips, px, py, ground(px, py), 0.1, fx, fy, 0, 1, v.id, 0, 6);
+  } else if (t.kind === 'farm' && v.pose === POSE.work) {
+    // Nur beim Pflügen hat der Bauer die Hacke (POSE.work, villagers.ts).
+    const [px, py] = [x + fx * 0.15, y + fy * 0.15];
+    out.push(PARTICLE.dirt, px, py, ground(px, py), 0.08, fx, fy, 0, 1, v.id, 0, 8);
+  } else if (t.kind === 'gather' && t.type === 'berries' && v.pose === POSE.pick) {
+    const [px, py] = [t.x + 0.5, t.y + 0.5];
+    out.push(PARTICLE.leaf, px, py, ground(px, py), 0.22, fx, fy, 0, 1, v.id, 0, 4);
+  } else if (t.kind === 'fish' && t.step === 'angle') {
+    out.push(PARTICLE.splash, x + fx * LINE_REACH, y + fy * LINE_REACH, 0, 0.1, fx, fy, 0, 1, v.id, 0, 8);
+  } else if (t.kind === 'fish' && DRAGGING.has(t.step)) {
+    // Das Boot schleift über Land: hinter ihm spritzt Dreck, mehr als beim Pflügen.
+    // Wie beim Zeichnen des Boots unten: einen halben Bootslänge hinter ihm.
+    const [px, py] = [x - fx * BOAT_LENGTH * 0.55, y - fy * BOAT_LENGTH * 0.55];
+    const tile = world.terrain.getTile(Math.floor(px), Math.floor(py)).tileType;
+    if (tile !== 'water' && tile !== 'deep_water') {
+      out.push(PARTICLE.dirt, px, py, ground(px, py), 0.12, -fx, -fy, 0, 1.5, v.id, 0, 16);
+    }
+  } else if (t.kind === 'fish' && (t.step === 'row' || t.step === 'return')) {
+    // Längs des Rumpfs und dahinter im Kielwasser - je Quelle höchstens 16 Partikel.
+    out.push(PARTICLE.foam, x, y, 0, BOAT_LENGTH / 2, fx, fy, 0, 1, v.id, 0, 16);
+    out.push(PARTICLE.foam, x - fx * BOAT_LENGTH * 0.7, y - fy * BOAT_LENGTH * 0.7, 0, BOAT_LENGTH / 2, fx, fy, 0, 1, v.id + 7, 0, 16);
+  }
 }
 
 /** Das Boot des Fischers mit der Mitte auf (x, y), Bug in Richtung `heading`. */
@@ -233,7 +304,8 @@ function armoryMotion(shape: number, bows: number, capacity: number, open: boole
 }
 
 /** Einstürzende Gebäude: Wackeln, Zusammensacken, Staub, fliegender Schutt, Ausblenden. */
-function ruinInstances(world: World, x0: number, y0: number, x1: number, y1: number, out: EntityInstance[], blend: number) {
+function ruinInstances(world: World, x0: number, y0: number, x1: number, y1: number, out: EntityInstance[], blend: number,
+                       particles?: ParticleSources) {
   const now = world.timeAt(blend);
   const ease = (t: number) => t * t * (3 - 2 * t);
   for (const ruin of world.ruins) {
@@ -281,24 +353,11 @@ function ruinInstances(world: World, x0: number, y0: number, x1: number, y1: num
       }
     }
 
-    // Schutt fliegt im Bogen hinaus und bleibt liegen.
-    const ground = reliefZ(world.terrain.getTile(ruin.x, ruin.y).height);
-    const tf = Math.min(t, RUIN_FLIGHT);
-    for (const d of ruin.debris) {
-      const along = tf / RUIN_FLIGHT;
-      // Höhe: Wurfparabel, die genau nach RUIN_FLIGHT auf der Landestelle ankommt.
-      const arc = d.vz * tf - 0.5 * (2 * d.vz / RUIN_FLIGHT) * tf * tf;
-      const z = ground + (d.ground - ground) * along + Math.max(0, arc) * 0.6;
-      out.push({
-        x: ruin.x + d.dx * along,
-        y: ruin.y + d.dy * along,
-        size: d.size * fade,
-        color: DUST_COLOR,
-        shape: SHAPE.stoneRock,
-        alpha: 1,
-        motion: [d.heading + t * 6 * (1 - along), 0, 0, 0],
-        ground: z,
-      });
-    }
+    // Schutt fliegt im Bogen hinaus und bleibt liegen - als Partikel
+    // (gl/particleRenderer.ts, DEBRIS): Flugzeit, Beginn und Ende des
+    // Ausblendens stecken in der Richtung, die Stärke ist die Gebäudegröße.
+    particles?.push(PARTICLE.debris, ruin.x + 0.5, ruin.y + 0.5, reliefZ(world.terrain.getTile(ruin.x, ruin.y).height),
+        def.size, RUIN_FLIGHT, RUIN_FADE_START, RUIN_DURATION, def.size,
+        (Math.imul(ruin.x, 7919) ^ Math.imul(ruin.y, 104729)) & 0xffffff, animationTime() - t, 7 + Math.round(def.size * 3));
   }
 }

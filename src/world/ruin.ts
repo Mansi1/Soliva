@@ -15,9 +15,10 @@ export interface Ruin {
   at: number;
   /** Stand der Animations-Uhr (animationTime, wie uTime) beim Abriss - dort bleiben die Mühlenflügel stehen. */
   clock: number;
-  /** Schuttbrocken: Flugrichtung und -weite, Steiggeschwindigkeit, Bodenhöhe am Landepunkt. */
-  debris: { dx: number; dy: number; vz: number; size: number; heading: number; ground: number }[];
 }
+
+/** Ein eben gesetztes Gebäude: so lange (Sekunden) spritzt dort Dreck - es gibt keine Bauphase. */
+export const DIG_DURATION = 2.5;
 
 /** Ablauf des Einsturzes in Sekunden. */
 export const RUIN_SHAKE = 0.3;

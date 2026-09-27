@@ -46,6 +46,7 @@ import { Compass, directionAt, isDirection, northAngle, rotateToFace } from './g
 import { TurnAnimation } from './game/TurnAnimation';
 import { Ground } from './game/Ground';
 import { Lighting } from './game/Lighting';
+import { LandscapeParticles } from './world/particles';
 import { worldSounds } from './game/worldSounds';
 import { minimapDots, placementOverlay, selectionOverlay } from './game/overlay';
 import { mountGame } from './components/Hud';
@@ -115,6 +116,8 @@ world.treeLength = (x, y) => resources.treeLengthAt(x, y);
 const resources = new ResourceField(terrain, mapGen);
 /** Blumen als 3D-Objekte, nah heran (world/flowers.ts). */
 const flowers = new FlowerField(terrain, mapGen);
+/** Glitzern über Gold und Stein, Insekten über der Wiese (world/particles.ts). */
+const landscape = new LandscapeParticles(terrain);
 const sound = new Sound();
 /** Hintergrundmusik aus assets/music/ - der Ton-Schalter (M) gilt auch für sie. */
 const music = new Music();
@@ -798,8 +801,14 @@ function collectOverlay(blend: number) {
     flowers.update(visible, camera.x, camera.y);
     flowers.instances(visible, world, overlay);
   }
+  // Partikel: erst Wichtiges (Einsturz in worldInstances), zuletzt Schmuck.
+  const particles = renderer.particles;
+  particles.clear();
+  particles.tileSize = camera.tileSize;
   const hovered = pointer.tile ? world.at(pointer.tile.x, pointer.tile.y)?.anchor : undefined;
-  worldInstances(world, visible, overlay, blend, selection, hovered, hideAnimal);
+  worldInstances(world, visible, overlay, blend, selection, hovered, hideAnimal, particles);
+  landscape.update(visible, camera.x, camera.y);
+  landscape.collect(visible, world, particles);
   selectionOverlay(world, selection, blend, overlay, hideAnimal);
   const tile = pointer.tile;
   if (placement.placingType !== null && tile) {

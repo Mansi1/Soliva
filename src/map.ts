@@ -5,6 +5,8 @@ import { FLOWER_OBJECT_PIXELS, TerrainRenderer } from './gl/terrainRenderer';
 import type { Light } from './gl/light';
 import { PostRenderer } from './gl/postRenderer';
 import { GrassRenderer } from './gl/grassRenderer';
+import { ParticleRenderer } from './gl/particleRenderer';
+import { MAX_SOURCES, ParticleSources } from './particles';
 import {
   screenToGround,
   setViewElevation,
@@ -368,6 +370,9 @@ export class MapRenderer {
   private post: PostRenderer;
   /** Grashalme in der Wiese, nur herangezoomt. */
   private grass: GrassRenderer;
+  /** Partikel (Bienen, Glitzern, Gischt, Schutt ...) - main.ts füllt die Quellen je Bild. */
+  private particleRenderer: ParticleRenderer;
+  readonly particles = new ParticleSources();
   /** Ohne Post-Effekte zeichnet die Szene direkt ins Canvas (Prüfschalter ?ohneEffekte). */
   postEnabled = true;
   /**
@@ -422,6 +427,7 @@ export class MapRenderer {
     this.terrain = new TerrainRenderer(canvas, seed, TERRAIN_PALETTE);
     this.entities = new EntityRenderer(this.terrain.context);
     this.post = new PostRenderer(this.terrain.context, () => this.pixelRatio);
+    this.particleRenderer = new ParticleRenderer(this.terrain.context, MAX_SOURCES);
     const grass = TILE_TYPE_GRADIENT.grass;
     this.grass = new GrassRenderer(this.terrain.context, grass[0].toRGB(), grass[1].toRGB());
   }
@@ -539,6 +545,7 @@ export class MapRenderer {
       flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
     });
     this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
+    this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
     if (post) this.post.end();
     return true;
   }

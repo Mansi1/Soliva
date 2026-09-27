@@ -22,6 +22,9 @@ import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, type AnimalKind, type 
 import { FLOWER_SIZE } from './world/flowers';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
+import { ParticleRenderer } from './gl/particleRenderer';
+import { CLASSIC_LIGHT } from './gl/light';
+import { MAX_SOURCES, PARTICLE, ParticleSources } from './particles';
 
 type RGB = [number, number, number];
 
@@ -30,6 +33,8 @@ interface Exhibit {
   label: string;
   /** Instanzen um (x, y) - die Mitte des Stücks in Welt-Tiles. */
   draw(t: number, x: number, y: number, out: EntityInstance[]): void;
+  /** Partikelquellen um (x, y) - wie im Spiel (gl/particleRenderer.ts). */
+  particles?(x: number, y: number, out: ParticleSources): void;
 }
 
 const PLAYER: RGB = [64, 160, 72];
@@ -397,6 +402,89 @@ const TREES: [string, number][] = [
   ['Trauerbirke', SHAPE.treeBirch3], ['Ahorn', SHAPE.treeMaple], ['Pappel', SHAPE.treePoplar],
 ];
 
+/** Ein Dorfbewohner in echter Größe (nicht ZOOMED), wie im Spiel - mit seinem Werkzeug oder dem, was er hält. */
+function worker(x: number, y: number, t: number, heading: number, pose: number, out: EntityInstance[], hold?: 'fish' | 'rod') {
+  const f: EntityInstance = {
+    x: x - 0.5, y: y - 0.5, size: VILLAGER.size, color: PLAYER, shape: SHAPE.villager, alpha: 1,
+    motion: [heading, pose === POSE.stand ? t : t * 6, pose, 0],
+  };
+  out.push(f, ...(hold ? figureHolding(f, hold) : figureProps(f)));
+}
+
+/**
+ * Partikel im Zusammenhang, wie im Spiel: das, woran gearbeitet wird, der
+ * Dorfbewohner und die Quelle (world/render.ts, world/particles.ts).
+ */
+function particleExhibit(label: string, draw: Exhibit['draw'], particles: NonNullable<Exhibit['particles']>): Exhibit {
+  return { label, draw, particles };
+}
+
+/** Zufallswerte, mit denen die Krabben alle fünf Farben zeigen (vSeed * 5 im Shader). */
+const CRAB_SEEDS = [300, 304, 307, 306, 312];
+const H = -Math.PI / 4;
+const [HX, HY] = [Math.cos(H), Math.sin(H)];
+const PARTICLE_EXHIBITS: Exhibit[] = [
+  particleExhibit('Holz hacken', (t, x, y, out) => {
+    out.push({ x: x + HX * 0.3 - 0.5, y: y + HY * 0.3 - 0.5, size: 0.6, color: PLAYER, shape: SHAPE.tree, alpha: 1, motion: [0, 0, 0, 1] });
+    worker(x, y, t, H, POSE.work, out);
+  }, (x, y, out) => out.push(PARTICLE.chips, x + HX * 0.12, y + HY * 0.12, 0, 0.1, HX, HY, 0, 1, 11, 0, 6)),
+  particleExhibit('Pflügen', (t, x, y, out) => worker(x, y, t, H, POSE.work, out),
+    (x, y, out) => out.push(PARTICLE.dirt, x + HX * 0.15, y + HY * 0.15, 0, 0.08, HX, HY, 0, 1, 12, 0, 8)),
+  particleExhibit('Beeren pflücken', (t, x, y, out) => {
+    out.push({ x: x + HX * 0.3 - 0.5, y: y + HY * 0.3 - 0.5, size: 0.55, color: PLAYER, shape: SHAPE.berryBush, alpha: 1, motion: [0, 0, 0, 1] });
+    worker(x, y, t, H, POSE.pick, out);
+  }, (x, y, out) => out.push(PARTICLE.leaf, x + HX * 0.3, y + HY * 0.3, 0, 0.22, HX, HY, 0, 1, 13, 0, 4)),
+  particleExhibit('Angeln', (t, x, y, out) => worker(x, y, t, H, POSE.stand, out, 'rod'),
+    (x, y, out) => out.push(PARTICLE.splash, x + HX * 0.45, y + HY * 0.45, 0, 0.1, HX, HY, 0, 1, 14, 0, 8)),
+  particleExhibit('Rudern', (t, x, y, out) => {
+    out.push({ x: x - 0.5, y: y - 0.5, size: 1.73 / 5, color: PLAYER, shape: SHAPE.fisherBoat, alpha: 1, motion: [H, 0, 0, 0] });
+    worker(x, y, t, H, POSE.stand, out);
+  }, (x, y, out) => {
+    out.push(PARTICLE.foam, x, y, 0, 0.37, HX, HY, 0, 1, 15, 0, 16);
+    out.push(PARTICLE.foam, x - HX * 0.52, y - HY * 0.52, 0, 0.37, HX, HY, 0, 1, 22, 0, 16);
+  }),
+  particleExhibit('Reh äst', (t, x, y, out) => out.push({
+    x: x - 0.5, y: y - 0.5, size: ANIMALS.deer.height, color: [255, 255, 255], shape: ANIMALS.deer.shape, alpha: 1, motion: [H, t, ANIMAL_POSE.graze, 0],
+  }), (x, y, out) => out.push(PARTICLE.dirt, x + HX * ANIMALS.deer.height * 0.6, y + HY * ANIMALS.deer.height * 0.6, 0, 0.06, HX, HY, 0, 1, 18, 0, 4)),
+  particleExhibit('Reh flieht', (t, x, y, out) => out.push({
+    x: x - 0.5, y: y - 0.5, size: ANIMALS.deer.height, color: [255, 255, 255], shape: ANIMALS.deer.shape, alpha: 1,
+    motion: [H, t * 12, ANIMAL_POSE.flee, 0],
+  }), (x, y, out) => out.push(PARTICLE.dirt, x - HX * ANIMALS.deer.height * 0.5, y - HY * ANIMALS.deer.height * 0.5, 0, 0.06, -HX, -HY, 0, 1, 19, 0, 8)),
+  particleExhibit('Boot ziehen', (t, x, y, out) => {
+    out.push({ x: x - HX * 0.4 - 0.5, y: y - HY * 0.4 - 0.5, size: 1.73 / 5, color: PLAYER, shape: SHAPE.fisherBoat, alpha: 1, motion: [H, 0, 0, 0] });
+    worker(x, y, t, H, POSE.walk, out);
+  }, (x, y, out) => out.push(PARTICLE.dirt, x - HX * 0.4, y - HY * 0.4, 0, 0.12, -HX, -HY, 0, 1.5, 20, 0, 16)),
+  particleExhibit('Hausbau', (_t, x, y, out) => {
+    out.push({ x: x - 0.5, y: y - 0.5, size: BUILDINGS.house.size, color: PLAYER, shape: SHAPE.house, alpha: 1, motion: [BUILDING_HEADING, 0, 0, 0] });
+  }, (x, y, out) => {
+    for (let i = 0; i < 4; i++) {
+      const [dx, dy] = [Math.cos(i * Math.PI / 2 + 0.4), Math.sin(i * Math.PI / 2 + 0.4)];
+      out.push(PARTICLE.dirt, x + dx * 0.45, y + dy * 0.45, 0, 0.1, dx, dy, 0, 2, 30 + i * 7919, 0, 16);
+    }
+  }),
+  particleExhibit('Krabben und Fische', () => {}, (x, y, out) => {
+    for (let i = 0; i < 5; i++) out.push(PARTICLE.crab, x - 0.8 + i * 0.3, y + 0.3, 0, 0.3, 0, 0, 0, 1, CRAB_SEEDS[i], 0, 1);
+    for (let i = 0; i < 4; i++) out.push(PARTICLE.fish, x + 0.5, y - 0.4, 0, 0.7, 0, 0, 0, 1, 400 + i, 0, 3);
+  }),
+  particleExhibit('Goldader', (_t, x, y, out) => {
+    out.push({ x: x - 0.5, y: y - 0.5, size: 0.56, color: PLAYER, shape: SHAPE.goldRock, alpha: 1, motion: [0, 0, 0, 1] });
+  }, (x, y, out) => out.push(PARTICLE.gold, x, y, 0, 0.15, 0, 0, 0, 1, 16, 0, 3)),
+  particleExhibit('Stein', (_t, x, y, out) => {
+    out.push({ x: x - 0.5, y: y - 0.5, size: 0.6, color: PLAYER, shape: SHAPE.stoneRock, alpha: 1, motion: [0, 0, 0, 1] });
+  }, (x, y, out) => out.push(PARTICLE.sparkle, x, y, 0, 0.15, 0, 0, 0, 1, 17, 0, 3)),
+  particleExhibit('Bienen und Schmetterlinge', (_t, x, y, out) => {
+    for (let i = 0; i < 6; i++) {
+      const [fx, fy] = [x + Math.cos(i * 2.4) * 0.5, y + Math.sin(i * 2.4) * 0.5];
+      out.push({ x: fx - 0.5, y: fy - 0.5, size: FLOWER_SIZE, color: PLAYER, shape: FLOWERS[i % FLOWERS.length], alpha: 1, motion: [i, 0, 0, 1] });
+    }
+  }, (x, y, out) => {
+    // Seeds so gewählt, dass alle Sorten vorkommen: Honigbiene, Wespe, Hummel, Schmetterlinge in allen Farben.
+    for (let i = 0; i < 4; i++) out.push(PARTICLE.bee, x, y, 0, 0.6, 0, 0, 0, 1, 100 + i, 0, 2);
+    // Blau, rot, gelb, weiß (vSeed * 4 im Shader).
+    for (const seed of [208, 204, 201, 200]) out.push(PARTICLE.butterfly, x, y, 0, 0.8, 0, 0, 0, 1, seed, 0, 1);
+  }),
+];
+
 const SHOWCASE: Showcase[] = [
   people(false),
   people(true),
@@ -420,6 +508,7 @@ const SHOWCASE: Showcase[] = [
   building('Holzlager', BUILDINGS.lumber_camp.models!, BUILDINGS.lumber_camp.size, 220, 0.6),
   building('Minenlager', [SHAPE.miningCamp], BUILDINGS.mining_camp.size, 200, 0.7),
   building('Fischerhütte', [SHAPE.fisherHut], BUILDINGS.fisher_hut.size, 200, 0.7),
+  showcase('Partikel', 'Partikel', PARTICLE_EXHIBITS, 300, 0.4),
   showcase('Gebäude', 'Fischerei', [
     model('Boot', SHAPE.fisherBoat, (1.73 / 5) * ZOOMED),
     model('Reuse', SHAPE.fishTrap, BUILDINGS.fish_trap.size * 2, [BUILDING_HEADING, 0, 0, 0]),
@@ -595,6 +684,9 @@ const { canvas, labels: labelEls, titles: titleEls, show, files, vertices, gizmo
 
 const gl = canvas.getContext('webgl2', { antialias: true, depth: true, alpha: false })!;
 const renderer = new EntityRenderer(gl);
+/** Partikel der Exponate - wie im Spiel, mit der festen Sonne. */
+const particleRenderer = new ParticleRenderer(gl, MAX_SOURCES);
+const sources = new ParticleSources();
 // Das Gitter ist immer weiß - auf dem dunklen Grund und über dem Modell gut zu sehen.
 renderer.wireColor = [1, 1, 1, 1];
 // Kein Boden, in dem ein Sockel verschwinden könnte.
@@ -924,11 +1016,13 @@ function frame() {
   if (t >= TIMELINE_SECONDS) setAnimationTime((t %= TIMELINE_SECONDS));
   time(t, playing);
   instances.length = 0;
+  sources.clear();
   // Solange die Kamera sich einpasst (fit), ohne Boden - sonst passte sie den Boden ein.
   const withGround = showGround && fitPasses === 0;
   if (current < 0) {
     placed.forEach((p, i) => {
       p.item.draw(t, p.x, p.y, instances);
+      p.item.particles?.(p.x, p.y, sources);
       const g = withGround && settled(`alle:${i}`, (out) => p.item.draw(0, p.x, p.y, out)).ground;
       if (g) instances.push(g);
     });
@@ -936,6 +1030,7 @@ function frame() {
     const s = SHOWCASE[current];
     const exhibit = demolishing && s.demolish ? s.demolish[animation] : s.exhibits[animation];
     exhibit.draw(t, 0, 0, instances);
+    exhibit.particles?.(0, 0, sources);
     spinAll(instances, spin);
     const st = settled(`${current}:${animation}:${demolishing}`, (out) => exhibit.draw(0, 0, 0, out));
     renderer.modelPivot.set(st.pivot);
@@ -951,6 +1046,7 @@ function frame() {
   const drawnBefore = renderer.drawnVertices;
   renderer.wireframe = wireMode === 2;
   renderer.render(instances, camera, 0, pixelRatio);
+  particleRenderer.render(sources, camera, t, CLASSIC_LIGHT);
   if (current >= 0) vertices(renderer.drawnVertices - drawnBefore);
   if (wireMode === 1) {
     // Gitter über dem Modell: ein zweiter Durchgang nur mit den Kanten, ohne den Boden.
