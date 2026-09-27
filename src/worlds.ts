@@ -8,6 +8,8 @@
 // Ausnahme zum Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5> geht direkt
 // in diese Welt an diese Stelle, ohne Hauptmenü und ohne sich die Welt zu
 // merken. Ohne Seed (/game) eine Zufallswelt - ihr Name kommt in die Adresse.
+// Liegt dazu public/savegame/<seed>.json bereit, beginnt sie jedes Mal mit
+// diesem Stand (entry.ts) - so bleiben Test-Spielstände gleich.
 
 import { readSave, saveKey, seedOfKey } from './world/save';
 
@@ -103,12 +105,15 @@ export function isDemo(seed: string): boolean {
   return seed.toLowerCase() === DEMO_SEED.toLowerCase();
 }
 
-/** Den Demo-Spielstand als Spielstand der Welt "Demo" ablegen; false, wenn es nicht ging. */
-export async function installDemo(): Promise<boolean> {
+/**
+ * Den mitgelieferten Spielstand public/savegame/<seed klein>.json als
+ * Spielstand der Welt ablegen - etwa die Demo; false, wenn es keinen gibt.
+ */
+export async function installSave(seed: string): Promise<boolean> {
   try {
-    const response = await fetch('/savegame/demo.json');
+    const response = await fetch(`/savegame/${encodeURIComponent(seed.toLowerCase())}.json`);
     if (!response.ok) return false;
-    localStorage.setItem(saveKey(DEMO_SEED), JSON.stringify(await response.json()));
+    localStorage.setItem(saveKey(seed), JSON.stringify(await response.json()));
     return true;
   } catch {
     return false;
