@@ -84,7 +84,7 @@ export class World {
   stock: Resources = initialResources();
   /**
    * Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit, ein ganzes Feld
-   * auf einmal gepflügt, gesät oder geerntet, ein Baum, Strauch oder Tier auf
+   * auf einmal gepflügt, gesät oder geerntet und gleich reif, ein Baum, Strauch oder Tier auf
    * einmal - Nahrung und Holz gleich in den Vorrat (villagers.ts). Nicht im Spielstand.
    */
   speedy = false;
@@ -630,7 +630,7 @@ export class World {
       }
     }
     if (this.deposits.regrow(dt, this.time)) this.dirty = true;
-    if (this.farming.grow(dt)) this.dirty = true;
+    if (this.farming.grow(this.speedy ? Infinity : dt)) this.dirty = true;
     if (this.wildlife.tick(dt, this.animalSurroundings)) this.dirty = true;
     for (const v of this.villagers) {
       v.rememberPosition();

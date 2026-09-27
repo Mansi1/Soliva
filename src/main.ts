@@ -625,7 +625,7 @@ const CHEATS: Record<string, () => string | undefined> = {
   // Noch einmal eingegeben schaltet es wieder ab.
   speedygonzales: () => {
     world.speedy = !world.speedy;
-    return `Ausbildung, Felder, Holz und Nahrung sofort ${world.speedy ? 'an' : 'aus'}`;
+    return `Ausbildung, Felder, Wachsen, Holz und Nahrung sofort ${world.speedy ? 'an' : 'aus'}`;
   },
 };
 
