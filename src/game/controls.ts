@@ -45,6 +45,10 @@ export const CONTROLS: readonly Control[] = [
   },
   { label: ['Alt', '↑', '↓'], sep: '+', what: 'Steiler / flacher neigen', short: 'neigen' },
   { label: ['Alt', '←', '→'], sep: '+', what: 'Vierteldrehung nach links / rechts', short: 'drehen' },
+  {
+    label: ['R'], what: 'Drehung und Neigung zurücksetzen', short: 'Ansicht',
+    keys: ['r'], run: (c) => c.resetView(),
+  },
   // H wie in AoE2 - "Home".
   { label: ['H'], what: 'Zum Hauptgebäude', short: 'Hauptgebäude', keys: ['h'], run: (c) => c.home() },
   { label: [MOUSE_LEFT], what: 'Auswählen (Ziehen: Rahmen)', short: 'auswählen' },
