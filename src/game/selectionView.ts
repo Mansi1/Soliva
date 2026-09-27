@@ -177,8 +177,9 @@ export function selectionView(world: World, selection: Selection, resources: Res
   }
   if (selection.flower) {
     const kind = FLOWERS.indexOf(selection.flower.shape);
-    const { name, latin, info } = FLOWER_KINDS[kind];
-    return { kind: 'flower', name, latin, info, flower: kind, color: selection.flower.color };
+    const { name, latin, info, wiki } = FLOWER_KINDS[kind];
+    // Das Foto legt `npm run fetch:flowers` ab (tools/ui/flower-photos.mjs).
+    return { kind: 'flower', name, latin, info, wiki, photo: `/assets/blumen/${name}.webp`, flower: kind, color: selection.flower.color };
   }
   if (selection.villagers.size > 0) {
     const chosen = selection.chosenVillagers();
@@ -204,8 +205,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       activities: [...counts],
     };
   }
-  if (!world.hasTownCenter()) return { kind: 'start' };
-  return { kind: 'overview', idle: world.villagers.filter((v) => v.task.kind === 'idle').length };
+  return { kind: 'none' };
 }
 
 /** Werkstatt: wer dort arbeitet, was er tut, wie weit der Bogen ist. */

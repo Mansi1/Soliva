@@ -7,7 +7,7 @@ import type { Sound } from '../audio';
 import { BuildMenu } from '../components/BuildMenu';
 import { mountMinimapMenu } from '../components/Hud';
 import { ResourceBar } from '../components/ResourceBar';
-import { renderSelection } from '../components/SelectionPanel';
+import { hasDetails, renderSelection } from '../components/SelectionPanel';
 import { GATHER_CURSOR, RALLY_CURSOR } from '../cursors';
 import { CROP_ORDER, RESOURCE_LABEL, VILLAGER, type BuildingType, type CropType, type ResourceKind } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
@@ -35,6 +35,8 @@ export interface UiHooks {
   train(count: number): void;
   demolish(): void;
   setFieldCrop(crop: CropType): void;
+  /** Bild im Auswahl-Panel: zum Ausgewählten springen. */
+  focusSelection(): void;
 }
 
 export interface UiState {
@@ -56,6 +58,8 @@ export class GameUi {
   private readonly buildEl = byId('build');
   private readonly actionsEl = byId('actions');
   private readonly selectionEl = byId('selection');
+  /** Die Schriftrolle um das Pergament. */
+  private readonly scrollEl = byId('scroll');
   private readonly hintEl = byId('hint');
   private hintTimer = 0;
 
@@ -81,6 +85,10 @@ export class GameUi {
       e.preventDefault();
       e.stopPropagation();
       hooks.selectIdle(!e.shiftKey);
+    });
+    // Das Bild auf dem Pergament: zum Ausgewählten springen.
+    this.selectionEl.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && (e.target as HTMLElement).closest('.sel-frame')) hooks.focusSelection();
     });
     this.actionsEl.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
@@ -184,7 +192,9 @@ export class GameUi {
     const { world, selection, resources } = this.state;
     selection.prune();
     // Hat die Auswahl Befehle (ein Gebäude), zeigt die Steintafel sie statt des Baumenüs.
-    const hasCommands = renderSelection(this.selectionEl, this.actionsEl, selectionView(world, selection, resources));
+    const view = selectionView(world, selection, resources);
+    const hasCommands = renderSelection(this.selectionEl, this.actionsEl, view);
+    this.scrollEl.classList.toggle('open', hasDetails(view));
     this.actionsEl.hidden = !hasCommands;
     this.buildEl.hidden = hasCommands;
     // Die Auswahl hat sich vielleicht geändert, oder das Feld unter dem

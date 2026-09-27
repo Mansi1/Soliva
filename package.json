@@ -11,6 +11,7 @@
     "test": "node --test tests/*.test.mjs",
     "test:update-ids": "node tests/update-ids.mjs",
     "gen:ui": "node tools/ui/icons.mjs && node tools/ui/wood-bar.mjs",
+    "fetch:flowers": "node tools/ui/flower-photos.mjs",
     "smoke": "node tools/ui/smoke.mjs",
     "export:bognerei": "node tools/export/bognerei.mjs && node tools/export/bognerei.mjs frau",
     "export:props": "node tools/export/props.mjs",

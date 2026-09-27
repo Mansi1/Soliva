@@ -3,7 +3,7 @@
 // mit Geländehöhe, das Tile, der nächste Dorfbewohner, ein Tier, eine Blume,
 // ein Vorkommen am Objekt (Baumkrone, Fels) - und worauf ein Klick damit zielt.
 
-import { modelSize, TREES, type EntityInstance } from '../gl/entityRenderer';
+import { animalCenter, modelSize, TREES, type EntityInstance } from '../gl/entityRenderer';
 import { pickWorld, visibleWorldRect, worldToScreen } from '../gl/iso';
 import { addRenderStats } from '../renderStats';
 import { VILLAGER } from '../world/catalog';
@@ -83,7 +83,8 @@ export class Picker {
     let bestDistance = Infinity;
     for (const a of this.world.wildlife.animals) {
       if (!this.shown.animal(a.kind)) continue;
-      const p = a.positionAt(this.blend());
+      const at = a.positionAt(this.blend());
+      const p = animalCenter(a.definition.shape, at.x - 0.5, at.y - 0.5, a.definition.height, a.heading, a.isDead);
       const height = a.isDead ? 0.2 * a.definition.height : 0.5 * a.definition.height;
       const s = worldToScreen(v, p.x, p.y, this.ground.heightAt(p.x, p.y) + height);
       const d = Math.hypot(s.x - px, s.y - py);
@@ -107,7 +108,7 @@ export class Picker {
     for (const f of this.nearFlowers) {
       const x = f.x + 0.5;
       const y = f.y + 0.5;
-      // Die Blüte sitzt auf 0.62 der Breite (STEM_HEIGHT in flowerModel.ts).
+      // Die Blüte sitzt auf 0.62 der Breite (models/flowers/flower.glb).
       const s = worldToScreen(v, x, y, this.ground.heightAt(x, y) + 0.62 * f.size);
       const d = Math.hypot(s.x - px, s.y - py);
       if (d < Math.max(6, f.size * this.camera.tileSize * 0.6) && d < bestDistance) {

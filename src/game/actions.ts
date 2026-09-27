@@ -32,6 +32,8 @@ export interface ActionUi {
    * ein Berg, legt sich das Gelände flach (lookAt in main.ts).
    */
   lookAt(x: number, y: number): void;
+  /** Wie lookAt, aber als sanfter Kameraflug. */
+  flyTo(x: number, y: number): void;
   /** Baumodus für diese Art ein- (oder mit null aus-)schalten. */
   setPlacing(type: BuildingType | null): void;
 }
@@ -262,6 +264,26 @@ export class PlayerActions {
     this.ui.lookAt(next.x + 0.5, next.y + 0.5);
     this.ui.refreshPointer();
     this.ui.refreshSelection();
+  }
+
+  /**
+   * Klick aufs Bild im Auswahl-Panel: das Ausgewählte in die Bildmitte -
+   * Tier, Blume, Vorkommen, das fokussierte Gebäude oder die Mitte der
+   * Dorfbewohner.
+   */
+  focusSelection() {
+    const s = this.selection;
+    const animal = s.animal !== null ? this.world.wildlife.byId(s.animal) : undefined;
+    const building = s.focused();
+    const villagers = s.chosenVillagers();
+    const target = animal ? { x: animal.x, y: animal.y }
+      : s.flower ? { x: s.flower.x + 0.5, y: s.flower.y + 0.5 }
+      : s.resource ? { x: s.resource.x + 0.5, y: s.resource.y + 0.5 }
+      : building ? { x: building.x + 0.5, y: building.y + 0.5 }
+      : villagers.length > 0
+        ? { x: villagers.reduce((sum, v) => sum + v.x, 0) / villagers.length, y: villagers.reduce((sum, v) => sum + v.y, 0) / villagers.length }
+        : undefined;
+    if (target) this.ui.flyTo(target.x, target.y);
   }
 
   /** Die ausgewählten Gebäude abreißen. */

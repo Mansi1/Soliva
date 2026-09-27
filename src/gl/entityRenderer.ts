@@ -22,7 +22,7 @@ import millClipsManifest from '../models/clips/mill.json';
 import flagClipsGlb from '../models/clips/flag.glb?inline';
 import flagClipsManifest from '../models/clips/flag.json';
 import {
-  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips,
+  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
   type Clip, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
@@ -67,7 +67,7 @@ import gold2Model from '../models/resources/gold_2.glb?model';
 import gold3Model from '../models/resources/gold_3.glb?model';
 import berryBush1Model from '../models/resources/berry_bush_1.glb?model';
 import { gizmoModel } from './gizmoModel';
-import { FLOWER_KINDS, flowerModel } from './flowerModel';
+import { FLOWER_KINDS } from './flowerModel';
 import berryBush2Model from '../models/resources/berry_bush_2.glb?model';
 import berryBush3Model from '../models/resources/berry_bush_3.glb?model';
 import berryBush4Model from '../models/resources/berry_bush_4.glb?model';
@@ -93,6 +93,7 @@ import herringModel from '../models/props/herring.glb?model';
 import fishingRodModel from '../models/props/fishing_rod.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
 import bowModel from '../models/props/bow.glb?model';
+import flowerModel from '../models/flowers/flower.glb?model';
 
 /** Materialien der Dorfbewohner und ihrer Werkzeuge - jedes Modell bringt seine mit. */
 const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
@@ -2639,10 +2640,7 @@ function natural(shape: number, obj: string, mtl: string, meters: number) {
  * Instanzgröße - eine Figur der Größe 0.55 ist 0.55 * 1.7 Tiles hoch.
  */
 const PROP_AXE = loadModel(propAxeModel.obj, villagerMtl, 'meters');
-const FLOWER_MODEL = (() => {
-  const { obj, mtl } = flowerModel();
-  return loadModel(obj, mtl, 'width', true);
-})();
+const FLOWER_MODEL = loadModel(flowerModel.obj, flowerModel.mtl, 'width', true);
 const PROP_KNIFE = loadModel(propKnifeModel.obj, villagerMtl, 'meters');
 const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
 const PROP_ROD = loadModel(fishingRodModel.obj, fishingRodModel.mtl, 'meters');
@@ -2819,6 +2817,41 @@ function modelToWorld(m: { scale: number }, [f, l]: [number, number], x: number,
   const s = size * m.scale;
   const [fx, fy] = [Math.cos(heading), Math.sin(heading)];
   return { x: x + 0.5 + (fx * f - fy * l) * s, y: y + 0.5 + (fy * f + fx * l) * s };
+}
+
+/** Mitte eines Modells in Ruhelage (Modell-Einheiten: vorn, links, oben) - je Form einmal ausgerechnet. */
+const modelCenters = new Map<number, [number, number, number]>();
+function modelCenter(m: { model: Model }, shape: number): [number, number, number] {
+  let c = modelCenters.get(shape);
+  if (!c) {
+    const { vertices: v, floats } = m.model;
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < v.length; i += floats) {
+      for (let k = 0; k < 3; k++) {
+        lo[k] = Math.min(lo[k], v[i + k]);
+        hi[k] = Math.max(hi[k], v[i + k]);
+      }
+    }
+    c = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+    modelCenters.set(shape, c);
+  }
+  return c;
+}
+
+/**
+ * Wo ein Tier am Boden seine Mitte hat (Welt, Instanz-Lage wie `x`, `y` einer
+ * EntityInstance). Stehend über dem Fuß; erlegt liegt es auf der Seite - der
+ * Clip "dead" kippt den Körper um den Wurzelknochen, die Mitte rückt zur
+ * Seite. Dort gehören Auswahlring, Balken und der Klick hin.
+ */
+export function animalCenter(shape: number, x: number, y: number, size: number, heading: number, dead: boolean): { x: number; y: number } {
+  const m = MODEL_BY_SHAPE.get(shape);
+  const clip = dead ? ANIMAL_CLIPS.find((c) => c.lying) : undefined;
+  if (!m || !clip) return { x: x + 0.5, y: y + 0.5 };
+  // Bild 0, Wurzelknochen: Drehung und Verschiebung (vorn, links) in Modell-Einheiten.
+  const r = clip.rotations;
+  const [f, l] = qRotate([r[0], r[1], r[2], r[3]], modelCenter(m, shape));
+  return modelToWorld(m, [f + clip.root[0], l + clip.root[1]], x, y, size, heading);
 }
 
 /**
@@ -3708,6 +3741,11 @@ export class EntityRenderer {
     let top = model ? model.model.top * model.scale * size : (BOX_TOP[e.shape] ?? 1) * size;
     // Ein liegender Baum ist flach - der Balken gehört knapp darüber.
     if (TREES.includes(e.shape) && e.motion && e.motion[1] > 0.5) top = 0.3 * size;
+    // Ein erlegtes Tier liegt auf der Seite: Balken über dem liegenden Körper, knapp darüber.
+    const beast = BEASTS.includes(e.shape);
+    const dead = beast && e.motion?.[2] === ANIMAL_POSE.dead;
+    const at = dead ? animalCenter(e.shape, e.x, e.y, size, e.motion![0], true) : { x: e.x + 0.5, y: e.y + 0.5 };
+    if (dead && model) top = 2 * model.model.side * model.scale * size;
     const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
     const width = figure
       ? clamp(pixelsPerTile * 0.6, 22 * pixelRatio, 36 * pixelRatio)
@@ -3715,8 +3753,8 @@ export class EntityRenderer {
     const height = (figure ? 4 : 6) * pixelRatio;
 
     d.fill(0, o, o + STRIDE);
-    d[o] = e.x;
-    d[o + 1] = e.y;
+    d[o] = at.x - 0.5;
+    d[o + 1] = at.y - 0.5;
     // Rot 1 heißt im Shader: Nahrungsbalken.
     d[o + 2] = food ? 1 : 0;
     d[o + 5] = SHAPE.healthBar;

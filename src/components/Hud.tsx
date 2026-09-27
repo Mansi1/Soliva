@@ -217,7 +217,12 @@ function Hud() {
           <div id="build" class="cmd-grid" />
           <div id="actions" class="cmd-grid" hidden />
         </div>
-        <div id="selection" />
+        {/* Schriftrolle: rollt sich auf, wenn etwas ausgewählt ist (game/ui.ts setzt "open"). */}
+        <div id="scroll">
+          <div id="selection" />
+          <i class="scroll-roller left" />
+          <i class="scroll-roller right" />
+        </div>
       </div>
       <Minimap />
       <div id="paused" hidden>Pause</div>

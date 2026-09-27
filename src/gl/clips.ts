@@ -128,7 +128,7 @@ const qMul = ([ax, ay, az, aw]: Quat, [bx, by, bz, bw]: Quat): Quat => [
   aw * bw - ax * bx - ay * by - az * bz,
 ];
 const qInv = ([x, y, z, w]: Quat): Quat => [-x, -y, -z, w];
-const qRotate = (q: Quat, [x, y, z]: Vec3): Vec3 => {
+export const qRotate = (q: Quat, [x, y, z]: Vec3): Vec3 => {
   const r = qMul(qMul(q, [x, y, z, 0]), qInv(q));
   return [r[0], r[1], r[2]];
 };
