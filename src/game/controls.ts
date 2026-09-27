@@ -37,7 +37,11 @@ export const CONTROLS: readonly Control[] = [
     label: ['Q', 'E'], sep: '/', what: 'Zoomen (auch Mausrad)', short: 'zoomen',
     keys: ['q', 'e'], run: (c, e) => c.zoom(e.key.toLowerCase() === 'e' ? 1 : -1),
   },
-  { label: ['Leertaste'], what: 'Halten: Gelände flach', short: 'flach' },
+  // Einmal drücken schaltet um - wie der Knopf am Reif der Minimap (main.ts).
+  {
+    label: ['Leertaste'], what: 'Gelände flach an/aus', short: 'flach',
+    keys: [' '], run: (c, e) => !e.repeat && c.toggleFlat(),
+  },
   // Alt: auf dem Mac Option, unter Windows auch AltGr (keyboard.ts, MouseInput.ts).
   {
     label: ['Alt', MOUSE_RIGHT, '~ziehen'], sep: '+',

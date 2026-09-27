@@ -1,13 +1,13 @@
 // cameraControl.ts
-// Die Kamera je Bild: mit WASD bzw. den Pfeiltasten scrollen, mit gehaltener
-// Leertaste das Relief flachlegen, und hinter dem Hauptmenü zieht die Welt
+// Die Kamera je Bild: mit WASD bzw. den Pfeiltasten scrollen, das Relief
+// flachlegen (Leertaste, Knopf am Reif), und hinter dem Hauptmenü zieht die Welt
 // langsam vorbei.
 
 import type { MapRenderer } from '../map';
 import type { Camera } from './Camera';
 import type { Keyboard } from './keyboard';
 
-/** Relief bei gehaltener Leertaste - nie ganz 0, siehe MapRenderer.relief. */
+/** Relief, wenn flachgelegt - nie ganz 0, siehe MapRenderer.relief. */
 const FLAT_RELIEF = 0.02;
 /** So schnell zieht die Welt hinter dem Hauptmenü vorbei (Pixel je Sekunde). */
 const TITLE_DRIFT = 24;
@@ -16,7 +16,7 @@ const TITLE_DRIFT = 24;
  * Ein Bild weiter. true, wenn sich die Ansicht bewegt hat - dann liegt unter
  * dem stehenden Zeiger anderes Gelände.
  * @param scrollSpeed Kamera-Tempo aus den Einstellungen (1 = normal)
- * @param flatten Gelände flachlegen wie mit gehaltener Leertaste
+ * @param flatten Gelände flachlegen (Leertaste, Knopf am Reif oder autoFlat in main.ts)
  */
 export function steerCamera(camera: Camera, renderer: MapRenderer, keyboard: Keyboard, dt: number, scrollSpeed: number, onTitle: boolean,
                             flatten = false): boolean {
@@ -34,10 +34,9 @@ export function steerCamera(camera: Camera, renderer: MapRenderer, keyboard: Key
   if (keyboard.isDown('d', 'arrowright')) dx += speed;
   if (onTitle) dx += TITLE_DRIFT * dt;
 
-  // Leertaste halten: Relief sinkt flach, um hinter Berge zu sehen. Weich
-  // überblendet, damit man sieht, was wohin gehört. `flatten`: dasselbe von
-  // selbst, wenn Gelände den angeschauten Punkt verdeckt (main.ts, autoFlat).
-  const target = keyboard.isDown(' ') || flatten ? FLAT_RELIEF : 1;
+  // Flach: Relief sinkt, um hinter Berge zu sehen. Weich überblendet, damit
+  // man sieht, was wohin gehört.
+  const target = flatten ? FLAT_RELIEF : 1;
   const before = renderer.relief;
   renderer.relief += (target - renderer.relief) * Math.min(1, dt * 10);
   if (Math.abs(target - renderer.relief) < 0.002) renderer.relief = target;

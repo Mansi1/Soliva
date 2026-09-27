@@ -255,6 +255,20 @@ applySettings();
 // Geräusche aus der Welt - nur, was man sieht (game/worldSounds.ts).
 world.onEvent = worldSounds(sound, camera, (x, y) => ground.heightAt(x, y));
 
+// --- Flaches Gelände ----------------------------------------------------------
+
+/** Flachgelegt per Leertaste oder Knopf am Reif - bleibt, bis man eins davon erneut drückt. */
+let flatOn = false;
+const flatButton = document.getElementById('flat')!;
+
+function toggleFlat() {
+  flatOn = !flatOn;
+  flatButton.classList.toggle('on', flatOn);
+  flatButton.setAttribute('aria-pressed', String(flatOn));
+}
+
+flatButton.addEventListener('click', toggleFlat);
+
 // --- Kompass ---------------------------------------------------------------
 
 /** Windrose um die Minimap (game/Compass.ts) - die Buchstaben außen vor den Spitzen (Hud.tsx). */
@@ -661,6 +675,7 @@ const keyboard = new Keyboard({
   closeMenu: () => menu.close(),
   togglePause,
   toggleSound,
+  toggleFlat,
   zoom: (step) => zoomBy(step),
   tiltStep: (step) => tiltBy(step * TILT_STEP),
   // Wie die Pfeile unter der Minimap: rechts = was rechts liegt, kommt nach oben.
@@ -900,7 +915,7 @@ function loop(now: number) {
   const held = heldFocus();
   const reliefBefore = renderer.relief;
   const [cameraX, cameraY] = [camera.x, camera.y];
-  const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat);
+  const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
   if (held && renderer.relief !== reliefBefore && camera.x === cameraX && camera.y === cameraY) keepFocus(held);
   if (steered || zoomed || tilted || flying) refreshPointer();
   // Schaut man in einen Berg? Geprüft, wenn sich die Ansicht ändert - und

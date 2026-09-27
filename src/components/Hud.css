@@ -396,6 +396,12 @@
   white-space: nowrap;
   cursor: default;
 }
+/* Flaches Gelände an: der Pfeil zeigt nach oben - ein Klick richtet es wieder auf. */
+#flat.on .arrow {
+  transform: rotate(180deg);
+  transform-box: fill-box;
+  transform-origin: center;
+}
 #sound .off {
   display: none;
 }
