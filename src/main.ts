@@ -135,6 +135,7 @@ const ui = new GameUi({ world, selection, placement, pointer, resources, sound, 
   train: (count) => actions.trainVillagers(count),
   demolish: () => actions.demolishSelected(),
   setFieldCrop: (crop) => actions.setFieldCrop(crop),
+  focusSelection: () => actions.focusSelection(),
 }, player.color.toRGB());
 
 // --- Einstellungen und Menü ------------------------------------------------
@@ -310,7 +311,10 @@ const ground = new Ground(mapGen, world, renderer, camera);
 world.groundAt = (x, y) => ground.groundAt(x, y);
 
 /** Was unter dem Zeiger liegt: Welt-Punkt, Tile, Dorfbewohner, Vorkommen (game/Picker.ts). */
-const picker = new Picker(world, resources, camera, ground, () => simulation.blend);
+/** Tierarten weit draußen ausgeblendet (Einstellung animalsBelow). */
+const hideAnimal = (kind: string) => camera.tileSize < (settings.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT);
+const picker = new Picker(world, resources, camera, ground, () => simulation.blend, flowers,
+  { animal: (kind) => !hideAnimal(kind), flowers: () => renderer.flowerObjects });
 
 /** Was der Spieler tut: auswählen, Befehle, bauen, ausbilden, abreißen (game/actions.ts). */
 const actions = new PlayerActions({ world, camera, selection, placement, picker, sound }, {
@@ -320,6 +324,7 @@ const actions = new PlayerActions({ world, camera, selection, placement, picker,
   refreshPointer,
   setPlacing: (type) => ui.setPlacing(type),
   lookAt,
+  flyTo,
 });
 
 /** Die Maus über dem Spielfeld (game/MouseInput.ts) - hier, was sie im Spiel bedeutet. */
@@ -433,6 +438,38 @@ let clearSince = 0;
 function lookAt(x: number, y: number) {
   focus = { x, y, height: ground.groundAt(x, y), cameraX: 0, cameraY: 0 };
   keepFocus(focus);
+}
+
+/**
+ * Kameraflug zur Stelle (x, y) statt eines Sprungs: sanft anfahren, gleiten,
+ * sanft abbremsen - je weiter, desto länger, höchstens FLIGHT_MAX_S. Jeder
+ * Schritt ist ein lookAt; bewegt der Spieler die Kamera selbst, endet der Flug.
+ */
+let flight: { from: { x: number; y: number }; to: { x: number; y: number }; start: number; duration: number } | null = null;
+const FLIGHT_MIN_S = 0.35;
+const FLIGHT_MAX_S = 1.2;
+
+function flyTo(x: number, y: number) {
+  const from = focusPoint();
+  const distance = Math.hypot(x - from.x, y - from.y);
+  const duration = Math.min(FLIGHT_MAX_S, FLIGHT_MIN_S + distance * 0.02) * 1000;
+  flight = { from: { x: from.x, y: from.y }, to: { x, y }, start: performance.now(), duration };
+}
+
+/** Ein Schritt des Flugs; false, wenn keiner (mehr) läuft. */
+function stepFlight(now: number): boolean {
+  if (!flight) return false;
+  // Seit dem letzten Schritt anders bewegt (Tasten, Ziehen, Minimap): abbrechen.
+  if (now > flight.start && !heldFocus()) {
+    flight = null;
+    return false;
+  }
+  const t = Math.min(1, Math.max(0, (now - flight.start) / flight.duration));
+  // Ease-in-out (kubisch).
+  const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+  lookAt(flight.from.x + (flight.to.x - flight.from.x) * e, flight.from.y + (flight.to.y - flight.from.y) * e);
+  if (t >= 1) flight = null;
+  return true;
 }
 
 /**
@@ -750,9 +787,8 @@ function collectOverlay(blend: number) {
     flowers.instances(visible, world, overlay);
   }
   const hovered = pointer.tile ? world.at(pointer.tile.x, pointer.tile.y)?.anchor : undefined;
-  worldInstances(world, visible, overlay, blend, selection, hovered,
-    (kind) => camera.tileSize < (settings.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT));
-  selectionOverlay(world, selection, blend, overlay);
+  worldInstances(world, visible, overlay, blend, selection, hovered, hideAnimal);
+  selectionOverlay(world, selection, blend, overlay, hideAnimal);
   const tile = pointer.tile;
   if (placement.placingType !== null && tile) {
     const blocked = placement.check(tile.x, tile.y, placement.placingType) !== null;
@@ -784,6 +820,7 @@ function loop(now: number) {
 
 
   // WASD, Leertaste, hinter dem Hauptmenü langsam vorbeiziehen (game/cameraControl.ts).
+  const flying = stepFlight(now);
   const zoomed = updateZoom(dt, now);
   const tilted = updateTilt(dt, now);
   // Beim Flachlegen und Aufrichten bleibt der angeschaute Punkt in der Mitte,
@@ -793,7 +830,7 @@ function loop(now: number) {
   const [cameraX, cameraY] = [camera.x, camera.y];
   const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat);
   if (held && renderer.relief !== reliefBefore && camera.x === cameraX && camera.y === cameraY) keepFocus(held);
-  if (steered || zoomed || tilted) refreshPointer();
+  if (steered || zoomed || tilted || flying) refreshPointer();
   // Schaut man in einen Berg? Geprüft, wenn sich die Ansicht ändert - und
   // solange flachgelegt ist, bis die Sicht eine Weile frei ist.
   if (!start.isOpen()) {

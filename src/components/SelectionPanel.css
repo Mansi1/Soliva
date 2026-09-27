@@ -11,17 +11,24 @@
   height: 156px;
   display: flex;
   gap: 0;
-  border: 3px solid #1b1a18;
-  border-radius: 6px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
+  /* Nur die Steintafel hat einen Rahmen - die Schriftrolle hängt frei daran. */
+  pointer-events: none;
+}
+#command-bar > * {
+  pointer-events: auto;
 }
 
 /* --- Steintafel ---------------------------------------------------------- */
 #command-bar .cmd-stone {
   flex: none;
-  width: 316px;
+  /* Das Raster: 5 Knöpfe à 52 px, 4 Lücken à 6 px, Innenabstand 2 x 6 px, Rand
+     2 x 1 px = 298 px - dazu der Innenabstand (2 x 12 px) und der Rahmen
+     (2 x 3 px) der Tafel, border-box. Schmaler klebt die Windmühle am Rand. */
+  width: 328px;
   padding: 12px;
+  border: 3px solid #1b1a18;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' seed='4'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
     linear-gradient(180deg, #7a7873, #55534f);
@@ -55,19 +62,85 @@
   display: none;
 }
 
-/* --- Pergament ----------------------------------------------------------- */
-#selection {
+/* --- Schriftrolle -------------------------------------------------------- */
+/* Hängt rechts an der Steintafel. Zu: beide Rollen liegen an der Tafel, das
+   Pergament ist weggeschnitten. Auf (.open): die rechte Rolle fährt nach
+   rechts und zieht das Pergament hinter sich her - clip-path statt Breite, so
+   bricht der Text beim Aufrollen nicht um. Leer ist die Fläche daneben
+   durchsichtig, man sieht die Welt. */
+#scroll {
+  --roller: 20px;
+  --roll-time: 0.55s;
+  position: relative;
   flex: 1;
   min-width: 0;
-  padding: 10px 16px;
+  /* Schatten um Rollen und Pergament - am Elternteil, das clip-path schnitte ihn ab. */
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
+}
+/* Zu: nur die Rollen nehmen Klicks an, daneben geht der Klick in die Welt. */
+#scroll:not(.open) {
+  pointer-events: none;
+}
+#scroll .scroll-roller {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  width: var(--roller);
+  /* Aufgerolltes Papier: rund schattiert. */
+  background: linear-gradient(90deg, #7a5a2c, #c9a66b 22%, #f1e2bd 45%, #d8bd86 70%, #8a6634);
+  border-radius: 4px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.55);
+  transition: left var(--roll-time) ease-in-out;
+  z-index: 1;
+}
+/* Holzknäufe oben und unten am Stab. */
+#scroll .scroll-roller::before,
+#scroll .scroll-roller::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  height: 7px;
+  background: linear-gradient(90deg, #2e1a0a, #7a4a22 45%, #3a220e);
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+#scroll .scroll-roller::before {
+  top: -5px;
+}
+#scroll .scroll-roller::after {
+  bottom: -5px;
+}
+#scroll .scroll-roller.left {
+  left: 0;
+}
+#scroll .scroll-roller.right {
+  left: calc(var(--roller) - 3px);
+}
+#scroll.open .scroll-roller.right {
+  left: calc(100% - var(--roller));
+}
+
+/* --- Pergament ----------------------------------------------------------- */
+#selection {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: calc(var(--roller) / 2);
+  right: calc(var(--roller) / 2);
+  padding: 3px calc(var(--roller) / 2 + 12px);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path var(--roll-time) ease-in-out;
   overflow-y: auto;
   font: 13px/1.45 Georgia, 'Times New Roman', serif;
   color: #3a2410;
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='4' seed='9'/><feColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.32 0 0 0 0 0.15 0 0 0 0.28 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
     radial-gradient(ellipse at center, #eddcb3 0%, #dcc28f 70%, #b9955b 100%);
-  border-left: 3px solid #1b1a18;
   box-shadow: inset 0 0 18px rgba(90, 55, 20, 0.45);
+}
+#scroll.open #selection {
+  clip-path: inset(0 0 0 0);
 }
 #selection .sel-title {
   margin-bottom: 6px;
@@ -84,6 +157,7 @@
   width: 72px;
 }
 #selection .sel-frame {
+  cursor: pointer;
   width: 72px;
   height: 72px;
   display: grid;
@@ -95,6 +169,15 @@
 #selection .sel-frame img {
   width: 64px;
   height: 64px;
+}
+/* Foto (Blume aus Wikipedia): füllt den Rahmen. */
+#selection .sel-frame img.photo {
+  width: 68px;
+  height: 68px;
+  object-fit: cover;
+}
+#selection a {
+  color: var(--wood-ink);
 }
 /* Lebensbalken unter dem Porträt - grün wie in AoE2. */
 #selection .hp {
@@ -143,6 +226,13 @@
   align-items: center;
   gap: 7px;
   margin-top: 3px;
+}
+#selection .sel-grow {
+  flex: 1;
+}
+/* Nahrungsbalken neben dem Fleisch: kurz, nicht über die ganze Breite. */
+#selection .sel-grow .bar {
+  max-width: 100px;
 }
 #selection .sel-stock-icon {
   flex: none;

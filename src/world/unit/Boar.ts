@@ -8,7 +8,9 @@ import type { AnimalDefinition } from './definition';
 
 export class Boar extends AnimalBase {
   static readonly definition: AnimalDefinition<'boar'> = {
-    type: 'boar', label: 'Wildschwein', shape: SHAPE.boar, height: 0.18, hp: 6, food: 220, walk: 0.4, flee: 2.0,
+    type: 'boar', label: 'Wildschwein',
+    info: 'Wildschweine wühlen den Boden nach Wurzeln und Larven um. So lockern sie die Erde, und Samen finden offenen Boden zum Keimen.',
+    shape: SHAPE.boar, height: 0.18, hp: 6, food: 220, walk: 0.4, flee: 2.0,
     fear: 3.5, herd: [1, 3], stride: 0.35,
   };
 }

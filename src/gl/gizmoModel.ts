@@ -1,6 +1,6 @@
 // gizmoModel.ts
 // Dreh-Gizmo der Galerie als 3D-Modell: je Achse ein Ring (Torus), gebaut wie
-// eine OBJ/MTL-Datei (Text) wie flowerModel.ts. Material "Paint" - die Farbe
+// eine OBJ/MTL-Datei (Text). Material "Paint" - die Farbe
 // kommt aus der Instanz, so leuchtet der Ring beim Überfahren heller.
 //
 // Datei-Koordinaten: x links, y oben, z vorn; im Spiel ist Modell-x = Datei-z,

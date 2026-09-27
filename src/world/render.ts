@@ -61,7 +61,7 @@ export function worldInstances(
   view: ViewRect,
   out: EntityInstance[] = [],
   blend = 1,
-  selection?: { villagers: ReadonlySet<number>; buildings: ReadonlySet<string> },
+  selection?: { villagers: ReadonlySet<number>; buildings: ReadonlySet<string>; animal?: number | null },
   hovered?: string,
   hideAnimal: (kind: string) => boolean = () => false,
 ): EntityInstance[] {
@@ -208,6 +208,8 @@ export function worldInstances(
       x: x - 0.5, y: y - 0.5, size: def.height, color: [255, 255, 255], shape: def.shape, alpha: 1,
       motion: [a.heading, phase, pose, 0],
       ground: world.groundAt?.(x, y),
+      health: selection?.animal === a.id ? a.hp / def.hp : undefined,
+      food: selection?.animal === a.id ? a.food / def.food : undefined,
     });
   }
   return out;

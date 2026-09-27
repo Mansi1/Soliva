@@ -4,12 +4,15 @@
 // Vorkommen, Dorfbewohner mit ihren Tätigkeiten - oder nichts.
 
 import type { FarmView, SelectionView, TrainView, WorkshopView } from '../components/SelectionPanel';
+import { FLOWERS } from '../gl/entityRenderer';
+import { FLOWER_KINDS } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { FishTrap, type Building, type UnitProducer } from '../world/building';
 import {
   BUILDINGS, CROPS, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
+import type { AnimalState } from '../world/unit';
 import type { World } from '../world/world';
 import { workplace } from '../world/villagers';
 import type { Selection } from './Selection';
@@ -51,6 +54,9 @@ function farmView(world: World, building: Building): FarmView {
 function costText(cost: Partial<Record<ResourceKind, number>>): string {
   return Object.entries(cost).map(([r, n]) => `${n} ${RESOURCE_LABEL[r as ResourceKind]}`).join(', ');
 }
+
+/** Was ein Tier gerade tut - fürs Panel. */
+const ANIMAL_DOING: Record<AnimalState, string> = { graze: 'äst', walk: 'zieht umher', flee: 'flieht', dead: 'erlegt' };
 
 /** Knopf zum Ausbilden: Kosten und ob man sie hat. */
 function trainView(world: World): TrainView {
@@ -156,6 +162,25 @@ export function selectionView(world: World, selection: Selection, resources: Res
       max: MAX_GATHERERS,
     };
   }
+  if (selection.animal !== null) {
+    const animal = world.wildlife.byId(selection.animal);
+    if (!animal) {
+      // Kadaver leer zerlegt, während es ausgewählt war.
+      selection.animal = null;
+      return { kind: 'empty' };
+    }
+    const def = animal.definition;
+    return {
+      kind: 'animal', type: animal.kind, label: def.label, info: def.info, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
+      hp: animal.hp, maxHp: def.hp, food: animal.food, maxFood: def.food,
+    };
+  }
+  if (selection.flower) {
+    const kind = FLOWERS.indexOf(selection.flower.shape);
+    const { name, latin, info, wiki } = FLOWER_KINDS[kind];
+    // Das Foto legt `npm run fetch:flowers` ab (tools/ui/flower-photos.mjs).
+    return { kind: 'flower', name, latin, info, wiki, photo: `/assets/blumen/${name}.webp`, flower: kind, color: selection.flower.color };
+  }
   if (selection.villagers.size > 0) {
     const chosen = selection.chosenVillagers();
     // Gleiche Tätigkeiten zusammenfassen: "3x sammelt Holz, 1x untätig".
@@ -180,8 +205,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       activities: [...counts],
     };
   }
-  if (!world.hasTownCenter()) return { kind: 'start' };
-  return { kind: 'overview', idle: world.villagers.filter((v) => v.task.kind === 'idle').length };
+  return { kind: 'none' };
 }
 
 /** Werkstatt: wer dort arbeitet, was er tut, wie weit der Bogen ist. */

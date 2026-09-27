@@ -3,7 +3,7 @@
 // (Ring, Fläche, Sammelpunkt), im Baumodus die Vorschau am Zeiger - und die
 // Punkte auf der Minimap.
 
-import { SHAPE, type EntityInstance } from '../gl/entityRenderer';
+import { SHAPE, animalCenter, type EntityInstance } from '../gl/entityRenderer';
 import type { IsoView } from '../gl/iso';
 import type { MiniMap } from '../map';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
@@ -13,8 +13,14 @@ import type { Selection } from './Selection';
 /** Farbe der Auswahl und freier Bauplätze. */
 const SELECTED: [number, number, number] = [110, 231, 160];
 
-/** Auswahl: grüner Ring unter jedem Dorfbewohner, Fläche unter dem Gebäude, Sammelpunkt, Vorkommen. */
-export function selectionOverlay(world: World, selection: Selection, blend: number, out: EntityInstance[]) {
+/**
+ * Auswahl: grüner Ring unter jedem Dorfbewohner, Tier und der Blume, Fläche
+ * unter dem Gebäude, Sammelpunkt, Vorkommen. Ein ausgeblendetes Tier
+ * (`hideAnimal`, weit draußen) bekommt keinen Ring.
+ */
+export function selectionOverlay(
+    world: World, selection: Selection, blend: number, out: EntityInstance[], hideAnimal: (kind: string) => boolean,
+) {
   for (const v of world.villagers) {
     if (!selection.villagers.has(v.id)) continue;
     const p = v.positionAt(blend);
@@ -57,6 +63,24 @@ export function selectionOverlay(world: World, selection: Selection, blend: numb
     out.push({
       x: selection.resource.x, y: selection.resource.y, size: 1,
       color: SELECTED, shape: SHAPE.flat, alpha: 0.3,
+    });
+  }
+  const animal = selection.animal !== null ? world.wildlife.byId(selection.animal) : undefined;
+  if (animal && !hideAnimal(animal.kind)) {
+    const at = animal.positionAt(blend);
+    const def = animal.definition;
+    // Erlegt: unter dem liegenden Körper, nicht unter dem Stehpunkt.
+    const p = animalCenter(def.shape, at.x - 0.5, at.y - 0.5, def.height, animal.heading, animal.isDead);
+    out.push({
+      x: p.x - 0.5, y: p.y - 0.5, size: animal.definition.height * 2,
+      color: SELECTED, shape: SHAPE.ring, alpha: 1, ground: world.groundAt!(p.x, p.y),
+    });
+  }
+  const flower = selection.flower;
+  if (flower) {
+    out.push({
+      x: flower.x, y: flower.y, size: flower.size * 3,
+      color: SELECTED, shape: SHAPE.ring, alpha: 1, ground: world.groundAt!(flower.x + 0.5, flower.y + 0.5),
     });
   }
 

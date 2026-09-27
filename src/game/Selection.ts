@@ -1,9 +1,10 @@
 // Selection.ts
-// Was der Spieler ausgewählt hat: Dorfbewohner (Kennungen), Gebäude (Anker)
-// oder ein Vorkommen (Tile) - immer nur eine der drei Arten. Bei mehreren
+// Was der Spieler ausgewählt hat: Dorfbewohner (Kennungen), Gebäude (Anker),
+// ein Vorkommen (Tile), ein Tier oder eine Blume - immer nur eine Art. Bei mehreren
 // Gebäuden zeigt das Panel die Einzelheiten des fokussierten (des zuletzt
 // angeklickten).
 
+import type { EntityInstance } from '../gl/entityRenderer';
 import type { Building } from '../world/building';
 import type { Villager, World } from '../world/world';
 
@@ -14,18 +15,29 @@ export class Selection {
   focusedBuilding: string | null = null;
   /** Ausgewähltes Vorkommen (Tile). */
   resource: { x: number; y: number } | null = null;
+  /** Kennung des ausgewählten Tiers. */
+  animal: number | null = null;
+  /** Ausgewählte Blume - ihre Instanz aus world/flowers.ts. */
+  flower: EntityInstance | null = null;
 
   constructor(private world: World) {}
 
   get isEmpty(): boolean {
-    return this.villagers.size === 0 && this.buildings.size === 0 && !this.resource;
+    return this.villagers.size === 0 && this.buildings.size === 0 && !this.resource && this.animal === null && !this.flower;
   }
 
   /** Nichts mehr ausgewählt. */
   clear() {
     this.villagers.clear();
     this.clearBuildings();
+    this.clearSingle();
+  }
+
+  /** Vorkommen, Tier und Blume abwählen - es gibt je nur eins. */
+  clearSingle() {
     this.resource = null;
+    this.animal = null;
+    this.flower = null;
   }
 
   clearBuildings() {

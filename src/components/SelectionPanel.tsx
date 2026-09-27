@@ -11,9 +11,9 @@ import './SelectionPanel.css';
 import './buttons.css';
 import { formatDuration } from '../format';
 import {
-  CROP_ORDER, CROPS, player, type BuildingType, type CropType, type DepositType,
+  CROP_ORDER, CROPS, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
 } from '../world/catalog';
-import { buildingIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
+import { animalIcon, buildingIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
 
 /** Werkstatt fürs Panel: wer dort arbeitet (fehlt, wenn niemand), was er tut, Fortschritt des Bogens. */
@@ -99,6 +99,22 @@ export type SelectionView =
       gatherers: number;
       max: number;
     }
+  | {
+      kind: 'animal';
+      type: AnimalKind;
+      label: string;
+      /** Was es für die Natur leistet. */
+      info: string;
+      dead: boolean;
+      /** Was es gerade tut: äst, zieht umher, flieht, erlegt. */
+      doing: string;
+      hp: number;
+      maxHp: number;
+      /** Erlegt: Nahrung am Kadaver. */
+      food: number;
+      maxFood: number;
+    }
+  | { kind: 'flower'; name: string; latin: string; info: string; wiki: string; photo: string; flower: number; color: [number, number, number] }
   | { kind: 'empty' }
   | {
       kind: 'villagers';
@@ -114,8 +130,8 @@ export type SelectionView =
       /** Gleiche Tätigkeiten zusammengefasst: [Text, Anzahl]. */
       activities: [string, number][];
     }
-  | { kind: 'start' }
-  | { kind: 'overview'; idle: number };
+  /** Nichts ausgewählt: die Schriftrolle ist zugerollt. */
+  | { kind: 'none' };
 
 const rgb = () => player.color.toRGB();
 
@@ -126,10 +142,10 @@ function Bar({ percent }: { percent: number }) {
 }
 
 /** Porträt links auf dem Pergament, darunter Lebensbalken und Zahl. */
-function Portrait({ src, hp, maxHp }: { src: string; hp?: number; maxHp?: number }) {
+function Portrait({ src, hp, maxHp, photo }: { src: string; hp?: number; maxHp?: number; photo?: boolean }) {
   return (
     <div class="sel-portrait">
-      <div class="sel-frame"><img src={src} alt="" draggable={false} /></div>
+      <div class="sel-frame" title="Hinspringen"><img class={photo ? 'photo' : undefined} src={src} alt="" draggable={false} /></div>
       {hp !== undefined && maxHp ? (
         <>
           <div class="hp"><i style={`width:${Math.max(0, Math.min(100, (hp / maxHp) * 100))}%`} /></div>
@@ -282,6 +298,61 @@ function Resource({ v }: { v: Extract<SelectionView, { kind: 'resource' }> }) {
   );
 }
 
+/** Ein Stück Fleisch: Keule mit Knochen - vor der Nahrung eines Tiers. */
+function MeatIcon() {
+  return (
+    <svg viewBox="0 0 44 44" width="34" height="34" aria-hidden="true">
+      <path d="M27 17 L36 8" stroke="#efe6d2" stroke-width="4.5" stroke-linecap="round" />
+      <circle cx="35" cy="6.5" r="3.2" fill="#f6efdf" stroke="#1a0f07" stroke-width="1.2" />
+      <circle cx="38.5" cy="10" r="3.2" fill="#f6efdf" stroke="#1a0f07" stroke-width="1.2" />
+      <path d="M28 16 C34 22 30 36 18 38 C8 40 3 32 7 24 C11 15 22 10 28 16 Z" fill="#b8432e" stroke="#1a0f07" stroke-width="1.6" />
+      <path d="M11 26 C13 20 19 16 24 17" stroke="#e8a58e" stroke-width="2.4" fill="none" stroke-linecap="round" />
+      <path d="M26 20 C28 26 25 32 18 34" stroke="#7a2416" stroke-width="1.6" fill="none" stroke-linecap="round" />
+    </svg>
+  );
+}
+
+function Animal({ v }: { v: Extract<SelectionView, { kind: 'animal' }> }) {
+  return (
+    <>
+      <div class="sel-title">{v.label} <span class="muted">{v.doing}</span></div>
+      <div class="sel-body">
+        <Portrait src={animalIcon(v.type, v.dead)} hp={v.hp} maxHp={v.maxHp} />
+        <div class="sel-info">
+          <div class="sel-stock">
+            <span class="sel-stock-icon"><MeatIcon /></span>
+            {/* Erlegt: der Balken neben dem Fleisch unter der Zahl - eine eigene Zeile passte nicht mehr aufs Pergament. */}
+            <div class="sel-grow">
+              Nahrung <b>{Math.ceil(v.food)}/{v.maxFood}</b>
+              {v.dead ? <Bar percent={(v.food / v.maxFood) * 100} /> : null}
+            </div>
+          </div>
+          <div>{v.info}</div>
+          <div class="muted">
+            Wähle Dorfbewohner und klicke mit rechts darauf, um es {v.dead ? 'zu zerlegen' : 'zu jagen'}.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Flower({ v }: { v: Extract<SelectionView, { kind: 'flower' }> }) {
+  return (
+    <>
+      <div class="sel-title">{v.name} <span class="muted">{v.latin}</span></div>
+      <div class="sel-body">
+        <Portrait src={v.photo} photo />
+        <div class="sel-info">
+          <div>{v.info}</div>
+          <div><a href={v.wiki} target="_blank" rel="noopener">Mehr auf Wikipedia</a></div>
+          <div class="muted">Wildblume - schön anzusehen, sammeln kann man sie nicht.</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) {
   return (
     <>
@@ -310,15 +381,12 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
     case 'buildings': return <Buildings v={view} />;
     case 'building': return <Building v={view} />;
     case 'resource': return <Resource v={view} />;
+    case 'animal': return <Animal v={view} />;
+    case 'flower': return <Flower v={view} />;
     case 'empty':
       return <><div class="sel-title">Leer</div><div class="muted">Hier ist nichts mehr zu holen.</div></>;
     case 'villagers': return <Villagers v={view} />;
-    // Nichts ausgewählt: leeres Pergament.
-    case 'start': return <></>;
-    case 'overview':
-      return view.idle > 0
-        ? <div class="muted">{view.idle} Dorfbewohner ohne Arbeit - Taste . wählt sie aus.</div>
-        : <></>;
+    case 'none': return <></>;
   }
 }
 
@@ -397,6 +465,11 @@ function CommandButton({ c }: { c: Command }) {
       {c.key ? <span class="cmd-key">{c.key}</span> : null}
     </button>
   );
+}
+
+/** Zeigt das Pergament etwas? Sonst bleibt die Schriftrolle zugerollt. */
+export function hasDetails(view: SelectionView): boolean {
+  return view.kind !== 'none';
 }
 
 /** Was zuletzt in der Steintafel stand - neu gezeichnet wird nur bei einer Änderung. */

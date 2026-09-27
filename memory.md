@@ -6,16 +6,21 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 ## Umgebung
 
 - 2026-09-26, Mac (M4): Headless-Chrome aus `tools/ui/browser.mjs` rendert über Metal auf der echten GPU (`ANGLE Metal Renderer: Apple M4`), kein Software-Renderer; `EXT_disjoint_timer_query_webgl2` ist vorhanden. Messwerte aus Playwright sind echt.
-- Bench, Rauchtest und Screenshots brauchen den laufenden Dev-Server (`npm run dev`, http://localhost:5173).
+- 2026-09-27: Es gibt auch einen Mac mit M1 (`ANGLE Metal Renderer: Apple M1`). `baseline.json` stammt nicht von ihm - dort nur `main` gegen Branch im selben Lauf vergleichen, nicht gegen die Basis. `stadt` erreicht auf dem M1 keine 60 fps (29-48 fps im Median, stark schwankend).
+- Bench, Rauchtest und Screenshots brauchen den laufenden Dev-Server (`npm run dev`, http://localhost:5173). Für einen zweiten Stand (Worktree) einen eigenen Port nehmen (`npx vite --port 5188`) und die Adresse übergeben: `node tools/perf/bench.mjs http://localhost:5188`.
+- 2026-09-27: Wikimedia antwortet bei schnellen Folgen von Bild-Downloads mit 429 - `tools/ui/flower-photos.mjs` wartet und versucht es erneut.
 
 - 2026-09-26: Modelle aus Blender (auch per `blender-mcp`) mit `export_normals=False` exportieren. Mit Normalen wurde `villagers/male.glb` 4× so groß (118 → 508 KB), das Spiel liest nur POSITION.
 - 2026-09-27: Die Fischerei-Modelle (`fisher_hut`, `fish_trap`, `fisher_boat`, `fishing_rod`, `herring`) kamen aus trimesh: Z oben, Vorderseite -Y, ohne glTF-Drehung, ohne `Entry`. Sie liegen dann im Spiel auf der Seite. Gedreht mit `glbToObj` → (x, z, -y) → `objToGlb`, Marker als kleine Würfel ergänzt. Bei jedem neuen GLB den `generator` prüfen. Neue Fassungen aus trimesh brauchen die Drehung wieder.
 - 2026-09-27: `render.ts` rechnet mit Maßen aus den Fischerei-Modellen (`BOAT_*`, `TRAP_DRAFT`). Wer Boot oder Reuse neu exportiert, muss sie nachziehen.
 - 2026-09-26, M4: `stadt`-fps schwanken zwischen Läufen desselben Codes zwischen 50 und 60 (Median je Lauf). Einzelläufe belegen nichts. Nur abwechselnd A/B/A/B messen (Datei tauschen, 4 s warten, `npm run bench`).
 
+- 2026-09-27: Im Demo-Stand stehen keine Tiere im Startbild (die 125 liegen weit weg, z. B. bei 35,-104). Zum Testen vor dem Laden `animals` im Spielstand ersetzen, z. B. `{ k: 'deer', x: 92, y: 70, hp: 3, f: 140 }` neben dem Hauptgebäude (96,67). Das Spiel hat keine Test-Hooks auf `window`, außer den Render-Stats.
+
 ## Repo
 
 - `main` folgt `upstream` (Mansi1/procedurally-generated-map). PR-Branches werden nach `origin` (kyr0/soliva) gepusht, die PRs laufen gegen `upstream`.
+- 2026-09-27, Checkout von Mansi1 (M1): Hier ist `origin` selbst Mansi1/procedurally-generated-map - Branch dorthin pushen (HTTPS mit `gh auth git-credential`, SSH ist gesperrt), PR gegen `main`.
 
 ## Messen
 
