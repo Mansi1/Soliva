@@ -622,12 +622,22 @@ const CHEATS: Record<string, () => string | undefined> = {
     const count = pointer.tile ? world.spawnVillagers(pointer.tile.x, pointer.tile.y, 20) : 0;
     return count > 0 ? `${count} Dorfbewohner zur Hilfe` : undefined;
   },
+  // Eine Kuh am Mauszeiger - nicht ins Wasser, nicht in ein Gebäude.
+  muh: () => {
+    const tile = pointer.tile;
+    if (!tile || world.animalBlocked(tile.x, tile.y)) return undefined;
+    world.wildlife.add('cow', tile.x + 0.5, tile.y + 0.5);
+    world.markDirty();
+    return 'Muh!';
+  },
   // Noch einmal eingegeben schaltet es wieder ab.
   speedygonzales: () => {
     world.speedy = !world.speedy;
     return `Ausbildung, Felder, Wachsen, Holz und Nahrung sofort ${world.speedy ? 'an' : 'aus'}`;
   },
 };
+// "muh muh" geht auch.
+CHEATS.muhmuh = CHEATS.muh;
 
 const cheatInput = document.getElementById('cheat') as HTMLInputElement;
 cheatInput.addEventListener('keydown', (e) => {

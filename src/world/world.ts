@@ -723,7 +723,7 @@ export class World {
   // --- Wild ------------------------------------------------------------------
 
   /** Darf ein Tier dieses Tile betreten? Nicht ins Wasser, nicht in Gebäude - zwischen Bäumen hindurch schon. */
-  private animalBlocked(x: number, y: number): boolean {
+  animalBlocked(x: number, y: number): boolean {
     const k = key(x, y);
     const anchor = this.occupied.get(k);
     if (anchor !== undefined && !this.buildings.get(anchor)?.isFarm()) return true;
