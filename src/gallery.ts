@@ -117,20 +117,22 @@ function model(label: string, shape: number, size: number, motion?: [number, num
 /**
  * Werkstatt mit ihrem Arbeiter: das Gebäude und davor, an der markierten
  * Werkbank (Work.Stand), ein Dorfbewohner in Pose - in echter Größe, damit
- * er an die Bank passt, und zur Bank gewandt wie im Spiel.
+ * er an die Bank passt, und zur Bank gewandt wie im Spiel. Sitzt er
+ * (POSE.sit), dann auf dem Hocker (Work.Seat), und die Bank ist leer.
  */
 function withWorker(label: string, shape: number, size: number, female: boolean, pose: number): Exhibit {
   return {
     label,
     draw: (t, x, y, out) => {
       // Auf der Bank entsteht in 12 s ein Bogen, dann von vorn (siehe P_CRAFT).
-      out.push({ x: x - 0.5, y: y - 0.5, size, color: PLAYER, shape, alpha: 1, motion: [BUILDING_HEADING, loop(t, 12), 0, 0] });
-      const spot = modelWorkSpot(shape, x - 0.5, y - 0.5, size, BUILDING_HEADING);
+      const sit = pose === POSE.sit;
+      out.push({ x: x - 0.5, y: y - 0.5, size, color: PLAYER, shape, alpha: 1, motion: [BUILDING_HEADING, sit ? -1 : loop(t, 12), 0, 0] });
+      const spot = modelWorkSpot(shape, x - 0.5, y - 0.5, size, BUILDING_HEADING, sit ? 'seat' : 'work');
       if (!spot) return;
       const f: EntityInstance = {
         x: spot.x - 0.5, y: spot.y - 0.5, size: VILLAGER.size, color: PLAYER,
         shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1,
-        motion: [Math.atan2(spot.aimY - spot.y, spot.aimX - spot.x), t * 6, pose, 0], accent: WOOD,
+        motion: [Math.atan2(spot.aimY - spot.y, spot.aimX - spot.x), sit ? t : t * 6, pose, 0], accent: WOOD,
       };
       out.push(f, ...figureProps(f));
     },
@@ -432,6 +434,8 @@ const SHOWCASE: Showcase[] = [
       model('steht', SHAPE.bowyer, BUILDINGS.bowyer.size),
       withWorker('mit Bogner', SHAPE.bowyer, BUILDINGS.bowyer.size, false, POSE.carve),
       withWorker('mit Bognerin', SHAPE.bowyer, BUILDINGS.bowyer.size, true, POSE.carve),
+      withWorker('Bogner wartet', SHAPE.bowyer, BUILDINGS.bowyer.size, false, POSE.sit),
+      withWorker('Bognerin wartet', SHAPE.bowyer, BUILDINGS.bowyer.size, true, POSE.sit),
     ], 200, 0.7),
     demolish: [0, 1, 2].map(() => collapse('Abriss', SHAPE.bowyer, BUILDINGS.bowyer.size)),
     extras: ['Abriss'],
