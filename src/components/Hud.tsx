@@ -47,6 +47,8 @@ function DebugPanel() {
         Tiles/Px <b id="sampling">-</b><span class="sep">|</span>
         Zoom <b id="zoom">8px</b>
       </div>
+      {/* Pixeldichte und Geräte-Pixel je Tile - danach wählt das Spiel z. B. den Blüten-Streifen. */}
+      <div>Bildschirm <b id="screen">-</b></div>
       <Legend />
       <div>Tile <b id="tile-info">-</b></div>
       {/* "Gebäude" oder "Ressource" - je nachdem, was unter dem Zeiger steht (main.ts). */}

@@ -31,8 +31,5 @@ tools/lsystem/bark/.cache
 # Blender-Export der Bognerei (tools/export/bognerei.mjs)
 tools/export/out
 
-# Blumenfotos aus Wikipedia (npm run fetch:flowers)
-public/assets/blumen
-
 # Sicherungen, die Blender beim Speichern anlegt
 *.blend1

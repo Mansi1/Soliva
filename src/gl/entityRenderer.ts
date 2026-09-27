@@ -70,7 +70,8 @@ import gold2Model from '../models/resources/gold_2.glb?model';
 import gold3Model from '../models/resources/gold_3.glb?model';
 import berryBush1Model from '../models/resources/berry_bush_1.glb?model';
 import { gizmoModel } from './gizmoModel';
-import { FLOWER_KINDS } from './flowerModel';
+import { FLOWER_KINDS, flowerStrip } from './flowerModel';
+import flowerIndex from '../models/flowers/textures/flower-index.json';
 import berryBush2Model from '../models/resources/berry_bush_2.glb?model';
 import berryBush3Model from '../models/resources/berry_bush_3.glb?model';
 import berryBush4Model from '../models/resources/berry_bush_4.glb?model';
@@ -353,6 +354,8 @@ const CLIP_TEXTURE_UNIT = 5;
 const BILLBOARD_TEXTURE_UNIT = 6;
 /** Bildtexturen aus den .glb-Modellen (uModelImages, siehe MODEL_IMAGES). */
 const IMAGE_TEXTURE_UNIT = 7;
+/** Der Blüten-Streifen, der zur Zoomstufe passt (uFlowerStrip, siehe flowerStripFor). */
+const FLOWER_TEXTURE_UNIT = 10;
 /** Kantenlänge jeder Bildtextur in uModelImages - alle Bilder werden darauf gebracht. */
 const IMAGE_SIZE = 512;
 /** Rolle der Flächen mit Bildtextur: statt der Farbe (u, v, Schicht in uModelImages). */
@@ -481,21 +484,18 @@ const LEAF_TEX_SIZE = 256;
 const LEAF_CARD_ROLE = 13;
 /** Rolle der Astkarten (Birke): ein ganzer Ast mit hängenden Zweigen und kleinen Blättern. */
 const BRANCH_CARD_ROLE = 14;
-/** Rolle der Blütenkarten (Blumen): der Shader malt die Blüte darauf (blossomCard). */
+/** Rolle der Blütenkarten (Blumen): die Blüte als Textur darauf (blossomCard). */
 const BLOSSOM_CARD_ROLE = 19;
 /** Rolle der Schattenkarten (Blumen): ein weicher dunkler Fleck unter der Blüte. */
 const FLOWER_SHADOW_ROLE = 21;
 /** Materialien der Karten, auf die der Shader malt - sie tragen (u, v, Zufall) statt einer Farbe. */
 const CARD_MATERIALS = new Set(['LeafCard', 'BranchCard', 'BlossomCard', 'FlowerShadow']);
 
-/** Die Arten als GLSL-Tabelle, aus FLOWER_KINDS - Index = Form - SHAPE.flowerDaisy. */
-const glslList = (type: string, values: string[]) => `${type}[${values.length}](${values.join(', ')})`;
-const glslVec3 = ([r, g, b]: readonly number[]) => `vec3(${r.toFixed(3)}, ${g.toFixed(3)}, ${b.toFixed(3)})`;
+/** Stelle der Art in den Blüten-Streifen, als GLSL-Tabelle - Index = Form - SHAPE.flowerDaisy. */
+const FLOWER_TILES = Object.keys(flowerIndex.index).length;
 const FLOWER_GLSL = `
-const float FLOWER_PETALS[${FLOWER_KINDS.length}] = ${glslList('float', FLOWER_KINDS.map((k) => k.petals.toFixed(1)))};
-const vec3 FLOWER_PETAL[${FLOWER_KINDS.length}] = ${glslList('vec3', FLOWER_KINDS.map((k) => glslVec3(k.petal)))};
-const vec3 FLOWER_HEART[${FLOWER_KINDS.length}] = ${glslList('vec3', FLOWER_KINDS.map((k) => glslVec3(k.heart)))};
-const float FLOWER_HEART_SIZE[${FLOWER_KINDS.length}] = ${glslList('float', FLOWER_KINDS.map((k) => k.heartSize.toFixed(3)))};
+uniform sampler2D uFlowerStrip;
+const float FLOWER_TILE[${FLOWER_KINDS.length}] = float[${FLOWER_KINDS.length}](${FLOWER_KINDS.map((k) => flowerIndex.index[k.type].toFixed(1)).join(', ')});
 `;
 /** Materialien, aus denen eine Krone besteht - daraus Mitte und Ausdehnung (Model.canopy). */
 const FOLIAGE_MATERIALS = new Set(['Paint', 'LeafDark', 'LeafLight', 'Needle', 'NeedleDark', 'LeafCard', 'BranchCard']);
@@ -1712,37 +1712,33 @@ ${FLOWER_GLSL}
 // Deckung der Blütenkarte am Rand der Blüte - geht ins Alpha (main).
 float gCardAlpha = 1.0;
 
-// Blütenkarte einer Blume: Blütenblätter mit Fugen und Wölbung, eine gewölbte
-// Mitte mit Glanzpunkt, Klee als Köpfchen aus Tupfen - wie die gemalten Blumen
-// im Gelände (flower() in terrainShader.ts). base = (u, v, Zufall); was
-// außerhalb der Blüte liegt, wird verworfen.
-vec3 blossomCard(vec3 base, int shape) {
+// Blütenkarte einer Blume: die Blüte aus dem Streifen, der zur Zoomstufe passt
+// (uFlowerStrip, gemalt von tools/models/create-flower-blossoms.ts), je Blume um ihren Zufall gedreht,
+// dazu ein Glanzpunkt zur Sonne (sun, Länge 1; contrast wie uLight.y).
+// base = (u, v, Zufall); was außerhalb der Blüte liegt, wird verworfen.
+vec3 blossomCard(vec3 base, int shape, vec3 sun, float contrast) {
   int k = clamp(shape - ${SHAPE.flowerDaisy}, 0, ${FLOWER_KINDS.length - 1});
-  float petals = FLOWER_PETALS[k];
-  float heartSize = FLOWER_HEART_SIZE[k];
-  // Die Blüte füllt die Karte fast bis an den Rand.
-  vec2 q = (base.xy - 0.5) * 2.0 / 0.95;
-  float d = length(q);
-  // Ein Pixel in Einheiten der Blüte - für weiche, aber scharfe Ränder.
-  float px = max(fwidth(d), 1e-4);
-  float a = atan(q.y, q.x) + base.z * 6.2832;
-  float rim = petals > 0.0 ? 0.5 + 0.5 * pow(abs(cos(a * petals * 0.5)), 0.6) : 0.8;
-  gCardAlpha = smoothstep(rim + px, rim - px, d);
+  // Achsen der Karte (+u, +v) in der Welt, aus den Bildschirm-Ableitungen -
+  // vor dem discard, sonst sind sie undefiniert.
+  vec3 dpx = dFdx(vWorld), dpy = dFdy(vWorld);
+  vec2 dux = dFdx(base.xy), duy = dFdy(base.xy);
+  float det = dux.x * duy.y - dux.y * duy.x;
+  vec3 axisU = normalize((dpx * duy.y - dpy * dux.y) * sign(det) + 1e-9);
+  vec3 axisV = normalize((dpy * dux.x - dpx * duy.x) * sign(det) + 1e-9);
+  vec2 q = base.xy - 0.5;
+  float a = base.z * 6.2832;
+  vec2 uv = mat2(cos(a), sin(a), -sin(a), cos(a)) * q + 0.5;
+  vec4 t = texture(uFlowerStrip, vec2((FLOWER_TILE[k] + uv.x) / ${FLOWER_TILES}.0, 1.0 - uv.y));
+  // Außerhalb des Kreises holte die gedrehte Karte die Nachbarkachel im Streifen.
+  gCardAlpha = dot(q, q) > 0.25 ? 0.0 : t.a;
   if (gCardAlpha < 0.02) discard;
-  // Licht von einer festen Seite der Karte - sie steht je Blume anders gedreht.
-  vec2 toSun = normalize(vec2(-0.45, 0.35));
-  float facing = dot(q, toSun) / max(d, 1e-3);
-  // Blütenblätter: zur Mitte hin tiefer (dunkler), außen heller, dazu die
-  // Wölbung zur Sonne und dunkle Fugen zwischen den Blättern.
-  vec3 col = FLOWER_PETAL[k] * (0.72 + 0.3 * d) * (0.9 + 0.22 * facing * min(d, 1.0));
-  if (petals > 0.0) col *= 0.82 + 0.18 * smoothstep(0.0, 0.35, abs(cos(a * petals * 0.5)));
-  else col *= 0.85 + 0.3 * step(0.5, fract((q.x + q.y) * 3.0) * fract((q.x - q.y) * 3.0) * 4.0);
-  // Die Mitte als kleine Kuppel mit Glanzpunkt.
-  float h = smoothstep(heartSize + px, heartSize - px, d);
-  vec3 hc = FLOWER_HEART[k] * (0.75 + 0.45 * clamp(1.0 - length(q / max(heartSize, 1e-3) - toSun * 0.4), 0.0, 1.0));
-  col = mix(col, hc, h);
-  float gloss = smoothstep(0.22, 0.0, length(q - toSun * max(heartSize, 0.35) * 0.9));
-  return mix(col, vec3(1.0), gloss * 0.35);
+  // Die Textur ist vormultipliziert - so filtert der Rand ohne grauen Saum.
+  vec3 col = t.rgb / t.a;
+  // Glanz: steht die Sonne hoch, in der Mitte, steht sie tief, zu ihr hin am
+  // Rand der Mitte. Bei bedecktem Himmel (contrast 0) keiner.
+  vec2 sunOnCard = vec2(dot(sun, axisU), dot(sun, axisV));
+  float gloss = smoothstep(0.22, 0.0, length(q * 2.0 / 0.95 - sunOnCard * 0.315));
+  return mix(col, vec3(1.0), gloss * 0.35 * contrast);
 }
 
 // Zur Kamera, in Weltkoordinaten - hängt von der Blickrichtung ab.
@@ -1850,7 +1846,7 @@ void main() {
   else if (uPlain == 1 && vTex != ${BLOSSOM_CARD_ROLE} && vTex != ${FLOWER_SHADOW_ROLE}) base = vColor;
   else if (vTex == ${IMAGE_ROLE}) base = vSawn > 0.5 ? treeTexture(vec3(0.86, 0.71, 0.48)) : imageTexture(base);
   else if (vTex >= ${FIGURE_TEX.cloth} && vTex <= ${FIGURE_TEX.skin}) base = figureTexture(base);
-  else if (vTex == ${BLOSSOM_CARD_ROLE}) base = blossomCard(base, shape);
+  else if (vTex == ${BLOSSOM_CARD_ROLE}) base = blossomCard(base, shape, uSunDir, uLight.y);
   else if (vTex == ${FLOWER_SHADOW_ROLE}) {
     // Schatten der Blüte auf dem Gras: rund und weich, zur Mitte am dunkelsten.
     gCardAlpha = 0.6 * (1.0 - smoothstep(0.3, 0.85, length(base.xy - 0.5) * 2.0));
@@ -3042,6 +3038,12 @@ export class EntityRenderer {
   /** So viele davon sind geladen - vorher ist ihre Schicht durchsichtig. */
   private imagesLoaded = 0;
   /**
+   * Die Blüten-Streifen aus flower-index.json, kleinster zuerst; ohne die, die
+   * nicht in eine Textur passen. Jeder lädt erst, wenn ein Bild ihn braucht -
+   * den großen (nur für die Nahansicht der Galerie) lädt das Spiel nie.
+   */
+  private flowerStrips: ((typeof flowerIndex.strips)[number] & { texture: WebGLTexture | null; ready: boolean })[];
+  /**
    * Unter so vielen CSS-Pixeln je Tile zeichnen die Bäume der festen Puffer
    * als Bild statt als Modell (0: nie). Gefällte, angefangene und
    * ausgewählte Bäume bleiben Modelle.
@@ -3104,6 +3106,15 @@ export class EntityRenderer {
     gl.uniform1i(this.location('uLeafTex'), LEAF_TEXTURE_UNIT);
     gl.uniform1i(this.location('uBillboardTex'), BILLBOARD_TEXTURE_UNIT);
     gl.uniform1i(this.location('uModelImages'), IMAGE_TEXTURE_UNIT);
+    gl.uniform1i(this.location('uFlowerStrip'), FLOWER_TEXTURE_UNIT);
+    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    this.flowerStrips = flowerIndex.strips
+      .filter((strip) => {
+        const fits = strip.size * FLOWER_TILES <= maxTextureSize;
+        if (!fits) console.warn(`Flowers: ${strip.file} does not fit into a texture (max ${maxTextureSize} px) - using the next smaller strip`);
+        return fits;
+      })
+      .map((strip) => ({ ...strip, texture: null, ready: false }));
 
     // Blatt-Textur: bis das Bild geladen ist, ein einzelnes grünes Pixel.
     this.leafTexture = gl.createTexture()!;
@@ -3172,6 +3183,54 @@ export class EntityRenderer {
       image.src = url;
     });
     return texture;
+  }
+
+  /**
+   * Bindet den kleinsten Blüten-Streifen, der bei `pixelsPerTile`
+   * (Geräte-Pixel je Tile) noch mindestens ein Texel je Bildpunkt hat, und
+   * lädt ihn beim ersten Mal. Bis er da ist, nimmt er den nächsten geladenen.
+   */
+  private bindFlowerStrip(pixelsPerTile: number) {
+    const strips = this.flowerStrips;
+    const found = strips.findIndex((s) => s.maxPixelsPerTile === null || pixelsPerTile <= s.maxPixelsPerTile);
+    const want = found >= 0 ? found : strips.length - 1;
+    if (!strips[want].texture) this.loadFlowerStrip(strips[want]);
+    let use = strips[want];
+    for (let d = 1; !use.ready && d < strips.length; d++) {
+      use = [strips[want - d], strips[want + d]].find((s) => s?.ready) ?? use;
+    }
+    this.gl.activeTexture(this.gl.TEXTURE0 + FLOWER_TEXTURE_UNIT);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, use.texture);
+    this.gl.activeTexture(this.gl.TEXTURE0);
+  }
+
+  /** Lädt einen Blüten-Streifen - bis dahin ist er ein durchsichtiges Pixel. */
+  private loadFlowerStrip(strip: EntityRenderer['flowerStrips'][number]) {
+    const gl = this.gl;
+    const texture = gl.createTexture()!;
+    strip.texture = texture;
+    gl.activeTexture(gl.TEXTURE0 + FLOWER_TEXTURE_UNIT);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    gl.activeTexture(gl.TEXTURE0);
+    const image = new Image();
+    image.onload = () => {
+      gl.activeTexture(gl.TEXTURE0 + FLOWER_TEXTURE_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      // Direkt, nicht über einen Canvas: Die Farben sind schon vormultipliziert
+      // und bleiben so (UNPACK_PREMULTIPLY_ALPHA_WEBGL steht auf false).
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      // Mipmaps nur bis 8 px je Blüte - darunter mischten sich die Nachbarn im Streifen.
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, Math.max(0, Math.log2(strip.size) - 3));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.activeTexture(gl.TEXTURE0);
+      strip.ready = true;
+    };
+    image.src = flowerStrip(strip.file);
   }
 
   /**
@@ -3635,6 +3694,7 @@ export class EntityRenderer {
     gl.activeTexture(gl.TEXTURE0 + IMAGE_TEXTURE_UNIT);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.imageTexture);
     gl.activeTexture(gl.TEXTURE0);
+    this.bindFlowerStrip(camera.pixelsPerTile);
     // Herausgezoomt die vereinfachten Fassungen der Vorkommen.
     const lod = LOD_ZOOM.filter((z) => cssPixelsPerTile < z).length;
     const fieldLod = FIELD_LOD_ZOOM.filter((z) => cssPixelsPerTile < z).length;

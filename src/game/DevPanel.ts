@@ -1,6 +1,6 @@
 // DevPanel.ts
 // Die Entwickler-Infos oben links (components/Hud.tsx): Position, Abtastung,
-// Zoom, das Tile und was unter dem Zeiger steht, Kamera, Minimap-Zeiger,
+// Zoom, Bildschirm (Pixeldichte), das Tile und was unter dem Zeiger steht, Kamera, Minimap-Zeiger,
 // Bilder je Sekunde (Spiel und Minimap) und ob Bäume als Bild (Billboard)
 // gezeichnet werden. Texte werden nur gesetzt, wenn sie sich ändern - sonst
 // rechnete der Browser je Bild das Layout neu.
@@ -21,6 +21,7 @@ function setText(el: Element, text: string) {
 export class DevPanel {
   private pos = byId('pos');
   private sampling = byId('sampling');
+  private screen = byId('screen');
   private zoom = byId('zoom');
   private tile = byId('tile-info');
   private objectLabel = byId('object-label');
@@ -45,6 +46,8 @@ export class DevPanel {
     setText(this.pos, center);
     setText(this.camera, center);
     setText(this.sampling, (1 / (camera.tileSize * camera.pixelRatio)).toFixed(4));
+    const ratio = Math.round(camera.pixelRatio * 100) / 100;
+    setText(this.screen, `${ratio >= 2 ? 'hochauflösend (Retina)' : ratio > 1 ? 'leicht hochauflösend' : 'normal'} ×${ratio} | ${Math.round(camera.tileSize * camera.pixelRatio)} Geräte-px je Tile`);
     this.frames++;
     if (now - this.lastFps >= FPS_INTERVAL) {
       setText(this.fps, String(Math.round((this.frames * 1000) / (now - this.lastFps))));
