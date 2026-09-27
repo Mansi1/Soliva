@@ -134,20 +134,24 @@ export class Picker {
     return this.resources.pick(area, (inst, x, y) => {
       const dims = modelSize(inst.shape);
       if (!dims) return undefined;
-      // Leer abgebaut und nicht mehr zu sehen (Bäume, Felsen) - nicht treffen.
-      if (!this.world.resourceInfo(x, y)) return undefined;
       const cx = inst.x + 0.5;
       const cy = inst.y + 0.5;
+      // Halbe Breite in Pixeln: ein Stück quer zur Blickrichtung am Boden.
+      // Bildschirm-x und diese Breite hängen nicht von der Höhe ab - so fällt
+      // fast jedes Objekt weg, bevor Geländehöhe und Vorrat gefragt werden (teuer).
+      const w = dims.width * inst.size * 0.4;
+      const foot = worldToScreen(v, cx, cy, 0);
+      const edge = worldToScreen(v, cx + w, cy - w, 0);
+      const half = Math.max(6, Math.hypot(edge.x - foot.x, edge.y - foot.y));
+      if (Math.abs(px - foot.x) > half) return undefined;
+      // Leer abgebaut und nicht mehr zu sehen (Bäume, Felsen) - nicht treffen.
+      if (!this.world.resourceInfo(x, y)) return undefined;
       const z = this.ground.heightAt(cx, cy);
       // Ein gefällter Baum liegt flach.
       const fallen = inst.motion && inst.motion[1] > 0.5;
       const height = fallen ? 0.3 * inst.size : dims.height * inst.size;
       const base = worldToScreen(v, cx, cy, z);
       const top = worldToScreen(v, cx, cy, z + height);
-      // Halbe Breite in Pixeln: ein Stück quer zur Blickrichtung am Boden.
-      const w = dims.width * inst.size * 0.4;
-      const side = worldToScreen(v, cx + w, cy - w, z);
-      const half = Math.max(6, Math.hypot(side.x - base.x, side.y - base.y));
       // Abstand des Zeigers zum Streifen von base nach top. Bäume laufen nach
       // oben spitz zu - ihr Treffer auch, sonst verdeckte eine hohe Spitze den
       // Strauch dahinter.
