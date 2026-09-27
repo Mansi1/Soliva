@@ -14,6 +14,8 @@ export interface Tile {
 export class Pointer {
   /** Stelle auf dem Canvas (CSS-Pixel) - null, wenn der Zeiger nicht darüber ist. */
   pixel: CanvasPoint | null = null;
+  /** Ein Linksklick hier wählt etwas aus (wie PlayerActions.clickSelect) - Hand als Mauszeiger. */
+  selectable = false;
   /** Tile unter dem Zeiger. */
   tile: Tile | null = null;
   /** Vorkommen, auf dessen Objekt der Zeiger zeigt - für den Sammel-Mauszeiger. */
@@ -24,6 +26,7 @@ export class Pointer {
     this.pixel = null;
     this.tile = null;
     this.object = null;
+    this.selectable = false;
   }
 
   /** Neue Stelle; true, wenn sich das Objekt darunter geändert hat. */

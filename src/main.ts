@@ -725,14 +725,25 @@ minimapCanvas.addEventListener('mouseleave', () => devPanel.showMinimapPointer()
 function updateHoveredTile(mouseX: number, mouseY: number): boolean {
   pointer.pixel = { x: mouseX, y: mouseY };
   // Nur mit ausgewählten Dorfbewohnern zählt, worauf der Zeiger zeigt.
-  const object = selection.villagers.size > 0 ? picker.resourceObject(mouseX, mouseY) : undefined;
-  if (pointer.setObject(object)) ui.updateCursor();
+  pointer.setObject(selection.villagers.size > 0 ? picker.resourceObject(mouseX, mouseY) : undefined);
   const tile = picker.tile(mouseX, mouseY);
-  if (!pointer.setTile(tile)) return false;
-  ui.updateCursor();
+  const tileChanged = pointer.setTile(tile);
+  updateSelectable(picker.target(mouseX, mouseY));
+  if (!tileChanged) return false;
   devPanel.showTile({ ...terrain.getTile(tile.x, tile.y), x: tile.x, y: tile.y });
   updateHoverInfo();
   return true;
+}
+
+/**
+ * Wählt ein Linksklick hier etwas aus? Dieselbe Reihenfolge wie
+ * PlayerActions.clickSelect: Dorfbewohner, Tier, Gebäude, Vorkommen, Blume.
+ */
+function updateSelectable(object = pointer.pixel && picker.target(pointer.pixel.x, pointer.pixel.y)) {
+  const { pixel } = pointer;
+  pointer.selectable = !!pixel && !!object && !!(picker.villager(pixel.x, pixel.y) || picker.animal(pixel.x, pixel.y)
+    || world.at(object.x, object.y) || world.resourceInfo(object.x, object.y) || picker.flower(pixel.x, pixel.y));
+  ui.updateCursor();
 }
 
 /** Die Kamera hat sich bewegt: unter dem stehenden Zeiger liegt jetzt anderes. */
@@ -969,6 +980,8 @@ function loop(now: number) {
   if (uiRefresh.due(now)) {
     ui.refreshResources();
     updateHoverInfo();
+    // Figuren laufen unter dem stehenden Zeiger durch.
+    updateSelectable();
   }
   if (autosave.due(now)) world.save();
   renderStatsFrame(now, performance.now() - workStart);
