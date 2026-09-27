@@ -169,8 +169,9 @@ export class PlayerActions {
     const at = this.picker.point(p.x, p.y);
     const prey = this.world.animalNear(at.x, at.y, 0.6);
     if (prey) {
-      this.world.hunt(this.selection.villagers, prey);
-      this.sound.play('click', 0.7);
+      const busy = this.world.hunt(this.selection.villagers, prey);
+      if (busy) this.ui.hint(busy);
+      else this.sound.play('click', 0.7);
       this.ui.refreshSelection();
       return;
     }

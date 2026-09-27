@@ -22,6 +22,8 @@ export interface WorkshopView {
   role: string;
   worker?: string;
   doing?: string;
+  /** Entlassen, geht gerade. */
+  leaving?: boolean;
   percent?: number;
 }
 
@@ -433,9 +435,10 @@ export function commandsFor(view: SelectionView): Command[] {
           action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
           title: `Reuse bauen - ${view.trapCost.cost}\nIns Wasser nahe der Hütte; der Fischer leert sie mit dem Boot`,
         } satisfies Command] : []),
-        ...(view.workshop?.worker
-          ? [{ action: 'dismiss' as const, icon: villagerIcon(false, rgb()), title: `${view.workshop.worker} entlassen - geht hinaus und ist wieder frei` }]
-          : []),
+        ...(view.workshop?.worker && !view.workshop.leaving ? [{
+          action: 'dismiss', icon: villagerIcon(false, rgb()),
+          title: `${view.workshop.worker} entlassen\nGeht noch einmal hinein und wartet dann vor der Tür`,
+        } satisfies Command] : []),
         demolish(false),
       ];
     case 'buildings':

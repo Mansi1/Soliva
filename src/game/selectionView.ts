@@ -219,6 +219,7 @@ function workshopView(world: World, building: Building): WorkshopView {
     role,
     worker: worker.name,
     doing: world.describe(worker),
+    leaving: 'leave' in task && task.leave,
     percent: busy && 'progress' in task ? Math.floor(task.progress * 100) : undefined,
   };
 }

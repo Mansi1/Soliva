@@ -32,26 +32,29 @@ export type Task =
   /** Bestellt und erntet das Feld, bringt die Ernte zum nächsten Lager für Nahrung. */
   | { kind: 'farm'; building: string; row: number; delivering: boolean }
   /**
-   * Arbeitet in der Werkstatt (Bognerei): holt Holz vom nächsten Lager
+   * Arbeitet in der Werkstatt (Bognerei): geht erst durch ihre Tür hinein
+   * (`enter`), holt dann Holz vom nächsten Lager
    * (`fetch`), schnitzt an der Werkbank (`carve`, Fortschritt 0..1) und trägt
    * den Bogen zur nächsten Waffenkammer (`deliver`) - dann von vorn.
+   * `leave`: entlassen (siehe VillagerWork.dismiss).
    */
-  | { kind: 'craft'; building: string; step: 'fetch' | 'carve' | 'deliver'; progress: number }
+  | { kind: 'craft'; building: string; step: 'enter' | 'fetch' | 'carve' | 'deliver'; progress: number; leave?: boolean }
   /**
-   * Fischer der Fischerhütte `building`. Mit Boot zur vollen Reuse `trap`:
+   * Fischer der Fischerhütte `building`. Geht erst durch ihre Tür hinein
+   * (`enter`). Mit Boot zur vollen Reuse `trap`:
    * Boot holen (`boat`), ins Wasser ziehen (`launch`), hinrudern (`row`),
    * leeren (`empty`), zurückrudern (`return`), an Land ziehen (`land`). Ohne
    * volle Reuse zum Ufer (`shore`) und angeln (`angle`). Den Fang (`fish`
    * Nahrung) legt er ins Netz (`net`), dann sucht er neu (`choose`).
    * `shore`: Stelle am Ufer - an Land (x, y) und im Wasser (wx, wy).
-   * `progress` 0..1: Angeln bzw. Leeren.
+   * `progress` 0..1: Angeln bzw. Leeren. `leave`: entlassen.
    */
   | {
       kind: 'fish'; building: string; step: FishStep; progress: number; fish: number;
-      trap?: string; shore?: { x: number; y: number; wx: number; wy: number };
+      trap?: string; shore?: { x: number; y: number; wx: number; wy: number }; leave?: boolean;
     };
 
-export type FishStep = 'choose' | 'boat' | 'launch' | 'row' | 'empty' | 'return' | 'land' | 'shore' | 'angle' | 'net';
+export type FishStep = 'enter' | 'choose' | 'boat' | 'launch' | 'row' | 'empty' | 'return' | 'land' | 'shore' | 'angle' | 'net';
 
 export class Villager extends UnitBase {
   carrying = 0;

@@ -22,6 +22,7 @@ const GATHER_SPREAD = 0.4;
 const DELIVER_REACH = 0.6;
 /** So lange (Sekunden) bleibt ein Dorfbewohner beim Abladen im Gebäude. */
 const INSIDE_TIME = 1.2;
+const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
 
 const key = (x: number, y: number) => `${x},${y}`;
 
@@ -74,8 +75,8 @@ export class VillagerWork {
    * in AoE2: Lager -> abliefern, Vorkommen -> sammeln, sonst hingehen.
    */
   command(ids: ReadonlySet<number>, x: number, y: number): string | null {
-    const selected = this.world.villagers.filter((v) => ids.has(v.id));
-    if (selected.length === 0) return null;
+    const selected = this.controllable(ids);
+    if (selected.length === 0) return ids.size > 0 ? WORKER_BUSY : null;
     // Wer gerade im Gebäude ablädt, kommt für den neuen Befehl sofort heraus.
     for (const v of selected) v.inside = 0;
 
@@ -86,12 +87,9 @@ export class VillagerWork {
       const taken = this.world.villagers.some((v) => !ids.has(v.id) && workplace(v.task) === anchor);
       if (taken) return `In der ${target.label} arbeitet schon jemand`;
       const [worker, ...rest] = selected;
-      for (const v of rest) {
-        if (workplace(v.task) === anchor) v.assign({ kind: 'idle' });
-      }
       worker.assign(target.type === 'fisher_hut'
-        ? { kind: 'fish', building: anchor, step: 'choose', progress: 0, fish: 0 }
-        : { kind: 'craft', building: anchor, step: 'fetch', progress: 0 });
+        ? { kind: 'fish', building: anchor, step: 'enter', progress: 0, fish: 0 }
+        : { kind: 'craft', building: anchor, step: 'enter', progress: 0 });
       return rest.length > 0 ? `In der ${target.label} arbeitet nur einer` : null;
     }
     if (target?.isFarm()) {
@@ -155,16 +153,6 @@ export class VillagerWork {
       v.problem = null;
     });
     return null;
-  }
-
-  /** Entlässt den Arbeiter der Werkstatt: er geht zur Tür hinaus und steht dort untätig. */
-  dismiss(anchor: string): Villager | undefined {
-    const shop = this.world.building(anchor);
-    const worker = this.world.villagers.find((v) => v.task.kind === 'craft' && v.task.building === anchor);
-    if (!shop || !worker) return undefined;
-    const entry = modelEntry(shop.model, shop.x, shop.y, shop.definition.size, BUILDING_HEADING);
-    worker.assign(entry ? { kind: 'move', x: entry.x, y: entry.y } : { kind: 'idle' });
-    return worker;
   }
 
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
@@ -263,6 +251,22 @@ export class VillagerWork {
 
   /** Läuft zum Lager; true, sobald die Ladung abgegeben ist. */
   private deliverTo(v: Villager, building: Building, dt: number): boolean {
+    return this.enter(v, building, dt, () => {
+      if (v.carryType && v.carrying > 0) {
+        this.world.stock[v.carryType] += v.carrying;
+        this.world.onEvent?.({ kind: 'deliver', x: v.x, y: v.y });
+      }
+      v.carrying = 0;
+      v.carryType = null;
+      this.world.markDirty();
+    });
+  }
+
+  /**
+   * Läuft zum Gebäude und geht durch die Tür hinein; true, sobald er wieder
+   * herauskommt. `arrive` läuft, wenn er an der Tür ankommt.
+   */
+  private enter(v: Villager, building: Building, dt: number, arrive?: () => void): boolean {
     // Im Gebäude: kurz warten, dann kommt er ohne Last wieder heraus.
     if (v.inside > 0) {
       v.inside -= dt;
@@ -278,13 +282,7 @@ export class VillagerWork {
     const reach = entry ? 0.08 : Math.max(def.footprint, def.size) / 2 + DELIVER_REACH;
     const [tx, ty] = entry ? [entry.x, entry.y] : [building.x + 0.5, building.y + 0.5];
     if (!this.walk(v, tx, ty, reach, dt)) return false;
-    if (v.carryType && v.carrying > 0) {
-      this.world.stock[v.carryType] += v.carrying;
-      this.world.onEvent?.({ kind: 'deliver', x: v.x, y: v.y });
-    }
-    v.carrying = 0;
-    v.carryType = null;
-    this.world.markDirty();
+    arrive?.();
     // Durch die Tür hinein - einen Moment lang ist er weg.
     if (entry) {
       v.inside = INSIDE_TIME;
@@ -512,7 +510,20 @@ export class VillagerWork {
   private tickCrafter(v: Villager, task: Extract<Task, { kind: 'craft' }>, dt: number) {
     const shop = this.world.building(task.building);
     if (!shop?.isWorkshop()) {
-      v.task = { kind: 'idle' };
+      // Die Werkstatt ist weg - einen Bogen bringt er trotzdem zur Waffenkammer.
+      const armory = v.carryType === 'bows' ? this.nearestDropSite(v, 'bows') : undefined;
+      v.task = armory ? { kind: 'deliver', building: armory.anchor } : { kind: 'idle' };
+      return;
+    }
+    if (task.leave && task.step !== 'deliver') {
+      // Das Holz auf der Werkbank kommt zurück in den Vorrat.
+      if (task.step === 'carve' && v.carryType !== 'wood') this.world.stock.wood += BOWYER.wood;
+      task.step = 'fetch';
+      if (this.deliverTo(v, shop, dt)) v.assign({ kind: 'idle' });
+      return;
+    }
+    if (task.step === 'enter') {
+      if (this.enter(v, shop, dt)) task.step = 'fetch';
       return;
     }
     if (task.step === 'deliver') {
@@ -589,6 +600,17 @@ export class VillagerWork {
     const trap = task.trap ? this.world.building(task.trap) : undefined;
     const shore = task.shore;
     v.problem = null;
+    if (task.leave && !AFLOAT.has(task.step) && !DRAGGING.has(task.step)) {
+      // Den Fang legt er noch ins Netz.
+      this.world.stock.food += task.fish;
+      task.fish = 0;
+      if (this.deliverTo(v, hut, dt)) v.assign({ kind: 'idle' });
+      return;
+    }
+    if (task.step === 'enter') {
+      if (this.enter(v, hut, dt)) task.step = 'choose';
+      return;
+    }
     if (task.step === 'choose' || !shore) {
       const full = this.fullTrap(hut, v);
       const place = this.shore(hut, full);
@@ -711,11 +733,27 @@ export class VillagerWork {
   }
 
   /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
-  hunt(ids: ReadonlySet<number>, animal: Animal) {
-    for (const v of this.world.villagers) {
-      if (!ids.has(v.id)) continue;
-      v.assign({ kind: 'hunt', animal: animal.id, delivering: false, cooldown: 0 });
-    }
+  hunt(ids: ReadonlySet<number>, animal: Animal): string | null {
+    const chosen = this.controllable(ids);
+    for (const v of chosen) v.assign({ kind: 'hunt', animal: animal.id, delivering: false, cooldown: 0 });
+    return chosen.length === 0 && ids.size > 0 ? WORKER_BUSY : null;
+  }
+
+  /** Die Ausgewählten, die Befehle annehmen - wer einer Werkstatt zugeteilt ist, muss erst entlassen werden. */
+  private controllable(ids: ReadonlySet<number>): Villager[] {
+    return this.world.villagers.filter((v) => ids.has(v.id) && !workplace(v.task));
+  }
+
+  /**
+   * Den Arbeiter der Werkstatt entlassen: Einen Bogen bringt er noch zur
+   * Waffenkammer, das Boot noch an Land. Dann geht er noch einmal in die
+   * Werkstatt, legt ab, was er trägt, und bleibt vor der Tür stehen, frei für
+   * neue Befehle. Gibt ihn zurück.
+   */
+  dismiss(anchor: string): Villager | undefined {
+    const worker = this.world.villagers.find((v) => workplace(v.task) === anchor);
+    if (worker?.task.kind === 'craft' || worker?.task.kind === 'fish') worker.task.leave = true;
+    return worker;
   }
 
   /** Nächstes Tier bzw. Kadaver mit Fleisch in Reichweite der Suche - lieber erlegte. */
@@ -957,7 +995,9 @@ export class VillagerWork {
         return (a.isDead ? `zerlegt ${a.label}` : `jagt ${a.label}`) + load;
       }
       case 'craft':
+        if (v.task.leave && v.task.step !== 'deliver') return 'entlassen, geht aus der Bognerei';
         switch (v.task.step) {
+          case 'enter': return 'geht in die Bognerei';
           case 'fetch': return 'holt Holz für die Bognerei' + load;
           case 'deliver': return 'bringt einen Bogen zur Waffenkammer';
           case 'carve': return v.carryType === 'wood'
@@ -965,7 +1005,9 @@ export class VillagerWork {
             : `schnitzt einen Bogen (${Math.floor(v.task.progress * 100)} %)`;
         }
       case 'fish':
+        if (v.task.leave && !AFLOAT.has(v.task.step) && !DRAGGING.has(v.task.step)) return 'entlassen, geht aus der Fischerhütte';
         switch (v.task.step) {
+          case 'enter': return 'geht in die Fischerhütte';
           case 'choose': return 'fischt';
           case 'shore': return 'geht zum Ufer angeln';
           case 'angle': return `angelt (${Math.floor(v.task.progress * 100)} %)`;
