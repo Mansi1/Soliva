@@ -82,6 +82,8 @@ export class World {
   private nextId = 1;
 
   stock: Resources = initialResources();
+  /** Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit. Nicht im Spielstand. */
+  instantTraining = false;
   villagers: Villager[] = [];
   /** Wild - lebend und erlegt. */
   /** Das Wild: Tiere und wo schon welche entstanden sind (wildlife.ts). */
@@ -636,7 +638,7 @@ export class World {
     const pop = this.population();
     // Bevölkerungsgrenze erreicht: die Ausbildung wartet, bis ein Haus steht.
     if (pop.used >= pop.cap) return;
-    if (!building.train(dt)) return;
+    if (!building.train(this.instantTraining ? Infinity : dt)) return;
 
     // Er tritt an der Vorderkante des Gebäudes heraus - zur Kamera hin.
     const r = building.definition.footprint / 2 + 0.4;

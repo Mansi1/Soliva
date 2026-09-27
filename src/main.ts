@@ -616,6 +616,10 @@ const CHEATS: Record<string, () => void> = {
   ineedhelp: () => {
     if (pointer.tile) world.spawnVillagers(pointer.tile.x, pointer.tile.y, 20);
   },
+  // Noch einmal eingegeben schaltet es wieder ab.
+  speedygonzales: () => {
+    world.instantTraining = !world.instantTraining;
+  },
 };
 
 const cheatInput = document.getElementById('cheat') as HTMLInputElement;
