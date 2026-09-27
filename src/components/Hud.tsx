@@ -82,14 +82,14 @@ function SoundButton() {
   );
 }
 
-/** Gelände flach an/aus (Leertaste) - leuchtet, solange es an ist (Klasse on, main.ts). */
+/** Gelände flach an/aus (Leertaste) - der Pfeil zeigt, wohin ein Klick das Gelände bringt (Klasse on, main.ts). */
 function FlatButton() {
   return (
     <button id="flat" type="button" title="Gelände flach (Leertaste)" aria-pressed="false">
       <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"
         stroke-linecap="round" stroke-linejoin="round">
         <path d="M2 11l5-6 3 3 2-2 6 5" stroke-dasharray="2 2.2" />
-        <path d="M10 9v5M7.5 11.5 10 14l2.5-2.5" />
+        <path class="arrow" d="M10 9v5M7.5 11.5 10 14l2.5-2.5" />
         <path d="M2 17h16" />
       </svg>
     </button>

@@ -396,12 +396,14 @@
   white-space: nowrap;
   cursor: default;
 }
-/* Flaches Gelände an: eingedrückt und golden. */
+/* Flaches Gelände an: golden, der Pfeil zeigt nach oben - ein Klick richtet es wieder auf. */
 #flat.on {
-  color: #ffd76a;
-  border-color: #f0c95a;
-  background: radial-gradient(circle at 50% 55%, #2a180b, #120a04);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 8px 2px rgba(240, 201, 90, 0.75);
+  color: #f0c95a;
+}
+#flat.on .arrow {
+  transform: rotate(180deg);
+  transform-box: fill-box;
+  transform-origin: center;
 }
 #sound .off {
   display: none;
