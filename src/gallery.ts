@@ -20,6 +20,7 @@ import {
 import { AXIS_COLORS, GIZMO_RADIUS, TIMELINE_SECONDS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
 import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
 import { FLOWER_SIZE } from './world/flowers';
+import { STRIDE_LENGTH } from './world/world';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
 
@@ -260,11 +261,8 @@ function oneFlower(kind: number): Exhibit {
   };
 }
 
-/**
- * Schritte je Sekunde (Phase) beim Gehen und Tragen: in der Galerie halb so
- * schnell wie im Spiel - so sieht man die Bewegung.
- */
-const walkRate = (VILLAGER.speed * Math.PI * 2 / 0.6) * 0.5;
+/** Schritte je Sekunde (Phase) beim Gehen und Tragen - wie im Spiel. */
+const walkRate = VILLAGER.speed * Math.PI * 2 / STRIDE_LENGTH;
 
 /**
  * Die Reihen der Galerie, von oben nach unten. `gap`: Abstand der Stücke,

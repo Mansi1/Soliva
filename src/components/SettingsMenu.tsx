@@ -32,7 +32,8 @@ export interface MenuHooks {
   save(): void;
 }
 
-const SPEEDS: [number, string][] = [[1, 'Normal'], [1.5, 'Schnell'], [2, 'Sehr schnell']];
+/** Spieltempo: langsam (1×) bis extrem schnell, Vorgabe 2.5× - so viel schneller laufen Simulation und Animationen. */
+const MAX_SPEED = 10;
 /**
  * Wahl "bis Zoom N": Aus oder eine der Zoomstufen (Zoom 1 = weit draußen).
  * Gespeichert wird die Grenze in CSS-Pixeln je Tile, unter der es gilt - die
@@ -76,13 +77,13 @@ export class SettingsMenu {
   private opened = false;
   private pauseButton = createRef<HTMLButtonElement>();
   private soundButton = createRef<HTMLButtonElement>();
-  private speedButtons = SPEEDS.map(() => createRef<HTMLButtonElement>());
   private billboardButtons = BILLBOARDS.map(() => createRef<HTMLButtonElement>());
   private animalButtons = new Map(ANIMAL_KINDS.map(([kind]) => [kind, HIDE_ANIMALS.map(() => createRef<HTMLButtonElement>())]));
   private colorButtons = new Map(Object.keys(PLAYER_COLORS).map((key) => [key, createRef<HTMLButtonElement>()]));
   private volume = sliderRefs();
   private music = sliderRefs();
   private scroll = sliderRefs();
+  private speed = sliderRefs();
   private track = createRef<HTMLSpanElement>();
   private showHelp = createRef<HTMLInputElement>();
   private showDebug = createRef<HTMLInputElement>();
@@ -145,11 +146,7 @@ export class SettingsMenu {
           </div>
           <div class="menu-row">
             <span>Geschwindigkeit</span>
-            <span class="menu-choice">
-              {SPEEDS.map(([value, label], i) => (
-                <button type="button" class="wood-btn" ref={this.speedButtons[i]} onClick={() => this.change({ speed: value })}>{label}</button>
-              ))}
-            </span>
+            <Slider refs={this.speed} min={100} max={MAX_SPEED * 100} step={50} onInput={(v) => this.change({ speed: v })} />
           </div>
         </section>
         <section>
@@ -330,7 +327,6 @@ export class SettingsMenu {
     const s = this.settings;
     this.pauseButton.current.textContent = this.hooks.paused() ? 'Fortsetzen' : 'Anhalten';
     this.soundButton.current.textContent = this.hooks.soundEnabled() ? 'An' : 'Aus';
-    SPEEDS.forEach(([value], i) => this.speedButtons[i].current.classList.toggle('active', value === s.speed));
     BILLBOARDS.forEach(([value], i) => this.billboardButtons[i].current.classList.toggle('active', value === s.billboards));
     for (const [kind, refs] of this.animalButtons) {
       const below = s.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT;
@@ -344,6 +340,8 @@ export class SettingsMenu {
     slider(this.volume, s.volume);
     slider(this.music, s.music);
     slider(this.scroll, s.scroll);
+    this.speed.input.current.value = String(Math.round(s.speed * 100));
+    this.speed.output.current.textContent = s.speed <= 1 ? 'Langsam' : s.speed >= MAX_SPEED ? 'Extrem schnell' : `${s.speed}×`;
     const title = this.hooks.musicTitle();
     this.track.current.textContent = title ? `♪ ${title}` : 'Musik beginnt mit dem ersten Klick';
     this.showHelp.current.checked = s.showHelp;

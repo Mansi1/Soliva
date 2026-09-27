@@ -132,8 +132,8 @@ export const VILLAGER = {
   trainTime: 6,
   /** Trefferpunkte, wenn er unverletzt ist - wie in AoE2. */
   hp: 25,
-  /** Tiles je Sekunde. */
-  speed: 3.2,
+  /** Tiles je Sekunde: 0.8 = 4 m/s, zügiges Gehen (1 Tile = 5 m, siehe `size`). */
+  speed: 0.8,
   /** So viel trägt er, bevor er zum Lager geht. */
   capacity: 10,
   /**

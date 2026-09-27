@@ -49,7 +49,7 @@ export interface Settings {
 export const ANIMALS_BELOW_DEFAULT = 16;
 
 const DEFAULTS: Settings = {
-  volume: 1, music: 0.5, speed: 1, scroll: 1, showHelp: false, showDebug: false, facing: '', tilt: 30, paused: false,
+  volume: 1, music: 0.5, speed: 2.5, scroll: 1, showHelp: false, showDebug: false, facing: '', tilt: 30, paused: false,
   playerColor: 'green', billboards: 16, animalsBelow: {}, idleFps: true, minimapFps: true,
   fxaa: true, colorGrading: true, bloom: true,
 };
