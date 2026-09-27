@@ -44,6 +44,8 @@ export interface KeyCommands {
   chooseCrop(index: number): void;
   /** Taste eines Gebäudes im Baumenü. */
   build(type: BuildingType): void;
+  /** Enter: die Cheat-Eingabe öffnen. */
+  openCheat(): void;
 }
 
 /** Alt + Pfeiltasten. Drehen nur einmal je Druck, Neigen auch beim Gedrückthalten. */

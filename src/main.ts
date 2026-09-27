@@ -607,6 +607,26 @@ function showZoom() {
   devPanel.showZoom(camera);
 }
 
+/** Cheats wie in AoE2 - Leerzeichen und Groß-/Kleinschreibung zählen nicht. */
+const CHEATS: Record<string, () => void> = {
+  iamtheking: () => {
+    for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.stock[kind] += 30000;
+  },
+};
+
+const cheatInput = document.getElementById('cheat') as HTMLInputElement;
+cheatInput.addEventListener('keydown', (e) => {
+  // Getippt wird hier, nicht im Spiel: die Spieltasten (keyboard.ts) bekommen nichts ab.
+  e.stopPropagation();
+  if (e.key !== 'Enter' && e.key !== 'Escape') return;
+  if (e.key === 'Enter') CHEATS[cheatInput.value.toLowerCase().replace(/\s+/g, '')]?.();
+  ui.refreshResources();
+  cheatInput.value = '';
+  cheatInput.blur();
+});
+// Klick daneben schließt die Eingabe.
+cheatInput.addEventListener('blur', () => (cheatInput.hidden = true));
+
 /** Tastatur: gehaltene Tasten und die Belegung (game/keyboard.ts) - hier, was sie im Spiel tut. */
 const keyboard = new Keyboard({
   isMenuOpen: () => menu.isOpen(),
@@ -637,6 +657,10 @@ const keyboard = new Keyboard({
   build: (type) => {
     if (type === 'farm') ui.openFarms();
     else ui.setPlacing(placement.placingType === type ? null : type);
+  },
+  openCheat: () => {
+    cheatInput.hidden = false;
+    cheatInput.focus();
   },
 });
 

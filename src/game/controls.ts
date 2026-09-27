@@ -73,6 +73,14 @@ export const CONTROLS: readonly Control[] = [
   // F3 und F10 wie in AoE2 - sie behandelt keyboard.ts vorab, weil sie auch im Menü gelten.
   { label: ['F3'], what: 'Pause', short: 'Pause' },
   { label: ['F10'], what: 'Menü', short: 'Menü' },
+  // Enter wie in AoE2: Cheat eingeben. preventDefault, sonst löst Enter auch einen fokussierten Knopf aus.
+  {
+    label: ['Enter'], what: 'Cheat eingeben', short: 'Cheat',
+    keys: ['enter'], run: (c, e) => {
+      e.preventDefault();
+      c.openCheat();
+    },
+  },
   { label: ['M'], what: 'Ton an/aus', short: 'Ton', keys: ['m'], run: (c) => c.toggleSound() },
   // I: Tastenhilfe (Info), P: Entwickler-Infos (Programmierer).
   { label: ['I'], what: 'Tastenhilfe ein/aus', short: 'Tastenhilfe', keys: ['i'], run: (c) => c.toggleHelp() },

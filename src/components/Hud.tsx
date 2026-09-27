@@ -211,6 +211,8 @@ function Hud() {
 
       <div id="select-box" hidden />
       <div id="hint" />
+      {/* Cheat-Eingabe: Enter öffnet sie, Enter führt aus, Esc schließt (main.ts). */}
+      <input id="cheat" type="text" hidden autocomplete="off" spellcheck={false} placeholder="Cheat" />
       {/* Befehlsleiste wie in AoE2: Steintafel mit Baumenü oder Befehlen, Pergament mit der Auswahl. */}
       <div id="command-bar">
         <div class="cmd-stone">

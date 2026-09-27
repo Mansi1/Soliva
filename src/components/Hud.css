@@ -199,6 +199,24 @@
 #hint.show {
   opacity: 1;
 }
+#cheat {
+  position: absolute;
+  bottom: 214px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(20, 16, 10, 0.85);
+  border: 1px solid rgba(255, 220, 150, 0.5);
+  font: inherit;
+  font-size: 13px;
+  color: #fff3d6;
+  outline: none;
+}
+#cheat[hidden] {
+  display: none;
+}
 /* Auswahlrechteck beim Ziehen */
 #select-box {
   position: absolute;
