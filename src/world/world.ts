@@ -28,7 +28,7 @@ export { Villager };
 
 /**
  * Eine Schrittfolge (links + rechts) in Tiles. Sie wächst mit der Figur, sonst
- * rutschen die Füße - aber nicht unter 0.3 Tiles: so kleine Figuren laufen
+ * rutschen die Füße - aber nicht unter 0.6 Tiles: so kleine Figuren laufen
  * sonst so schnell, dass die Beine nur noch flimmern.
  */
 export const STRIDE_LENGTH = Math.max(VILLAGER.size * 1.1, 0.6);

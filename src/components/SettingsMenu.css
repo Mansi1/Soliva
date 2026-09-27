@@ -120,6 +120,8 @@
 /* Regler rechtsbündig vor ihrer Zahl, alle gleich breit. */
 #menu input[type='range'] {
   width: 170px;
+  /* Schmaler, wenn daneben ein Wort statt einer Zahl steht. */
+  min-width: 0;
   margin-left: auto;
   accent-color: #d9a441;
 }
@@ -129,7 +131,10 @@
   accent-color: #d9a441;
 }
 #menu output {
-  width: 48px;
+  /* Breiter nur für Wörter wie "Extrem schnell" beim Spieltempo. */
+  min-width: 48px;
+  white-space: nowrap;
+  flex-shrink: 0;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -144,7 +149,7 @@
   border-radius: 0;
   margin-left: -2px;
   font-size: 13px;
-  /* Auch wenn die Bildlaufleiste Platz nimmt: "Sehr schnell" in einer Zeile. */
+  /* Auch wenn die Bildlaufleiste Platz nimmt: jede Wahl in einer Zeile. */
   white-space: nowrap;
 }
 #menu .menu-choice button:first-child {

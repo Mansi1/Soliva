@@ -73,7 +73,7 @@ async function runScene(scene) {
   await started();
   await page.evaluate(async ({ seed }) => {
     localStorage.clear();
-    localStorage.setItem('pgm.settings', JSON.stringify({ idleFps: false, facing: '', tilt: 30, paused: false }));
+    localStorage.setItem('pgm.settings', JSON.stringify({ speed: 1, idleFps: false, facing: '', tilt: 30, paused: false }));
     localStorage.setItem('pgm.seed', seed);
     if (seed === 'Demo') localStorage.setItem('pgm.world.Demo', JSON.stringify(await (await fetch('/savegame/demo.json')).json()));
     sessionStorage.setItem('pgm.start', 'continue');
