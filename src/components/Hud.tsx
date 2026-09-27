@@ -82,7 +82,7 @@ function SoundButton() {
   );
 }
 
-/** Gelände flach an/aus (Leertaste) - der Pfeil zeigt, wohin ein Klick das Gelände bringt (Klasse on, main.ts). */
+/** Gelände flach an/aus (Leertaste) - nur der Pfeil zeigt, wohin ein Klick das Gelände bringt (Klasse on, main.ts). */
 function FlatButton() {
   return (
     <button id="flat" type="button" title="Gelände flach (Leertaste)" aria-pressed="false">
