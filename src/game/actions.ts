@@ -112,18 +112,22 @@ export class PlayerActions {
     this.ui.refreshSelection();
   }
 
-  /** Aufziehen eines Rechtecks: alle Dorfbewohner darin - ohne Werkstatt-Arbeiter, sie gehorchen nicht. */
+  /**
+   * Aufziehen eines Rechtecks: alle Dorfbewohner darin - ohne Werkstatt-Arbeiter,
+   * sie gehorchen nicht. Trifft es nur solche, werden eben sie gewählt.
+   */
   boxSelect(x0: number, y0: number, x1: number, y1: number, add: boolean) {
     const [left, right] = x0 < x1 ? [x0, x1] : [x1, x0];
     const [top, bottom] = y0 < y1 ? [y0, y1] : [y1, y0];
     if (!add) this.selection.villagers.clear();
     this.selection.clearBuildings();
     this.selection.clearSingle();
-    for (const v of this.world.villagers) {
-      if (workplace(v.task)) continue;
+    const hits = this.world.villagers.filter((v) => {
       const s = this.picker.villagerScreen(v);
-      if (s.x >= left && s.x <= right && s.y >= top && s.y <= bottom) this.selection.villagers.add(v.id);
-    }
+      return s.x >= left && s.x <= right && s.y >= top && s.y <= bottom;
+    });
+    const free = hits.filter((v) => !workplace(v.task));
+    for (const v of free.length > 0 ? free : hits) this.selection.villagers.add(v.id);
     this.ui.refreshSelection();
   }
 
