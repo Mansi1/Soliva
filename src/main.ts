@@ -614,7 +614,8 @@ function showZoom() {
 const CHEATS: Record<string, () => string | undefined> = {
   iamtheking: () => {
     for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.stock[kind] += 30000;
-    return '+30.000 Nahrung, Holz, Stein und Gold';
+    world.bonusHousing += 100;
+    return '+30.000 Nahrung, Holz, Stein und Gold, +100 Bevölkerung';
   },
   // Am Mauszeiger; wo keiner stehen kann (Wasser, Wald, Gebäude), passiert nichts.
   ineedhelp: () => {

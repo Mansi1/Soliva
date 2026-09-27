@@ -84,6 +84,8 @@ export class World {
   stock: Resources = initialResources();
   /** Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit. Nicht im Spielstand. */
   instantTraining = false;
+  /** Cheat "iam the king": so viel mehr Platz als die Häuser geben. Nicht im Spielstand. */
+  bonusHousing = 0;
   villagers: Villager[] = [];
   /** Wild - lebend und erlegt. */
   /** Das Wild: Tiere und wo schon welche entstanden sind (wildlife.ts). */
@@ -173,7 +175,7 @@ export class World {
 
   /** Lebende Dorfbewohner und Bevölkerungsgrenze aus Hauptgebäuden und Häusern. */
   population(): { used: number; cap: number; training: number } {
-    let cap = 0;
+    let cap = this.bonusHousing;
     let training = 0;
     for (const b of this.buildings.values()) {
       cap += b.definition.housing;
