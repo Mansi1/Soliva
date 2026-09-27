@@ -292,7 +292,8 @@ Hintergrund und Plan: `docs/OPTIMIZATION_PLAN.md`.
 ### Stolperfallen, in die schon ein Agent gelaufen ist
 
 - **Szenen per Playwright aufsetzen:** `entry.ts` lädt `main.ts` erst nach dem `load`-Ereignis nach.
-  - Einfacher für Test-Spielstände: `/game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>` startet direkt ohne Hauptmenü in dieser Welt, speichert unter ihrem Seed und lässt `pgm.seed` unberührt. `/game` allein nimmt einen Zufalls-Seed und schreibt ihn in die Adresse.
+  - Einfacher für Test-Spielstände: `/game/<seed>/<stand>?lat=<y>&lng=<x>&zoom=<1-5>` startet direkt ohne Hauptmenü. Mit `<stand>` beginnt die Welt jedes Mal mit `public/savegame/<seed klein>/<stand>.json`, `pgm.seed` bleibt unberührt. `/game` allein nimmt einen Zufalls-Seed.
+  - Test-Spielstände immer in der Welt `Testseed`, benannt nach dem Todo: `public/savegame/testseed/<todo>.json`, von Hand geschrieben wie `kuh-erlegt.json`. Freie Wiese dort: um x 12, y -40.
   - Wer Welt und Start-Vermerk setzt (`pgm.seed`, `sessionStorage` `pgm.start`), muss vorher warten, bis `window.getRenderStats` existiert. Sonst verbraucht die laufende Seite den Vermerk, und gemessen wird das Hauptmenü, mit plausibel aussehenden Zahlen.
   - Danach prüfen, dass `#start` verborgen ist, und in den Stats nachsehen, ob `tileSize` zur Szene passt.
 - **Stillstand ist keine Langsamkeit:** Steht die Kamera eine Sekunde, zeichnet das Spiel absichtlich nur 30 fps (`idleFps`). Das erkennt man in den Stats an `idle` nahe 1. Zum Messen `idleFps: false` setzen, der Bench tut das schon.
