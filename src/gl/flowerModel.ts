@@ -2,7 +2,7 @@
 // Die Blumenarten. Das Modell steht in src/models/flowers/flower.glb: ein
 // weicher Schatten und drei Blätter am Boden, ein Stiel mit einem Kelch und
 // darauf die Blüte als Karte (BlossomCard) mit der Textur der Art
-// (flowerTexture). So hat die Blüte alle Einzelheiten bei nur zwei
+// (Streifen aus flower-index.json, siehe flowerStrip). So hat die Blüte alle Einzelheiten bei nur zwei
 // Dreiecken. Weit draußen malt das Gelände die Blumen (flower() in
 // terrainShader.ts).
 //
@@ -18,13 +18,13 @@ export const BASE_FLOWER_PHOTO_URL = new URL('../models/flowers/photos/', import
 export type FlowerType = 'daisy' | 'buttercup' | 'poppy' | 'cornflower' | 'clover';
 
 /**
- * Blüte der Art von oben als Textur-URL (gemalt von tools/models/create-flower-blossoms.ts).
- * In dieser Form mit `${type}` im Pfad erkennt Vite die Bilder und bündelt sie -
+ * URL eines Blüten-Streifens aus flower-index.json (gemalt von tools/models/create-flower-blossoms.ts).
+ * In dieser Form mit `${file}` im Pfad erkennt Vite die Bilder und bündelt sie -
  * eine URL aus BASE_FLOWER_TEXTURE_URL zur Laufzeit fände der Build nicht.
  */
-export const flowerTexture = (type: FlowerType) => new URL(`../models/flowers/textures/${type}.webp`, import.meta.url).href;
+export const flowerStrip = (file: string) => new URL(`../models/flowers/textures/${file}`, import.meta.url).href;
 
-/** Foto der Art fürs Auswahl-Panel (aus Wikipedia, tools/models/download-flower-photos.ts) - dieselbe Form wie flowerTexture. */
+/** Foto der Art fürs Auswahl-Panel (aus Wikipedia, tools/models/download-flower-photos.ts) - dieselbe Form wie flowerStrip. */
 export const flowerPhoto = (type: FlowerType) => new URL(`../models/flowers/photos/${type}.webp`, import.meta.url).href;
 
 export interface FlowerKind {

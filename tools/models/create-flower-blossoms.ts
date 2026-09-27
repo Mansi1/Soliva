@@ -1,5 +1,10 @@
-// Blüten der Blumen von oben als Textur: src/models/flowers/textures/<type>.webp,
-// 512 x 512 (IMAGE_SIZE in entityRenderer.ts), Hintergrund durchsichtig.
+/// <reference path="../../src/models.d.ts" />
+// Blüten der Blumen von oben als Texturen in src/models/flowers/textures/:
+// je Zoomstufe mit Blumen-Modellen ein Streifen aller Arten nebeneinander in
+// der Auflösung, die die Stufe braucht (flower-zoom<n>.webp), dazu der große
+// für die Nahansicht der Galerie (flower-large.webp, 512 px je Art).
+// flower-index.json sagt, welche Art an welcher Stelle steht und bis zu wie
+// vielen Geräte-Pixeln je Tile ein Streifen reicht - danach wählt das Spiel.
 // Blütenblätter mit Fugen, Klee als Tupfen, gewölbte Mitte - ohne Drehung und
 // ohne Licht: blossomCard() in src/gl/entityRenderer.ts legt die Textur auf die
 // Blütenkarte, dreht sie je Blume und gibt Licht und Glanzpunkt zur Sonne dazu.
@@ -17,6 +22,10 @@ import type { FlowerType } from '../../src/gl/flowerModel.ts';
 import  {BASE_FLOWER_TEXTURE_URL} from '../../src/gl/flowerModel.ts';
 import { Color, type RGB } from '../../src/functions/Color.ts';
 import { fileURLToPath } from 'node:url';
+import { ZOOM_LEVELS } from '../../src/game/Camera.ts';
+import { FLOWER_OBJECT_PIXELS } from '../../src/gl/terrainRenderer.ts';
+import { FLOWER_SIZE } from '../../src/world/flowers.ts';
+import flowerModel from '../../src/models/flowers/flower.glb?model';
 
 const SIZE = 512;
 /** WebP-Qualität wie bei den Blumenfotos: ein Drittel der PNG-Größe, im Mittel unter einer Farbstufe Abweichung. */
@@ -104,28 +113,116 @@ const paintFlower = (flower: FlowerRenderProps, size: number, blossom: Blossom):
   return image;
 };
 
-/** Läuft im Browser: RGBA-Pixel (Base64) als WebP-Daten-URL. */
-const toWebp = ([pixels, size, quality]: [string, number, number]): string => {
+/** Verkleinert um einen ganzzahligen Faktor, je Block das Mittel - richtig, weil die Farben vormultipliziert sind. */
+const downscale = (rgba: Uint8ClampedArray, size: number, target: number): Uint8ClampedArray => {
+  const factor = size / target;
+  if (!Number.isInteger(factor)) throw new Error(`${size} cannot be scaled down evenly to ${target}`);
+  // In Gleitkomma summieren - ein Uint8ClampedArray rundete nach jeder Addition.
+  const sum = new Float32Array(target * target * 4);
+  for (let row = 0; row < size; row++) for (let col = 0; col < size; col++) {
+    const from = (row * size + col) * 4;
+    const to = (Math.floor(row / factor) * target + Math.floor(col / factor)) * 4;
+    for (let channel = 0; channel < 4; channel++) sum[to + channel] += rgba[from + channel];
+  }
+  return Uint8ClampedArray.from(sum, (v) => v / (factor * factor));
+};
+
+/** Läuft im Browser: RGBA-Pixel (Base64) als WebP-Daten-URL; Qualität 1 schreibt Chrome verlustfrei. */
+const toWebp = ([pixels, width, height, quality]: [string, number, number, number]): string => {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
+  canvas.width = width;
+  canvas.height = height;
   const data = Uint8ClampedArray.from(atob(pixels), (c) => c.charCodeAt(0));
-  canvas.getContext('2d')!.putImageData(new ImageData(data, size, size), 0, 0);
+  canvas.getContext('2d')!.putImageData(new ImageData(data, width, height), 0, 0);
   return canvas.toDataURL('image/webp', quality);
 };
 
+/**
+ * Wie breit die Blüte im Spiel höchstens ist, in Geräte-Pixeln, je Zoomstufe
+ * und Pixel-Verhältnis - daran bemisst sich, wie groß die Textur sein muss.
+ * null: Die Blumen malt dort das Gelände (unter FLOWER_OBJECT_PIXELS je Tile).
+ */
+/** Breite der größten Blüte in Tiles. */
+const largestBlossomTiles = () => {
+  // Blütenkarte als Anteil der Modellbreite - loadModel(..., 'width') bezieht
+  // die Instanzgröße auf die Breite aller Teile (Schatten, Blätter, Blüte).
+  let part = '', x0 = Infinity, x1 = -Infinity, bx0 = Infinity, bx1 = -Infinity;
+  for (const line of flowerModel.obj.split('\n')) {
+    if (line.startsWith('o ')) part = line.slice(2);
+    if (!line.startsWith('v ')) continue;
+    const x = Number(line.split(' ')[1]);
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+    if (part === 'Blossom') { bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); }
+  }
+  // Größte Blume: FLOWER_SIZE mal 1,25 (plant() in src/world/flowers.ts streut 0,8 bis 1,25).
+  return FLOWER_SIZE * 1.25 * (bx1 - bx0) / (x1 - x0);
+};
+
+const blossomScreenSizes = (pixelRatios = [1, 2, 3]) => {
+  const blossomTiles = largestBlossomTiles();
+  return ZOOM_LEVELS.map((tileSize, i) => ({
+    zoom: i + 1,
+    tileSize,
+    pixels: pixelRatios.map((ratio) => tileSize * ratio < FLOWER_OBJECT_PIXELS ? null : Math.ceil(blossomTiles * tileSize * ratio)),
+  }));
+};
+
 const createFlowerBlossoms = async () => {
+  console.log('Largest blossom in game, in device pixels (pixel ratio 1 / 2 / 3, - = painted by the terrain):');
+  const sizes = blossomScreenSizes();
+  for (const { zoom, tileSize, pixels } of sizes) {
+    console.log(`  Zoom ${zoom} (${tileSize} px/Tile): ${pixels.map((p) => p ?? '-').join(' / ')}`);
+  }
+  // Nötige Auflösung je Zoomstufe: die nächste Zweierpotenz über der größten
+  // Blüte der Stufe - so hat jedes Pixel auf dem Schirm mindestens ein Texel,
+  // und die Mipmaps gehen glatt auf. Stufen, auf denen das Gelände malt, fehlen.
+  const zooms = sizes.flatMap(({ zoom, pixels }) => {
+    const largest = Math.max(...pixels.map((p) => p ?? 0));
+    return largest > 0 ? [{ zoom, largest, size: 2 ** Math.ceil(Math.log2(largest)) }] : [];
+  });
+  for (const { zoom, largest, size } of zooms) console.log(`Needed resolution zoom ${zoom}: ${size} x ${size} (largest blossom ${largest} px)`);
+
   mkdirSync(BASE_FLOWER_TEXTURE_URL, { recursive: true });
   const browser = await launch();
   const page = await browser.newPage();
-  for (const [type, flower] of Object.entries(FLOWERS)) {
-    console.log(`Start painting flower ${type}`)
-    const save_path = fileURLToPath(new URL(`${type}.webp`, BASE_FLOWER_TEXTURE_URL));
-    const pixels = Buffer.from(paintFlower(flower, SIZE, BLOSSOM).buffer).toString('base64');
-    const url = await page.evaluate(toWebp, [pixels, SIZE, QUALITY] as [string, number, number]);
-    if (!url.startsWith('data:image/webp')) throw new Error(`${type}: Chrome schreibt kein WebP`);
+  const save = async (name: string, rgba: Uint8ClampedArray, width: number, height: number, quality: number) => {
+    const save_path = fileURLToPath(new URL(`${name}.webp`, BASE_FLOWER_TEXTURE_URL));
+    const url = await page.evaluate(toWebp, [Buffer.from(rgba.buffer).toString('base64'), width, height, quality] as [string, number, number, number]);
+    if (!url.startsWith('data:image/webp')) throw new Error(`${name}: Chrome did not write WebP`);
     writeFileSync(save_path, Buffer.from(url.split(',')[1], 'base64'));
-    console.log(`Saved flower ${type} => ${relative(process.cwd(), save_path)}`);
+    console.log(`Saved flower ${name} => ${relative(process.cwd(), save_path)}`);
+  };
+  // Je Zoomstufe ein Streifen aller Arten nebeneinander, verlustfrei - bei so
+  // wenigen Pixeln fiele jeder Fehler auf -, dazu der große in SIZE, verlustbehaftet.
+  const types = Object.keys(FLOWERS) as FlowerType[];
+  const blossomTiles = largestBlossomTiles();
+  const strips = [
+    ...zooms.map(({ zoom, size }) => ({ name: `flower-zoom${zoom}`, zoom, size, quality: 1 })),
+    { name: 'flower-large', zoom: null, size: SIZE, quality: QUALITY },
+  ].map((strip) => ({ ...strip, rgba: new Uint8ClampedArray(types.length * strip.size * strip.size * 4) }));
+  const index = {} as Record<FlowerType, number>;
+  for (const [i, type] of types.entries()) {
+    console.log(`Start painting flower ${type}`)
+    const rgba = paintFlower(FLOWERS[type], SIZE, BLOSSOM);
+    for (const { size, rgba: strip } of strips) {
+      const tile = size === SIZE ? rgba : downscale(rgba, SIZE, size);
+      for (let row = 0; row < size; row++) {
+        strip.set(tile.subarray(row * size * 4, (row + 1) * size * 4), (row * types.length + i) * size * 4);
+      }
+    }
+    index[type] = i;
   }
+  for (const { name, size, rgba, quality } of strips) await save(name, rgba, types.length * size, size, quality);
+  const index_path = fileURLToPath(new URL('flower-index.json', BASE_FLOWER_TEXTURE_URL));
+  writeFileSync(index_path, JSON.stringify({
+    index,
+    // Größter Streifen zuletzt; maxPixelsPerTile null = reicht für jede Größe.
+    strips: strips.map(({ name, zoom, size }, i) => ({
+      file: `${name}.webp`, zoom, size,
+      maxPixelsPerTile: i === strips.length - 1 ? null : Math.floor(size / blossomTiles),
+    })),
+  }, null, 2) + '\n');
+  console.log(`Saved flower index => ${relative(process.cwd(), index_path)}`);
   await browser.close();
   console.log('DONE!!!')
 }

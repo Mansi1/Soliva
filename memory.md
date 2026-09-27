@@ -25,7 +25,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 - 2026-09-27: `main.ts` räumt die Adresse beim Start auf (`history.replaceState`). Adress-Schalter nur über `startParams` lesen, das vorher gelesen wird. Prüfschalter: `?festesLicht` (Sonne wie früher, kein Wetter), `?regen` (Dauerregen), `?ohneEffekte` (keine Post-Effekte). Nur mit `?festesLicht&ohneEffekte` ist das Bild mit dem vor dem Lichtsystem vergleichbar.
 - 2026-09-27: Der Gelände-Cache (RGBA8) speichert die Farbe geteilt durch `CACHE_HEADROOM` (1,5), weil das Licht jetzt erst im Bild dazukommt. Ohne das werden helle Felsfarben auf der Schattenseite zu dunkel. Wer Farben im Cache ausliest, muss mit `uCacheGain` multiplizieren. Der Alpha-Kanal ist belegt: Tiefe im Flachwasser 0..1 für die Brandung, 1 = Land oder tiefes Wasser.
-- 2026-09-27, `feat/flower-type`: `loadModelImages` (entityRenderer.ts) lädt Bilder über einen 2D-Canvas - durchsichtige Pixel werden dabei schwarz, beim Filtern entsteht ein grauer Saum. Die Blüten-Texturen sind darum vormultipliziert, `blossomCard` teilt durch Alpha.
+- 2026-09-27, `feat/flower-type`: Texturen mit Alpha filtern ohne grauen Saum nur vormultipliziert - durchsichtige Pixel sind schwarz (Canvas und WebP verlieren ihre Farbe). Die Blüten-Streifen sind darum vormultipliziert und werden direkt (nicht über `loadModelImages`s Canvas) hochgeladen, `blossomCard` teilt durch Alpha.
 - 2026-09-27: Vite bündelt ein Bild nur, wenn der Pfad im Quelltext steht (Import oder `new URL(\`…/${name}.png\`, import.meta.url)`). Eine Ordner-URL plus Name zur Laufzeit fehlt im Build.
 
 ## Messen

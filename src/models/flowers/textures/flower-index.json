@@ -1,0 +1,35 @@
+{
+  "index": {
+    "daisy": 0,
+    "buttercup": 1,
+    "poppy": 2,
+    "cornflower": 3,
+    "clover": 4
+  },
+  "strips": [
+    {
+      "file": "flower-zoom3.webp",
+      "zoom": 3,
+      "size": 8,
+      "maxPixelsPerTile": 159
+    },
+    {
+      "file": "flower-zoom4.webp",
+      "zoom": 4,
+      "size": 16,
+      "maxPixelsPerTile": 318
+    },
+    {
+      "file": "flower-zoom5.webp",
+      "zoom": 5,
+      "size": 32,
+      "maxPixelsPerTile": 637
+    },
+    {
+      "file": "flower-large.webp",
+      "zoom": null,
+      "size": 512,
+      "maxPixelsPerTile": null
+    }
+  ]
+}
