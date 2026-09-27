@@ -456,7 +456,7 @@ export class VillagerWork {
     if (!this.walk(v, spot.x, spot.y, 0.05, dt)) return;
     v.heading = Math.atan2(spot.aimY - v.y, spot.aimX - v.x);
     this.world.markDirty();
-    if (working && this.world.speedy) {
+    if (working && this.world.speedy && phase !== 'harvest') {
       this.finishField(building, phase);
       return;
     }
@@ -484,13 +484,14 @@ export class VillagerWork {
       v.carrying = 0;
       v.carryType = 'food';
     }
-    const take = Math.min(FARM_RATE * crop.rate * dt, f.food, VILLAGER.capacity - v.carrying);
+    // Cheat "speedy gonzales": der Korb sofort voll.
+    const take = Math.min(this.world.speedy ? Infinity : FARM_RATE * crop.rate * dt, f.food, VILLAGER.capacity - v.carrying);
     f.food -= take;
     v.carrying += take;
     if (v.carrying >= VILLAGER.capacity - 1e-6) task.delivering = true;
   }
 
-  /** Cheat "speedy gonzales": die Phase auf dem ganzen Feld auf einmal - die Ernte gleich in den Vorrat. */
+  /** Cheat "speedy gonzales": Pflügen oder Säen auf dem ganzen Feld auf einmal. */
   private finishField(building: Farm, phase: FarmPhase) {
     for (const { f } of this.world.farming.furrows(this.world.farmGroup(building))) {
       if (phase === 'plough') f.plough = 1;
@@ -499,10 +500,6 @@ export class VillagerWork {
         if (!f.paid) this.world.pay(RESEED_COST);
         f.paid = true;
         f.sown = 1;
-      }
-      if (phase === 'harvest') {
-        this.world.stock.food += f.food;
-        f.food = 0;
       }
     }
   }
@@ -800,15 +797,10 @@ export class VillagerWork {
       v.carrying = 0;
       v.carryType = 'food';
     }
-    if (this.world.speedy) {
-      // Cheat "speedy gonzales": das ganze Tier auf einmal, gleich in den Vorrat.
-      this.world.stock.food += a.food;
-      a.food = 0;
-    } else {
-      const take = Math.min(HUNT.butcherRate * dt, a.food, VILLAGER.capacity - v.carrying);
-      a.food -= take;
-      v.carrying += take;
-    }
+    // Cheat "speedy gonzales": sofort voll beladen.
+    const take = Math.min(this.world.speedy ? Infinity : HUNT.butcherRate * dt, a.food, VILLAGER.capacity - v.carrying);
+    a.food -= take;
+    v.carrying += take;
     this.world.markDirty();
     if (v.carrying >= VILLAGER.capacity - 1e-6 || a.food <= 1e-6) task.delivering = true;
   }
@@ -934,13 +926,9 @@ export class VillagerWork {
             this.world.onEvent?.({ kind: 'treeFall', x: task.x + 0.5, y: task.y + 0.5 });
           }
         }
-        // Cheat "speedy gonzales": der ganze Baum oder Strauch auf einmal, gleich in den Vorrat.
-        if (this.world.speedy && (task.type === 'wood' || task.type === 'berries')) {
-          this.world.stock[YIELD[task.type]] += this.world.deposits.take(task.x, task.y, Infinity, this.world.now);
-          this.world.markDirty();
-          return;
-        }
-        const wanted = Math.min(VILLAGER.gatherRate[task.type] * dt, VILLAGER.capacity - v.carrying);
+        // Cheat "speedy gonzales": Holz und Beeren sofort voll beladen.
+        const fast = this.world.speedy && (task.type === 'wood' || task.type === 'berries');
+        const wanted = Math.min(fast ? Infinity : VILLAGER.gatherRate[task.type] * dt, VILLAGER.capacity - v.carrying);
         v.carrying += this.world.deposits.take(task.x, task.y, wanted, this.world.now);
         this.world.markDirty();
 

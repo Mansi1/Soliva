@@ -84,8 +84,8 @@ export class World {
   stock: Resources = initialResources();
   /**
    * Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit, ein ganzes Feld
-   * auf einmal gepflügt, gesät oder geerntet und gleich reif, ein Baum, Strauch oder Tier auf
-   * einmal - Nahrung und Holz gleich in den Vorrat (villagers.ts). Nicht im Spielstand.
+   * auf einmal gepflügt oder gesät und gleich reif; beim Ernten, Holzfällen,
+   * Pflücken und Zerlegen ist die Ladung sofort voll (villagers.ts). Nicht im Spielstand.
    */
   speedy = false;
   /** Cheat "iam the king": so viel mehr Platz als die Häuser geben. Nicht im Spielstand. */
