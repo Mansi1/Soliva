@@ -9,6 +9,7 @@
       "duration": 4.0,
       "props": [],
       "kneel": false,
+      "sit": true,
       "pose": 6,
       "phase_period": 4.0,
       "phase_shift": 0.0

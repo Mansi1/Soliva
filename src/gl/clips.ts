@@ -58,6 +58,8 @@ export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4 }
  * (Knochen allein können das nicht).
  */
 export const KNEEL_BIT = 8;
+/** Bit in uClipProps: der Clip sitzt - der Rock liegt auf den Oberschenkeln und fällt ab dem Knie. */
+export const SIT_BIT = 16;
 
 type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];
@@ -86,6 +88,8 @@ export interface Clip {
   strike: number[];
   /** Kniend: der Rock wird gestaucht (KNEEL_BIT). */
   kneel: boolean;
+  /** Sitzend: der Rock liegt auf den Oberschenkeln (SIT_BIT). */
+  sit: boolean;
   /** Tiere: nur für diese Arten (ANIMALS-Schlüssel wie 'hare') - leer: für alle. */
   species: string[];
   /** Tiere: liegt auf der Seite (erlegt) - so hoch, wie der Körper des Tiers breit ist. */
@@ -113,7 +117,7 @@ interface Manifest {
   clips: {
     name: string; frames: number; duration: number; props?: string[];
     /** Angaben je Clip (von Hand in der .json gepflegt) - können fehlen. */
-    pose?: number; phase_period?: number; phase_shift?: number; kneel?: boolean; strike?: number[];
+    pose?: number; phase_period?: number; phase_shift?: number; kneel?: boolean; sit?: boolean; strike?: number[];
     /** Tiere: nur für diese Arten (leer: alle) und ob es auf der Seite liegt. */
     species?: string[]; lying?: boolean;
   }[];
@@ -305,6 +309,7 @@ export function loadClips(glbDataUrl: string, manifest: Manifest, rig: Rig<any> 
       phaseRate: period ? meta.duration / period : 1,
       phaseShift: meta.phase_shift ?? 0,
       kneel: meta.kneel === true,
+      sit: meta.sit === true,
       strike: meta.strike ?? [],
       species: meta.species ?? [],
       lying: meta.lying === true,

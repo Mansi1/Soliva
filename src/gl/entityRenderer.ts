@@ -24,7 +24,7 @@ import millClipsManifest from '../models/clips/mill.json';
 import flagClipsGlb from '../models/clips/flag.glb?inline';
 import flagClipsManifest from '../models/clips/flag.json';
 import {
-  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
+  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, KNEEL_BIT, MAX_BONES, SIT_BIT, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
   type Clip, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
@@ -718,7 +718,7 @@ uniform float uTime;
 // (Zeilen einer 3x4-Matrix). uClipRow: erste Zeile des Clips für diese Figur,
 // -1 = nicht gebacken. uPoseClip: welcher Clip eine Pose spielt (-1: keiner,
 // die Figur steht still), Clip-Zeit = (Phase - uPoseShift) * uPoseRate. uClipProps: Bits
-// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS), kniend ${KNEEL_BIT} (KNEEL_BIT).
+// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS), kniend ${KNEEL_BIT} (KNEEL_BIT), sitzend ${SIT_BIT} (SIT_BIT).
 uniform highp sampler2D uClipTex;
 uniform int   uClipRow[${MAX_CLIPS}];
 uniform int   uClipFrames[${MAX_CLIPS}];
@@ -1008,6 +1008,14 @@ void main() {
             float below = (uHip - p.z) / uHip;
             p.z = uHip - (uHip - p.z) * (uHip + kneelBob) / (uHip - 0.02);
             p.x += below * 0.14;
+          }
+          if ((props & ${SIT_BIT}) != 0 && part == P_TORSO && p.z <= uHip && aBones.x < 0.5) {
+            // Sitzend: der Rock klappt um die Hüfte nach vorn auf die
+            // Oberschenkel - vorn liegt er oben, hinten darunter, sie sitzt
+            // darauf - und fällt ab dem Knie senkrecht.
+            float below = uHip - p.z;
+            float thigh = uHip - uKnee;
+            p = below < thigh ? vec3(below, p.y, uHip + p.x) : vec3(thigh + p.x, p.y, uHip - (below - thigh));
           }
           if (part == P_KNIFE) {
             // Zweihändig: nach der Lage zwischen den Händen auf beide Unterarme verteilt.
@@ -3206,7 +3214,7 @@ export class EntityRenderer {
           u.rows[i] = rows;
           u.frames[i] = clip.frames;
           u.fps[i] = clip.fps;
-          u.props[i] = clip.props | (clip.kneel ? KNEEL_BIT : 0);
+          u.props[i] = clip.props | (clip.kneel ? KNEEL_BIT : 0) | (clip.sit ? SIT_BIT : 0);
           u.rate[i] = clip.phaseRate;
           u.shift[i] = clip.phaseShift;
           // Welche Pose ein Clip ersetzt, steht im Clip selbst (Custom Property
