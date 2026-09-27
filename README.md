@@ -94,7 +94,7 @@ nichts.
 |---|---|
 | `iam the king` | je +30.000 Nahrung, Holz, Stein und Gold, Bevölkerungsgrenze +100 |
 | `i need help` | 20 Dorfbewohner rund um den Mauszeiger – nur auf begehbarem Boden; über Wasser, Wald oder Gebäuden nichts |
-| `muh` / `muh muh` | eine Kuh am Mauszeiger – nicht auf Wasser, Gebirge, Schnee oder in Gebäuden |
+| `muh`, `muh muh`, `muh muh muh`, … | je „muh“ eine Kuh am Mauszeiger, weitere rundherum – nicht auf Wasser, Gebirge, Schnee oder in Gebäuden |
 | `speedy gonzales` | an/aus, siehe unten |
 
 `speedy gonzales` schaltet ein; noch einmal eingegeben schaltet es wieder

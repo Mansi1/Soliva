@@ -666,18 +666,20 @@ export class World {
   }
 
   /**
-   * Cheat: `count` Dorfbewohner auf freien Tiles rund um (x, y), ohne Kosten und
-   * Bevölkerungsgrenze. Ist (x, y) selbst nicht begehbar, keiner. Gibt die Zahl zurück.
+   * Cheat: `count` Dorfbewohner (ohne Kosten und Bevölkerungsgrenze) oder Kühe
+   * auf freien Tiles rund um (x, y). Ist (x, y) selbst nicht frei, keiner. Gibt die Zahl zurück.
    */
-  spawnVillagers(x: number, y: number, count: number): number {
-    if (this.work.blockedAt(x, y)) return 0;
+  spawnAround(what: 'villager' | 'cow', x: number, y: number, count: number): number {
+    const blocked = (tx: number, ty: number) => (what === 'cow' ? this.animalBlocked(tx, ty) : this.work.blockedAt(tx, ty));
+    if (blocked(x, y)) return 0;
     let placed = 0;
     // Ring um Ring nach außen; ponytail: Luftlinie, nicht erreichbar geprüft - ein Tile hinter einem Fluss zählt mit.
     for (let r = 0; r <= 4 && placed < count; r++) {
       for (let dy = -r; dy <= r && placed < count; dy++) {
         for (let dx = -r; dx <= r && placed < count; dx++) {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || this.work.blockedAt(x + dx, y + dy)) continue;
-          this.addVillager(x + dx + 0.5, y + dy + 0.5);
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || blocked(x + dx, y + dy)) continue;
+          if (what === 'cow') this.wildlife.add('cow', x + dx + 0.5, y + dy + 0.5);
+          else this.addVillager(x + dx + 0.5, y + dy + 0.5);
           placed++;
         }
       }

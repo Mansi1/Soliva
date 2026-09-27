@@ -619,16 +619,8 @@ const CHEATS: Record<string, () => string | undefined> = {
   },
   // Am Mauszeiger; wo keiner stehen kann (Wasser, Wald, Gebäude), passiert nichts.
   ineedhelp: () => {
-    const count = pointer.tile ? world.spawnVillagers(pointer.tile.x, pointer.tile.y, 20) : 0;
+    const count = pointer.tile ? world.spawnAround('villager', pointer.tile.x, pointer.tile.y, 20) : 0;
     return count > 0 ? `${count} Dorfbewohner zur Hilfe` : undefined;
-  },
-  // Eine Kuh am Mauszeiger - nicht ins Wasser, nicht in ein Gebäude.
-  muh: () => {
-    const tile = pointer.tile;
-    if (!tile || world.animalBlocked(tile.x, tile.y)) return undefined;
-    world.wildlife.add('cow', tile.x + 0.5, tile.y + 0.5);
-    world.markDirty();
-    return 'Muh!';
   },
   // Noch einmal eingegeben schaltet es wieder ab.
   speedygonzales: () => {
@@ -636,15 +628,22 @@ const CHEATS: Record<string, () => string | undefined> = {
     return `Ausbildung, Felder, Wachsen, Jagd, Holz und Nahrung sofort ${world.speedy ? 'an' : 'aus'}`;
   },
 };
-// "muh muh" geht auch.
-CHEATS.muhmuh = CHEATS.muh;
+
+/** Der Cheat zur Eingabe (klein, ohne Leerzeichen). "muh", "muh muh", ...: so viele Kühe am Mauszeiger. */
+function findCheat(code: string): (() => string | undefined) | undefined {
+  if (!/^(muh)+$/.test(code)) return CHEATS[code];
+  return () => {
+    const count = pointer.tile ? world.spawnAround('cow', pointer.tile.x, pointer.tile.y, code.length / 3) : 0;
+    return count > 1 ? `${count} Kühe - Muh!` : count === 1 ? 'Muh!' : undefined;
+  };
+}
 
 const cheatInput = document.getElementById('cheat') as HTMLInputElement;
 cheatInput.addEventListener('keydown', (e) => {
   // Getippt wird hier, nicht im Spiel: die Spieltasten (keyboard.ts) bekommen nichts ab.
   e.stopPropagation();
   if (e.key !== 'Enter' && e.key !== 'Escape') return;
-  const message = e.key === 'Enter' ? CHEATS[cheatInput.value.toLowerCase().replace(/\s+/g, '')]?.() : undefined;
+  const message = e.key === 'Enter' ? findCheat(cheatInput.value.toLowerCase().replace(/\s+/g, ''))?.() : undefined;
   if (message) ui.hint(`Cheat: ${message}`, true);
   ui.refreshResources();
   cheatInput.value = '';
