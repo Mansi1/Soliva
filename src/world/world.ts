@@ -84,7 +84,7 @@ export class World {
   stock: Resources = initialResources();
   /**
    * Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit, ein ganzes Feld
-   * auf einmal gepflügt oder gesät und gleich reif; beim Ernten, Holzfällen,
+   * auf einmal gepflügt oder gesät und gleich reif, Tiere mit einem Treffer erlegt; beim Ernten, Holzfällen,
    * Pflücken und Zerlegen ist die Ladung sofort voll (villagers.ts). Nicht im Spielstand.
    */
   speedy = false;

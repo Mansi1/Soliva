@@ -779,7 +779,8 @@ export class VillagerWork {
       v.workTime += dt;
       if (task.cooldown > 0) return;
       task.cooldown = HUNT.reload;
-      a.hp -= 1;
+      // Cheat "speedy gonzales": ein Treffer erlegt es.
+      a.hp -= this.world.speedy ? a.hp : 1;
       this.world.onEvent?.({ kind: 'strike', resource: 'wood', x: v.x, y: v.y });
       if (a.hp <= 0) {
         a.state = 'dead';
