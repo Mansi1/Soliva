@@ -11,7 +11,7 @@
 import { FLOWERS, type EntityInstance } from '../gl/entityRenderer';
 import { FLOWER_KINDS } from '../gl/flowerModel';
 import type { Terrain } from '../map';
-import { reliefZ, type MapGenerator } from '../noise';
+import type { MapGenerator } from '../noise';
 import { CHUNK, fillChunks, hash } from './resources';
 import type { ViewRect, World } from './world';
 
@@ -115,7 +115,14 @@ export class FlowerField {
     return out;
   }
 
-  /** Die Blume der Zelle (gx, gy) - der Schatten gehört zum Modell. */
+  /**
+   * Die Blume der Zelle (gx, gy) - der Schatten gehört zum Modell. Ohne
+   * `ground`: der Shader stellt sie auf das Gelände, wie es gerade gezeichnet
+   * ist (Feindetail der Zoomstufe, eingeebnete Flächen). Vorab mit
+   * heightAt(x, y) gemessen fehlt das Feindetail - am Hang schwebte die Blume
+   * bis zu einer Viertel-Tile über dem Boden oder steckte darin, und der Klick
+   * (Picker.flower) ging daneben.
+   */
   private plant(out: EntityInstance[], gx: number, gy: number, groupKind: number) {
     const x = (gx + 0.35 + 0.3 * hash(gx, gy, 21)) / CELLS;
     const y = (gy + 0.35 + 0.3 * hash(gx, gy, 22)) / CELLS;
@@ -123,7 +130,6 @@ export class FlowerField {
     const kindRnd = hash(gx, gy, 23) < 0.2 ? hash(gx, gy, 24) : groupKind;
     const kind = Math.min(FLOWER_KINDS.length - 1, Math.floor(kindRnd * FLOWER_KINDS.length));
     const size = FLOWER_SIZE * (0.8 + 0.45 * hash(gx, gy, 26));
-    const ground = reliefZ(this.mapGen.heightAt(x, y));
     out.push({
       x: x - 0.5,
       y: y - 0.5,
@@ -132,7 +138,6 @@ export class FlowerField {
       shape: FLOWERS[kind],
       alpha: 1,
       motion: [hash(gx, gy, 27) * Math.PI * 2, 0, 0, 1],
-      ground,
     });
   }
 }

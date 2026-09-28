@@ -37,10 +37,10 @@ export class Ground {
 
   /**
    * Geländehöhe (Tiles) ohne Reliefstärke - mit derselben Feinheit wie das
-   * Geländegitter der jetzigen Zoomstufe und mit den eingeebneten Flächen.
+   * Geländegitter der jetzigen Zoomstufe (oder mit `step`) und mit den
+   * eingeebneten Flächen.
    */
-  groundAt(x: number, y: number): number {
-    const step = 4 / (this.camera.tileSize * this.camera.pixelRatio);
+  groundAt(x: number, y: number, step = 4 / (this.camera.tileSize * this.camera.pixelRatio)): number {
     return flatten(x, y, reliefZ(this.mapGen.heightAt(x, y, step)), this.flatZones);
   }
 
@@ -58,6 +58,11 @@ export class Ground {
    */
   heightAt(x: number, y: number): number {
     return this.groundAt(x, y) * this.renderer.relief;
+  }
+
+  /** Eine vorab gemessene Höhe (Tiles) am Rand der eingeebneten Flächen - wie flattenZ im Shader. */
+  flat(x: number, y: number, z: number): number {
+    return flatten(x, y, z, this.flatZones);
   }
 
   /** Reliefstärke des Renderers - für Höhen ohne sie (EntityInstance.ground). */

@@ -145,8 +145,8 @@ export class Picker {
       if (Math.abs(px - foot.x) > Math.max(6, reach)) return undefined;
       // Leer abgebaut und nicht mehr zu sehen (Bäume, Felsen) - nicht treffen.
       if (!this.world.resourceInfo(x, y)) return undefined;
-      // Wie im Shader: auf dem tiefsten Punkt seines Fußes, sonst auf dem Gelände.
-      const z = inst.ground !== undefined ? inst.ground * this.ground.relief : this.ground.heightAt(cx, cy);
+      // Wie im Shader: auf dem tiefsten Punkt seines Fußes (am Rand eingeebneter Flächen mit), sonst auf dem Gelände.
+      const z = inst.ground !== undefined ? this.ground.flat(cx, cy, inst.ground) * this.ground.relief : this.ground.heightAt(cx, cy);
       const base = worldToScreen(v, cx, cy, z);
       const fallen = inst.motion && inst.motion[1] > 0.5;
       if (!fallen) {

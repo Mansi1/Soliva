@@ -268,6 +268,14 @@ const MICRO_FREQUENCY = DETAIL_FREQUENCY * 16;
 const MICRO_STRENGTH = 0.009;
 /** Obergrenze für die Zahl der Feinoktaven - reicht bis zur 128px-Zoomstufe. */
 const MICRO_OCTAVES = 7;
+/**
+ * Abtastschritt (Tiles) des Geländegitters auf der nächsten Zoomstufe (128 px
+ * je Tile, 4 px je Zelle) - für Höhen, die einmal gemessen und gemerkt werden
+ * (Vorkommen, Felder): so stehen sie nah heran auf dem Boden, den man sieht.
+ * Weiter draußen fehlen dem Gelände die feinsten Oktaven, die Pixel sind dort
+ * aber kleiner.
+ */
+export const NEAR_STEP = 1 / 32;
 /** So viele Abtastzellen muss ein Merkmal breit sein, damit seine Oktave zählt. */
 const MICRO_MIN_SAMPLES = 3;
 /** Unter 0.5 gewichtet, damit die Schattierung bei vielen Oktaven nicht körnig wird. */
