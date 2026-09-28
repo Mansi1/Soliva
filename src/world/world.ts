@@ -20,7 +20,7 @@ import { Wildlife } from './wildlife';
 import { Deposits } from './deposits';
 import { VillagerWork } from './villagers';
 import { Farming, FIELD_INNER, METERS_PER_TILE, type FarmPhase } from './farming';
-import { RUIN_DURATION, type Ruin } from './ruin';
+import { DIG_DURATION, RUIN_DURATION, type Ruin } from './ruin';
 
 // Gebäude sind Klassen (building/) - hier weiter unter diesen Namen erreichbar.
 export type { Building, FarmPhase, Task };
@@ -75,6 +75,8 @@ export class World {
   private fieldLooks = new Map<string, { outline: { mask: number; others: number }; ground: Float32Array | null }>();
   /** Abgerissene Gebäude, die noch einstürzen (ruin.ts) - nur fürs Bild. */
   ruins: Ruin[] = [];
+  /** Eben gesetzte Gebäude (ohne Felder und Reusen) - dort spritzt noch Dreck (render.ts). Nur fürs Bild. */
+  digs: { x: number; y: number; size: number; at: number }[] = [];
   /** Weltzeit in Sekunden, läuft mit den Ticks. */
   private time = 0;
   private lastDt = 0;
@@ -498,6 +500,9 @@ export class World {
     const building = createBuilding(type, x, y, type === 'farm' ? { crop: this.nextFarmCrop, tiles: this.farmTiles(x, y) } : {});
     this.buildings.set(building.anchor, building);
     for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
+    if (type !== 'farm' && type !== 'fish_trap') {
+      this.digs.push({ x: x + 0.5, y: y + 0.5, size: Math.max(building.definition.footprint, building.definition.size), at: this.time });
+    }
     this.farming.invalidate();
     this.fieldLooks.clear();
     this.dirty = true;
@@ -529,32 +534,13 @@ export class World {
     this.dirty = true;
   }
 
-  /** Legt den Einsturz an: Schutt fliegt in alle Richtungen, landet auf dem Gelände. */
+  /** Legt den Einsturz an - Staub und Schutt zeichnet render.ts (der Schutt als Partikel). */
   private addRuin(building: Building) {
-    const def = building.definition;
-    const cx = building.x + 0.5;
-    const cy = building.y + 0.5;
-    const debris: Ruin['debris'] = [];
-    const count = 7 + Math.round(def.size * 3);
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.6;
-      const reach = def.size * (0.45 + Math.random() * 0.7);
-      const dx = Math.cos(angle) * reach;
-      const dy = Math.sin(angle) * reach;
-      debris.push({
-        dx,
-        dy,
-        vz: def.size * (1.2 + Math.random() * 1.6),
-        size: def.size * (0.12 + Math.random() * 0.14),
-        heading: Math.random() * Math.PI * 2,
-        ground: reliefZ(this.terrain.getTile(Math.floor(cx + dx), Math.floor(cy + dy)).height),
-      });
-    }
     this.ruins.push({
       type: building.type, shape: building.model, x: building.x, y: building.y, at: this.time,
-      clock: animationTime(), debris,
+      clock: animationTime(),
     });
-    this.onEvent?.({ kind: 'collapse', x: cx, y: cy });
+    this.onEvent?.({ kind: 'collapse', x: building.x + 0.5, y: building.y + 0.5 });
   }
 
   /**
@@ -622,6 +608,7 @@ export class World {
     this.time += dt;
     this.lastDt = dt;
     if (this.ruins.length > 0) this.ruins = this.ruins.filter((r) => this.time - r.at < RUIN_DURATION);
+    if (this.digs.length > 0) this.digs = this.digs.filter((d) => this.time - d.at < DIG_DURATION);
     for (const b of this.buildings.values()) {
       if (b.isUnitProducer()) this.tickTraining(b, dt);
       // Reusen füllen sich von allein; voll gespeichert wird sie sofort.

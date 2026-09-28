@@ -31,6 +31,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-27: Vite bündelt ein Bild nur, wenn der Pfad im Quelltext steht (Import oder `new URL(\`…/${name}.png\`, import.meta.url)`). Eine Ordner-URL plus Name zur Laufzeit fehlt im Build.
 - 2026-09-28, `fix/flower-pick`: Vorab gemerkte Bodenhöhen (`ground` einer Instanz) weichen vom Gelände ab, wenn sie mit `mapGen.heightAt(x, y)` (Schritt 1, ohne Feindetail) gemessen sind - am Hang bis 0,27 Tiles (~35 px bei Zoom 5), die Blumen schwebten, Klicks gingen daneben. Darum: Blumen ohne `ground`, Vorkommen und Felder mit `NEAR_STEP`, Vorkommen im Shader und im Picker zusätzlich eingeebnet (`flattenZ` / `Ground.flat`). Prüfen per Debug-Global: gemerkte Höhe gegen `Ground.groundAt`.
 
+- 2026-09-27: Partikel (`gl/particleRenderer.ts`) sind Punkte ohne Zustand - ihre Lage rechnet der Shader aus Quelle, Partikelnummer und `animationTime()`. Ein Standbild zeigt deshalb nur einen Augenblick; Seltenes wie Gold- und Steinblitze fehlt oft darin. Zum Prüfen die Galerie (`/galerie?zeige=Partikel&animation=...`) oder `particleSources` in den Render-Stats. `Terrain.resourceAt().height` ist die grobe Höhe - im Gebirge Tiles unter dem sichtbaren Relief. Was auf dem Boden sitzen soll, nimmt `world.groundAt`.
+
 ## Messen
 
 - 2026-09-26, M4, Stand `6b5b5bd`: Alle Bench-Szenen laufen mit 60 fps und `frameMsMax` 16,8 ms, auch `zoom-wechsel`. Der Zoom ist auf diesem Rechner nicht langsam, Gewinne im Gelände-Shader zeigt der Bench hier nicht.
