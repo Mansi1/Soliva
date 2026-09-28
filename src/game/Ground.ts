@@ -60,6 +60,11 @@ export class Ground {
     return this.groundAt(x, y) * this.renderer.relief;
   }
 
+  /** Reliefstärke des Renderers - für Höhen ohne sie (EntityInstance.ground). */
+  get relief(): number {
+    return this.renderer.relief;
+  }
+
   /** Je Bild: eingeebnete Flächen und - ab und zu - die Äcker an den Shader geben. */
   update(now: number) {
     this.updateFlatZones();

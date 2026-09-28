@@ -3,8 +3,8 @@
 // mit Geländehöhe, das Tile, der nächste Dorfbewohner, ein Tier, eine Blume,
 // ein Vorkommen am Objekt (Baumkrone, Fels) - und worauf ein Klick damit zielt.
 
-import { animalCenter, buildingHeading, modelBounds, modelRayHit, modelSize, TREES, type EntityInstance } from '../gl/entityRenderer';
-import { groundToWorld, pickWorld, viewZScreen, visibleWorldRect, worldToScreen } from '../gl/iso';
+import { animalCenter, buildingHeading, modelBounds, modelRayHit, type EntityInstance } from '../gl/entityRenderer';
+import { groundToWorld, pickWorld, viewZScreen, visibleWorldRect, worldToScreen, type IsoView } from '../gl/iso';
 import { addRenderStats } from '../renderStats';
 import { VILLAGER } from '../world/catalog';
 import type { FlowerField } from '../world/flowers';
@@ -121,8 +121,9 @@ export class Picker {
 
   /**
    * Vorkommen, dessen Objekt (Baum, Fels, Strauch) unter dem Zeiger steht -
-   * auch an der Krone, nicht nur am Fuß. Jedes Objekt gilt als aufrechter
-   * Streifen vom Fuß bis zur Spitze; der vorderste Treffer gewinnt.
+   * auch an der Krone, nicht nur am Fuß, aber nicht daneben: geprüft wird
+   * gegen die Dreiecke des Modells (modelHit). Ein gefällter Baum liegt und
+   * gilt als Streifen vom Fuß zur Spitze. Der vorderste Treffer gewinnt.
    */
   resourceObject(px: number, py: number): { x: number; y: number } | undefined {
     if (this.camera.tileSize < RESOURCE_OBJECTS_MIN_ZOOM) return undefined;
@@ -132,84 +133,92 @@ export class Picker {
     const margin = 4;
     const area = { x: rect.x - margin, y: rect.y - margin, width: rect.width + 2 * margin, height: rect.height + 2 * margin };
     return this.resources.pick(area, (inst, x, y) => {
-      const dims = modelSize(inst.shape);
-      if (!dims) return undefined;
+      const box = modelBounds(inst.shape);
+      if (!box) return undefined;
       const cx = inst.x + 0.5;
       const cy = inst.y + 0.5;
-      // Halbe Breite in Pixeln: ein Stück quer zur Blickrichtung am Boden.
-      // Bildschirm-x und diese Breite hängen nicht von der Höhe ab - so fällt
-      // fast jedes Objekt weg, bevor Geländehöhe und Vorrat gefragt werden (teuer).
-      const w = dims.width * inst.size * 0.4;
+      // Bildschirm-x hängt nicht von der Höhe ab - so fällt fast jedes Objekt
+      // weg, bevor Geländehöhe und Vorrat gefragt werden (teuer). Weiter als
+      // 2 · größte Ausdehnung reicht kein Modell zur Seite.
+      const reach = 2 * Math.max(...box.lo.slice(0, 2).map(Math.abs), ...box.hi.slice(0, 2).map(Math.abs)) * inst.size * v.tileSize;
       const foot = worldToScreen(v, cx, cy, 0);
-      const edge = worldToScreen(v, cx + w, cy - w, 0);
-      const half = Math.max(6, Math.hypot(edge.x - foot.x, edge.y - foot.y));
-      if (Math.abs(px - foot.x) > half) return undefined;
+      if (Math.abs(px - foot.x) > Math.max(6, reach)) return undefined;
       // Leer abgebaut und nicht mehr zu sehen (Bäume, Felsen) - nicht treffen.
       if (!this.world.resourceInfo(x, y)) return undefined;
-      const z = this.ground.heightAt(cx, cy);
-      // Ein gefällter Baum liegt flach.
-      const fallen = inst.motion && inst.motion[1] > 0.5;
-      const height = fallen ? 0.3 * inst.size : dims.height * inst.size;
+      // Wie im Shader: auf dem tiefsten Punkt seines Fußes, sonst auf dem Gelände.
+      const z = inst.ground !== undefined ? inst.ground * this.ground.relief : this.ground.heightAt(cx, cy);
       const base = worldToScreen(v, cx, cy, z);
-      const top = worldToScreen(v, cx, cy, z + height);
-      // Abstand des Zeigers zum Streifen von base nach top. Bäume laufen nach
-      // oben spitz zu - ihr Treffer auch, sonst verdeckte eine hohe Spitze den
-      // Strauch dahinter.
+      const fallen = inst.motion && inst.motion[1] > 0.5;
+      if (!fallen) {
+        // Winzige Objekte (weit draußen) bleiben ein paar Pixel um ihre Achse treffbar.
+        const top = worldToScreen(v, cx, cy, z + box.hi[2] * inst.size);
+        const tiny = Math.abs(px - base.x) <= 4 && py <= base.y + 4 && py >= top.y - 4;
+        return tiny || this.modelHit(v, px, py, inst.shape, cx, cy, z, inst.size, inst.motion?.[0] ?? 0) ? base.y : undefined;
+      }
+      // Liegender Baum: Abstand zum Streifen vom Fuß bis 0.3 · Größe hoch.
+      const w = (box.hi[1] - box.lo[1]) * inst.size * 0.4;
+      const side = worldToScreen(v, cx + w, cy - w, z);
+      const half = Math.max(6, Math.hypot(side.x - base.x, side.y - base.y));
+      const top = worldToScreen(v, cx, cy, z + 0.3 * inst.size);
       const sx = top.x - base.x;
       const sy = top.y - base.y;
       const len2 = sx * sx + sy * sy || 1;
       const t = Math.max(0, Math.min(1, ((px - base.x) * sx + (py - base.y) * sy) / len2));
-      const d = Math.hypot(px - (base.x + sx * t), py - (base.y + sy * t));
-      const taper = TREES.includes(inst.shape) && !fallen ? 1 - 0.75 * t : 1;
-      return d <= Math.max(4, half * taper) ? base.y : undefined;
+      return Math.hypot(px - (base.x + sx * t), py - (base.y + sy * t)) <= half ? base.y : undefined;
     });
   }
 
   /**
+   * Trifft der Sichtstrahl durch (px, py) das Modell `shape`, das mit dem Fuß
+   * auf (cx, cy, ground) steht, um `heading` gedreht und `size` groß - wie
+   * der Shader es zeichnet (Ruhelage: Wind und bewegte Teile zählen nicht)?
+   * Erst gegen den Quader (billig), dann gegen die Dreiecke.
+   */
+  private modelHit(v: IsoView, px: number, py: number, shape: number,
+      cx: number, cy: number, ground: number, size: number, heading: number): boolean {
+    const box = modelBounds(shape);
+    if (!box) return false;
+    // Punkt des Strahls in Höhe z - wie pickWorld -, in Modell-Achsen
+    // (vorn, links, oben) und Einheiten von modelBounds.
+    const a = groundToWorld((px - v.width / 2) / v.tileSize, (py - v.height / 2) / v.tileSize);
+    const d = groundToWorld(0, viewZScreen());
+    const [c, sn] = [Math.cos(heading), Math.sin(heading)];
+    const local = (z: number) => {
+      const x = v.centerX + a.x + d.x * z - cx;
+      const y = v.centerY + a.y + d.y * z - cy;
+      return [(c * x + sn * y) / size, (-sn * x + c * y) / size, (z - ground) / size];
+    };
+    const p = local(ground + box.lo[2] * size);
+    const q = local(ground + box.hi[2] * size);
+    // Strecke p..q gegen das Rechteck lo..hi, je Achse ein Streifen.
+    let t0 = 0, t1 = 1;
+    for (let k = 0; k < 2 && t0 <= t1; k++) {
+      const [lo, hi, dk] = [box.lo[k], box.hi[k], q[k] - p[k]];
+      if (Math.abs(dk) < 1e-9) {
+        if (p[k] < lo || p[k] > hi) return false;
+        continue;
+      }
+      const [ta, tb] = [(lo - p[k]) / dk, (hi - p[k]) / dk];
+      t0 = Math.max(t0, Math.min(ta, tb));
+      t1 = Math.min(t1, Math.max(ta, tb));
+    }
+    return t0 <= t1 && modelRayHit(shape, p, q);
+  }
+
+  /**
    * Gebäude, dessen Modell unter dem Zeiger steht - auch an Dach und Wand,
-   * nicht nur am Grundriss. Der Sichtstrahl wird in das Modell gedreht wie
-   * beim Zeichnen und gegen seine Dreiecke geprüft (Ruhelage - bewegte Teile
-   * wie Mühlenflügel zählen, wo sie ohne Bewegung stünden). Der vorderste
-   * gewinnt; `depth` wie bei resourceObject (Bildschirm-y des Fußpunkts, größer = weiter vorn).
+   * nicht nur am Grundriss; der Hof daneben und die Luft darüber zählen nicht
+   * (modelHit). Der vorderste gewinnt; `depth` wie bei resourceObject
+   * (Bildschirm-y des Fußpunkts, größer = weiter vorn).
    */
   private building(px: number, py: number): { x: number; y: number; depth: number } | undefined {
     const v = this.camera.view();
-    // Punkt des Strahls in Höhe z: (ax + dx·z, ay + dy·z) - wie pickWorld.
-    const a = groundToWorld((px - v.width / 2) / v.tileSize, (py - v.height / 2) / v.tileSize);
-    const d = groundToWorld(0, viewZScreen());
     let best: { x: number; y: number; depth: number } | undefined;
     for (const b of this.world.allBuildings()) {
-      const box = modelBounds(b.model);
-      if (!box) continue;
-      const s = b.definition.size;
       const cx = b.x + 0.5;
       const cy = b.y + 0.5;
       const ground = this.ground.heightAt(cx, cy);
-      // Strahl zwischen Unter- und Oberkante des Modells, in Modell-Achsen
-      // (vorn, links, oben) und Einheiten von modelBounds.
-      const h = buildingHeading(b.model);
-      const [c, sn] = [Math.cos(h), Math.sin(h)];
-      const local = (z: number) => {
-        const x = v.centerX + a.x + d.x * z - cx;
-        const y = v.centerY + a.y + d.y * z - cy;
-        return [(c * x + sn * y) / s, (-sn * x + c * y) / s, (z - ground) / s];
-      };
-      const p = local(ground + box.lo[2] * s);
-      const q = local(ground + box.hi[2] * s);
-      // Erst der Quader (billig): Strecke p..q gegen das Rechteck lo..hi, je Achse ein Streifen.
-      let t0 = 0, t1 = 1;
-      for (let k = 0; k < 2 && t0 <= t1; k++) {
-        const [lo, hi, dk] = [box.lo[k], box.hi[k], q[k] - p[k]];
-        if (Math.abs(dk) < 1e-9) {
-          if (p[k] < lo || p[k] > hi) t0 = 2;
-          continue;
-        }
-        const [ta, tb] = [(lo - p[k]) / dk, (hi - p[k]) / dk];
-        t0 = Math.max(t0, Math.min(ta, tb));
-        t1 = Math.min(t1, Math.max(ta, tb));
-      }
-      // Dann die Dreiecke des Modells - der Hof daneben und die Luft über ihm zählen nicht.
-      if (t0 > t1 || !modelRayHit(b.model, p, q)) continue;
+      if (!this.modelHit(v, px, py, b.model, cx, cy, ground, b.definition.size, buildingHeading(b.model))) continue;
       const depth = worldToScreen(v, cx, cy, ground).y;
       if (!best || depth > best.depth) best = { x: b.x, y: b.y, depth };
     }
