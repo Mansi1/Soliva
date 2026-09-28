@@ -2618,11 +2618,7 @@ const FIELD_DETAIL = [1, 0.3, 0.1];
 
 /** Ein Vorkommen: mit vereinfachten Fassungen, in seiner echten Breite. */
 function natural(shape: number, obj: string, mtl: string, meters: number) {
-  const all = parseObj(obj);
-  // Gras und Laub am Fuß der Bäume zählen für die Breite mit (und damit für
-  // die Größe), gezeichnet werden sie nicht - nur Stamm, Stumpf und Wurzeln.
-  const drawn = TREES.includes(shape) ? all.filter((t) => !/^(Grass|Litter)(\.|$)/.test(t.object)) : undefined;
-  const model = loadModel(all, mtl, 'width', true, TREES.includes(shape), drawn);
+  const model = loadModel(obj, mtl, 'width', true, TREES.includes(shape));
   model.file = modelFile(obj);
   return [{ shape, model, scale: model.meters / meters }];
 }

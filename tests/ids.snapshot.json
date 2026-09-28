@@ -2755,7 +2755,6 @@
   ],
   "trees/birch": [
    "Bark.Mark",
-   "Grass",
    "Leaves.Branch.0",
    "Leaves.Branch.1",
    "Leaves.Branch.10",
@@ -2796,13 +2795,11 @@
    "Leaves.Branch.7",
    "Leaves.Branch.8",
    "Leaves.Branch.9",
-   "Litter",
    "Trunk",
    "Trunk.Stump"
   ],
   "trees/birch_2": [
    "Bark.Mark",
-   "Grass",
    "Leaves.Branch.0",
    "Leaves.Branch.1",
    "Leaves.Branch.10",
@@ -2845,14 +2842,12 @@
    "Leaves.Branch.7",
    "Leaves.Branch.8",
    "Leaves.Branch.9",
-   "Litter",
    "Trunk",
    "Trunk.Stump"
   ],
   "trees/birch_3": [
    "Bark.Mark",
    "Branch",
-   "Grass",
    "Leaves.Branch.0",
    "Leaves.Branch.1",
    "Leaves.Branch.10",
@@ -2897,7 +2892,6 @@
    "Leaves.Branch.7",
    "Leaves.Branch.8",
    "Leaves.Branch.9",
-   "Litter",
    "Trunk",
    "Trunk.Stump"
   ],
@@ -2906,8 +2900,6 @@
    "Clump",
    "Crown",
    "Crown.Under",
-   "Grass",
-   "Litter",
    "Root",
    "Trunk",
    "Trunk.Stump"
@@ -2917,9 +2909,7 @@
    "Clump",
    "Crown",
    "Crown.Under",
-   "Grass",
    "Knot",
-   "Litter",
    "Root",
    "Trunk",
    "Trunk.Stump"
@@ -2930,10 +2920,8 @@
    "Clump",
    "Crown",
    "Crown.Under",
-   "Grass",
    "Hollow",
    "Hollow.Rim",
-   "Litter",
    "Root",
    "Trunk",
    "Trunk.Stump"
@@ -2942,8 +2930,6 @@
    "Branch",
    "Clump",
    "Crown",
-   "Grass",
-   "Litter",
    "Root",
    "Trunk",
    "Trunk.Stump"
@@ -2953,8 +2939,6 @@
    "Cone",
    "Crown",
    "Crown.Core",
-   "Grass",
-   "Litter",
    "Root",
    "Trunk",
    "Trunk.Stump",
@@ -2963,8 +2947,6 @@
   "trees/poplar": [
    "Crown",
    "Crown.Core",
-   "Grass",
-   "Litter",
    "Root",
    "Trunk",
    "Trunk.Stump",
@@ -2972,8 +2954,6 @@
   ],
   "trees/spruce": [
    "Cone",
-   "Grass",
-   "Litter",
    "Root",
    "Tier",
    "Tip",
