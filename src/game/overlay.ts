@@ -7,6 +7,7 @@ import { SHAPE, animalCenter, type EntityInstance } from '../gl/entityRenderer';
 import type { IsoView } from '../gl/iso';
 import type { MiniMap } from '../map';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
+import { workplace } from '../world/villagers';
 import type { World } from '../world/world';
 import type { Selection } from './Selection';
 
@@ -14,7 +15,8 @@ import type { Selection } from './Selection';
 const SELECTED: [number, number, number] = [110, 231, 160];
 
 /**
- * Auswahl: grüner Ring unter jedem Dorfbewohner, Tier und der Blume, Fläche
+ * Auswahl: grüner Ring unter jedem Dorfbewohner (nicht unter Werkstatt-
+ * Arbeitern - sie gehorchen nicht), Tier und der Blume, Fläche
  * unter dem Gebäude, Sammelpunkt, Vorkommen. Ein ausgeblendetes Tier
  * (`hideAnimal`, weit draußen) bekommt keinen Ring.
  */
@@ -22,7 +24,7 @@ export function selectionOverlay(
     world: World, selection: Selection, blend: number, out: EntityInstance[], hideAnimal: (kind: string) => boolean,
 ) {
   for (const v of world.villagers) {
-    if (!selection.villagers.has(v.id)) continue;
+    if (!selection.villagers.has(v.id) || workplace(v.task)) continue;
     const p = v.positionAt(blend);
     out.push({
       x: p.x - 0.5, y: p.y - 0.5, size: VILLAGER.size * 2,

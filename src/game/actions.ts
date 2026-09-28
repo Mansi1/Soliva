@@ -8,6 +8,7 @@
 import type { Sound } from '../audio';
 import { CROPS, type BuildingType, type CropType } from '../world/catalog';
 import type { UnitProducer } from '../world/building';
+import { workplace } from '../world/villagers';
 import type { World } from '../world/world';
 import type { Camera } from './Camera';
 import type { Picker } from './Picker';
@@ -111,17 +112,22 @@ export class PlayerActions {
     this.ui.refreshSelection();
   }
 
-  /** Aufziehen eines Rechtecks: alle Dorfbewohner darin. */
+  /**
+   * Aufziehen eines Rechtecks: alle Dorfbewohner darin - ohne Werkstatt-Arbeiter,
+   * sie gehorchen nicht. Trifft es nur solche, werden eben sie gewählt.
+   */
   boxSelect(x0: number, y0: number, x1: number, y1: number, add: boolean) {
     const [left, right] = x0 < x1 ? [x0, x1] : [x1, x0];
     const [top, bottom] = y0 < y1 ? [y0, y1] : [y1, y0];
     if (!add) this.selection.villagers.clear();
     this.selection.clearBuildings();
     this.selection.clearSingle();
-    for (const v of this.world.villagers) {
+    const hits = this.world.villagers.filter((v) => {
       const s = this.picker.villagerScreen(v);
-      if (s.x >= left && s.x <= right && s.y >= top && s.y <= bottom) this.selection.villagers.add(v.id);
-    }
+      return s.x >= left && s.x <= right && s.y >= top && s.y <= bottom;
+    });
+    const free = hits.filter((v) => !workplace(v.task));
+    for (const v of free.length > 0 ? free : hits) this.selection.villagers.add(v.id);
     this.ui.refreshSelection();
   }
 
@@ -169,8 +175,9 @@ export class PlayerActions {
     const at = this.picker.point(p.x, p.y);
     const prey = this.world.animalNear(at.x, at.y, 0.6);
     if (prey) {
-      this.world.hunt(this.selection.villagers, prey);
-      this.sound.play('click', 0.7);
+      const busy = this.world.hunt(this.selection.villagers, prey);
+      if (busy) this.ui.hint(busy);
+      else this.sound.play('click', 0.7);
       this.ui.refreshSelection();
       return;
     }

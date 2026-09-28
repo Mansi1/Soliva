@@ -194,7 +194,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       kind: 'villagers',
       female: chosen[0].female,
       single: single
-        ? { name: single.name, role: single.female ? 'Dorfbewohnerin' : VILLAGER.label, doing: world.describe(single) }
+        ? { name: single.name, role: single.female ? 'Dorfbewohnerin' : VILLAGER.label, doing: world.describe(single), worker: !!workplace(single.task) }
         : undefined,
       count: chosen.length,
       label: VILLAGER.label,
@@ -219,6 +219,7 @@ function workshopView(world: World, building: Building): WorkshopView {
     role,
     worker: worker.name,
     doing: world.describe(worker),
+    leaving: 'leave' in task && task.leave,
     percent: busy && 'progress' in task ? Math.floor(task.progress * 100) : undefined,
   };
 }
