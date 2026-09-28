@@ -784,7 +784,7 @@ export class World {
   }
 
   /** Der Stand als Speicherstand (siehe save.ts). */
-  private toSave(): SaveData {
+  toSave(): SaveData {
     return {
       version: 3,
       savedAt: Date.now(),

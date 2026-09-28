@@ -158,6 +158,19 @@
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
 }
+/* Knopf in den Entwickler-Infos */
+.panel-btn {
+  font: inherit;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.panel-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
 /* Pause-Schild oben in der Mitte */
 #paused {
   position: fixed;
