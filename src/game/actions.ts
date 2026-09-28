@@ -83,8 +83,9 @@ export class PlayerActions {
       if (add && this.selection.villagers.has(villager.id)) this.selection.villagers.delete(villager.id);
       else this.selection.villagers.add(villager.id);
     } else {
-      const { x, y } = this.picker.target(px, py);
-      const building = this.world.at(x, y);
+      // Nur der Boden unter Gebäude oder Vorkommen getroffen: nichts auswählen (Picker.target).
+      const { x, y, bareGround } = this.picker.target(px, py);
+      const building = bareGround ? undefined : this.world.at(x, y);
       this.selection.villagers.clear();
       if (building) {
         const anchor = this.world.anchorOf(building);
@@ -103,7 +104,7 @@ export class PlayerActions {
         }
       } else if (!add) {
         this.selection.clearBuildings();
-        if (this.world.resourceInfo(x, y)) this.selection.resource = { x, y };
+        if (!bareGround && this.world.resourceInfo(x, y)) this.selection.resource = { x, y };
         else this.selection.flower = this.picker.flower(px, py) ?? null;
       }
     }

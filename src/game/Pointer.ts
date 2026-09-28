@@ -1,7 +1,7 @@
 // Pointer.ts
 // Wo der Mauszeiger auf dem Spielfeld steht: die Stelle in CSS-Pixeln, das
-// Tile darunter und - mit ausgewählten Dorfbewohnern - das Vorkommen, auf
-// dessen Objekt (Baumkrone, Fels) er zeigt. Nichts davon, solange der Zeiger
+// Tile darunter und - mit ausgewählten Dorfbewohnern - das Feld, auf das ein
+// Klick zielt (Gebäude, Baumkrone, Fels). Nichts davon, solange der Zeiger
 // nicht über dem Spielfeld ist.
 
 import type { CanvasPoint } from './MouseInput';
@@ -18,7 +18,7 @@ export class Pointer {
   selectable = false;
   /** Tile unter dem Zeiger. */
   tile: Tile | null = null;
-  /** Vorkommen, auf dessen Objekt der Zeiger zeigt - für den Sammel-Mauszeiger. */
+  /** Feld, auf das ein Klick zielt (Picker.target) - für den Sammel-Mauszeiger. */
   object: Tile | null = null;
 
   /** Zeiger hat das Spielfeld verlassen. */
