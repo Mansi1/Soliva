@@ -83,7 +83,7 @@ export class PlayerActions {
       if (add && this.selection.villagers.has(villager.id)) this.selection.villagers.delete(villager.id);
       else this.selection.villagers.add(villager.id);
     } else {
-      const { x, y } = this.picker.target(px, py);
+      const { x, y, treeGround } = this.picker.target(px, py);
       const building = this.world.at(x, y);
       this.selection.villagers.clear();
       if (building) {
@@ -103,7 +103,7 @@ export class PlayerActions {
         }
       } else if (!add) {
         this.selection.clearBuildings();
-        if (this.world.resourceInfo(x, y)) this.selection.resource = { x, y };
+        if (!treeGround && this.world.resourceInfo(x, y)) this.selection.resource = { x, y };
         else this.selection.flower = this.picker.flower(px, py) ?? null;
       }
     }

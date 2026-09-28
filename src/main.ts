@@ -764,7 +764,8 @@ function updateHoveredTile(mouseX: number, mouseY: number): boolean {
 function updateSelectable(object = pointer.pixel && picker.target(pointer.pixel.x, pointer.pixel.y)) {
   const { pixel } = pointer;
   pointer.selectable = !!pixel && !!object && !!(picker.villager(pixel.x, pixel.y) || picker.animal(pixel.x, pixel.y)
-    || world.at(object.x, object.y) || world.resourceInfo(object.x, object.y) || picker.flower(pixel.x, pixel.y));
+    || world.at(object.x, object.y) || (!object.treeGround && world.resourceInfo(object.x, object.y))
+    || picker.flower(pixel.x, pixel.y));
   ui.updateCursor();
 }
 

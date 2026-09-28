@@ -230,8 +230,11 @@ export class Picker {
    * getroffen (das vorderste), sonst der Boden. Liegt direkt auf dem
    * angeklickten Feld ein Gebäude, Strauch, Stein oder Gold, gewinnt das -
    * auch wenn eine Baumspitze davor ins Bild ragt.
+   * `treeGround`: nichts getroffen, nur der Boden eines Baum-Felds - zum
+   * Auswählen zählt dort nur der Baum selbst, sammeln geht per Rechtsklick
+   * trotzdem. Weit draußen (keine Modelle, nur Farbe im Gelände) nie gesetzt.
    */
-  target(px: number, py: number): { x: number; y: number } {
+  target(px: number, py: number): { x: number; y: number; treeGround?: boolean } {
     const tile = this.tile(px, py);
     if (this.world.at(tile.x, tile.y)) return tile;
     const own = this.world.resourceInfo(tile.x, tile.y);
@@ -242,6 +245,7 @@ export class Picker {
         || house.depth >= worldToScreen(this.camera.view(), object.x + 0.5, object.y + 0.5, this.ground.heightAt(object.x + 0.5, object.y + 0.5)).y)) {
       return house;
     }
-    return object ?? tile;
+    if (object) return object;
+    return own && this.camera.tileSize >= RESOURCE_OBJECTS_MIN_ZOOM ? { ...tile, treeGround: true } : tile;
   }
 }
