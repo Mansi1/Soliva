@@ -27,6 +27,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-27: Der Gelände-Cache (RGBA8) speichert die Farbe geteilt durch `CACHE_HEADROOM` (1,5), weil das Licht jetzt erst im Bild dazukommt. Ohne das werden helle Felsfarben auf der Schattenseite zu dunkel. Wer Farben im Cache ausliest, muss mit `uCacheGain` multiplizieren. Der Alpha-Kanal ist belegt: Tiefe im Flachwasser 0..1 für die Brandung, 1 = Land oder tiefes Wasser.
 - 2026-09-27, `feat/flower-type`: Texturen mit Alpha filtern ohne grauen Saum nur vormultipliziert - durchsichtige Pixel sind schwarz (Canvas und WebP verlieren ihre Farbe). Die Blüten-Streifen sind darum vormultipliziert und werden direkt (nicht über `loadModelImages`s Canvas) hochgeladen, `blossomCard` teilt durch Alpha.
 - 2026-09-27: Vite bündelt ein Bild nur, wenn der Pfad im Quelltext steht (Import oder `new URL(\`…/${name}.png\`, import.meta.url)`). Eine Ordner-URL plus Name zur Laufzeit fehlt im Build.
+- 2026-09-28, `fix/flower-pick`: Vorab gemerkte Bodenhöhen (`ground` einer Instanz) weichen vom Gelände ab, wenn sie mit `mapGen.heightAt(x, y)` (Schritt 1, ohne Feindetail) gemessen sind - am Hang bis 0,27 Tiles (~35 px bei Zoom 5), die Blumen schwebten, Klicks gingen daneben. Darum: Blumen ohne `ground`, Vorkommen und Felder mit `NEAR_STEP`, Vorkommen im Shader und im Picker zusätzlich eingeebnet (`flattenZ` / `Ground.flat`). Prüfen per Debug-Global: gemerkte Höhe gegen `Ground.groundAt`.
 
 ## Messen
 

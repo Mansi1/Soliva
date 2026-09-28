@@ -340,7 +340,7 @@ camera.moveTo(startX, startY);
 
 /** Gelände, wie man es sieht, und sein Abgleich mit dem Shader (game/Ground.ts). */
 const ground = new Ground(mapGen, world, renderer, camera);
-world.groundAt = (x, y) => ground.groundAt(x, y);
+world.groundAt = (x, y, step) => ground.groundAt(x, y, step);
 
 /** Was unter dem Zeiger liegt: Welt-Punkt, Tile, Dorfbewohner, Vorkommen (game/Picker.ts). */
 /** Tierarten weit draußen ausgeblendet (Einstellung animalsBelow). */

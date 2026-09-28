@@ -7,7 +7,7 @@
 import { uniqueName } from './names';
 import { POSE, animationTime } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
-import { reliefZ } from '../noise';
+import { NEAR_STEP, reliefZ } from '../noise';
 import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
 import type { BuildingType, CropType, DepositType, ResourceKind, Resources } from './catalog';
 import {
@@ -108,7 +108,7 @@ export class World {
    * es. Dorfbewohner bekommen sie mit, wie die Bäume: auf der Grafikkarte
    * gerechnet standen sie an manchen Hängen deutlich unter dem Gelände.
    */
-  groundAt: ((x: number, y: number) => number) | null = null;
+  groundAt: ((x: number, y: number, step?: number) => number) | null = null;
 
   constructor(readonly terrain: Terrain, private seed: string) {
     this.deposits = new Deposits(terrain);
@@ -377,8 +377,8 @@ export class World {
           const x = building.x + 0.5 + (-FIELD_INNER + (row + 0.5) * gap) / METERS_PER_TILE;
           for (let i = 0; i < 3; i++) {
             const y = building.y + 0.5 - 1.5 + i * 1.5;
-            ground[row * 3 + i] = this.groundAt(x, y);
-            ground[27 + row * 3 + i] = (this.groundAt(x + half, y) - this.groundAt(x - half, y)) / (2 * half);
+            ground[row * 3 + i] = this.groundAt(x, y, NEAR_STEP);
+            ground[27 + row * 3 + i] = (this.groundAt(x + half, y, NEAR_STEP) - this.groundAt(x - half, y, NEAR_STEP)) / (2 * half);
           }
         }
       }

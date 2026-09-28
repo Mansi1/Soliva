@@ -8,7 +8,7 @@
 import type { EntityInstance, StaticBatch } from '../gl/entityRenderer';
 import { BILLBOARD_HEADINGS, SHAPE, TREES, modelSize } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
-import { reliefZ, type MapGenerator } from '../noise';
+import { NEAR_STEP, reliefZ, type MapGenerator } from '../noise';
 import type { DepositType } from './catalog';
 import type { ViewRect, World } from './world';
 
@@ -289,9 +289,9 @@ export class ResourceField {
    * schwebte es talseitig über dem Boden.
    */
   private groundUnder(x: number, y: number, radius: number): number {
-    let lowest = this.mapGen.heightAt(x, y);
+    let lowest = this.mapGen.heightAt(x, y, NEAR_STEP);
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      lowest = Math.min(lowest, this.mapGen.heightAt(x + dx * radius, y + dy * radius));
+      lowest = Math.min(lowest, this.mapGen.heightAt(x + dx * radius, y + dy * radius, NEAR_STEP));
     }
     return reliefZ(lowest);
   }

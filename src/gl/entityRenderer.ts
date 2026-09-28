@@ -1232,6 +1232,10 @@ void main() {
 
     vec2 xy = center + offset;
     float base = aGround > ${GROUND_UNKNOWN / 10}.0 ? aGround * uReliefScale : groundZ(center);
+    // Vorkommen kennen beim Messen (ResourceField.groundUnder) die Gebäude
+    // nicht - am Rand einer eingeebneten Fläche schwebten sie sonst über der
+    // Böschung. Figuren bringen die eingeebnete Höhe schon mit.
+    if (natural && aGround > ${GROUND_UNKNOWN / 10}.0) base = flattenZ(center, base);
     // Felder werden nicht eingeebnet: jede Pflanze steht auf dem Gelände darunter.
     if (field) {
       // Felder folgen dem Gelände. Gemessen ist es je Furche an drei Stellen
