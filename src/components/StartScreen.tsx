@@ -10,7 +10,7 @@ import { createRef, render } from 'defuss';
 import './StartScreen.css';
 import woodBar from '../icons/wood-bar.png';
 import { confirmDialog } from './ConfirmDialog';
-import { DEFAULT_SEED, DEMO_SEED, hasProgress, installDemo, isDemo, listSaves, randomSeed, switchWorld, type SaveInfo } from '../worlds';
+import { DEFAULT_SEED, DEMO_SEED, gamePath, hasProgress, installDemo, isDemo, listSaves, randomSeed, switchWorld, type SaveInfo } from '../worlds';
 
 /** Was das Hauptmenü braucht - main.ts liefert es. */
 export interface StartHooks {
@@ -200,6 +200,8 @@ export class StartScreen {
   /** @param page 'new' springt gleich zur Wahl der Welt (Neues Spiel aus dem Spiel-Menü). */
   open(page: Page = 'main') {
     this.opened = true;
+    // Im Hauptmenü "/", im Spiel die Welt (close).
+    window.history.replaceState(null, '', '/');
     this.root.hidden = false;
     document.body.classList.add('title-screen');
     this.qr.hidden = false;
@@ -209,6 +211,7 @@ export class StartScreen {
 
   close() {
     this.opened = false;
+    window.history.replaceState(null, '', gamePath(this.hooks.world));
     this.root.hidden = true;
     document.body.classList.remove('title-screen');
     this.qr.hidden = true;

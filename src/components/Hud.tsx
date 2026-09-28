@@ -64,6 +64,9 @@ function DebugPanel() {
         {/* Bild = Billboards (Menü → Grafik → Bäume als Bild), 3D = Modelle. */}
         Bäume <b id="billboards">3D</b>
       </div>
+      {/* Welt, Ansicht und Spielstand als Link (main.ts) - wie "Link teilen" im Menü. */}
+      <div><button type="button" id="share-link" class="panel-btn"
+        title="Welt, Kamera (Position, Zoom, Drehung, Neigung) und Spielstand als Link in die Zwischenablage">Link kopieren: Spielstand + Kamera</button></div>
     </div>
   );
 }

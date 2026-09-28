@@ -5,11 +5,13 @@
 // dass sie gleich ins Spiel geht (neu oder weiter) statt ins Hauptmenü.
 // Dazu die Liste der Spielstände fürs Laden-Menü - das Format und den Ort
 // der Spielstände kennt world/save.ts.
-// Ausnahme zum Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&save=<base64>
-// geht direkt in diese Welt an diese Stelle, ohne Hauptmenü und ohne sich die
-// Welt zu merken. Ohne Seed (/game) eine Zufallswelt - ihr Name kommt in die
-// Adresse. Mit save (Spielstand-JSON als base64url) beginnt sie jedes Mal mit
-// diesem Stand - so passt ein Test-Spielstand in einen Link, ohne Datei im Repo.
+// Im Spiel zeigt die Adresse /game/<seed>, im Hauptmenü "/" (StartScreen).
+// Wer /game/<seed> öffnet (auch neu lädt), geht direkt in diese Welt, ohne
+// Hauptmenü und ohne sich die Welt zu merken. Ohne Seed (/game) eine Zufallswelt.
+// Zum Teilen und Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&rot=<0-3>&tilt=<Grad>&save=<base64>
+// setzt dazu die Kamera dorthin; mit save (Spielstand-JSON als base64url) beginnt
+// die Welt mit diesem Stand - so passt ein Spielstand in einen Link, ohne
+// Datei im Repo. Die Abfrage gilt einmal, danach steht nur noch /game/<seed> da.
 
 import { readSave, saveKey, seedOfKey } from './world/save';
 
@@ -24,7 +26,7 @@ const START_KEY = 'pgm.start';
 /** Wie die Seite nach dem Wechsel der Welt beginnt. */
 export type StartRequest = 'new' | 'continue';
 
-/** Welt und Stelle aus /game/<seed>?lat=&lng=&zoom=&save= - null bei jeder anderen Adresse. */
+/** Welt und Ansicht aus /game/<seed>?lat=&lng=&zoom=&rot=&tilt=&save= - null bei jeder anderen Adresse. */
 export const gameUrl = parseGameUrl();
 
 function parseGameUrl() {
@@ -33,16 +35,45 @@ function parseGameUrl() {
   const seed = decodeURIComponent(match[1] ?? '') || randomSeed();
   const params = new URLSearchParams(window.location.search);
   const num = (key: string) => (params.get(key) ? Number(params.get(key)) : NaN);
-  const [lat, lng, zoom] = [num('lat'), num('lng'), num('zoom')];
+  const [lat, lng, zoom, rot, tilt] = [num('lat'), num('lng'), num('zoom'), num('rot'), num('tilt')];
   const save = params.get('save');
   // Fehlerhafter Stand: laut scheitern statt still eine leere Welt zeigen.
   if (save) localStorage.setItem(saveKey(seed), JSON.stringify(JSON.parse(fromBase64(save))));
-  window.history.replaceState(null, '', `/game/${encodeURIComponent(seed)}${window.location.search}`);
   return {
     seed,
     at: Number.isFinite(lat) && Number.isFinite(lng) ? { x: lng, y: lat } : null,
     zoom: Number.isInteger(zoom) ? zoom : null,
+    /** Vierteldrehungen der Ansicht (iso.ts setViewRotation). */
+    rotation: Number.isInteger(rot) ? rot : null,
+    /** Blickwinkel in Grad. */
+    tilt: Number.isFinite(tilt) ? tilt : null,
   };
+}
+
+/** Die Adresse der Welt im Spiel. */
+export function gamePath(seed: string): string {
+  return `/game/${encodeURIComponent(seed)}`;
+}
+
+/** Link auf diese Welt mit Ansicht und Spielstand - parseGameUrl liest ihn wieder. */
+export function shareUrl(seed: string, view: { x: number; y: number; zoom: number; rotation: number; tilt: number }, save: object): string {
+  const params = new URLSearchParams({
+    lat: view.y.toFixed(2),
+    lng: view.x.toFixed(2),
+    zoom: String(view.zoom),
+    rot: String(view.rotation),
+    tilt: view.tilt.toFixed(1),
+    save: toBase64(JSON.stringify(save)),
+  });
+  return `${window.location.origin}${gamePath(seed)}?${params}`;
+}
+
+/** Text (UTF-8) als base64url - ohne '+', '/' und '=', die in der Adresse stören. */
+function toBase64(text: string): string {
+  // ponytail: Stand unkomprimiert (Demo ~30 KB Link); upgrade to CompressionStream when Links zu lang zum Teilen werden.
+  let binary = '';
+  for (const byte of new TextEncoder().encode(text)) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /** base64 oder base64url (UTF-8) als Text - ein '+' kommt aus der Adresse als Leerzeichen. */

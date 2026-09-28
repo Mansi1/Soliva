@@ -1,7 +1,7 @@
 // SettingsMenu.tsx
 // Menü als Holztafel in der Bildmitte (Zahnrad an der Rohstoffleiste oder
 // F10, wie in AoE2): Spielerfarbe, Pause, Tempo, Ton und Musik, Kamera-Tempo,
-// Anzeigen, Grafik, Speichern, zurück ins Hauptmenü. Einmal gerendert; refresh()
+// Anzeigen, Grafik, Speichern, Link teilen, zurück ins Hauptmenü. Einmal gerendert; refresh()
 // setzt über Refs, was sich auch von außen ändert (Pause, Ton, laufendes
 // Musikstück).
 
@@ -30,6 +30,8 @@ export interface MenuHooks {
   mainMenu(): void;
   /** Den Spielstand jetzt speichern. */
   save(): void;
+  /** Link auf Welt, Ansicht und Spielstand. */
+  share(): string;
 }
 
 /** Spieltempo: langsam (1×) bis extrem schnell, Vorgabe 2.5× - so viel schneller laufen Simulation und Animationen. */
@@ -72,6 +74,19 @@ function Slider({ refs, min, max, step, onInput }: {
   );
 }
 
+/** Link in die Zwischenablage, der Knopf bestätigt es kurz; ohne Zwischenablage (kein HTTPS) zum Abschreiben. */
+export async function copyLink(button: HTMLButtonElement, url: string) {
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    window.prompt('Link zum Teilen:', url);
+    return;
+  }
+  const label = button.textContent;
+  button.textContent = 'Link kopiert ✓';
+  setTimeout(() => { button.textContent = label; }, 1500);
+}
+
 export class SettingsMenu {
   private root: HTMLDivElement;
   private opened = false;
@@ -100,6 +115,7 @@ export class SettingsMenu {
   private title = createRef<HTMLDivElement>();
   private saveButton = createRef<HTMLButtonElement>();
   private savedTimer = 0;
+  private shareButton = createRef<HTMLButtonElement>();
 
   constructor(private settings: Settings, private hooks: MenuHooks) {
     this.root = document.createElement('div');
@@ -271,6 +287,7 @@ export class SettingsMenu {
         </section>
         <div class="menu-footer" ref={this.gameButtons}>
           <button type="button" class="wood-btn menu-btn" ref={this.saveButton} onClick={() => this.save()}>Speichern</button>
+          <button type="button" class="wood-btn menu-btn" ref={this.shareButton} onClick={() => copyLink(this.shareButton.current, this.hooks.share())}>Link teilen</button>
           <button type="button" class="wood-btn menu-btn" onClick={() => this.close()}>Weiter spielen <small>Esc</small></button>
         </div>
         <div class="menu-footer menu-footer-end" ref={this.backButton} hidden>

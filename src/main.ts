@@ -8,6 +8,7 @@ import {
   centerFor,
   groundToWorld,
   setViewElevation,
+  setViewRotation,
   type IsoView,
   viewElevation,
   viewRotation,
@@ -49,7 +50,7 @@ import { Lighting } from './game/Lighting';
 import { worldSounds } from './game/worldSounds';
 import { minimapDots, placementOverlay, selectionOverlay } from './game/overlay';
 import { mountGame } from './components/Hud';
-import { SettingsMenu } from './components/SettingsMenu';
+import { copyLink, SettingsMenu } from './components/SettingsMenu';
 import { StartScreen } from './components/StartScreen';
 import { ANIMALS_BELOW_DEFAULT, loadSettings, saveSettings } from './settings';
 import { ResourceField, type OnScreen } from './world/resources';
@@ -57,7 +58,7 @@ import { FlowerField } from './world/flowers';
 import { Sound } from './audio';
 import { addRenderStats, renderStatsFrame, setRenderInfo, startRenderStats, withoutRenderStats } from './renderStats';
 import { Music } from './music';
-import { currentSeed, deleteSave, gameUrl, switchWorld, takeStartRequest } from './worlds';
+import { currentSeed, deleteSave, gameUrl, shareUrl, switchWorld, takeStartRequest } from './worlds';
 
 // Erst Spielfeld-Canvas und Oberfläche (components/Hud.tsx) - danach werden
 // ihre Teile hier über ihre IDs gefunden.
@@ -99,11 +100,6 @@ applyCanvasSize();
 
 // Schalter zum Prüfen (?festesLicht, ?regen, ?ohneEffekte) - gelesen, bevor die Adresse aufgeräumt wird.
 const startParams = new URLSearchParams(window.location.search);
-// Die Adresse bleibt "/": Welt und Stelle stehen nicht mehr darin. Alte Links
-// (/<seed>/<x>-<y>?zoom=) werden aufgeräumt; die Welt wählt man im Hauptmenü.
-// Nur /game/<seed> zum Testen bleibt stehen (worlds.ts).
-if (!gameUrl && (window.location.pathname !== '/' || window.location.search)) window.history.replaceState(null, '', '/');
-
 const seed = currentSeed();
 const mapGen = new MapGenerator(seed);
 const terrain = new Terrain(mapGen, seed);
@@ -146,7 +142,7 @@ const ui = new GameUi({ world, selection, placement, pointer, resources, sound, 
 
 const settings = loadSettings();
 // Blickwinkel wie beim letzten Mal - vor dem ersten Bild.
-setViewElevation(clampTilt((settings.tilt * Math.PI) / 180));
+setViewElevation(clampTilt(((gameUrl?.tilt ?? settings.tilt) * Math.PI) / 180));
 /** Angehalten (F3 oder Menü): die Welt steht, Kamera und Auswahl gehen weiter. */
 let paused = false;
 const pausedEl = document.getElementById('paused')!;
@@ -202,7 +198,17 @@ const menu = new SettingsMenu(settings, {
     start.open();
   },
   save: () => world.save(),
+  share: () => stateLink(),
 });
+
+/** Link auf Welt, Ansicht und Spielstand (worlds.ts shareUrl) - Menü und Entwickler-Infos. */
+function stateLink() {
+  return shareUrl(seed, {
+    x: camera.x, y: camera.y, zoom: camera.zoomNumber, rotation: viewRotation(), tilt: (viewElevation() * 180) / Math.PI,
+  }, world.toSave());
+}
+const shareButton = document.getElementById('share-link') as HTMLButtonElement;
+shareButton.addEventListener('click', () => copyLink(shareButton, stateLink()));
 
 function startNewGame() {
   world.reset();
@@ -1007,15 +1013,20 @@ function loop(now: number) {
 showZoom();
 // Blickrichtung und Pause wie beim letzten Mal. Die Kamera bleibt auf dem
 // Feld aus der Adresse - gedreht wird nur die Ansicht.
-if (isDirection(settings.facing)) rotateToFace(settings.facing);
+// Aus einem geteilten Link die Drehung von dort.
+if (gameUrl?.rotation != null) setViewRotation(gameUrl.rotation);
+else if (isDirection(settings.facing)) rotateToFace(settings.facing);
 if (settings.paused && !paused) togglePause();
 compass.update();
 ui.refreshResources();
 // Wer die Seite aufmacht, landet im Hauptmenü - wie bei einem Spiel. Nach
 // der Wahl einer anderen Welt geht es dort gleich los - neu oder geladen.
 const request = takeStartRequest();
+// Die Adresse setzt das Hauptmenü: "/" offen, /game/<seed> im Spiel. Die
+// Abfrage (Ansicht, Spielstand, Schalter) ist gelesen und fällt dabei weg.
+if (request) start.close();
+else start.open();
 if (request === 'new') startNewGame();
-else if (request !== 'continue') start.open();
 startRenderStats();
 // Umstände der Messung für getRenderInfo() - ohne sie sind Läufe nicht vergleichbar.
 setRenderInfo(() => {
