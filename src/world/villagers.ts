@@ -748,11 +748,14 @@ export class VillagerWork {
    * Den Arbeiter der Werkstatt entlassen: Einen Bogen bringt er noch zur
    * Waffenkammer, das Boot noch an Land. Dann geht er noch einmal in die
    * Werkstatt, legt ab, was er trägt, und bleibt vor der Tür stehen, frei für
-   * neue Befehle. Gibt ihn zurück.
+   * neue Befehle. War er noch auf dem Weg hinein, bleibt er gleich stehen.
+   * Gibt ihn zurück.
    */
   dismiss(anchor: string): Villager | undefined {
     const worker = this.world.villagers.find((v) => workplace(v.task) === anchor);
-    if (worker?.task.kind === 'craft' || worker?.task.kind === 'fish') worker.task.leave = true;
+    if (worker?.task.kind !== 'craft' && worker?.task.kind !== 'fish') return worker;
+    if (worker.task.step === 'enter') worker.assign({ kind: 'idle' });
+    else worker.task.leave = true;
     return worker;
   }
 
