@@ -209,16 +209,21 @@ export class Picker {
    * Gebäude, dessen Modell unter dem Zeiger steht - auch an Dach und Wand,
    * nicht nur am Grundriss; der Hof daneben und die Luft darüber zählen nicht
    * (modelHit). Der vorderste gewinnt; `depth` wie bei resourceObject
-   * (Bildschirm-y des Fußpunkts, größer = weiter vorn).
+   * (Bildschirm-y des Fußpunkts, größer = weiter vorn). Felder zählen hier
+   * nicht - sie liegen flach, ihr Tile ist das Feld (siehe target).
    */
   private building(px: number, py: number): { x: number; y: number; depth: number } | undefined {
     const v = this.camera.view();
+    // Mindestgröße wie beim Zeichnen: 8 Geräte-Pixel (map.ts, entities.render).
+    const minSize = 8 / (this.camera.tileSize * this.camera.pixelRatio);
     let best: { x: number; y: number; depth: number } | undefined;
     for (const b of this.world.allBuildings()) {
+      if (b.isFarm()) continue;
       const cx = b.x + 0.5;
       const cy = b.y + 0.5;
       const ground = this.ground.heightAt(cx, cy);
-      if (!this.modelHit(v, px, py, b.model, cx, cy, ground, b.definition.size, buildingHeading(b.model))) continue;
+      const size = Math.max(b.definition.size, minSize);
+      if (!this.modelHit(v, px, py, b.model, cx, cy, ground, size, buildingHeading(b.model))) continue;
       const depth = worldToScreen(v, cx, cy, ground).y;
       if (!best || depth > best.depth) best = { x: b.x, y: b.y, depth };
     }
@@ -226,19 +231,18 @@ export class Picker {
   }
 
   /**
-   * Tile, auf das ein Klick zielt: ein Gebäude oder Vorkommen am Objekt
-   * getroffen (das vorderste), sonst der Boden. Liegt direkt auf dem
-   * angeklickten Feld ein Gebäude, Strauch, Stein oder Gold, gewinnt das -
-   * auch wenn eine Baumspitze davor ins Bild ragt.
-   * `treeGround`: nichts getroffen, nur der Boden eines Baum-Felds - zum
-   * Auswählen zählt dort nur der Baum selbst, sammeln geht per Rechtsklick
-   * trotzdem. Weit draußen (keine Modelle, nur Farbe im Gelände) nie gesetzt.
+   * Tile, auf das ein Klick zielt: das Gebäude oder Vorkommen, dessen Modell
+   * getroffen ist (das vorderste), sonst der Boden. Felder liegen flach -
+   * dort ist das Tile das Feld.
+   * `bareGround`: kein Modell getroffen, nur der Boden unter einem Gebäude
+   * oder Vorkommen - zum Auswählen zählt dort nur das Modell selbst; ein
+   * Rechtsklick (sammeln, abliefern, hineingehen) geht dort trotzdem. Weit
+   * draußen, wo Vorkommen nur Farbe im Gelände sind, zählt ihr Tile.
    */
-  target(px: number, py: number): { x: number; y: number; treeGround?: boolean } {
+  target(px: number, py: number): { x: number; y: number; bareGround?: boolean } {
     const tile = this.tile(px, py);
-    if (this.world.at(tile.x, tile.y)) return tile;
-    const own = this.world.resourceInfo(tile.x, tile.y);
-    if (own && own.type !== 'wood') return tile;
+    const onTile = this.world.at(tile.x, tile.y);
+    if (onTile?.isFarm()) return tile;
     const object = this.resourceObject(px, py);
     const house = this.building(px, py);
     if (house && (!object
@@ -246,6 +250,7 @@ export class Picker {
       return house;
     }
     if (object) return object;
-    return own && this.camera.tileSize >= RESOURCE_OBJECTS_MIN_ZOOM ? { ...tile, treeGround: true } : tile;
+    const bare = onTile || (this.camera.tileSize >= RESOURCE_OBJECTS_MIN_ZOOM && this.world.resourceInfo(tile.x, tile.y));
+    return bare ? { ...tile, bareGround: true } : tile;
   }
 }
