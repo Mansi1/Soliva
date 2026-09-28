@@ -115,6 +115,8 @@ const sound = new Sound();
 /** Hintergrundmusik aus assets/music/ - der Ton-Schalter (M) gilt auch für sie. */
 const music = new Music();
 music.mute = !sound.enabled;
+// Im Hauptmenü beginnt sie mit Stück 1 (start ist weiter unten angelegt).
+music.inMenu = () => start.isOpen();
 
 
 /** Aktuell zum Bauen ausgewählter Typ, oder null im Ansichtsmodus. */

@@ -1,7 +1,7 @@
 // music.ts
 // Hintergrundmusik: die Stücke aus assets/music/ in gemischter Reihenfolge,
 // jedes erst wieder, wenn alle einmal dran waren, mit sanftem Übergang
-// zwischen zweien. Gespielt wird mit <audio>-Elementen - die Dateien werden gestreamt,
+// zwischen zweien. Beginnt sie im Hauptmenü, kommt immer zuerst Stück 1. Gespielt wird mit <audio>-Elementen - die Dateien werden gestreamt,
 // statt ganz in den Speicher dekodiert zu werden.
 //
 // Browser erlauben Ton erst nach einer Nutzeraktion - die Musik beginnt darum
@@ -9,25 +9,15 @@
 // Seite kam per Zurück aus dem Browser-Cache und wurde dabei angehalten),
 // läuft sie beim nächsten Klick oder Tastendruck weiter.
 
-/** Anzeige-Titel je Datei (assets/music/<name>.mp3) - sonst aus dem Dateinamen. */
-const TITLES: Record<string, string> = {
-  a_colony_is_born: 'A Colony Is Born',
-  colony_dawn: 'Colony Dawn',
-  erntedankfest: 'Erntedankfest',
-  erntedankfest_op_2: 'Erntedankfest Op. 2',
-  foundations_of_a_new_home: 'Foundations of a New Home',
-  fruehlingsfest: 'Frühlingsfest',
-  lets_build_an_empire: 'Lets Build An Empire!',
-  on_a_sunny_morning: 'On A Sunny Morning',
-  wind_swellings: 'Wind Swellings',
-};
+import { trackTitle } from './trackTitle';
 
+/** Die Stücke nach ihrer Nummer im Dateinamen (1_..., 2_... bis 19_...). */
 const TRACKS: { title: string; url: string }[] = Object.entries(
   import.meta.glob('../assets/music/*.mp3', { eager: true, query: '?url', import: 'default' }) as Record<string, string>,
 ).map(([path, url]) => {
   const name = path.replace(/^.*\//, '').replace(/\.mp3$/, '');
-  return { title: TITLES[name] ?? name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), url };
-});
+  return { number: parseInt(name, 10) || 0, title: trackTitle(name), url };
+}).sort((a, b) => a.number - b.number);
 
 /** Sekunden, über die ein Stück aus- und das nächste eingeblendet wird. */
 const FADE = 4;
@@ -41,6 +31,8 @@ export class Music {
   private started = false;
   private level = 0.4;
   private muted = false;
+  /** Beginnt die Musik gerade im Hauptmenü? Dann zuerst Stück 1 (main.ts setzt es). */
+  inMenu: () => boolean = () => false;
   /** Laufende Überblendung: Start (performance.now, ms), von welchem zu welchem Spieler. */
   private fade: { start: number; from: HTMLAudioElement; to: HTMLAudioElement } | null = null;
 
@@ -116,6 +108,8 @@ export class Music {
       const last = this.order[this.order.length - 1];
       this.order = TRACKS.map((_, i) => i).sort(() => Math.random() - 0.5);
       if (this.order.length > 1 && this.order[0] === last) this.order.push(this.order.shift()!);
+      // Das allererste Stück im Hauptmenü ist immer Nummer 1 (TRACKS[0]).
+      if (last === undefined && this.inMenu()) this.order.unshift(...this.order.splice(this.order.indexOf(0), 1));
       this.index = 0;
     }
     const from = this.players[this.current];
