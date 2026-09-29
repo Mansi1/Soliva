@@ -1086,4 +1086,6 @@ setRenderInfo(() => {
   };
 });
 requestAnimationFrame(loop);
+// Nach dem ersten Bild, wenn der Browser Luft hat (audio.ts).
+sound.prepare();
 document.title = `Soliva - ${seed}`;
