@@ -60,7 +60,7 @@ export class FlowerField {
   update(view: ViewRect, centerX: number, centerY: number, budgetMs = 3) {
     fillChunks(this.chunks, view, centerX, centerY, budgetMs, MAX_CHUNKS, (cx, cy) => this.generate(cx, cy), {
       dropped: (cx, cy) => this.dropBatch(`${Math.floor(cx / REGION)},${Math.floor(cy / REGION)}`),
-    });
+    }, 'flowerChunkMs');
   }
 
   /**

@@ -25,6 +25,8 @@
 //   tileSize, relief - Zoom (CSS-Pixel je Tile) und Reliefstärke
 //   idle - Anteil der Bilder, die gedrosselt kamen (Kamera steht, 30 fps gewollt)
 //   simVillagersMs, simWildlifeMs - Anteile von simMs (world/world.ts)
+//   resourceChunkMs, flowerChunkMs, particleChunkMs, regionMs - Erzeugen der Stücke
+//   (fillChunks) und Bauen der Regions-Puffer, Anteile von collectMs (world/)
 //   gpuMs - GPU-Zeit der Hauptansicht (gpuTimer.ts, nur mit EXT_disjoint_timer_query_webgl2)
 //   selectedInstances, selectedDrawCalls, selectedVertices - die Modellarten
 //   des Ausgewählten, alle ihre Objekte im Bild (gl/entityRenderer.ts)

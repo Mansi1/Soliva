@@ -36,7 +36,7 @@ export class LandscapeParticles {
 
   update(view: ViewRect, centerX: number, centerY: number, budgetMs = 2) {
     if (view.width <= 0) return;
-    fillChunks(this.chunks, view, centerX, centerY, budgetMs, MAX_CHUNKS, (cx, cy) => this.generate(cx, cy));
+    fillChunks(this.chunks, view, centerX, centerY, budgetMs, MAX_CHUNKS, (cx, cy) => this.generate(cx, cy), {}, 'particleChunkMs');
   }
 
   /** Meldet an, was im Rechteck glitzert und fliegt - Insekten erst nah heran. */

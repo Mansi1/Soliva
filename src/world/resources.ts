@@ -11,6 +11,7 @@ import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ, type MapGenerator } from '../noise';
 import type { DepositType } from './catalog';
 import type { ViewRect, World } from './world';
+import { addRenderStats } from '../renderStats';
 
 /** Klein genug, dass ein Stück das Zeitbudget eines Bildes nicht sprengt. */
 export const CHUNK = 16;
@@ -227,7 +228,7 @@ export class ResourceField {
         if (region) region.stale = true;
       },
       dropped: (cx, cy) => this.dropRegion(cx, cy),
-    });
+    }, 'resourceChunkMs');
   }
 
   private generate(cx: number, cy: number): ResourceNode[] {
@@ -477,6 +478,7 @@ export class ResourceField {
    * Zoomen nur, welche gezeichnet werden, gebaut wird nichts neu.
    */
   private rebuild(rx: number, ry: number, region: Region, batcher: Batcher) {
+    const start = performance.now();
     const trees: EntityInstance[] = [];
     const others: EntityInstance[] = [];
     for (let cy = ry * REGION; cy < (ry + 1) * REGION; cy++) {
@@ -500,6 +502,7 @@ export class ResourceField {
     region.others = others.length > 0 ? batcher.createBatch(others) : null;
     region.stale = false;
     region.wrong = false;
+    addRenderStats('regionMs', performance.now() - start);
   }
 
   /** Fallen Stücke weg, wird die Region beim nächsten Zeigen neu gebaut; ihr Puffer ist frei. */
@@ -522,6 +525,7 @@ export function fillChunks<T>(
     chunks: Map<string, T>, view: ViewRect, centerX: number, centerY: number,
     budgetMs: number, maxChunks: number, generate: (cx: number, cy: number) => T,
     hooks: { added?: (cx: number, cy: number) => void; dropped?: (cx: number, cy: number) => void } = {},
+    stat?: string,
 ) {
   const missing: [number, number][] = [];
   const cx0 = Math.floor(view.x / CHUNK);
@@ -545,6 +549,8 @@ export function fillChunks<T>(
     hooks.added?.(cx, cy);
     if (performance.now() - start > budgetMs) break;
   }
+  // Wie viel Hauptthread das Erzeugen kostet (renderStats.ts) - je Art.
+  if (stat) addRenderStats(stat, performance.now() - start);
 
   // Zu viele gemerkt: die am weitesten entfernten fallen weg.
   if (chunks.size > maxChunks) {
