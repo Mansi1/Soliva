@@ -891,6 +891,9 @@ function collectOverlay(blend: number) {
     resources.update(visible, camera.x, camera.y);
     if (camera.tileSize < STATIC_BATCHES_BELOW) {
       resources.instances(visible, world, overlay, selection.resource, blend, { batcher: renderer, out: staticBatches });
+    } else if (camera.tileSize < settings.billboards) {
+      // Bäume als Bild gibt es nur aus den festen Puffern - nah dort nur sie, der Rest einzeln.
+      resources.instances(visible, world, overlay, selection.resource, blend, { batcher: renderer, out: staticBatches }, onScreenTest());
     } else {
       resources.instances(visible, world, overlay, selection.resource, blend, undefined, onScreenTest());
     }

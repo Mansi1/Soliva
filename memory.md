@@ -55,6 +55,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 - 2026-09-29, M4, `stadt` ohne Deckel, Stand `7f1e195`: ~2 ms je Bild bei DPR 1 (vorher 5,2), kein Modell-Teil sticht mehr heraus. Offen: M1 (`stadt` 29-48 fps) mit diesem Stand neu messen - vermutlich war es die GPU.
 - 2026-09-29, M4, DPR 2 (4,1 Mio. Pixel), ohne Deckel: Post-Effekte 1,2-1,4 ms je Bild in jeder Szene (größter fester Posten), Modelle in `stadt` 2,3 ms, Gelände vor dem CSS-Pixel-Gitter 1,2-1,9 ms. `nah` füllt bei DPR 2 nach 4 s noch den Gelände-Cache (100-250k Texel je Bild) - erst nach dem Anlauf messen.
+- 2026-09-29: Die Bench-Szenen haben kaum Bäume - Wald-Kosten dort nie sichtbar. Wald messen: `Testseed` `lat=-10&lng=40` (Zoom 3-5). Holzfäller in der Demo: Baum bei 92,111 (`lat=109&lng=92&zoom=5`).
+- Bildvergleich nach Drehung: Kamera per Taste (Alt+Pfeil) steht anders als per `rot=` in der Adresse - Referenz in derselben Seite per Taste aufnehmen.
 - Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
 
 ## Optimierungsplan

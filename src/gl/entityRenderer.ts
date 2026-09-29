@@ -777,6 +777,9 @@ flat out float vRoof;   // Gebäude: 1 = Dachfläche. Figuren: Körperteil.
 uniform int  uBillboard;
 uniform vec4 uBillboardRect[${BILLBOARD_HEADINGS}];
 uniform vec4 uBillboardBox[${BILLBOARD_HEADINGS}];
+// Die Bilder sind in einer Drehung der Ansicht gerendert (BillboardSet.rotation);
+// jede Vierteldrehung seither verschiebt den Blickwinkel um so viele Bilder.
+uniform int uBillboardShift;
 out vec2 vBillboardUV;
 
 // Körperteile der Figur - aCorner.w im Menschen-Mesh.
@@ -931,7 +934,7 @@ void main() {
     // gerenderten Bild. Die Ansicht ist parallel, das Bild ist also überall
     // dasselbe - nur verschoben und nach der Größe skaliert. Die Tiefe wächst
     // mit der Höhe über dem Fuß wie beim Modell.
-    int h = int(mod(floor(aMotion.x / ${((2 * Math.PI) / BILLBOARD_HEADINGS).toFixed(7)} + 0.5), ${BILLBOARD_HEADINGS}.0));
+    int h = int(mod(floor(aMotion.x / ${((2 * Math.PI) / BILLBOARD_HEADINGS).toFixed(7)} + 0.5) + float(uBillboardShift), ${BILLBOARD_HEADINGS}.0));
     vec4 box = uBillboardBox[h];
     vec2 off = (box.xy + aCorner.xy * box.zw) * aParams.z * uPixelsPerTile;
     float base = aGround > ${GROUND_UNKNOWN / 10}.0 ? aGround * uReliefScale : groundZ(center);
@@ -2957,6 +2960,8 @@ export interface StaticBatch {
  */
 interface BillboardSet {
   key: string;
+  /** Drehung der Ansicht (viewRotation), in der die Bilder gerendert sind. */
+  rotation: number;
   shapes: Map<number, BillboardBand>;
 }
 
@@ -2986,6 +2991,17 @@ const BILLBOARD_TREE_SIZE = 0.6 * 1.2;
 const BILLBOARD_TREE_COLOR: [number, number, number] = [42, 97, 52];
 /** Breite der Textur mit den Baumbildern; Rand um jedes Bild in Pixeln. */
 const BILLBOARD_ATLAS_WIDTH = 2048;
+/**
+ * In dieser Auflösung (Geräte-Pixel je Tile) werden die Baumbilder einmal
+ * gerendert - für alle Zoomstufen: weiter draußen verkleinern die Mipmaps,
+ * näher heran (Zoom 5 auf Retina, 256) wird vergrößert. Die Bilder aller
+ * Baumarten brauchen so 72 MB Grafikspeicher (ohne Mipmaps), bei 256 wären
+ * es 263 MB (gemessen, M4). Je Zoomstufe neu gerendert hieß beim Zoomen
+ * 75-97 ms lange Aufgaben je Sekunde.
+ * ponytail: nah auf Retina etwas weicher; höher setzen, wenn das stört und
+ * der Speicher auf den Zielgeräten reicht.
+ */
+const BILLBOARD_PPT = 128;
 const BILLBOARD_PAD = 3;
 
 /** Name jeder Form aus SHAPE, z. B. "treeOak" - für Dateinamen. */
@@ -3459,7 +3475,7 @@ export class EntityRenderer {
     const max = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
     const zScreen = viewZScreen();
     const unit = ppt * BILLBOARD_TREE_SIZE;
-    const set: BillboardSet = { key, shapes: new Map() };
+    const set: BillboardSet = { key, rotation: viewRotation(), shapes: new Map() };
     for (const shape of TREES) {
       const m = this.modelByShape.get(shape);
       if (!m) continue;
@@ -3576,8 +3592,12 @@ export class EntityRenderer {
    * jetzigen Zoom würde je Bild neu gerendert, das kostete jedes Mal
    * Dutzende Millisekunden. false, wenn es keine Bilder gibt.
    */
-  private ensureBillboards(pixelsPerTile: number, groundV: number, pixelRatio: number, shapes: Iterable<number>): boolean {
-    const key = `${viewRotation()}|${pixelsPerTile}|${groundV.toFixed(4)}|${pixelRatio}|${this.leafReady}|${this.imagesLoaded}`;
+  private ensureBillboards(groundV: number, pixelRatio: number, shapes: Iterable<number>): boolean {
+    // Immer in derselben Auflösung (BILLBOARD_PPT): weiter draußen verkleinern
+    // die Mipmaps - beim Zoomen und Drehen wird nichts neu gerendert, nur beim Neigen.
+    const pixelsPerTile = BILLBOARD_PPT;
+    // Ohne die Drehung der Ansicht: sie verschiebt nur die Bilder (uBillboardShift).
+    const key = `${pixelsPerTile}|${groundV.toFixed(4)}|${pixelRatio}|${this.leafReady}|${this.imagesLoaded}`;
     if (this.billboardSet?.key !== key) {
       for (const band of this.billboardSet?.shapes.values() ?? []) if (band.texture) this.gl.deleteTexture(band.texture);
       this.billboardSet = this.planBillboards(key, pixelsPerTile);
@@ -3664,7 +3684,7 @@ export class EntityRenderer {
     const shown = new Set<number>();
     for (const batch of batches) for (const shape of batch.ranges.keys()) if (TREES.includes(shape)) shown.add(shape);
     const billboards = shown.size > 0 && cssPixelsPerTile < this.billboardBelow
-      && this.ensureBillboards(camera.cachePixelsPerTile ?? camera.pixelsPerTile, camera.cacheGroundV ?? viewGroundV(), pixelRatio, shown);
+      && this.ensureBillboards(camera.cacheGroundV ?? viewGroundV(), pixelRatio, shown);
     this.billboardsActive = billboards;
     // Einzeln je Bild gepackt gegen fest in Puffern (createBatch) - und ob Bäume als Bild.
     addRenderStats('instances', instances.length);
@@ -3804,6 +3824,9 @@ export class EntityRenderer {
         gl.uniform4fv(this.location('uBillboardRect[0]'), cells.flatMap((c) => c.rect));
         gl.uniform4fv(this.location('uBillboardBox[0]'), cells.flatMap((c) => c.box));
         gl.uniform1i(this.location('uBillboard'), 1);
+        const turns = (viewRotation() - this.billboardSet!.rotation + 4) % 4;
+        // Geprüft gegen neu gerenderte Bilder: gleiche Bäume, nur das gebackene Licht dreht mit.
+        gl.uniform1i(this.location('uBillboardShift'), (turns * (BILLBOARD_HEADINGS / 4)) % BILLBOARD_HEADINGS);
       }
       for (const batch of batches) {
         const range = batch.ranges.get(m.shape);
