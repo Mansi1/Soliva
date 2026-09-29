@@ -49,8 +49,9 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - Medianwerte je Szene verstecken Spitzen: Beim Zoom-Wechsel `frameMsMax` und `terrainTexels` mit ansehen, nicht nur `frameMs`.
 - Die Demo-Welt hat 31 Gebäude und 42 Dorfbewohner - weniger als die "große Stadt mit 80+" aus Szenario (b) des Optimierungsplans.
 
-- 2026-09-29, M4: `gpuMs` (eine Timer-Query um die Hauptansicht, `gpuTimer.ts`) stimmt mit der Wartezeit eines `readPixels` nach dem Bild überein: Demo nah 12-16 ms, `stadt` 12,5, `weit-leer` 5,5. Mit ¼ der Pixel und ⅕ der Eckpunkte noch ~9-10 ms - ein Sockel, der nicht an Pixeln oder Eckpunkten hängt, Ursache offen.
-- 2026-09-29, M4: Timer-Queries je Abschnitt (Gelände, Gras, Modelle, ...) sind auf ANGLE Metal unbrauchbar: jede Grenze kostet selbst GPU-Zeit (Summe ~16 statt ~12 ms), Werte sprangen zwischen Läufen auf 66-130 ms bei 60 fps. Eine Query für ein einzelnes Modell zeigte 6-13 ms für 24.000 Eckpunkte. `gl.finish()` blockiert dort nicht (0 ms) - zum Gegenprüfen `readPixels` eines Pixels nehmen.
+- 2026-09-29, M4: `gpuMs` (eine Timer-Query um die Hauptansicht) und die Wartezeit eines `readPixels` danach zeigen mit vsync beide ~12 ms, auch ohne 4 Mio. Eckpunkte Weizen - sie messen das Warten aufs nächste Bild mit. GPU-Last nur ohne Deckel messen (`npm run bench -- --uncapped`, AGENTS.md).
+- 2026-09-29, M4: Timer-Queries je Abschnitt (Gelände, Gras, Modelle, ...) sind auf ANGLE Metal unbrauchbar: jede Grenze kostet selbst GPU-Zeit, Werte sprangen zwischen Läufen auf 66-130 ms bei 60 fps. `gl.finish()` blockiert dort nicht (0 ms).
+- 2026-09-29, M4, ohne Deckel, Demo über den Äckern (`/game/Demo?lat=62&lng=100&zoom=4`): Weizen als Halme kostete ~5 ms je Bild (76 → 120 fps als Karten, 5,7 → 1,8 Mio. Eckpunkte), das Gras 0,5-1,1 ms (als Karten bei Zoom 5 ~0, bei Zoom 4 etwa gleich). Die Wärme des Rechners verschiebt fps zwischen Läufen um bis zu 40 % - nur direkt aufeinanderfolgende Paare vergleichen.
 
 ## Optimierungsplan
 
@@ -58,4 +59,5 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Offen
 
+- Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.

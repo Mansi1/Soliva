@@ -14,50 +14,56 @@ import { model } from './primitives.mjs';
 
 /** The parts a field is made of (src/models/fields/<name>.glb). */
 export const FIELD_PARTS = [
-  'stake', 'cord', 'wheat_leaf', 'wheat_stalk_light', 'wheat_stalk', 'wheat_stalk_dark', 'corn_1', 'corn_2',
+  'stake', 'cord', 'wheat_card', 'corn_1', 'corn_2',
   'tomato', 'potato', 'hop',
 ];
 
 /**
- * A part read from its OBJ, per material: vertices (file coords) and faces
- * (0-based into them).
+ * A part read from its OBJ, per material: vertices (file coords), faces
+ * (0-based into them) and, for an image card, the texture coordinates.
  */
 function readPart(obj) {
   const pos = [];
+  const uv = [];
   const groups = new Map();
   let mtl = '';
   for (const raw of obj.split('\n')) {
     const p = raw.trim().split(/\s+/);
     if (p[0] === 'v') pos.push(p.slice(1, 4).map(Number));
+    else if (p[0] === 'vt') uv.push(p.slice(1, 3).map(Number));
     else if (p[0] === 'usemtl') mtl = p.slice(1).join(' ');
     else if (p[0] === 'f') {
-      if (!groups.has(mtl)) groups.set(mtl, { mtl, map: new Map(), verts: [], faces: [] });
+      if (!groups.has(mtl)) groups.set(mtl, { mtl, map: new Map(), verts: [], faces: [], uvs: undefined });
       const g = groups.get(mtl);
       g.faces.push(p.slice(1).map((a) => {
-        const i = Number(a.split('/')[0]) - 1;
-        if (!g.map.has(i)) {
-          g.map.set(i, g.verts.length);
+        const [i, t] = a.split('/').map((n) => Number(n) - 1);
+        const key = `${i}/${t}`;
+        if (!g.map.has(key)) {
+          g.map.set(key, g.verts.length);
           g.verts.push(pos[i]);
+          if (t >= 0) (g.uvs ??= []).push(uv[t]);
         }
-        return g.map.get(i);
+        return g.map.get(key);
       }));
     }
   }
   return [...groups.values()];
 }
 
-/** Material colours (Kd) of the parts' MTL files. */
-function readColors(mtls) {
+/** Material colours (Kd) and images (map_Kd) of the parts' MTL files. */
+function readMaterials(mtls) {
   const colors = {};
+  const images = {};
   for (const text of mtls) {
     let cur = null;
     for (const raw of text.split('\n')) {
       const p = raw.trim().split(/\s+/);
       if (p[0] === 'newmtl') cur = p.slice(1).join(' ');
       if (p[0] === 'Kd' && cur) colors[cur] = p.slice(1, 4).join(' ');
+      if (p[0] === 'map_Kd' && cur) images[cur] = p.slice(1).join(' ');
     }
   }
-  return colors;
+  return { colors, images };
 }
 
 const sub = (a, b) => a.map((v, i) => v - b[i]);
@@ -178,35 +184,31 @@ function planted(rows, cols, plant) {
 }
 
 /**
- * Wheat like a real field: many single stalks, each with its ear, standing
- * close together and leaning a little this way and that.
+ * Wheat as image cards (fields/wheat_card.glb, a clump of stalks with ears):
+ * per plant two crossed cards, in the full version three such crosses along the
+ * furrow's width - so the ground does not show between the rows. A card is
+ * 4 vertices where the single stalks were thousands per plant.
  */
 function wheat(m, put, detail = 1) {
   const rnd = rng(11);
   const rows = ROWS, cols = 15;
   ground(m, put);
-  const gapZ = (2 * INNER) / rows, gapX = (2 * INNER) / cols;
+  const gapZ = (2 * INNER) / rows;
   planted(rows, cols, (name, x, z) => {
-    // Unten dicht an dicht Blätter, die schräg aus dem Boden stehen - so
-    // sieht man zwischen den Halmen nicht bis auf die Erde.
-    for (let i = 0; i < Math.round(24 * detail); i++) {
-      const px = x + (rnd() - 0.5) * gapX;
-      const pz = z + (rnd() - 0.5) * gapZ * 0.95;
-      const a = rnd() * Math.PI * 2;
-      const len = 0.35 + rnd() * 0.25;
-      const tip = [px + Math.cos(a) * len * 0.45, SOIL + len, pz + Math.sin(a) * len * 0.45];
-      put(name, 'wheat_leaf', stretch([0, 1, 0], [px, SOIL * 0.5, pz], tip));
-    }
-    for (let i = 0; i < Math.max(4, Math.round(60 * detail)); i++) {
-      const px = x + (rnd() - 0.5) * gapX;
-      const pz = z + (rnd() - 0.5) * gapZ * 0.95;
-      const h = 0.8 + rnd() * 0.25;
-      const lean = [(rnd() - 0.5) * 0.14, (rnd() - 0.5) * 0.14];
-      rnd(); // (früher die Länge der Ähre - sie steht jetzt im Modell)
-      const tone = rnd();
-      // Der Halm von der Erde bis oben, die Ähre setzt ihn fort.
-      put(name, tone < 0.55 ? 'wheat_stalk_light' : tone < 0.85 ? 'wheat_stalk' : 'wheat_stalk_dark',
-        stretch([0, 1, 0], [px, SOIL * 0.5, pz], [px + lean[0], h, pz + lean[1]]));
+    for (const dz of detail >= 1 ? [-1 / 3, 0, 1 / 3] : [0]) {
+      const px = x + (rnd() - 0.5) * 0.3;
+      const pz = z + dz * gapZ + (rnd() - 0.5) * 0.2;
+      const h = 0.85 + rnd() * 0.25;
+      // Breiter als hoch, damit zwischen den Kreuzen keine Erde durchscheint;
+      // die einfacheren Fassungen (ein Kreuz) noch breiter.
+      const wide = h * (detail >= 1 ? 1.3 : 1.8);
+      const turn = rnd() * Math.PI;
+      for (const t of [turn, turn + Math.PI / 2]) {
+        // Jede Karte oben bis etwa 10° zur Seite und nach vorn oder hinten geneigt.
+        const [side, back] = [(rnd() - 0.5) * 0.35, (rnd() - 0.5) * 0.35];
+        const at = stand(px, SOIL * 0.5, pz, t);
+        put(name, 'wheat_card', ([vx, vy, vz]) => at([vx * wide + side * vy * h, vy * h, vz + back * vy * h]));
+      }
     }
   });
 }
@@ -282,14 +284,14 @@ export function farmModel(kind, detail, parts) {
   const m = model();
   const read = Object.fromEntries(Object.entries(parts).map(([n, p]) => [n, readPart(p.obj)]));
   const put = (name, part, at) => {
-    for (const g of read[part]) m.mesh(name, g.mtl, g.verts.map(at), g.faces);
+    for (const g of read[part]) m.mesh(name, g.mtl, g.verts.map(at), g.faces, g.uvs);
   };
   MAKE[kind](m, put, detail);
-  const colors = readColors(Object.values(parts).map((p) => p.mtl));
+  const { colors, images } = readMaterials(Object.values(parts).map((p) => p.mtl));
   const obj = `# farm_${kind}.obj (tools/models/farmsGen.mjs)\nmtllib farm_${kind}.mtl\n${m.out.join('\n')}\n`;
   let mtl = `# farm_${kind}.mtl\n`;
   for (const n of [...m.used].sort()) {
-    mtl += `\nnewmtl ${n}\nKd ${colors[n] ?? '0.6 0.6 0.6'}\nKa 0 0 0\nKs 0 0 0\nd 1\nillum 1\n`;
+    mtl += `\nnewmtl ${n}\nKd ${colors[n] ?? '0.6 0.6 0.6'}\nKa 0 0 0\nKs 0 0 0\nd 1\nillum 1\n${images[n] ? `map_Kd ${images[n]}\n` : ''}`;
   }
   return { obj, mtl };
 }

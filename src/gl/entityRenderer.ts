@@ -365,9 +365,19 @@ const IMAGE_ROLE = 20;
  * Materialfarbe, die sie einfärbt - je Eintrag eine Schicht in uModelImages.
  */
 const MODEL_IMAGES: { url: string; tint: RGB01 }[] = [];
+/** Steht, sobald ein EntityRenderer das Textur-Array angelegt hat - danach passt keine Schicht mehr hinein. */
+let modelImagesAllocated = false;
 function imageLayer(url: string, tint: RGB01): number {
   const i = MODEL_IMAGES.findIndex((m) => m.url === url && m.tint.every((c, k) => c === tint[k]));
-  return i >= 0 ? i : MODEL_IMAGES.push({ url, tint }) - 1;
+  if (i >= 0) return i;
+  if (modelImagesAllocated) throw new Error('Bildtextur nach dem Anlegen von uModelImages - vorher anmelden (siehe FIELD_PART_MODELS)');
+  return MODEL_IMAGES.push({ url, tint }) - 1;
+}
+// Die Felder baut erst der erste Zugriff (lazyFieldModels), nach dem Anlegen
+// der Textur - ihre Bilder (Weizenkarte) darum gleich hier, mit ihrer Farbe (Kd) wie in farmModel.
+for (const part of Object.values(FIELD_PART_MODELS)) {
+  const colors = parseMtl(part.mtl);
+  for (const [material, url] of parseMtlImages(part.mtl)) imageLayer(url, colors.get(material) ?? [1, 1, 1]);
 }
 /**
  * So viele Drehungen je Baumart hat ein Billboard - das Bild liegt höchstens
@@ -737,6 +747,7 @@ uniform float uPoseShift[8];
 
 out vec3 vWorld;
 out vec3 vColor;
+out float vUnripe;  // Feldpflanzen: 1 = noch grün (Bildkarten färbt erst der Fragment-Shader)
 flat out vec3 vParams;
 flat out vec3 vTeam;     // Instanzfarbe (Spielerfarbe) - für den Umriss verdeckter Figuren
 // Bäume: welche Textur (0 keine, 3 Rinde, 4 Birkenrinde, 5 Schnittfläche)
@@ -1316,6 +1327,7 @@ void main() {
   // Auswahlring: der Fragment-Shader braucht die Lage im Quadrat (0..1).
   if (shape == ${SHAPE_RING}) vWorld = vec3(aCorner.xy, world.z);
   vColor = aColor;
+  vUnripe = 0.0;
   vTeam = aColor;
   vTex = 0;
   vSawn = gSawn;
@@ -1331,7 +1343,9 @@ void main() {
     vec3 paint = fieldShape ? uPlayerColor : aColor;
     vColor = role == 1 ? paint : role == 2 ? aAccent : aMaterial.rgb;
     if (gSawn > 0.5 && role != ${IMAGE_ROLE}) vColor = vec3(0.86, 0.71, 0.48);
-    vColor = mix(vColor, vec3(0.34, 0.56, 0.2), gUnripe * 0.85);
+    // Bildflächen tragen in vColor (u, v, Schicht) - sie färbt der Fragment-Shader.
+    if (role != ${IMAGE_ROLE}) vColor = mix(vColor, vec3(0.34, 0.56, 0.2), gUnripe * 0.85);
+    vUnripe = gUnripe;
     bool tree = ${TREES.map((n) => `shape == ${n}`).join(' || ')};
     bool villager = ${FIGURE_TEST};
     bool figureTex = role >= ${FIGURE_TEX.cloth} && role <= ${FIGURE_TEX.skin};
@@ -1367,6 +1381,7 @@ precision highp float;
 
 in vec3 vWorld;
 in vec3 vColor;
+in float vUnripe;
 flat in vec3 vTeam;
 flat in int vTex;
 flat in float vCut;
@@ -1848,7 +1863,11 @@ void main() {
   // Ohne Texturen: Bilder tragen statt einer Farbe (u, v, Schicht) - dann grau.
   else if (uPlain == 1 && vTex == ${IMAGE_ROLE}) base = vec3(0.7);
   else if (uPlain == 1 && vTex != ${BLOSSOM_CARD_ROLE} && vTex != ${FLOWER_SHADOW_ROLE}) base = vColor;
-  else if (vTex == ${IMAGE_ROLE}) base = vSawn > 0.5 ? treeTexture(vec3(0.86, 0.71, 0.48)) : imageTexture(base);
+  else if (vTex == ${IMAGE_ROLE}) {
+    base = vSawn > 0.5 ? treeTexture(vec3(0.86, 0.71, 0.48)) : imageTexture(base);
+    // Unreife Feldpflanzen (Weizenkarte): grün, die Helligkeit des Bilds bleibt.
+    base = mix(base, vec3(0.34, 0.56, 0.2) * dot(base, vec3(0.3, 0.59, 0.11)) / 0.45, vUnripe * 0.85);
+  }
   else if (vTex >= ${FIGURE_TEX.cloth} && vTex <= ${FIGURE_TEX.skin}) base = figureTexture(base);
   else if (vTex == ${BLOSSOM_CARD_ROLE}) base = blossomCard(base, shape, uSunDir, uLight.y);
   else if (vTex == ${FLOWER_SHADOW_ROLE}) {
@@ -3180,6 +3199,7 @@ export class EntityRenderer {
     gl.activeTexture(gl.TEXTURE0 + IMAGE_TEXTURE_UNIT);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
     gl.texStorage3D(gl.TEXTURE_2D_ARRAY, levels, gl.RGBA8, IMAGE_SIZE, IMAGE_SIZE, Math.max(1, MODEL_IMAGES.length));
+    modelImagesAllocated = true;
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.REPEAT);

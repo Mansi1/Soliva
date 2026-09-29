@@ -1630,6 +1630,18 @@
    "Window.Shutter",
    "Window.Shutter.Band"
   ],
+  "fields/billboards/cattails_billboard": [
+   "cattails"
+  ],
+  "fields/billboards/meadow_grass_billboard": [
+   "meadow_grass"
+  ],
+  "fields/billboards/reed_billboard": [
+   "reed"
+  ],
+  "fields/billboards/wild_grass_seedheads_billboard": [
+   "wild_grass_seedheads"
+  ],
   "fields/cord": [
    "Cord"
   ],
@@ -2004,26 +2016,26 @@
    "Stake",
    "Stem"
   ],
-  "fields/wheat_leaf": [
-   "Leaf"
-  ],
-  "fields/wheat_stalk": [
-   "Ear",
-   "Stalk"
-  ],
-  "fields/wheat_stalk_dark": [
-   "Ear",
-   "Stalk"
-  ],
-  "fields/wheat_stalk_light": [
-   "Ear",
-   "Stalk"
+  "fields/wheat_card": [
+   "WheatCard"
   ],
   "flowers/flower": [
    "Blossom",
    "Leaf",
    "Shadow",
    "Stem"
+  ],
+  "foliage/cattails": [
+   "cattails"
+  ],
+  "foliage/meadow_grass": [
+   "meadow_grass"
+  ],
+  "foliage/reed": [
+   "reed"
+  ],
+  "foliage/wild_grass_seedheads": [
+   "wild_grass_seedheads"
   ],
   "props/axe": [
    "Arm.R.Lower.Tool.Edge",

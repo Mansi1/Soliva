@@ -6,7 +6,13 @@
 // Aufruf: erst `npm run dev`, dann
 //   npm run bench -- --save   Ergebnis als Basis (tools/perf/baseline.json)
 //   npm run bench             gegen die Basis vergleichen
-// Optional die Adresse: `node tools/perf/bench.mjs [--save] [Adresse]`.
+// Optional die Adresse: `node tools/perf/bench.mjs [--save] [--uncapped] [Adresse]`.
+//
+// --uncapped: Chrome ohne vsync und Bildraten-Deckel. Dann zeigen fps (und
+// frameMs) die echte Last der GPU - mit vsync stehen sie bei 60, und gpuMs
+// misst auf ANGLE Metal das Warten aufs nächste Bild mit (M4, Demo: ~12 ms
+// mit und ohne 4 Mio. Eckpunkte Weizen; ohne Deckel 76 gegen 120 fps). Nicht
+// mit einer Basis ohne --uncapped vergleichen.
 //
 // Rauschen zwischen zwei Läufen (M4, gemessen): Zählwerte (drawCalls,
 // vertices, terrainTexels) ±2 %, Zeiten um 1 ms (cpuMs, renderMs) bis ±40 % -
@@ -18,6 +24,7 @@ import { launch } from '../ui/browser.mjs';
 
 const args = process.argv.slice(2);
 const SAVE = args.includes('--save');
+const UNCAPPED = args.includes('--uncapped');
 const BASE = (args.find((a) => !a.startsWith('--')) ?? 'http://localhost:5173').replace(/\/+$/, '');
 const BASELINE = new URL('baseline.json', import.meta.url);
 
@@ -48,7 +55,7 @@ const median = (values) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
-const browser = await launch();
+const browser = await launch(UNCAPPED ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []);
 // Feste Fenstergröße und Pixel-Verhältnis 1 - sonst misst jeder Lauf ein anderes Bild.
 const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 const page = await context.newPage();
@@ -110,6 +117,7 @@ async function runScene(scene) {
 
 const run = {
   commit: git('rev-parse --short HEAD') + (git('status --porcelain') ? '+geändert' : ''),
+  uncapped: UNCAPPED,
   date: new Date().toISOString(),
   scenes: {},
 };
@@ -124,6 +132,7 @@ await browser.close();
 const base = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, 'utf8')) : null;
 console.log(`\n${run.commit} auf ${run.info.gpu}${base ? ` - Basis ${base.commit} (${base.date.slice(0, 10)})` : ''}`);
 if (base && base.info.gpu !== run.info.gpu) console.log('Achtung: Basis auf anderer GPU gemessen - nicht vergleichbar.');
+if (base && !!base.uncapped !== UNCAPPED) console.log('Achtung: Basis mit anderem Bildraten-Deckel (--uncapped) - nicht vergleichbar.');
 for (const [name, now] of Object.entries(run.scenes)) {
   console.log(`\n${name}`);
   const before = base?.scenes[name];

@@ -1,0 +1,78 @@
+[
+  {
+    "name": "wild_grass_seedheads",
+    "model": "/mnt/data/foliage_billboards_v1_2026-09-29/models/wild_grass_seedheads_billboard.glb",
+    "texture": "/mnt/data/foliage_billboards_v1_2026-09-29/build/textures/wild_grass_seedheads.png",
+    "texture_px": [
+      1181,
+      1267
+    ],
+    "size_m": [
+      1.025335,
+      1.1
+    ],
+    "vertices": 4,
+    "triangles": 2,
+    "alpha_mode": "MASK",
+    "alpha_cutoff": 0.3,
+    "unlit": true,
+    "double_sided": false
+  },
+  {
+    "name": "meadow_grass",
+    "model": "/mnt/data/foliage_billboards_v1_2026-09-29/models/meadow_grass_billboard.glb",
+    "texture": "/mnt/data/foliage_billboards_v1_2026-09-29/build/textures/meadow_grass.png",
+    "texture_px": [
+      1222,
+      1225
+    ],
+    "size_m": [
+      0.847918,
+      0.85
+    ],
+    "vertices": 4,
+    "triangles": 2,
+    "alpha_mode": "MASK",
+    "alpha_cutoff": 0.3,
+    "unlit": true,
+    "double_sided": false
+  },
+  {
+    "name": "reed",
+    "model": "/mnt/data/foliage_billboards_v1_2026-09-29/models/reed_billboard.glb",
+    "texture": "/mnt/data/foliage_billboards_v1_2026-09-29/build/textures/reed.png",
+    "texture_px": [
+      1106,
+      1387
+    ],
+    "size_m": [
+      1.515068,
+      1.9
+    ],
+    "vertices": 4,
+    "triangles": 2,
+    "alpha_mode": "MASK",
+    "alpha_cutoff": 0.3,
+    "unlit": true,
+    "double_sided": false
+  },
+  {
+    "name": "cattails",
+    "model": "/mnt/data/foliage_billboards_v1_2026-09-29/models/cattails_billboard.glb",
+    "texture": "/mnt/data/foliage_billboards_v1_2026-09-29/build/textures/cattails.png",
+    "texture_px": [
+      1106,
+      1392
+    ],
+    "size_m": [
+      1.390445,
+      1.75
+    ],
+    "vertices": 4,
+    "triangles": 2,
+    "alpha_mode": "MASK",
+    "alpha_cutoff": 0.3,
+    "unlit": true,
+    "double_sided": false
+  }
+]

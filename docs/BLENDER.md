@@ -20,8 +20,10 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
   props/                    axe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
-  fields/                   stake, cord, wheat_leaf, wheat_stalk(_light, _dark),
-                            corn_1, corn_2, tomato, potato, hop
+  fields/                   stake, cord, wheat_card (Bildkarte), corn_1, corn_2,
+                            tomato, potato, hop
+  foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
+                            (Bildkarten fürs Gras, 256 px)
   clips/                    humanoid, humanoid_sit, quadruped, mill, flag - je .glb + .json
                             Bewegungen - je Skelett eine Bibliothek
   poses/                    mow.json, carve.json - Posen für tools/export/poses.mjs
@@ -149,8 +151,7 @@ wie früher, die Felder sehen aus wie vorher.
 |---|---|
 | `fields/stake` | Pflock am Rand, so wie er ist |
 | `fields/cord` | Schnur - 1 m lang entlang x, gestreckt von Pflock zu Pflock |
-| `fields/wheat_leaf` | Blatt am Boden - 1 m nach oben, gestreckt auf 0,35–0,6 m und schräg gestellt |
-| `fields/wheat_stalk`, `_light`, `_dark` | Halm mit Ähre (drei Farben: 30 %, 55 %, 15 %) - Halm 1 m, gestreckt auf 0,8–1,05 m und geneigt, die Ähre sitzt darüber |
+| `fields/wheat_card` | Bildkarte eines Weizenbüschels, 1 m hoch (`tools/models/billboard-card.mjs` aus `src/textures/wheat_texture.png`, Kd färbt golden) - je Pflanzplatz drei Kreuze aus zwei Karten, 0,85–1,1 m hoch |
 | `fields/corn_1`, `fields/corn_2` | Maispflanze mit einem bzw. zwei Kolben, 2,2 m - gedreht; was über 2 m liegt (Stängelspitze, Rispe), wächst mit der Höhe der Pflanze (2,0–2,45 m) |
 | `fields/tomato` | Tomatenstaude am Holzpfahl mit drei Rispen, 1,45 m - gedreht, vier je Pflanzplatz |
 | `fields/potato` | Kartoffelstaude mit weißen Blüten, 0,5 m - gedreht, sechs je Pflanzplatz |
