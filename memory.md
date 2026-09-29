@@ -53,7 +53,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-29, M4: Timer-Queries je Abschnitt (Gelände, Gras, Modelle, ...) sind auf ANGLE Metal unbrauchbar: jede Grenze kostet selbst GPU-Zeit, Werte sprangen zwischen Läufen auf 66-130 ms bei 60 fps. `gl.finish()` blockiert dort nicht (0 ms).
 - 2026-09-29, M4, ohne Deckel, Demo über den Äckern (`/game/Demo?lat=62&lng=100&zoom=4`): Weizen als Halme kostete ~5 ms je Bild (76 → 120 fps als Karten, 5,7 → 1,8 Mio. Eckpunkte), das Gras 0,5-1,1 ms (als Karten bei Zoom 5 ~0, bei Zoom 4 etwa gleich). Die Wärme des Rechners verschiebt fps zwischen Läufen um bis zu 40 % - nur direkt aufeinanderfolgende Paare vergleichen.
 
-- 2026-09-29, M4, `stadt` ohne Deckel nach Gras/Weizen: Modelle 3,5 ms, alles andere (Gelände, Gras, Partikel, Effekte) zusammen ~1,7 ms. Im Modell-Pass: Figuren 1,4 ms (davon Silhouetten 0,9), Gebäude 0,5, Natur 0,8, Äcker 0,3 - vor dem Indizieren. Danach nicht neu zerlegt.
+- 2026-09-29, M4, `stadt` ohne Deckel, Stand `7f1e195`: ~2 ms je Bild bei DPR 1 (vorher 5,2), kein Modell-Teil sticht mehr heraus. Offen: M1 (`stadt` 29-48 fps) mit diesem Stand neu messen - vermutlich war es die GPU.
 - 2026-09-29, M4, DPR 2 (4,1 Mio. Pixel), ohne Deckel: Post-Effekte 1,2-1,4 ms je Bild in jeder Szene (größter fester Posten), Modelle in `stadt` 2,3 ms, Gelände vor dem CSS-Pixel-Gitter 1,2-1,9 ms. `nah` füllt bei DPR 2 nach 4 s noch den Gelände-Cache (100-250k Texel je Bild) - erst nach dem Anlauf messen.
 - Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
 
