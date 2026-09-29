@@ -806,8 +806,20 @@ let lastTime = performance.now();
  */
 const IDLE_AFTER_MS = 1000;
 const IDLE_FPS = 30;
+/**
+ * In der Pause steht das Bild still - ohne Eingabe nur noch so oft, damit
+ * Nachgeladenes (Texturen, Gelände-Cache, Baumbilder) noch ins Bild kommt.
+ * ponytail: feste 2 fps statt gar keinem Bild; auf 0 gehen, wenn jede
+ * Quelle von Änderungen (Laden, Cache, UI) ein Neuzeichnen anstoßen kann.
+ */
+const PAUSED_FPS = 2;
 let lastMove = performance.now();
 let lastFrame = 0;
+/** Letzte Eingabe (Zeiger, Rad, Tasten) - sie zeichnet auch in der Pause sofort wieder. */
+let lastInput = performance.now();
+for (const type of ['pointermove', 'pointerdown', 'pointerup', 'wheel', 'keydown', 'keyup'] as const) {
+  window.addEventListener(type, () => { lastInput = performance.now(); }, { capture: true, passive: true });
+}
 /** So oft je Sekunde wird die Minimap gezeichnet - sie bewegt sich langsam (Einstellung minimapFps). */
 const MINIMAP_FPS = 10;
 let lastMinimap = 0;
@@ -911,7 +923,8 @@ function loop(now: number) {
     lastMove = now;
   }
   // Etwas Spiel, damit bei 60 Hz jedes zweite Bild kommt und nicht jedes dritte.
-  if (settings.idleFps && now - lastMove > IDLE_AFTER_MS && now - lastFrame < 1000 / IDLE_FPS - 4) {
+  const idleFps = paused && now - lastInput > IDLE_AFTER_MS ? PAUSED_FPS : IDLE_FPS;
+  if (settings.idleFps && now - lastMove > IDLE_AFTER_MS && now - lastFrame < 1000 / idleFps - 4) {
     requestAnimationFrame(loop);
     return;
   }
