@@ -13,18 +13,14 @@ import {
   PROJECT_GLSL, bindScreen, cameraDirection, groundToWorld, setCameraUniforms, viewGroundV, viewRotation, viewZScreen, worldToGround, type GpuCamera,
 } from './iso';
 import { link, uploadTerrainParams } from './terrainRenderer';
-import humanoidClipsGlb from '../models/clips/humanoid.glb?inline';
-import humanoidClipsManifest from '../models/clips/humanoid.json';
-import sitClipsGlb from '../models/clips/humanoid_sit.glb?inline';
-import sitClipsManifest from '../models/clips/humanoid_sit.json';
-import quadrupedClipsGlb from '../models/clips/quadruped.glb?inline';
-import quadrupedClipsManifest from '../models/clips/quadruped.json';
-import millClipsGlb from '../models/clips/mill.glb?inline';
-import millClipsManifest from '../models/clips/mill.json';
-import flagClipsGlb from '../models/clips/flag.glb?inline';
-import flagClipsManifest from '../models/clips/flag.json';
+// Beim Bauen gelesen (vite.config.ts, glbClips) - hier nur ausgepackt.
+import humanoidClips from '../models/clips/humanoid.glb?clips';
+import sitClips from '../models/clips/humanoid_sit.glb?clips';
+import quadrupedClips from '../models/clips/quadruped.glb?clips';
+import millClips from '../models/clips/mill.glb?clips';
+import flagClips from '../models/clips/flag.glb?clips';
 import {
-  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, loadClips, qRotate,
+  BONE, FLAG, FLAG_SEGMENTS, HUMANOID, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, qRotate, unpackClips,
   type Clip, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
@@ -419,13 +415,13 @@ export const CLIP_LIBRARIES_LOADED: Record<string, number> = {};
  * der Rauchtest schlägt an (CLIP_LIBRARIES_LOADED).
  */
 export const CLIPS: Clip[] = [
-  ...readClips('humanoid', () => loadClips(humanoidClipsGlb, humanoidClipsManifest, HUMANOID)),
+  ...readClips('humanoid', () => unpackClips(humanoidClips)),
   // Eigene Datei, damit humanoid.glb nicht durch Blender muss (docs/OFFEN.md, Export-Einstellungen).
-  ...readClips('humanoid_sit', () => loadClips(sitClipsGlb, sitClipsManifest, HUMANOID)),
+  ...readClips('humanoid_sit', () => unpackClips(sitClips)),
 ];
 /** Clips der Tiere (src/models/clips/quadruped.glb). */
-export const ANIMAL_CLIPS: Clip[] = readClips('quadruped', () => loadClips(quadrupedClipsGlb, quadrupedClipsManifest, QUADRUPED));
-const FLAG_CLIPS: Clip[] = readClips('flag', () => loadClips(flagClipsGlb, flagClipsManifest, FLAG));
+export const ANIMAL_CLIPS: Clip[] = readClips('quadruped', () => unpackClips(quadrupedClips));
+const FLAG_CLIPS: Clip[] = readClips('flag', () => unpackClips(flagClips));
 
 function readClips(name: string, load: () => Clip[]): Clip[] {
   let clips: Clip[] = [];
@@ -459,7 +455,7 @@ const CLIP_LIBRARIES: {
     },
   },
   // Mühlenflügel (src/models/clips/mill.glb): ein Clip "sails" für alle vier Mühlen.
-  { rig: MILL, clips: readClips('mill', () => loadClips(millClipsGlb, millClipsManifest, MILL)),
+  { rig: MILL, clips: readClips('mill', () => unpackClips(millClips)),
     shapes: [SHAPE.mill, SHAPE.mill2, SHAPE.mill3, SHAPE.mill4] },
   // Fahne am Sammelpunkt und auf dem Hauptgebäude (src/models/clips/flag.glb):
   // Clip "wave". Gemacht ist er für das Tuch am Sammelpunkt - ein längeres

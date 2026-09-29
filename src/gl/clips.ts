@@ -205,6 +205,37 @@ function sample(times: Float32Array, values: Float32Array, size: number, t: numb
   return at(k).map((v, i) => v + (at(k + 1)[i] - v) * f);
 }
 
+/** Clips, wie sie das Vite-Plugin glbClips beim Bauen schreibt: Float32-Reihen als { f32: Base64 }. */
+export type PackedClips = unknown[];
+
+/** Clips als JSON-Text für das Bundle: Float32-Reihen als Base64 (beim Bauen, in Node). */
+export function packClips(clips: Clip[]): string {
+  const base64 = (a: Float32Array) => {
+    const bytes = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  };
+  return JSON.stringify(clips, (_, v) => (v instanceof Float32Array ? { f32: base64(v) } : v));
+}
+
+/** Packt beim Bauen gelesene Clips aus (vite.config.ts, glbClips). */
+export function unpackClips(packed: PackedClips): Clip[] {
+  const floats = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(floats);
+    if (v && typeof v === 'object') {
+      const o = v as Record<string, unknown>;
+      if (typeof o.f32 === 'string') {
+        const bytes = Uint8Array.from(atob(o.f32), (c) => c.charCodeAt(0));
+        return new Float32Array(bytes.buffer);
+      }
+      return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, floats(x)]));
+    }
+    return v;
+  };
+  return packed.map(floats) as Clip[];
+}
+
 /**
  * Liest die Clip-Bibliothek. `glbDataUrl` ist das glb als data:-URL (Vite
  * `?inline`), `manifest` die .json daneben.
