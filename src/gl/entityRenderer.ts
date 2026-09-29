@@ -3137,6 +3137,72 @@ function saveBillboard(gl: WebGL2RenderingContext, shape: number, band: Billboar
   });
 }
 
+/**
+ * Alle Clips gebacken - einmal für alle EntityRenderer (Hauptansicht, Minimap,
+ * Symbole der Befehlsleiste): die Daten hängen nur an den gemeinsamen Modellen.
+ * Je Renderer gebacken hieß beim Start dreimal dieselbe Arbeit (~190 ms, M4).
+ */
+let bakedClipsCache: { data: Float32Array; columns: number; height: number; rows: number; uniforms: Map<number, ClipUniforms> } | null = null;
+function bakedClips(): NonNullable<typeof bakedClipsCache> {
+  if (bakedClipsCache) return bakedClipsCache;
+    // Ein Bild ist MAX_BONES Knochen breit, gleich für jedes Skelett.
+    const width = MAX_BONES * TEXELS_PER_BONE;
+    const blocks: { data: Float32Array; bones: number }[] = [];
+    const uniforms = new Map<number, ClipUniforms>();
+    let rows = 0;
+    for (const library of CLIP_LIBRARIES) {
+      const clips = library.clips.slice(0, MAX_CLIPS);
+      if (clips.length === 0 || library.rig.bones.length > MAX_BONES) continue;
+      for (const m of MODELS) {
+        if (!library.shapes.includes(m.shape)) continue;
+        const u: ClipUniforms = {
+          rows: new Int32Array(MAX_CLIPS).fill(-1),
+          frames: Int32Array.from(NO_CLIPS.frames), fps: Float32Array.from(NO_CLIPS.fps), props: new Int32Array(MAX_CLIPS),
+          poseClip: new Int32Array(8).fill(-1), poseRate: new Float32Array(8), poseShift: new Float32Array(8),
+          rate: new Float32Array(MAX_CLIPS).fill(1), shift: new Float32Array(MAX_CLIPS),
+        };
+        const species = library.species?.[m.shape];
+        clips.forEach((clip, i) => {
+          // Clips anderer Arten (z. B. das Hoppeln des Hasen) nicht für dieses Tier.
+          if (clip.species.length > 0 && (species === undefined || !clip.species.includes(species))) return;
+          u.rows[i] = rows;
+          u.frames[i] = clip.frames;
+          u.fps[i] = clip.fps;
+          u.props[i] = clip.props;
+          u.rate[i] = clip.phaseRate;
+          u.shift[i] = clip.phaseShift;
+          // Welche Pose ein Clip ersetzt, steht im Clip selbst (Custom Property
+          // "pose" der Action in Blender). Die Phase (motion[1]) wird zur
+          // Clip-Zeit: (Phase - phaseShift) * phaseRate.
+          if (clip.pose !== null && clip.pose >= 0 && clip.pose < 8) {
+            u.poseClip[clip.pose] = i;
+            u.poseRate[clip.pose] = clip.phaseRate;
+            u.poseShift[clip.pose] = clip.phaseShift;
+          }
+          const joints = library.joints ? library.joints(m.model, (shape) => MODELS.find((x) => x.shape === shape)?.model) : m.model;
+          blocks.push({ data: bakeClip(clip, joints, { stride: m.stride }, library.rig), bones: library.rig.bones.length });
+          rows += clip.frames;
+        });
+        uniforms.set(m.shape, u);
+      }
+    }
+    // Bilder in Spalten zu CLIP_COLUMN_ROWS nebeneinander (siehe clipTexel im Shader).
+    const columns = Math.max(1, Math.ceil(rows / CLIP_COLUMN_ROWS));
+    const height = Math.max(1, Math.min(rows, CLIP_COLUMN_ROWS));
+    const data = new Float32Array(columns * width * height * 4);
+    let frame = 0;
+    for (const block of blocks) {
+      const perFrame = block.bones * TEXELS_PER_BONE * 4;
+      for (let f = 0; f < block.data.length / perFrame; f++, frame++) {
+        const column = Math.floor(frame / CLIP_COLUMN_ROWS);
+        const row = frame % CLIP_COLUMN_ROWS;
+        data.set(block.data.subarray(f * perFrame, (f + 1) * perFrame), (row * columns * width + column * width) * 4);
+      }
+    }
+  bakedClipsCache = { data, columns, height, rows, uniforms };
+  return bakedClipsCache;
+}
+
 /** Eine Instanz in den Puffer ab Float `o` - STRIDE Floats. */
 function packInstance(d: Float32Array, o: number, e: EntityInstance) {
   d[o] = e.x;
@@ -3405,64 +3471,17 @@ export class EntityRenderer {
    */
   private bakeClips(): WebGLTexture {
     const gl = this.gl;
-    // Ein Bild ist MAX_BONES Knochen breit, gleich für jedes Skelett.
+    const baked = bakedClips();
+    let { data, columns, height } = baked;
     const width = MAX_BONES * TEXELS_PER_BONE;
-    const blocks: { data: Float32Array; bones: number }[] = [];
-    let rows = 0;
-    for (const library of CLIP_LIBRARIES) {
-      const clips = library.clips.slice(0, MAX_CLIPS);
-      if (clips.length === 0 || library.rig.bones.length > MAX_BONES) continue;
-      for (const m of this.models) {
-        if (!library.shapes.includes(m.shape)) continue;
-        const u: ClipUniforms = {
-          rows: new Int32Array(MAX_CLIPS).fill(-1),
-          frames: Int32Array.from(NO_CLIPS.frames), fps: Float32Array.from(NO_CLIPS.fps), props: new Int32Array(MAX_CLIPS),
-          poseClip: new Int32Array(8).fill(-1), poseRate: new Float32Array(8), poseShift: new Float32Array(8),
-          rate: new Float32Array(MAX_CLIPS).fill(1), shift: new Float32Array(MAX_CLIPS),
-        };
-        const species = library.species?.[m.shape];
-        clips.forEach((clip, i) => {
-          // Clips anderer Arten (z. B. das Hoppeln des Hasen) nicht für dieses Tier.
-          if (clip.species.length > 0 && (species === undefined || !clip.species.includes(species))) return;
-          u.rows[i] = rows;
-          u.frames[i] = clip.frames;
-          u.fps[i] = clip.fps;
-          u.props[i] = clip.props;
-          u.rate[i] = clip.phaseRate;
-          u.shift[i] = clip.phaseShift;
-          // Welche Pose ein Clip ersetzt, steht im Clip selbst (Custom Property
-          // "pose" der Action in Blender). Die Phase (motion[1]) wird zur
-          // Clip-Zeit: (Phase - phaseShift) * phaseRate.
-          if (clip.pose !== null && clip.pose >= 0 && clip.pose < 8) {
-            u.poseClip[clip.pose] = i;
-            u.poseRate[clip.pose] = clip.phaseRate;
-            u.poseShift[clip.pose] = clip.phaseShift;
-          }
-          const joints = library.joints ? library.joints(m.model, (shape) => this.models.find((x) => x.shape === shape)?.model) : m.model;
-          blocks.push({ data: bakeClip(clip, joints, { stride: m.stride }, library.rig), bones: library.rig.bones.length });
-          rows += clip.frames;
-        });
-        this.clipUniforms.set(m.shape, u);
-      }
-    }
-    // Bilder in Spalten zu CLIP_COLUMN_ROWS nebeneinander (siehe clipTexel im Shader).
-    const columns = Math.max(1, Math.ceil(rows / CLIP_COLUMN_ROWS));
-    const height = Math.max(1, Math.min(rows, CLIP_COLUMN_ROWS));
+    this.clipUniforms = baked.uniforms;
     if (columns * width > gl.getParameter(gl.MAX_TEXTURE_SIZE)) {
-      console.warn(`Clips: ${rows} Bilder passen nicht in eine Textur - die Figuren stehen still`);
+      console.warn(`Clips: ${baked.rows} Bilder passen nicht in eine Textur - die Figuren stehen still`);
       for (const name of Object.keys(CLIP_LIBRARIES_LOADED)) CLIP_LIBRARIES_LOADED[name] = 0;
-      this.clipUniforms.clear();
-      rows = 0;
-    }
-    const data = new Float32Array(columns * width * height * 4);
-    let frame = 0;
-    for (const block of rows > 0 ? blocks : []) {
-      const perFrame = block.bones * TEXELS_PER_BONE * 4;
-      for (let f = 0; f < block.data.length / perFrame; f++, frame++) {
-        const column = Math.floor(frame / CLIP_COLUMN_ROWS);
-        const row = frame % CLIP_COLUMN_ROWS;
-        data.set(block.data.subarray(f * perFrame, (f + 1) * perFrame), (row * columns * width + column * width) * 4);
-      }
+      this.clipUniforms = new Map();
+      data = new Float32Array(width * 4);
+      columns = 1;
+      height = 1;
     }
     const texture = gl.createTexture()!;
     gl.activeTexture(gl.TEXTURE0 + CLIP_TEXTURE_UNIT);
