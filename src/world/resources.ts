@@ -6,7 +6,7 @@
 // Tausende Tiles; je Bild neu zu rechnen wäre viel zu teuer.
 
 import type { EntityInstance, StaticBatch } from '../gl/entityRenderer';
-import { BILLBOARD_HEADINGS, SHAPE, TREES, modelSize } from '../gl/entityRenderer';
+import { BILLBOARD_HEADINGS, SHAPE, TREES, modelSize, stumpOf } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ, type MapGenerator } from '../noise';
 import type { DepositType } from './catalog';
@@ -164,6 +164,13 @@ export class ResourceField {
   private touched = new Map<string, { x: number; y: number }[]>();
   private seenDeposits: unknown = null;
   private seenRevision = -1;
+  private seenBuildings = -1;
+  /**
+   * Angefasste Tiles, auf denen nur noch ein Stumpf steht (ganz abgeholzt,
+   * kein Feld darauf): sie liegen als Stumpf-Modell (STUMPS) im Puffer der
+   * Region statt einzeln als ganzer Baum.
+   */
+  private stumps = new Set<string>();
   private selectedKey: string | null = null;
 
   constructor(private terrain: Terrain, private mapGen: MapGenerator) {}
@@ -429,13 +436,29 @@ export class ResourceField {
       this.selectedKey = selectedKey;
     }
     const deposits = world.deposits;
-    if (deposits === this.seenDeposits && deposits.revision === this.seenRevision) return;
+    // Auch Gebäude: ein Feld auf einem Stumpf gräbt ihn aus.
+    if (deposits === this.seenDeposits && deposits.revision === this.seenRevision && world.buildingsRevision === this.seenBuildings) return;
     this.seenDeposits = deposits;
     this.seenRevision = deposits.revision;
-    const next = new Set(deposits.touched());
+    this.seenBuildings = world.buildingsRevision;
+    const stumps = new Set<string>();
+    const next = new Set<string>();
+    for (const k of deposits.touched()) {
+      const comma = k.indexOf(',');
+      const x = Number(k.slice(0, comma));
+      const y = Number(k.slice(comma + 1));
+      const node = this.nodeAt(x, y);
+      // Ganz verbraucht steht der Stumpf aufrecht (pushNode) - auch nach dem Fällen.
+      const done = node && TREES.includes(node.shape) && world.remainingShare(x, y, node.total) <= 0
+        && !world.at(x, y)?.isFarm();
+      (done ? stumps : next).add(k);
+    }
     for (const k of next) if (!this.touchedKeys.has(k)) wrong(k);
     for (const k of this.touchedKeys) if (!next.has(k)) wrong(k);
+    for (const k of stumps) if (!this.stumps.has(k)) wrong(k);
+    for (const k of this.stumps) if (!stumps.has(k)) wrong(k);
     this.touchedKeys = next;
+    this.stumps = stumps;
     this.touched.clear();
     for (const k of next) {
       const comma = k.indexOf(',');
@@ -461,6 +484,10 @@ export class ResourceField {
         for (const node of this.chunks.get(`${cx},${cy}`) ?? []) {
           const key = `${node.x},${node.y}`;
           if (this.touchedKeys.has(key) || key === this.selectedKey) continue;
+          if (this.stumps.has(key)) {
+            trees.push({ ...node.instance, shape: stumpOf(node.shape), size: node.size, motion: [node.instance.motion![0], 0, 0, 0], health: undefined });
+            continue;
+          }
           // So, wie pushNode() ein unberührtes Vorkommen zeigt: volle Größe,
           // steht, voller Rest, kein Balken.
           (TREES.includes(node.shape) ? trees : others)

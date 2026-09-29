@@ -342,6 +342,16 @@ export const TREES: number[] = [
   SHAPE.treeOakOld, SHAPE.treeOakYoung, SHAPE.treeBirch2, SHAPE.treeBirch3,
 ];
 
+/**
+ * Stümpfe fertig abgeholzter Bäume, je Baumart (Reihenfolge wie TREES): nur
+ * die Teile "Trunk.Stump" ihres Modells - ein paar Dutzend Dreiecke statt des
+ * ganzen Baums, der sonst bis auf den Stumpf zusammengedrückt würde. Sie
+ * liegen in den festen Puffern der Vorkommen (world/resources.ts).
+ */
+export const STUMPS: number[] = TREES.map((_, i) => 135 + i);
+export const stumpOf = (tree: number): number => STUMPS[TREES.indexOf(tree)];
+const STUMP_TEST = `(shape >= ${STUMPS[0]} && shape <= ${STUMPS[STUMPS.length - 1]})`;
+
 /** Rolle des Laubs (außer Paint) - es wird im Shader weich schattiert. */
 /** Muster der Dorfbewohner (vTex) - nur auf Figuren, das Schaf hat auch "Wool". */
 const FIGURE_TEX = { cloth: 15, leather: 16, hair: 17, skin: 18 } as const;
@@ -520,6 +530,7 @@ const float FLOWER_TILE[${FLOWER_KINDS.length}] = float[${FLOWER_KINDS.length}](
 /** Materialien, aus denen eine Krone besteht - daraus Mitte und Ausdehnung (Model.canopy). */
 const FOLIAGE_MATERIALS = new Set(['Paint', 'LeafDark', 'LeafLight', 'Needle', 'NeedleDark', 'LeafCard', 'BranchCard']);
 
+const BUSH_TEST = `(${[SHAPE.berryBush, SHAPE.berryBush2, SHAPE.berryBush3, SHAPE.berryBush4].map((n) => `shape == ${n}`).join(' || ')})`;
 /** Bäume und Sträucher - ihr Laub wird weich schattiert (siehe vFoliage). */
 const FOLIAGE_SHAPES: number[] = [
   ...TREES, SHAPE.berryBush, SHAPE.berryBush2, SHAPE.berryBush3, SHAPE.berryBush4,
@@ -530,7 +541,7 @@ const FOLIAGE_SHAPES: number[] = [
 const BEASTS: number[] = [SHAPE.deer, SHAPE.hare, SHAPE.cow, SHAPE.sheep, SHAPE.goat, SHAPE.boar];
 
 export const NATURAL: number[] = [
-  ...TREES, ...FLOWERS,
+  ...TREES, ...STUMPS, ...FLOWERS,
   SHAPE.stoneRock, SHAPE.stoneRock2, SHAPE.stoneRock3, SHAPE.goldRock, SHAPE.goldRock2, SHAPE.goldRock3,
   SHAPE.berryBush, SHAPE.berryBush2, SHAPE.berryBush3, SHAPE.berryBush4,
 ];
@@ -1083,6 +1094,8 @@ void main() {
         // Stamm hineinsieht, die Schnittfläche - rund, auch am schrägen Stamm.
         gCut = cut;
       }
+    } else if (${STUMP_TEST} && part == P_STUMP_TOP) {
+      gSawn = 1.0;  // Stumpf: die Schnittfläche ist hell
     }
 
     if (part == P_STOCK && (aCorner.w - 29.0) / 0.45 >= aMotion.y) p = vec3(0.0);
@@ -1213,6 +1226,18 @@ void main() {
       }
     }
     float up = p.z * scale;
+    // Sträucher stehen je Stück etwas schief (bis etwa 8°), fest aus ihrer Lage.
+    if (${BUSH_TEST}) {
+      vec2 r = fract(sin(vec2(dot(center, vec2(12.9898, 78.233)), dot(center, vec2(39.3468, 11.135)))) * 43758.5453) - 0.5;
+      offset += r * 0.28 * up;
+    }
+    // Feldpflanzen wiegen im Wind, oben am stärksten - im selben Takt und in
+    // derselben Richtung wie das Gras (grassRenderer.ts), die Böen laufen übers Feld.
+    if (field && part == P_CROP) {
+      vec2 at = center + offset;
+      float wind = sin(uTime * 1.3 + at.x * 0.37 + at.y * 0.23) * 0.6 + sin(uTime * 2.1 + at.x) * 0.25;
+      offset += vec2(0.6, 0.3) * wind * 0.15 * up;
+    }
 
     // Umfallen (Vorkommen): um den Fuss kippen, aMotion.y = Winkel,
     // aMotion.z = Richtung in Weltkoordinaten. Der Anteil in Fallrichtung
@@ -1352,7 +1377,7 @@ void main() {
     if (gSawn > 0.5 && role != ${IMAGE_ROLE}) vColor = vec3(0.86, 0.71, 0.48);
     // Bildflächen tragen in vColor (u, v, Schicht) - sie färbt der Fragment-Shader.
     vGrowth = gGrowth;
-    bool tree = ${TREES.map((n) => `shape == ${n}`).join(' || ')};
+    bool tree = ${TREES.map((n) => `shape == ${n}`).join(' || ')} || ${STUMP_TEST};
     bool villager = ${FIGURE_TEST};
     bool figureTex = role >= ${FIGURE_TEX.cloth} && role <= ${FIGURE_TEX.skin};
     vTex = role == ${IMAGE_ROLE} ? role
@@ -2690,7 +2715,20 @@ const FIELD_DETAIL = [1, 0.3, 0.1];
 function natural(shape: number, obj: string, mtl: string, meters: number) {
   const model = loadModel(obj, mtl, 'width', true, TREES.includes(shape));
   model.file = modelFile(obj);
-  return [{ shape, model, scale: model.meters / meters }];
+  const slots = [{ shape, model, scale: model.meters / meters }];
+  if (TREES.includes(shape)) {
+    // Der Stumpf allein (STUMPS) - gemessen am ganzen Baum, so steht er genau
+    // wie dessen Stumpf. Dazu, was der Shader beim leeren Baum stehen lässt:
+    // Teile, die nicht über dem Stumpf ansetzen (Wurzeln, Gras, Laub am Boden).
+    const all = parseObj(obj);
+    const stumpTop = Math.max(...all.filter((t) => t.object.startsWith('Trunk.Stump')).flatMap((t) => t.points.map((p) => p[1])));
+    const bottom = new Map<string, number>();
+    for (const t of all) for (const p of t.points) bottom.set(t.object, Math.min(bottom.get(t.object) ?? Infinity, p[1]));
+    const keep = (t: ObjTriangle) => t.object.startsWith('Trunk.Stump') || (!t.object.startsWith('Trunk') && bottom.get(t.object)! <= stumpTop);
+    const stump = loadModel(all, mtl, 'width', false, true, all.filter(keep));
+    slots.push({ shape: stumpOf(shape), model: stump, scale: stump.meters / meters });
+  }
+  return slots;
 }
 
 /**
