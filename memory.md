@@ -49,11 +49,13 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - Medianwerte je Szene verstecken Spitzen: Beim Zoom-Wechsel `frameMsMax` und `terrainTexels` mit ansehen, nicht nur `frameMs`.
 - Die Demo-Welt hat 31 Gebäude und 42 Dorfbewohner - weniger als die "große Stadt mit 80+" aus Szenario (b) des Optimierungsplans.
 
+- 2026-09-29, M4: `gpuMs` (eine Timer-Query um die Hauptansicht, `gpuTimer.ts`) stimmt mit der Wartezeit eines `readPixels` nach dem Bild überein: Demo nah 12-16 ms, `stadt` 12,5, `weit-leer` 5,5. Mit ¼ der Pixel und ⅕ der Eckpunkte noch ~9-10 ms - ein Sockel, der nicht an Pixeln oder Eckpunkten hängt, Ursache offen.
+- 2026-09-29, M4: Timer-Queries je Abschnitt (Gelände, Gras, Modelle, ...) sind auf ANGLE Metal unbrauchbar: jede Grenze kostet selbst GPU-Zeit (Summe ~16 statt ~12 ms), Werte sprangen zwischen Läufen auf 66-130 ms bei 60 fps. Eine Query für ein einzelnes Modell zeigte 6-13 ms für 24.000 Eckpunkte. `gl.finish()` blockiert dort nicht (0 ms) - zum Gegenprüfen `readPixels` eines Pixels nehmen.
+
 ## Optimierungsplan
 
 - 2026-09-26: Falsch im Plan, am Code geprüft: 2.2 ist nicht bit-identisch (ein grober Vorlauf überspringt schmale Grate); ein Early-out in `World.armoryStock` ändert das Verhalten, weil `world/render.ts` `has()` prüft. Die Zeilenangaben des Plans stimmen seit 2026-09-26 (Merge von PR #4) nicht mehr.
 
 ## Offen
 
-- GPU-Zeit fehlt im Bench: `gpuFillMs` über `EXT_disjoint_timer_query_webgl2` würde Shader-Optimierungen belegbar machen - vor Plan 5.1 (Höhen-Textur) einbauen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.

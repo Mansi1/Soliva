@@ -64,6 +64,15 @@ function DebugPanel() {
         {/* Bild = Billboards (Menü → Grafik → Bäume als Bild), 3D = Modelle. */}
         Bäume <b id="billboards">3D</b>
       </div>
+      {/* Zeit je Bild, Mittel der letzten Sekunde (renderStats.ts, gpuTimer.ts). */}
+      <div>
+        CPU <b id="cpu-ms">-</b><span class="sep">|</span>
+        GPU <b id="gpu-ms">-</b>
+      </div>
+      <div>davon <b id="cpu-split">-</b></div>
+      {/* Was das Ausgewählte kostet: seine Modellart und je Objekt gemittelt. */}
+      <div>Auswahl <b id="selection-cost">-</b></div>
+      <div>je Objekt <b id="selection-each">-</b></div>
       {/* Welt, Ansicht und Spielstand als Link (main.ts) - wie "Link teilen" im Menü. */}
       <div><button type="button" id="share-link" class="panel-btn"
         title="Welt, Kamera (Position, Zoom, Drehung, Neigung) und Spielstand als Link in die Zwischenablage">Link kopieren: Spielstand + Kamera</button></div>

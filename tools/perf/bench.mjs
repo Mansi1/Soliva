@@ -39,7 +39,7 @@ const SCENES = [
 ];
 
 /** Die Felder, die im Vergleich gezeigt werden - alle anderen stehen im JSON. */
-const SHOWN = ['tileSize', 'fps', 'frameMs', 'frameMsMax', 'cpuMs', 'longTaskMs', 'pickMs', 'renderMs', 'collectMs', 'drawCalls', 'vertices', 'terrainVertices', 'terrainTexels'];
+const SHOWN = ['tileSize', 'fps', 'frameMs', 'frameMsMax', 'cpuMs', 'longTaskMs', 'pickMs', 'renderMs', 'collectMs', 'gpuMs', 'drawCalls', 'vertices', 'terrainVertices', 'terrainTexels'];
 
 const git = (cmd) => execSync(`git ${cmd}`, { encoding: 'utf8' }).trim();
 const median = (values) => {

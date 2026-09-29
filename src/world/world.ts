@@ -21,6 +21,7 @@ import { Deposits } from './deposits';
 import { VillagerWork } from './villagers';
 import { Farming, FIELD_INNER, METERS_PER_TILE, type FarmPhase } from './farming';
 import { DIG_DURATION, RUIN_DURATION, type Ruin } from './ruin';
+import { addRenderStats } from '../renderStats';
 
 // Gebäude sind Klassen (building/) - hier weiter unter diesen Namen erreichbar.
 export type { Building, FarmPhase, Task };
@@ -619,12 +620,17 @@ export class World {
     }
     if (this.deposits.regrow(dt, this.time)) this.dirty = true;
     if (this.farming.grow(this.speedy ? Infinity : dt)) this.dirty = true;
+    const t0 = performance.now();
     if (this.wildlife.tick(dt, this.animalSurroundings)) this.dirty = true;
+    const t1 = performance.now();
     for (const v of this.villagers) {
       v.rememberPosition();
       v.pose = POSE.stand;
       this.work.tick(v, dt);
     }
+    // Für die Kosten je Tier und Dorfbewohner im Entwickler-Panel.
+    addRenderStats('simWildlifeMs', t1 - t0);
+    addRenderStats('simVillagersMs', performance.now() - t1);
   }
 
   private tickTraining(building: UnitProducer, dt: number) {

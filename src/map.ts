@@ -7,6 +7,7 @@ import { PostRenderer } from './gl/postRenderer';
 import { GrassRenderer } from './gl/grassRenderer';
 import { ParticleRenderer } from './gl/particleRenderer';
 import { MAX_SOURCES, ParticleSources } from './particles';
+import { gpuFrameBegin, gpuFrameEnd } from './gpuTimer';
 import {
   screenToGround,
   setViewElevation,
@@ -532,7 +533,9 @@ export class MapRenderer {
     const post = this.postEnabled && this.post.active;
     if (post) this.post.begin();
     this.terrain.time = animationTime();
+    gpuFrameBegin();
     if (!this.terrain.render(camera)) {
+      gpuFrameEnd();
       this.post.cancel();
       return false;
     }
@@ -547,6 +550,7 @@ export class MapRenderer {
     this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
     this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
     if (post) this.post.end();
+    gpuFrameEnd();
     return true;
   }
 }

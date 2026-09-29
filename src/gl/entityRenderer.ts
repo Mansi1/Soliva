@@ -3051,6 +3051,9 @@ export class EntityRenderer {
   wireBias = 0;
   /** Gezeichnete Eckpunkte der Modelle seit dem Start - die Galerie liest den Zuwachs je Bild. */
   drawnVertices = 0;
+  /** Modellarten des Ausgewählten in diesem Bild (render) und ob draw gerade eine davon zeichnet. */
+  private selected = new Set<number>();
+  private probing = false;
   /** Kanten je Dreieck (3i-3i+1, 3i+1-3i+2, 3i+2-3i) für das Drahtgitter, wächst bei Bedarf. */
   private edgeBuffer: WebGLBuffer | null = null;
   private edgeVertices = 0;
@@ -3601,6 +3604,10 @@ export class EntityRenderer {
     if (mesh !== this.flat) this.drawnVertices += mesh.vertices * count;
     addRenderStats('drawCalls', 1);
     addRenderStats('vertices', mesh.vertices * count);
+    if (this.probing) {
+      addRenderStats('selectedDrawCalls', 1);
+      addRenderStats('selectedVertices', mesh.vertices * count);
+    }
   }
 
   /**
@@ -3658,6 +3665,10 @@ export class EntityRenderer {
     }
 
     const bars = healthBars ? instances.filter((e) => e.health !== undefined) : [];
+    // Ausgewähltes trägt einen Lebensbalken - seine Modellarten werden für das
+    // Entwickler-Panel gesondert gezählt (alle Instanzen der Art).
+    this.selected.clear();
+    for (const e of bars) this.selected.add(e.shape);
     const barCount = bars.length + bars.filter((e) => e.food !== undefined).length;
     const total = instances.length + barCount;
     if (this.data.length < total * STRIDE) {
@@ -3726,6 +3737,7 @@ export class EntityRenderer {
       // Ein Anhang (Werkzeug) zeichnet sich mit Gelenken, Clips und Hand
       // seines Körpers - er bewegt sich genau mit dessen Unterarm.
       const b = m.body === undefined ? m : this.modelByShape.get(m.body) ?? m;
+      this.probing = this.selected.has(m.shape);
       gl.uniform1f(this.location('uModelScale'), m.scale);
       gl.uniform1i(this.location('uDetailLayer'), m.model.detail);
       gl.uniform3fv(this.location('uSocket'), b.model.hand);
@@ -3769,6 +3781,7 @@ export class EntityRenderer {
         if (range) this.draw(cells ? this.quad : mesh, range.first, range.count, batch.buffer);
       }
       if (cells) gl.uniform1i(this.location('uBillboard'), 0);
+      this.probing = false;
     };
     const batched = new Set<number>();
     for (const batch of batches) for (const shape of batch.ranges.keys()) batched.add(shape);
@@ -3777,6 +3790,11 @@ export class EntityRenderer {
     // im Tiefenpuffer und verdecken sich nicht selbst.
     const figures: [ModelSlot, number][] = [];
     for (const m of this.models) {
+      if (this.selected.has(m.shape)) {
+        let count = m.list.length;
+        for (const batch of batches) count += batch.ranges.get(m.shape)?.count ?? 0;
+        addRenderStats('selectedInstances', count);
+      }
       if (m.list.length > 0 || batched.has(m.shape)) {
         if (FIGURES.includes(m.shape)) figures.push([m, first]);
         else drawModel(m, first);

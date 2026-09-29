@@ -58,6 +58,7 @@ import { ResourceField, type OnScreen } from './world/resources';
 import { FlowerField } from './world/flowers';
 import { Sound } from './audio';
 import { addRenderStats, renderStatsFrame, setRenderInfo, startRenderStats, withoutRenderStats } from './renderStats';
+import { collectGpuTimes, initGpuTimer } from './gpuTimer';
 import { Music } from './music';
 import { currentSeed, deleteSave, gameUrl, shareUrl, switchWorld, takeStartRequest } from './worlds';
 
@@ -1009,7 +1010,10 @@ function loop(now: number) {
     lap('minimapMs');
   }
 
+  collectGpuTimes();
   devPanel.frame(now, camera, renderer.billboardsActive);
+  devPanel.showCosts(selection.villagers.size > 0 ? { key: 'simVillagersMs', count: world.villagers.length }
+    : selection.animal !== null ? { key: 'simWildlifeMs', count: world.wildlife.animals.length } : undefined);
 
   if (uiRefresh.due(now)) {
     ui.refreshResources();
@@ -1041,6 +1045,7 @@ if (request) start.close();
 else start.open();
 if (request === 'new') startNewGame();
 startRenderStats();
+initGpuTimer(canvas.getContext('webgl2')!);
 // Umstände der Messung für getRenderInfo() - ohne sie sind Läufe nicht vergleichbar.
 setRenderInfo(() => {
   const gl = canvas.getContext('webgl2');

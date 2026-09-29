@@ -8,6 +8,8 @@
 import type { TileType } from '../noise';
 import { TILE_TYPE_LABEL } from '../map';
 import type { Camera } from './Camera';
+import { latestRenderStat, type RenderStat } from '../renderStats';
+import { gpuTimerAvailable } from '../gpuTimer';
 
 /** So oft (ms) werden die Bilder je Sekunde neu gezählt. */
 const FPS_INTERVAL = 500;
@@ -33,6 +35,13 @@ export class DevPanel {
   private minimapFps = byId('minimap-fps');
   private minimapFrames = 0;
   private billboards = byId('billboards');
+  private cpu = byId('cpu-ms');
+  private gpu = byId('gpu-ms');
+  private cpuSplit = byId('cpu-split');
+  private selectionCost = byId('selection-cost');
+  private selectionEach = byId('selection-each');
+  /** Sekunde der Render-Stats, die zuletzt gezeigt wurde. */
+  private shownStat: RenderStat | undefined;
   private frames = 0;
   private lastFps = performance.now();
 
@@ -56,6 +65,36 @@ export class DevPanel {
       this.frames = 0;
       this.lastFps = now;
     }
+  }
+
+  /**
+   * Zeit je Bild aus der letzten abgeschlossenen Sekunde der Render-Stats und
+   * was das Ausgewählte kostet: je Objekt gemittelt über alle Objekte seiner
+   * Modellart (Instanzen teilen sich die Draw-Calls). `sim` ist der
+   * Simulations-Anteil seiner Art (Dorfbewohner, Tiere), geteilt durch ihre Zahl.
+   */
+  showCosts(sim?: { key: string; count: number }) {
+    const s = latestRenderStat();
+    if (!s || s === this.shownStat) return;
+    this.shownStat = s;
+    const ms = (v: number | undefined) => (v ?? 0).toFixed(2);
+    setText(this.cpu, `${ms(s.cpuMs)} ms`);
+    setText(this.gpu, gpuTimerAvailable() ? `${ms(s.gpuMs)} ms` : 'nicht messbar');
+    setText(this.cpuSplit, `Sim ${ms(s.simMs)} · Sammeln ${ms(s.collectMs)} · Zeichnen ${ms(s.renderMs)} · Minimap ${ms(s.minimapMs)}`);
+    const n = s.selectedInstances;
+    if (!n) {
+      setText(this.selectionCost, '-');
+      setText(this.selectionEach, '-');
+      return;
+    }
+    // Keine GPU-Zeit je Objekt: Messgrenzen mitten im Bild verfälschen sie (gpuTimer.ts).
+    // Der Anteil an den Eckpunkten ist nur ein Anhalt für die Last, keine Zeit: mit
+    // 1/5 der Eckpunkte und 1/4 der Pixel brauchte das Bild auf dem M4 noch 3/4 der GPU-Zeit.
+    const share = s.vertices ? (100 * (s.selectedVertices ?? 0)) / s.vertices : 0;
+    setText(this.selectionCost, `${Math.round(n)} der Art · ${Math.round(s.selectedDrawCalls ?? 0)} Draw-Calls · ${share.toFixed(1)} % der Eckpunkte`);
+    const each = [`${Math.round((s.selectedVertices ?? 0) / n)} Eckpunkte`];
+    if (sim && sim.count > 0) each.push(`Sim ${((s[sim.key] ?? 0) / sim.count).toFixed(4)} ms`);
+    setText(this.selectionEach, each.join(' · '));
   }
 
   /** Die Minimap wurde gezeichnet - für ihre Bilder je Sekunde. */
