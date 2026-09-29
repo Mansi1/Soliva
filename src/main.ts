@@ -900,7 +900,8 @@ function collectOverlay(blend: number) {
   }
   if (renderer.flowerObjects) {
     flowers.update(visible, camera.x, camera.y);
-    flowers.instances(visible, world, overlay);
+    // Blumen als Bild gibt es nur aus festen Puffern (wie die Bäume).
+    flowers.instances(visible, world, overlay, camera.tileSize < settings.billboards ? { batcher: renderer, out: staticBatches } : undefined);
   }
   // Partikel: erst Wichtiges (Einsturz in worldInstances), zuletzt Schmuck.
   const particles = renderer.particles;

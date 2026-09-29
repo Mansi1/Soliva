@@ -83,6 +83,8 @@ export class World {
   private lastDt = 0;
   private dirty = false;
   private nextId = 1;
+  /** Zählt, wenn Gebäude hinzukommen oder wegfallen - wer daraus etwas baut (Blumen-Puffer), baut dann neu. */
+  buildingsRevision = 0;
 
   stock: Resources = initialResources();
   /**
@@ -500,6 +502,7 @@ export class World {
     // Ein Feld bekommt die Frucht fürs nächste Feld und die Tiles, die hier frei sind.
     const building = createBuilding(type, x, y, type === 'farm' ? { crop: this.nextFarmCrop, tiles: this.farmTiles(x, y) } : {});
     this.buildings.set(building.anchor, building);
+    this.buildingsRevision++;
     for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
     if (type !== 'farm' && type !== 'fish_trap') {
       this.digs.push({ x: x + 0.5, y: y + 0.5, size: Math.max(building.definition.footprint, building.definition.size), at: this.time });
@@ -523,6 +526,7 @@ export class World {
     for (const [tx, ty] of building.footprintTiles()) this.occupied.delete(key(tx, ty));
     const anchor = building.anchor;
     this.buildings.delete(anchor);
+    this.buildingsRevision++;
     this.farming.invalidate();
     this.fieldLooks.clear();
     this.addRuin(building);
@@ -808,6 +812,7 @@ export class World {
       this.buildings.set(building.anchor, building);
       for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
     }
+    this.buildingsRevision++;
 
     for (const k of data.spawned ?? []) this.wildlife.spawnedChunks.add(k);
     for (const a of data.animals ?? []) {
@@ -834,6 +839,7 @@ export class World {
   /** Alles zurücksetzen - für den Neustart-Knopf. */
   reset() {
     this.buildings.clear();
+    this.buildingsRevision++;
     this.farming.invalidate();
     this.fieldLooks.clear();
     this.occupied.clear();

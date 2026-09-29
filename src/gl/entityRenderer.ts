@@ -392,6 +392,8 @@ FIELD_PARTS.forEach((name, i) => {
  * eine halbe Stufe (22,5°) neben der Drehung des Baums.
  */
 export const BILLBOARD_HEADINGS = 8;
+/** Ab dieser Deckung ist ein Pixel eines Baumbilds Kern (deckend, mit Tiefe), darunter weiche Kante. */
+const BILLBOARD_CORE_ALPHA = '0.9';
 
 /**
  * Wie viele Clips jede Bibliothek geladen hat - auch als
@@ -934,7 +936,7 @@ void main() {
   // als eigene; Billboards setzen es unten neu. Ohne aDetail (0, 0).
   vBillboardUV = aDetail;
 
-  if (uBillboard == 1) {
+  if (uBillboard >= 1) {
     // Baum weit draußen: ein Rechteck zur Kamera mit dem vorab aus dem Modell
     // gerenderten Bild. Die Ansicht ist parallel, das Bild ist also überall
     // dasselbe - nur verschoben und nach der Größe skaliert. Die Tiefe wächst
@@ -1756,6 +1758,7 @@ flat in float vRoof;
 out vec4 fragColor;
 uniform highp int uBillboard;  // wie im Vertex-Shader, sonst lässt sich das Programm nicht linken
 uniform sampler2D uBillboardTex;
+uniform float uBillboardFeather;  // weicher Rand in Bildschirmpixeln, 0: keiner
 in vec2 vBillboardUV;
 
 ${FLOWER_GLSL}
@@ -1799,7 +1802,7 @@ ${LIGHT_GLSL}
 const float OVERCAST_LIGHT = 0.95;
 
 void main() {
-  if (uBillboard == 1) {
+  if (uBillboard >= 1) {
     // Die Bilder sind in der Größe der Zoomstufe gerendert: Ränder und dünne
     // Stämme sind halb deckend wie beim Modell und werden weich eingeblendet;
     // nur fast Durchsichtiges fällt weg (es schriebe sonst Tiefe). Die Farbe
@@ -1807,10 +1810,21 @@ void main() {
     // Die Bilder zeigen den größten Baum; kleinere werden nur verkleinert.
     // Die Verschiebung hält dabei die scharfe Stufe statt der nächstkleineren.
     vec4 t = texture(uBillboardTex, vBillboardUV, -0.7);
-    if (t.a < 0.2) discard;
+    // Weicher Rand: die Deckung der Nachbarn (etwa 1,5 Bildschirmpixel weit)
+    // mindert die eigene - sonst steht am Umriss eine harte, dunkle Kante
+    // (die Seiten des Kegels streift das Licht), die wie ein Strich wirkt, wo
+    // sich Bäume überlagern.
+    vec2 dx = dFdx(vBillboardUV) * uBillboardFeather, dy = dFdy(vBillboardUV) * uBillboardFeather;
+    float around = texture(uBillboardTex, vBillboardUV + dx, -0.7).a + texture(uBillboardTex, vBillboardUV - dx, -0.7).a
+                 + texture(uBillboardTex, vBillboardUV + dy, -0.7).a + texture(uBillboardTex, vBillboardUV - dy, -0.7).a;
+    float a = uBillboardFeather > 0.0 ? t.a * smoothstep(0.2, 1.0, around * 0.25) : t.a;
+    // Zwei Durchgänge (render): 1 die Kerne deckend mit Tiefe, 2 die weichen
+    // Kanten darüber geblendet, ohne Tiefe.
+    bool core = a >= ${BILLBOARD_CORE_ALPHA};
+    if (uBillboard == 1 ? !core : core || a < 0.02) discard;
     // Gebacken mit der festen Sonne (CLASSIC_LIGHT) - hier nur Helligkeit
     // und Farbe des Himmels, die Richtung bleibt. Weit weg fällt das nicht auf.
-    fragColor = vec4(t.rgb / t.a * uLight.x * uSunColor, t.a);
+    fragColor = vec4(t.rgb / max(t.a, 0.004) * uLight.x * uSunColor, uBillboard == 1 ? 1.0 : a);
     return;
   }
   int shape = int(vParams.x + 0.5);
@@ -3001,6 +3015,11 @@ interface BillboardBand {
   h: number;
   /** Erst gesetzt, wenn die Baumart gerendert ist. */
   texture: WebGLTexture | null;
+  /** rect bzw. box aller Zellen hintereinander - so gehen sie je Bild ohne Umbau in den Shader. */
+  rects: Float32Array;
+  boxes: Float32Array;
+  /** Breite des weichen Rands in Bildschirmpixeln (uBillboardFeather) - Blumen sind dafür zu klein. */
+  feather: number;
   /**
    * Lage in der Textur (x, y von unten, w, h), Fuß im Bild (fx, fy von oben
    * links) und daraus Ausschnitt und Lage zum Fuß für den Shader
@@ -3019,6 +3038,16 @@ interface BillboardBand {
 const BILLBOARD_TREE_SIZE = 0.6 * 1.2;
 /** Farbe der Bäume wie auf der Karte (LOOK.wood). */
 const BILLBOARD_TREE_COLOR: [number, number, number] = [42, 97, 52];
+/**
+ * Blumen (world/flowers.ts: FLOWER_SIZE 0,052, bis 1,25fach) gebacken viermal
+ * so groß - sonst wäre eine bei BILLBOARD_PPT nur 8 Pixel hoch, auf Retina
+ * bei Zoom 5 aber 17.
+ */
+const BILLBOARD_FLOWER_SIZE = 0.052 * 1.25 * 4;
+/** Was als Bild gezeichnet werden kann (aus festen Puffern, siehe render). */
+const BILLBOARDED: readonly number[] = [...TREES, ...FLOWERS];
+/** In dieser Größe (Instanzgröße) wird eine Form für ihr Bild gerendert. */
+const billboardSize = (shape: number) => (TREES.includes(shape) ? BILLBOARD_TREE_SIZE : BILLBOARD_FLOWER_SIZE);
 /** Breite der Textur mit den Baumbildern; Rand um jedes Bild in Pixeln. */
 const BILLBOARD_ATLAS_WIDTH = 2048;
 /**
@@ -3126,6 +3155,8 @@ export class EntityRenderer {
   /** Modellarten des Ausgewählten in diesem Bild (render) und ob draw gerade eine davon zeichnet. */
   private selected = new Set<number>();
   private probing = false;
+  /** Baumarten, die in diesem Bild als Bild gezeichnet wurden (render: ihre Kanten danach). */
+  private edgeShapes: number[] = [];
   /** Spielerfarbe (0..255) - Felder bekommen sie als Uniform (siehe uPlayerColor). */
   playerColor: [number, number, number] = [64, 160, 72];
   private models: ModelSlot[];
@@ -3504,14 +3535,17 @@ export class EntityRenderer {
   private planBillboards(key: string, ppt: number): BillboardSet {
     const max = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
     const zScreen = viewZScreen();
-    const unit = ppt * BILLBOARD_TREE_SIZE;
     const set: BillboardSet = { key, rotation: viewRotation(), shapes: new Map() };
-    for (const shape of TREES) {
+    for (const shape of BILLBOARDED) {
       const m = this.modelByShape.get(shape);
       if (!m) continue;
+      const unit = ppt * billboardSize(shape);
       const v = m.model.vertices;
-      const s = m.scale * BILLBOARD_TREE_SIZE;
-      const band: BillboardBand = { w: 0, h: 0, texture: null, cells: [] };
+      const s = m.scale * billboardSize(shape);
+      const band: BillboardBand = {
+        w: 0, h: 0, texture: null, cells: [], rects: new Float32Array(0), boxes: new Float32Array(0),
+        feather: TREES.includes(shape) ? 1.5 : 0,
+      };
       let x = 0, y = 0, row = 0;
       for (let k = 0; k < BILLBOARD_HEADINGS; k++) {
         const heading = (k * 2 * Math.PI) / BILLBOARD_HEADINGS;
@@ -3544,6 +3578,8 @@ export class EntityRenderer {
         cell.rect = [cell.x / band.w, (cell.y + cell.h) / band.h, (cell.x + cell.w) / band.w, cell.y / band.h];
         cell.box = [-cell.fx / unit, -cell.fy / unit, cell.w / unit, cell.h / unit];
       }
+      band.rects = new Float32Array(band.cells.flatMap((c) => c.rect));
+      band.boxes = new Float32Array(band.cells.flatMap((c) => c.box));
       set.shapes.set(shape, band);
     }
     return set;
@@ -3576,7 +3612,7 @@ export class EntityRenderer {
       // Kamera so, dass der Fuß (Welt 0, 0) im Bild bei (fx, fy) von oben links liegt.
       const center = groundToWorld((cell.w / 2 - cell.fx) / ppt, (cell.h / 2 - cell.fy) / ppt);
       const tree: EntityInstance = {
-        x: -0.5, y: -0.5, size: BILLBOARD_TREE_SIZE, color: BILLBOARD_TREE_COLOR, shape, alpha: 1,
+        x: -0.5, y: -0.5, size: billboardSize(shape), color: TREES.includes(shape) ? BILLBOARD_TREE_COLOR : [0, 0, 0], shape, alpha: 1,
         motion: [cell.heading, 0, 0, 1],
       };
       this.render([tree], { centerX: center.x, centerY: center.y, pixelsPerTile: ppt, reliefScale: 0 }, 0, pixelRatio);
@@ -3712,7 +3748,7 @@ export class EntityRenderer {
     const cssPixelsPerTile = camera.pixelsPerTile / pixelRatio;
     // Nur die Baumarten, die gerade im Bild stehen.
     const shown = new Set<number>();
-    for (const batch of batches) for (const shape of batch.ranges.keys()) if (TREES.includes(shape)) shown.add(shape);
+    for (const batch of batches) for (const shape of batch.ranges.keys()) if (BILLBOARDED.includes(shape)) shown.add(shape);
     const billboards = shown.size > 0 && cssPixelsPerTile < this.billboardBelow
       && this.ensureBillboards(camera.cacheGroundV ?? viewGroundV(), pixelRatio, shown);
     this.billboardsActive = billboards;
@@ -3848,15 +3884,8 @@ export class EntityRenderer {
       const band = billboards ? this.billboardSet!.shapes.get(m.shape) : undefined;
       const cells = band?.texture ? band.cells : undefined;
       if (cells) {
-        gl.activeTexture(gl.TEXTURE0 + BILLBOARD_TEXTURE_UNIT);
-        gl.bindTexture(gl.TEXTURE_2D, band!.texture);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.uniform4fv(this.location('uBillboardRect[0]'), cells.flatMap((c) => c.rect));
-        gl.uniform4fv(this.location('uBillboardBox[0]'), cells.flatMap((c) => c.box));
-        gl.uniform1i(this.location('uBillboard'), 1);
-        const turns = (viewRotation() - this.billboardSet!.rotation + 4) % 4;
-        // Geprüft gegen neu gerenderte Bilder: gleiche Bäume, nur das gebackene Licht dreht mit.
-        gl.uniform1i(this.location('uBillboardShift'), (turns * (BILLBOARD_HEADINGS / 4)) % BILLBOARD_HEADINGS);
+        useBand(band!, 1);
+        edges.push(m.shape);
       }
       for (const batch of batches) {
         const range = batch.ranges.get(m.shape);
@@ -3865,6 +3894,22 @@ export class EntityRenderer {
       if (cells) gl.uniform1i(this.location('uBillboard'), 0);
       this.probing = false;
     };
+    /** Bilder einer Baumart binden; pass 1 die deckenden Kerne, 2 die weichen Kanten (siehe uBillboard). */
+    const useBand = (band: BillboardBand, pass: number) => {
+      gl.activeTexture(gl.TEXTURE0 + BILLBOARD_TEXTURE_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, band.texture);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform4fv(this.location('uBillboardRect[0]'), band.rects);
+      gl.uniform4fv(this.location('uBillboardBox[0]'), band.boxes);
+      gl.uniform1i(this.location('uBillboard'), pass);
+      gl.uniform1f(this.location('uBillboardFeather'), band.feather);
+      const turns = (viewRotation() - this.billboardSet!.rotation + 4) % 4;
+      // Geprüft gegen neu gerenderte Bilder: gleiche Bäume, nur das gebackene Licht dreht mit.
+      gl.uniform1i(this.location('uBillboardShift'), (turns * (BILLBOARD_HEADINGS / 4)) % BILLBOARD_HEADINGS);
+    };
+    // Baumarten, die als Bild gezeichnet wurden - ihre Kanten kommen danach.
+    const edges = this.edgeShapes;
+    edges.length = 0;
     const batched = new Set<number>();
     for (const batch of batches) for (const shape of batch.ranges.keys()) batched.add(shape);
     // Erst alles außer den Figuren, dann die Figuren - dazwischen ihr Umriss,
@@ -3882,6 +3927,21 @@ export class EntityRenderer {
         else drawModel(m, first);
       }
       first += m.list.length;
+    }
+    if (edges.length > 0) {
+      // Die weichen Kanten der Baumbilder: erst jetzt, über allen Kernen, ohne
+      // Tiefe zu schreiben - sonst verdeckte ein halbdurchsichtiger Rand den
+      // Baum dahinter, und durch ihn schiene der Boden (wie ein Umriss).
+      gl.depthMask(false);
+      for (const shape of edges) {
+        useBand(this.billboardSet!.shapes.get(shape)!, 2);
+        for (const batch of batches) {
+          const range = batch.ranges.get(shape);
+          if (range) this.draw(this.quad, range.first, range.count, batch.buffer);
+        }
+      }
+      gl.uniform1i(this.location('uBillboard'), 0);
+      gl.depthMask(this.depthWrite);
     }
     if (figures.length > 0) {
       // Verdecktes als Silhouette - nicht im Gitter: dort würde es die
