@@ -139,6 +139,11 @@ const CACHE_FADE_MS = 200;
  * bei 16 px je Tile ~12.000 Blumen im Bild, das kostete merklich Bildrate.
  */
 export const FLOWER_OBJECT_PIXELS = 64;
+/**
+ * Ab so vielen CSS-Pixeln je Tile zeichnet grassRenderer.ts Gras und Steine als
+ * Karten; darunter malt der Gelände-Cache die Steine (uStoneCardPixels).
+ */
+export const CARDS_FROM = 48;
 
 /** Rand um den Bildschirm, damit beim Verschieben nichts Ungefülltes ins Bild rutscht. */
 const CACHE_MARGIN = 64;
@@ -690,6 +695,7 @@ export class TerrainRenderer {
 
     const f = (name: string) => this.fillLocation(name);
     gl.uniform1f(f('uPixelsPerTile'), ppt);
+    gl.uniform1f(f('uStoneCardPixels'), CARDS_FROM * this.pixelRatio);
     gl.uniform1f(f('uReliefScale'), camera.reliefScale > 0 ? 1 : 0);
     setViewUniforms(gl, f);
     // Berechnet wird für die Stauchung des Caches, nicht für den jetzigen Blickwinkel.

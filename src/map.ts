@@ -415,6 +415,13 @@ export class MapRenderer {
    * Stehen die Blumen als 3D-Objekte in der Wiese? Hängt an der Stufe des
    * Gelände-Caches, nicht am Zoom: so malt er sie nie zugleich als Tupfen.
    */
+  /**
+   * Weltpunkt, den man in der Bildmitte sieht (mit Geländehöhe) - Gras und
+   * Steine liegen um ihn. camera.x/y ist der Punkt auf Meereshöhe; im Gebirge
+   * lägen sie sonst weit neben dem Bild. Setzt main.ts, wenn sich die Ansicht ändert.
+   */
+  seenCenter: { x: number; y: number } | null = null;
+
   get flowerObjects(): boolean {
     return this.cacheTileSize * this.pixelRatio >= FLOWER_OBJECT_PIXELS;
   }
@@ -547,6 +554,7 @@ export class MapRenderer {
     this.grass.render(camera, this.tileSize, {
       light: this.terrain.light, time: this.terrain.time, gridCell: this.terrain.gridCell,
       flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
+      center: this.seenCenter ?? { x: centerX, y: centerY },
     });
     this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
     this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);

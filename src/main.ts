@@ -921,10 +921,12 @@ function collectOverlay(blend: number) {
 
 function loop(now: number) {
   // Stufenloser Zoom und Neigung zählen mit - beides bewegt die Ansicht.
-  const view = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()}`;
+  // Auch das Relief (Flachlegen): es verschiebt, was man in der Bildmitte sieht.
+  const view = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()},${renderer.relief}`;
   if (view !== lastView) {
     lastView = view;
     lastMove = now;
+    renderer.seenCenter = picker.point(camera.centerX, camera.centerY);
   }
   // Etwas Spiel, damit bei 60 Hz jedes zweite Bild kommt und nicht jedes dritte.
   const idleFps = paused && now - lastInput > IDLE_AFTER_MS ? PAUSED_FPS : IDLE_FPS;

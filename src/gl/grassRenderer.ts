@@ -20,7 +20,7 @@
 import { BIOME_GLSL, TERRAIN_COMMON } from './terrainShader';
 import { PROJECT_GLSL, bindScreen, cameraDirection, setCameraUniforms, viewGroundV, type GpuCamera } from './iso';
 import { LIGHT_GLSL, setLightUniforms, type Light } from './light';
-import { FIELD_WINDOW, link, uploadTerrainParams } from './terrainRenderer';
+import { CARDS_FROM, FIELD_WINDOW, link, uploadTerrainParams } from './terrainRenderer';
 import { parseMtlImages } from './obj';
 import { FLATTEN_GLSL } from '../world/flatten';
 import { addRenderStats } from '../renderStats';
@@ -29,12 +29,24 @@ import seedheads from '../models/foliage/wild_grass_seedheads.glb?model';
 import reed from '../models/foliage/reed.glb?model';
 import cattails from '../models/foliage/cattails.glb?model';
 
+/** Die Steine (tools/models/crop-cards.mjs aus src/textures/stone/), je 1 m. */
+const STONE_FILES = import.meta.glob('../models/foliage/stone_*.glb', { eager: true, query: '?model', import: 'default' }) as Record<string, { obj: string; mtl: string }>;
+const STONES = Array.from({ length: Object.keys(STONE_FILES).length }, (_, i) => STONE_FILES[`../models/foliage/stone_${i + 1}.glb`]);
+
 /**
- * Die Pflanzen, je eine Schicht in uFoliage - die Reihenfolge ist die Art im
- * Alpha der Daten-Textur (MAP). Die Karten (tools/models/billboard-card.mjs)
+ * Die Pflanzen und Steine, je eine Schicht in uFoliage - bei den Pflanzen ist
+ * die Reihenfolge die Art im Alpha der Daten-Textur (MAP), die Steine folgen ab
+ * STONE_FIRST. Die Karten (tools/models/billboard-card.mjs, crop-cards.mjs)
  * stehen unten mittig, ihr Bild ist 256 px hoch.
  */
-const KINDS = [meadowGrass, seedheads, reed, cattails];
+const PLANTS = [meadowGrass, seedheads, reed, cattails];
+const STONE_FIRST = PLANTS.length;
+const KINDS = [...PLANTS, ...STONES];
+/**
+ * Abstand der Stein-Rasterzellen (Tiles) - je Zelle höchstens ein Stein. Wie
+ * viele es sind und wie groß, entscheidet das Gelände (MAP mit uStones).
+ */
+const STONE_SPACING = 0.4;
 /** Kantenlänge der Bilder in uFoliage - die Karten sind 256 px hoch. */
 const FOLIAGE_SIZE = 256;
 /** Welt-Tiles je Meter der Karten (1 Tile = 5 m). */
@@ -44,7 +56,7 @@ const TILES_PER_METER = 0.2;
  * (64) weniger - dort ist viermal so viel Wiese im Bild und die Büschel sind
  * halb so groß. Darunter (ab Zoom 3) keins, die Bodentextur reicht.
  */
-const DENSITY: [number, number][] = [[96, 3], [48, 2]];
+const DENSITY: [number, number][] = [[96, 3], [CARDS_FROM, 2]];
 /** Höhen bis hierhin (Tiles) passen in die 16 Bit der Daten-Textur. */
 const MAX_Z = 64;
 /** Texture-Units beim Zeichnen (0: Rauschtabelle, 2: Äcker). */
@@ -73,7 +85,10 @@ void main() {
 }
 `;
 
-/** Durchgang 1: je Rasterzelle Höhe, Wiesenanteil und Pflanze (KINDS). */
+/**
+ * Durchgang 1: je Rasterzelle Höhe, Wiesenanteil und Pflanze (PLANTS) - mit
+ * uStones stattdessen Wahrscheinlichkeit und Größe eines Steins.
+ */
 const MAP = `#version 300 es
 precision highp float;
 precision highp int;
@@ -84,6 +99,7 @@ ${BIOME_GLSL}
 ${PROJECT_GLSL}
 ${FLATTEN_GLSL}
 ${CELL_GLSL}
+${LIGHT_GLSL}
 
 uniform float uGridCell;     // Abtastschritt wie das Geländegitter - die Halme stehen auf seiner Fläche
 // Äcker (TerrainRenderer.fieldWindow): dort wächst kein Gras.
@@ -91,6 +107,7 @@ uniform sampler2D uFields;
 uniform vec2  uFieldOrigin;
 uniform float uFieldSize;
 uniform float uFieldActive;
+uniform int uStones;         // 1: Steine statt Pflanzen
 
 out vec4 fragColor;
 
@@ -100,12 +117,15 @@ void main() {
   fragColor = vec4(0.0);
 
   // Wiese wie im Gelände-Shader (FILL_FRAGMENT_SOURCE): ohne Wald, Wüste, Strand, Fels, Schnee, Wasser.
+  // Steine auch am Strand bis kurz vor dem Wasser.
   vec2 n = pos * uMapScale;
   float height = elevation(n, uGridCell);
-  if (height < uShoreLevel) return;
+  if (height < (uStones == 1 ? uSeaLevel + (uShoreLevel - uSeaLevel) * 0.3 : uShoreLevel)) return;
   float moisture, temperature;
   climate(n, height, moisture, temperature);
-  if (classify(height, moisture, temperature) == B_SNOW) return;
+  // Schnee hat seine gemalten Felsen mit Haube - dort keine Pflanzen. Steine
+  // schon: hohe Lagen gelten oft als Schnee, sehen aber nach Fels aus.
+  if (uStones == 0 && classify(height, moisture, temperature) == B_SNOW) return;
   float jitter = snoise(L_FRINGE, pos * 0.5 + vec2(3.0, 8.0));
   float wood = smoothstep(0.02, 0.18, moisture + jitter * 0.05);
   float desert = min(smoothstep(0.15, 0.35, temperature), 1.0 - smoothstep(-0.2, 0.0, moisture + jitter * 0.05));
@@ -124,17 +144,48 @@ void main() {
     meadow = max(meadow, wet);
   }
   // Nicht auf Äckern und nicht unter Gebäuden (eingeebnete Flächen).
+  bool onField = false;
   if (uFieldActive > 0.5) {
     vec2 ft = floor(pos - uFieldOrigin);
-    if (all(greaterThanEqual(ft, vec2(0.0))) && all(lessThan(ft, vec2(uFieldSize)))
-        && texelFetch(uFields, ivec2(ft), 0).a > 0.5) meadow = 0.0;
+    onField = all(greaterThanEqual(ft, vec2(0.0))) && all(lessThan(ft, vec2(uFieldSize)))
+        && texelFetch(uFields, ivec2(ft), 0).a > 0.5;
+    if (onField) meadow = 0.0;
   }
+  bool built = false;
   for (int i = 0; i < uFlatCount; i++) {
     vec2 d = abs(pos - uFlat[i].xy) - uFlat[i].z;
-    if (max(d.x, d.y) < 0.2) meadow = 0.0;
+    if (max(d.x, d.y) < 0.2) built = true;
   }
+  if (built) meadow = 0.0;
   float z = clamp(flattenZ(pos, reliefZ(height) * uReliefScale) / ${MAX_Z.toFixed(1)}, 0.0, 1.0) * 65535.0;
-  fragColor = vec4(floor(z / 256.0) / 255.0, mod(floor(z), 256.0) / 255.0, meadow, kind / ${KINDS.length - 1}.0);
+  if (uStones == 1) {
+    // Steine: B wie wahrscheinlich, A die Größe (Meter / 2). Im Gebirge viele
+    // und große, am Strand und in Ufernähe mittlere, auf Äckern kleine, in
+    // Wiese und Wald wenige. Unter Gebäuden keine.
+    float near = shore * (1.0 - rock);
+    float chance = rock * 0.22 + beach * 0.04 + near * 0.02 + meadow * 0.004 + wood * (1.0 - rock) * 0.004;
+    float size = rock * mix(0.3, 0.8, rnd(seed + 12u)) + (1.0 - rock) * mix(0.12, 0.2, max(beach, near));
+    if (onField) { chance = 0.03; size = 0.06; }
+    // Ob hier ein Stein liegt, schon hier - nur dann das Licht (zwei Höhen mehr).
+    if (built || rnd(seed + 2u) >= chance) return;
+    // Licht wie das Gelände darunter (FILL: Hillshading, DISPLAY: Sonne auf den
+    // Hang) - sonst leuchtet ein Stein im Schatten eines Hangs.
+    float step = 0.25;
+    float hRight = elevation((pos + vec2(step, 0.0)) * uMapScale, uGridCell);
+    float hDown = elevation((pos + vec2(0.0, step)) * uMapScale, uGridCell);
+    float shade = tanh(((height - hRight) + (height - hDown)) * uShadeGain / step);
+    float lowland = mix(uLowlandShade, 1.0, smoothstep(uMountainFoot - 0.15, uMountainFoot, height));
+    float fill = 1.0 + shade * mix(0.42, 0.18, beach) * lowland;
+    vec2 dz = vec2(reliefZ(height) - reliefZ(hRight), reliefZ(height) - reliefZ(hDown)) * uReliefScale / step;
+    vec3 normal = normalize(vec3(dz, 1.0));
+    float direct = clamp(mix(1.0, dot(normal, uSunDir) / max(uSunDir.z, 0.1), 0.85), 0.45, 1.3);
+    float light = clamp((fill * mix(1.0, direct, uLight.y) - 0.3) / 1.5, 0.0, 1.0);
+    // A: Größe und Licht je 4 Bit; B = 1: hier liegt ein Stein.
+    float packed = (floor(clamp(size, 0.0, 1.0) * 15.0 + 0.5) * 16.0 + floor(light * 15.0 + 0.5)) / 255.0;
+    fragColor = vec4(floor(z / 256.0) / 255.0, mod(floor(z), 256.0) / 255.0, 1.0, packed);
+    return;
+  }
+  fragColor = vec4(floor(z / 256.0) / 255.0, mod(floor(z), 256.0) / 255.0, meadow, kind / ${PLANTS.length - 1}.0);
 }
 `;
 
@@ -151,9 +202,11 @@ uniform int   uColumns;      // Rasterzellen je Zeile
 uniform sampler2D uMap;      // Durchgang 1
 uniform float uTime;
 uniform vec2  uToCamera;     // zur Kamera, waagerecht (cameraDirection)
-uniform vec2  uSize[${KINDS.length}];  // Breite, Höhe je Pflanze in Tiles
+uniform vec2  uSize[${PLANTS.length}];  // Breite, Höhe je Pflanze in Tiles
 uniform vec3  uGrassLo;      // Wiesenfarbe des Geländes (Palette)
 uniform vec3  uGrassHi;
+uniform int   uStones;       // 1: Steine (MAP mit uStones)
+uniform int   uPass;         // Steine: 3 = Fleck auf dem Boden darunter (render)
 
 out vec3 vUv;                // u, v, Schicht in uFoliage
 out vec3 vLight;
@@ -164,21 +217,49 @@ void main() {
   vec4 data = texelFetch(uMap, local, 0);
   ivec2 cell = uOriginCell + local;
   uint seed = cellSeed(cell);
-  if (rnd(seed + 2u) >= data.b * 0.95) {
+  if (uStones == 1 ? data.b < 0.5 : rnd(seed + 2u) >= data.b * 0.95) {
     gl_Position = vec4(0.0, 0.0, 2.0, 1.0);  // hinter der fernen Clip-Ebene: nichts
     return;
   }
-  int kind = int(data.a * ${KINDS.length - 1}.0 + 0.5);
   vec2 pos = cellPos(cell, seed);
   float z = (data.r * 65280.0 + data.g * 255.0) / 65535.0 * ${MAX_Z.toFixed(1)} - 0.003;
 
   // Zwei Dreiecke: Ecken (0,0) (1,0) (1,1) - (0,0) (1,1) (0,1).
   int v = gl_VertexID;
   vec2 corner = vec2(v == 1 || v == 2 || v == 4 ? 1.0 : 0.0, v >= 2 && v != 3 ? 1.0 : 0.0);
+  vec2 view = normalize(uToCamera);
+  if (uStones == 1) {
+    // Ein Stein: zur Kamera, bis 20° gedreht, gespiegelt, in der Bildebene bis
+    // 20° gekippt (weiter nicht - das Licht im Foto käme sonst von unten), oben
+    // bis 10° geneigt, und ein Stück in den Boden gesunken.
+    int kind = ${STONE_FIRST} + int(rnd(seed + 11u) * ${STONES.length}.0) % ${STONES.length};
+    float turn = (rnd(seed + 3u) - 0.5) * 0.7;
+    vec2 across = vec2(-view.y, view.x) * cos(turn) + view * sin(turn);
+    // A: Größe (Meter / 2) und Licht je 4 Bit (MAP).
+    float packed = floor(data.a * 255.0 + 0.5);
+    float s = floor(packed / 16.0) / 15.0 * 2.0 * ${TILES_PER_METER} * (0.6 + 0.8 * rnd(seed + 4u));
+    float ground = mod(packed, 16.0) / 15.0 * 1.5 + 0.3;
+    float roll = (rnd(seed + 13u) - 0.5) * 0.7;
+    vec2 local = vec2(corner.x - 0.5, corner.y) * s;
+    local = vec2(local.x * cos(roll) - local.y * sin(roll), local.x * sin(roll) + local.y * cos(roll));
+    vec2 lean = (vec2(rnd(seed + 9u), rnd(seed + 10u)) - 0.5) * 0.35 * local.y;
+    gl_Position = project(pos + across * local.x + lean, z + local.y - 0.18 * s);
+    if (uPass == 3) {
+      // Fleck: ein flaches Oval auf dem Boden, etwas breiter als der Stein, knapp darüber.
+      vec2 q = (corner - 0.5) * 2.0;
+      gl_Position = project(pos + across * q.x * s * 0.62 + view * q.y * s * 0.42, z + 0.004);
+      vUv = vec3(q, 0.0);
+    }
+    vUv = vec3(rnd(seed + 6u) < 0.5 ? corner.x : 1.0 - corner.x, corner.y, float(kind));
+    vLight = vec3(ground * (0.9 + 0.15 * rnd(seed + 7u))) * uLight.x * uSunColor;
+    vGrass = vec4(0.0);
+    if (uPass == 3) vUv = vec3((corner - 0.5) * 2.0, 0.0);
+    return;
+  }
+  int kind = int(data.a * ${PLANTS.length - 1}.0 + 0.5);
   // Quer zur Blickrichtung, je Büschel um bis zu 18° gedreht, etwas größer
   // oder kleiner und oben bis etwa 10° in eine eigene Richtung geneigt.
   float turn = (rnd(seed + 3u) - 0.5) * 0.63;
-  vec2 view = normalize(uToCamera);
   vec2 across = vec2(-view.y, view.x);
   across = across * cos(turn) + view * sin(turn);
   vec2 size = uSize[kind] * (0.8 + 0.4 * rnd(seed + 4u));
@@ -204,13 +285,39 @@ const FRAGMENT = `#version 300 es
 precision mediump float;
 precision mediump sampler2DArray;
 uniform sampler2DArray uFoliage;
+// 0: Pflanzen (Maske); Steine in zwei Durchgängen wie die Baumbilder:
+// 1 die Kerne deckend mit Tiefe, 2 die weichen Kanten geblendet ohne Tiefe.
+uniform highp int uPass;  // wie im Vertex-Shader, sonst lässt sich das Programm nicht linken
 in vec3 vUv;
 in vec3 vLight;
 in vec4 vGrass;
 out vec4 fragColor;
 void main() {
   // Vormultipliziert hochgeladen - so filtert der Rand ohne dunklen Saum.
-  vec4 t = texture(uFoliage, vec3(vUv.x, 1.0 - vUv.y, vUv.z));
+  if (uPass == 3) {
+    // Grau-brauner, weicher Fleck unter dem Stein - so steht er nicht scharf abgesetzt im Gelände.
+    float d = length(vUv.xy);
+    float a = 0.45 * (1.0 - smoothstep(0.3, 1.0, d));
+    if (a < 0.01) discard;
+    fragColor = vec4(vec3(0.24, 0.21, 0.17) * vLight, a);
+    return;
+  }
+  vec3 uv = vec3(vUv.x, 1.0 - vUv.y, vUv.z);
+  vec4 t = texture(uFoliage, uv);
+  if (uPass > 0) {
+    // Weicher Rand (etwa 1,5 Bildschirmpixel) aus der Deckung der Nachbarn.
+    vec2 dx = dFdx(uv.xy) * 1.5, dy = dFdy(uv.xy) * 1.5;
+    float around = texture(uFoliage, uv + vec3(dx, 0.0)).a + texture(uFoliage, uv - vec3(dx, 0.0)).a
+                 + texture(uFoliage, uv + vec3(dy, 0.0)).a + texture(uFoliage, uv - vec3(dy, 0.0)).a;
+    float a = t.a * smoothstep(0.2, 1.0, around * 0.25);
+    bool core = a >= 0.9;
+    if (uPass == 1 ? !core : core || a < 0.02) discard;
+    // Gedämpft und grauer als im Foto, wie die Steine im Gelände.
+    vec3 c = t.rgb / max(t.a, 0.004);
+    c = mix(vec3(dot(c, vec3(0.3, 0.59, 0.11))), c, 0.3) * 0.9;
+    fragColor = vec4(c * vLight, uPass == 1 ? 1.0 : a);
+    return;
+  }
   if (t.a < 0.35) discard;
   vec3 c = t.rgb / t.a;
   // Helligkeit aus dem Bild (0.45 ist sein Mittel), Farbton aus der Palette.
@@ -245,7 +352,8 @@ export class GrassRenderer {
   private readonly program: WebGLProgram;
   private readonly vao: WebGLVertexArrayObject;
   private readonly locations = new Map<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
-  private readonly map: GrassMap;
+  /** Daten-Texturen: Pflanzen, Steine. */
+  private readonly maps: [GrassMap, GrassMap];
   private readonly foliage: WebGLTexture;
 
   /** @param lo, hi Wiesenfarbe (0..255) - dieselbe Palette wie das Gelände. */
@@ -253,7 +361,8 @@ export class GrassRenderer {
     this.mapProgram = link(gl, FULLSCREEN, MAP);
     this.program = link(gl, VERTEX, FRAGMENT);
     this.vao = gl.createVertexArray()!;
-    this.map = { texture: gl.createTexture()!, framebuffer: gl.createFramebuffer()!, size: 0 };
+    const map = () => ({ texture: gl.createTexture()!, framebuffer: gl.createFramebuffer()!, size: 0 });
+    this.maps = [map(), map()];
     this.foliage = this.loadFoliage();
     gl.useProgram(this.mapProgram);
     uploadTerrainParams(gl, (name) => this.location(this.mapProgram, name));
@@ -263,7 +372,7 @@ export class GrassRenderer {
     gl.uniform1i(this.location(this.program, 'uFoliage'), FOLIAGE_UNIT);
     gl.uniform3f(this.location(this.program, 'uGrassLo'), lo[0] / 255, lo[1] / 255, lo[2] / 255);
     gl.uniform3f(this.location(this.program, 'uGrassHi'), hi[0] / 255, hi[1] / 255, hi[2] / 255);
-    gl.uniform2fv(this.location(this.program, 'uSize[0]'), KINDS.flatMap((k) => cardSize(k.obj).map((m) => m * TILES_PER_METER)));
+    gl.uniform2fv(this.location(this.program, 'uSize[0]'), PLANTS.flatMap((k) => cardSize(k.obj).map((m) => m * TILES_PER_METER)));
   }
 
   /**
@@ -307,6 +416,8 @@ export class GrassRenderer {
     light: Light; time: number; gridCell: number;
     flatZones: Float32Array; flatCount: number;
     fields: { texture: WebGLTexture; origin: { x: number; y: number }; active: boolean };
+    /** Weltpunkt in der Bildmitte - um ihn liegt das Quadrat (nicht der Kamerapunkt auf Meereshöhe). */
+    center: { x: number; y: number };
   }) {
     const perTile = DENSITY.find(([from]) => tileSize >= from)?.[1];
     if (!perTile) return;
@@ -315,57 +426,86 @@ export class GrassRenderer {
     const { width, height } = gl.canvas;
     // Ein Quadrat um die Kamera, groß genug für jede Blickrichtung und Neigung.
     const side = Math.ceil((width + height / viewGroundV()) / ppt) + 4;
-    const spacing = 1 / perTile;
-    const columns = Math.ceil(side / spacing);
-    const originX = Math.floor((camera.centerX - side / 2) / spacing);
-    const originY = Math.floor((camera.centerY - side / 2) / spacing);
-    const map = this.map;
+    let cells = 0;
+    // Erst die Pflanzen, dann die Steine - je auf ihrem eigenen Raster.
+    for (const stones of [0, 1]) {
+      const spacing = stones ? STONE_SPACING : 1 / perTile;
+      const columns = Math.ceil(side / spacing);
+      const originX = Math.floor((o.center.x - side / 2) / spacing);
+      const originY = Math.floor((o.center.y - side / 2) / spacing);
+      const map = this.maps[stones];
 
-    // 1. Daten je Rasterzelle.
-    if (map.size !== columns) this.allocate(map, columns);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, map.framebuffer);
-    gl.viewport(0, 0, columns, columns);
-    gl.disable(gl.DEPTH_TEST);
-    gl.useProgram(this.mapProgram);
-    gl.bindVertexArray(this.vao);
-    const m = (name: string) => this.location(this.mapProgram, name);
-    gl.uniform2i(m('uOriginCell'), originX, originY);
-    gl.uniform1f(m('uSpacing'), spacing);
-    gl.uniform1f(m('uReliefScale'), camera.reliefScale);
-    gl.uniform1f(m('uGridCell'), o.gridCell);
-    if (o.flatCount > 0) gl.uniform4fv(m('uFlat[0]'), o.flatZones);
-    gl.uniform1i(m('uFlatCount'), o.flatCount);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, o.fields.texture);
-    gl.uniform1f(m('uFieldActive'), o.fields.active ? 1 : 0);
-    gl.uniform2f(m('uFieldOrigin'), o.fields.origin.x, o.fields.origin.y);
-    gl.uniform1f(m('uFieldSize'), FIELD_WINDOW);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    bindScreen(gl);
-    gl.viewport(0, 0, width, height);
-    gl.enable(gl.DEPTH_TEST);
+      // 1. Daten je Rasterzelle.
+      if (map.size !== columns) this.allocate(map, columns);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, map.framebuffer);
+      gl.viewport(0, 0, columns, columns);
+      gl.disable(gl.DEPTH_TEST);
+      gl.useProgram(this.mapProgram);
+      gl.bindVertexArray(this.vao);
+      const m = (name: string) => this.location(this.mapProgram, name);
+      gl.uniform2i(m('uOriginCell'), originX, originY);
+      gl.uniform1f(m('uSpacing'), spacing);
+      gl.uniform1i(m('uStones'), stones);
+      gl.uniform1f(m('uReliefScale'), camera.reliefScale);
+      gl.uniform1f(m('uGridCell'), o.gridCell);
+      if (stones) setLightUniforms(gl, m, o.light);
+      if (o.flatCount > 0) gl.uniform4fv(m('uFlat[0]'), o.flatZones);
+      gl.uniform1i(m('uFlatCount'), o.flatCount);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, o.fields.texture);
+      gl.uniform1f(m('uFieldActive'), o.fields.active ? 1 : 0);
+      gl.uniform2f(m('uFieldOrigin'), o.fields.origin.x, o.fields.origin.y);
+      gl.uniform1f(m('uFieldSize'), FIELD_WINDOW);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      bindScreen(gl);
+      gl.viewport(0, 0, width, height);
+      gl.enable(gl.DEPTH_TEST);
 
-    // 2. Die Büschel, in den Tiefenpuffer der Szene.
-    gl.useProgram(this.program);
-    const u = (name: string) => this.location(this.program, name);
-    setCameraUniforms(gl, u, camera);
-    setLightUniforms(gl, u, o.light);
-    gl.uniform2i(u('uOriginCell'), originX, originY);
-    gl.uniform1f(u('uSpacing'), spacing);
-    gl.uniform1i(u('uColumns'), columns);
-    gl.uniform1f(u('uTime'), o.time);
-    const [cx, cy] = cameraDirection();
-    gl.uniform2f(u('uToCamera'), cx, cy);
-    gl.activeTexture(gl.TEXTURE0 + MAP_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, map.texture);
-    gl.activeTexture(gl.TEXTURE0 + FOLIAGE_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.foliage);
-    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, columns * columns);
+      // 2. Büschel bzw. Steine, in den Tiefenpuffer der Szene.
+      gl.useProgram(this.program);
+      const u = (name: string) => this.location(this.program, name);
+      setCameraUniforms(gl, u, camera);
+      setLightUniforms(gl, u, o.light);
+      gl.uniform2i(u('uOriginCell'), originX, originY);
+      gl.uniform1f(u('uSpacing'), spacing);
+      gl.uniform1i(u('uColumns'), columns);
+      gl.uniform1i(u('uStones'), stones);
+      gl.uniform1f(u('uTime'), o.time);
+      const [cx, cy] = cameraDirection();
+      gl.uniform2f(u('uToCamera'), cx, cy);
+      gl.activeTexture(gl.TEXTURE0 + MAP_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, map.texture);
+      gl.activeTexture(gl.TEXTURE0 + FOLIAGE_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.foliage);
+      if (stones) {
+        // Erst der Fleck auf dem Boden, geblendet und ohne Tiefe zu schreiben.
+        gl.uniform1i(u('uPass'), 3);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(false);
+        gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, columns * columns);
+        gl.depthMask(true);
+        gl.disable(gl.BLEND);
+      }
+      gl.uniform1i(u('uPass'), stones);
+      gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, columns * columns);
+      if (stones) {
+        // Die weichen Kanten der Steine über das, was schon dahinter steht.
+        gl.uniform1i(u('uPass'), 2);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.depthMask(false);
+        gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, columns * columns);
+        gl.depthMask(true);
+        gl.disable(gl.BLEND);
+      }
+      cells += columns * columns;
+      if (!stones) addRenderStats('grassTufts', columns * columns);
+    }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindVertexArray(null);
-    addRenderStats('grassTufts', columns * columns);
-    addRenderStats('drawCalls', 2);
-    addRenderStats('vertices', columns * columns * 6);
+    addRenderStats('drawCalls', 6);
+    addRenderStats('vertices', cells * 6);
   }
 
   /** Daten-Textur in neuer Größe: RGBA8, nie gefiltert (texelFetch). */

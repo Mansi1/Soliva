@@ -5,6 +5,8 @@
 // Shader vor (cropCard in gl/entityRenderer.ts). Je Stufe eine .glb in
 // src/models/fields/: <feld>_card (die Karte, die der Acker benutzt),
 // <feld>_card_1, <feld>_card_2 (nur ihr Bild zählt). Ein Quadrat so breit wie hoch.
+// Ebenso die Steine aus src/textures/stone/ als src/models/foliage/stone_<n>.glb
+// (1 m, die Größe gibt gl/grassRenderer.ts je Stein vor).
 //
 // Aufruf: node tools/models/crop-cards.mjs  (braucht Chrome, wie tools/ui)
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -13,6 +15,8 @@ import { objToGlb } from './glb.mjs';
 
 const textures = new URL('../../src/textures/', import.meta.url);
 const fields = new URL('../../src/models/fields/', import.meta.url);
+const foliage = new URL('../../src/models/foliage/', import.meta.url);
+const STONES = Array.from({ length: 10 }, (_, i) => `stein${i + 1}`);
 /** Feld: die drei Bilder und die Höhe der erwachsenen Pflanze (m) - wie die früheren Modelle. */
 const CROPS = {
   wheat: [['weizen_saetzling', 'weizen_jungpflanze', 'weizen_erwachsen'], 1.0],
@@ -53,22 +57,31 @@ const squared = (png) => page.evaluate(async ({ src, size }) => {
   return btoa(s);
 }, { src: `data:image/png;base64,${png.toString('base64')}`, size: SIZE });
 
+/** Eine quadratische Karte (unten mittig, `height` Meter) mit dem Bild `png` (Base64). */
+function card(material, height, png) {
+  const half = height / 2;
+  const obj = [
+    `o ${material}`,
+    `v ${-half} 0 0`, `v ${half} 0 0`, `v ${half} ${height} 0`, `v ${-half} ${height} 0`,
+    'vt 0 0', 'vt 1 0', 'vt 1 1', 'vt 0 1',
+    `usemtl ${material}`,
+    'f 1/1 2/2 3/3 4/4',
+  ].join('\n');
+  return objToGlb(obj, `newmtl ${material}\nKd 1 1 1\nmap_Kd data:image/png;base64,${png}\n`);
+}
+
 for (const [crop, [stages, height]] of Object.entries(CROPS)) {
   const material = `${crop[0].toUpperCase()}${crop.slice(1)}Card`;
   for (const [i, name] of stages.entries()) {
     const png = await squared(readFileSync(new URL(`${name}.png`, textures)));
-    const half = height / 2;
-    const obj = [
-      `o ${material}${i}`,
-      `v ${-half} 0 0`, `v ${half} 0 0`, `v ${half} ${height} 0`, `v ${-half} ${height} 0`,
-      'vt 0 0', 'vt 1 0', 'vt 1 1', 'vt 0 1',
-      `usemtl ${material}${i}`,
-      'f 1/1 2/2 3/3 4/4',
-    ].join('\n');
-    const mtl = `newmtl ${material}${i}\nKd 1 1 1\nmap_Kd data:image/png;base64,${png}\n`;
     const file = `${crop}_card${i ? `_${i}` : ''}.glb`;
-    writeFileSync(new URL(file, fields), objToGlb(obj, mtl));
+    writeFileSync(new URL(file, fields), card(`${material}${i}`, height, png));
     console.log(`${file}: ${name}, ${height} m`);
   }
+}
+for (const [i, name] of STONES.entries()) {
+  const png = await squared(readFileSync(new URL(`stone/${name}.png`, textures)));
+  writeFileSync(new URL(`stone_${i + 1}.glb`, foliage), card(`Stone${i + 1}`, 1, png));
+  console.log(`stone_${i + 1}.glb: ${name}`);
 }
 await browser.close();
