@@ -20,8 +20,8 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
   props/                    axe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
-  fields/                   stake, cord, wheat_card (Bildkarte), corn_1, corn_2,
-                            tomato, potato, hop
+  fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
+                            der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
                             (Bildkarten fürs Gras, 256 px)
   clips/                    humanoid, humanoid_sit, quadruped, mill, flag - je .glb + .json
@@ -151,11 +151,7 @@ wie früher, die Felder sehen aus wie vorher.
 |---|---|
 | `fields/stake` | Pflock am Rand, so wie er ist |
 | `fields/cord` | Schnur - 1 m lang entlang x, gestreckt von Pflock zu Pflock |
-| `fields/wheat_card` | Bildkarte eines Weizenbüschels, 1 m hoch (`tools/models/billboard-card.mjs` aus `src/textures/wheat_texture.png`, Kd färbt golden) - je Pflanzplatz drei Kreuze aus zwei Karten, 0,85–1,1 m hoch |
-| `fields/corn_1`, `fields/corn_2` | Maispflanze mit einem bzw. zwei Kolben, 2,2 m - gedreht; was über 2 m liegt (Stängelspitze, Rispe), wächst mit der Höhe der Pflanze (2,0–2,45 m) |
-| `fields/tomato` | Tomatenstaude am Holzpfahl mit drei Rispen, 1,45 m - gedreht, vier je Pflanzplatz |
-| `fields/potato` | Kartoffelstaude mit weißen Blüten, 0,5 m - gedreht, sechs je Pflanzplatz |
-| `fields/hop` | Hopfenrebe, die sich an einem Draht mit Pfahl hochwindet, 3,2 m, mit Dolden - gedreht, zwei je Pflanzplatz |
+| `fields/<feld>_card`, `_card_1`, `_card_2` | Bildkarten der Feldpflanzen (Weizen, Mais, Tomate, Kartoffel, Hopfen): Sätzling, Jungpflanze, erwachsen - gebaut von `tools/models/crop-cards.mjs` aus `src/textures/` (quadratisch, unten mittig, 256 px; so hoch wie die erwachsene Pflanze). Je Pflanzplatz ein bis vier Kreuze aus zwei Karten, etwas geneigt; der Shader lässt die Pflanze auf der Karte durch die drei Stufen wachsen (`cropCard`). |
 
 Halm, Blatt und Schnur werden entlang ihrer Achse gestreckt, quer dazu
 behalten sie ihre Dicke. Wer eine Maispflanze in Blender ändert: Blätter und

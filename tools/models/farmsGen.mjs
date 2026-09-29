@@ -1,10 +1,9 @@
 // Field models - 3x3 tiles (15 m square) like the AoE2 farm: the staked-out
-// outline and the crop in rows. The parts are Blender models (docs/BLENDER.md,
-// src/models/fields/*.glb): stake, cord, wheat leaf, wheat stalks with
-// ears in three tones, maize plants with one or two cobs. Here only the
-// placing is decided - where each stands, how tall, how it leans and turns -
-// and the game builds the field from it at start-up (src/gl/entityRenderer.ts)
-// rather than storing it: a wheat field is thousands of single stalks.
+// outline and the crop in rows. The parts are in src/models/fields/*.glb:
+// stake and cord from Blender (docs/BLENDER.md), the crops as image cards in
+// three growth stages (tools/models/crop-cards.mjs). Here only the placing is
+// decided - where each stands, how tall, how it leans and turns - and the
+// game builds the field from it at start-up (src/gl/entityRenderer.ts).
 //
 // Every plant is one object "Crop.<row>.<c>.<cols>": the game shows per
 // furrow what is sown and not yet harvested, and lets the plants grow out of
@@ -14,8 +13,11 @@ import { model } from './primitives.mjs';
 
 /** The parts a field is made of (src/models/fields/<name>.glb). */
 export const FIELD_PARTS = [
-  'stake', 'cord', 'wheat_card', 'corn_1', 'corn_2',
-  'tomato', 'potato', 'hop',
+  'stake', 'cord',
+  // Je Feldart die Karte und die Bilder ihrer weiteren Wachstumsstufen
+  // (tools/models/crop-cards.mjs) - in dieser Reihenfolge, das Spiel legt die
+  // drei Bilder hintereinander in seine Textur.
+  ...['wheat', 'corn', 'tomato', 'potato', 'hop'].flatMap((c) => [`${c}_card`, `${c}_card_1`, `${c}_card_2`]),
 ];
 
 /**
@@ -95,19 +97,12 @@ function stretch(axis, p0, p1) {
   };
 }
 
-/**
- * Turned by `turn` about the vertical, then moved to (x, y, z). With `grow`
- * everything above `above` metres moves up by `grow` (the top of a maize
- * stalk and its tassel) - leaves and cobs below keep their height.
- */
-function stand(x, y, z, turn = 0, grow = 0, above = Infinity) {
+/** Turned by `turn` about the vertical, then moved to (x, y, z). */
+function stand(x, y, z, turn = 0) {
   const c = Math.cos(turn), s = Math.sin(turn);
-  return ([vx, vy, vz]) => [x + vx * c - vz * s, y + vy + (vy > above ? grow : 0), z + vx * s + vz * c];
+  return ([vx, vy, vz]) => [x + vx * c - vz * s, y + vy, z + vx * s + vz * c];
 }
 
-/** Height of the maize plants in Blender (fields/corn_*.glb) and from where up they grow with the plant. */
-const CORN_HEIGHT = 2.2;
-const CORN_GROWS_ABOVE = 2.0;
 
 /** Half the field edge and half the planted area, metres. */
 const HALF = 7.5;
@@ -125,7 +120,7 @@ function rng(seed) {
   };
 }
 
-/** Where the plants start, metres - they grow from here (FIELD_SOIL_METERS in the shader). */
+/** Where the plants stand, metres above the ground. */
 const SOIL = 0.02;
 /**
  * Furrows per field - the same for every crop (FIELD_ROWS in buildings.ts),
@@ -184,87 +179,32 @@ function planted(rows, cols, plant) {
 }
 
 /**
- * Wheat as image cards (fields/wheat_card.glb, a clump of stalks with ears):
- * per plant two crossed cards, in the full version three such crosses along the
- * furrow's width - so the ground does not show between the rows. A card is
- * 4 vertices where the single stalks were thousands per plant.
+ * A crop as image cards (fields/<crop>_card.glb, a square as wide as the grown
+ * plant is tall): per plant two crossed cards, in the full version one such
+ * cross at each of `spots` places across the furrow - so the ground does not
+ * show between the rows. The shader lets the plant grow on the card through
+ * its three stages. A card is 4 vertices where 3D plants were thousands.
  */
-function wheat(m, put, detail = 1) {
-  const rnd = rng(11);
-  const rows = ROWS, cols = 15;
-  ground(m, put);
-  const gapZ = (2 * INNER) / rows;
-  planted(rows, cols, (name, x, z) => {
-    for (const dz of detail >= 1 ? [-1 / 3, 0, 1 / 3] : [0]) {
-      const px = x + (rnd() - 0.5) * 0.3;
-      const pz = z + dz * gapZ + (rnd() - 0.5) * 0.2;
-      const h = 0.85 + rnd() * 0.25;
-      // Breiter als hoch, damit zwischen den Kreuzen keine Erde durchscheint;
-      // die einfacheren Fassungen (ein Kreuz) noch breiter.
-      const wide = h * (detail >= 1 ? 1.3 : 1.8);
-      const turn = rnd() * Math.PI;
-      for (const t of [turn, turn + Math.PI / 2]) {
-        // Jede Karte oben bis etwa 10° zur Seite und nach vorn oder hinten geneigt.
-        const [side, back] = [(rnd() - 0.5) * 0.35, (rnd() - 0.5) * 0.35];
-        const at = stand(px, SOIL * 0.5, pz, t);
-        put(name, 'wheat_card', ([vx, vy, vz]) => at([vx * wide + side * vy * h, vy * h, vz + back * vy * h]));
-      }
-    }
-  });
-}
-
-/**
- * Maize: dense stands of tall stalks - two rows of plants per furrow - with
- * long hanging leaves, a tassel on top and yellow cobs that stick out of
- * their husks. Each plant is one of the two Blender plants (one or two
- * cobs), turned and stretched to its height.
- */
-function corn(m, put, detail = 1) {
-  const rnd = rng(23);
-  const rows = ROWS, cols = 9;
-  ground(m, put);
-  const gapZ = (2 * INNER) / rows, gapX = (2 * INNER) / cols;
-  planted(rows, cols, (name, x, z) => {
-    // Fewer plants in the simpler versions (every second or fourth).
-    const stride = detail >= 1 ? 1 : detail >= 0.3 ? 2 : 4;
-    for (let k = 0; k < 8; k += stride) {
-      const px = x + ((k % 4) + 0.5 - 2) * (gapX / 4) + (rnd() - 0.5) * 0.12;
-      const pz = z + (k < 4 ? -0.22 : 0.22) * gapZ + (rnd() - 0.5) * 0.1;
-      const h = 2.0 + rnd() * 0.45;
-      const turn = rnd() * Math.PI;
-      // Ein oder zwei Kolben - gezogen wie früher: die Bedingung würfelt bei
-      // jeder Prüfung neu, dazu je Kolben seine (jetzt im Modell feste) Höhe.
-      // So stehen alle Pflanzen danach genau wie früher.
-      let cobs = 0;
-      while (cobs < 1 + Math.floor(rnd() * 2)) {
-        rnd();
-        cobs++;
-      }
-      // Die Modelle sind 2,2 m hoch und drehen sich um die Hochachse. Was über
-      // 2 m liegt (Spitze des Stängels, Rispe), wächst mit der Höhe der Pflanze.
-      put(name, cobs === 1 ? 'corn_1' : 'corn_2',
-        stand(px, SOIL * 0.5, pz, turn, h - CORN_HEIGHT, CORN_GROWS_ABOVE));
-    }
-  });
-}
-
-/**
- * Bushes in two rows per furrow (tomatoes, potatoes, hops): `per` plants per spot,
- * each turned and a little off its place. Fewer in the simpler versions.
- */
-function bushes(part, seed, per) {
+function cards(part, seed, cols, spots, widen = 1) {
   return (m, put, detail = 1) => {
     const rnd = rng(seed);
-    const rows = ROWS, cols = 9;
     ground(m, put);
-    const gapZ = (2 * INNER) / rows, gapX = (2 * INNER) / cols;
-    planted(rows, cols, (name, x, z) => {
-      const stride = detail >= 1 ? 1 : detail >= 0.3 ? 2 : 4;
-      for (let k = 0; k < per; k += stride) {
-        const half = Math.ceil(per / 2);
-        const px = x + ((k % half) + 0.5 - half / 2) * (gapX / half) + (rnd() - 0.5) * 0.12;
-        const pz = z + (k < half ? -0.22 : 0.22) * gapZ + (rnd() - 0.5) * 0.1;
-        put(name, part, stand(px, SOIL * 0.5, pz, rnd() * Math.PI * 2));
+    const gapZ = (2 * INNER) / ROWS;
+    const gapX = (2 * INNER) / cols;
+    planted(ROWS, cols, (name, x, z) => {
+      for (const [dx, dz] of detail >= 1 ? spots : [[0, 0]]) {
+        const px = x + dx * gapX + (rnd() - 0.5) * 0.3;
+        const pz = z + dz * gapZ + (rnd() - 0.5) * 0.2;
+        const k = 0.85 + rnd() * 0.3;
+        // Die einfacheren Fassungen (ein Kreuz) breiter, sonst sähe man die Erde.
+        const wide = k * widen * (detail >= 1 ? 1 : 1.5);
+        const turn = rnd() * Math.PI;
+        for (const t of [turn, turn + Math.PI / 2]) {
+          // Jede Karte oben bis etwa 10° zur Seite und nach vorn oder hinten geneigt.
+          const [side, back] = [(rnd() - 0.5) * 0.35, (rnd() - 0.5) * 0.35];
+          const at = stand(px, SOIL * 0.5, pz, t);
+          put(name, part, ([vx, vy, vz]) => at([vx * wide + side * vy * k, vy * k, vz + back * vy * k]));
+        }
       }
     });
   };
@@ -272,7 +212,15 @@ function bushes(part, seed, per) {
 
 /** The fields, in the order of the SHAPE numbers (farmWheat, farmCorn, farmTomato, farmPotato, farmHop). */
 export const FARM_KINDS = ['wheat', 'corn', 'tomato', 'potato', 'hop'];
-const MAKE = { wheat, corn, tomato: bushes('tomato', 31, 4), potato: bushes('potato', 37, 6), hop: bushes('hop', 41, 2) };
+/** Weizen dicht an dicht (15 Plätze je Furche, drei Kreuze quer), die übrigen auf 9 Plätzen in zwei Reihen. */
+const TWO_ROWS = [[0, -0.25], [0, 0.25]];
+const MAKE = {
+  wheat: cards('wheat_card', 11, 15, [[0, -1 / 3], [0, 0], [0, 1 / 3]], 1.3),
+  corn: cards('corn_card', 23, 9, TWO_ROWS),
+  tomato: cards('tomato_card', 31, 9, TWO_ROWS),
+  potato: cards('potato_card', 37, 9, [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]], 1.4),
+  hop: cards('hop_card', 41, 9, TWO_ROWS, 0.8),
+};
 
 /**
  * OBJ and MTL text of one field, from its parts (`parts[name] = { obj, mtl }`,

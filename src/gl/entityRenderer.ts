@@ -375,10 +375,18 @@ function imageLayer(url: string, tint: RGB01): number {
 }
 // Die Felder baut erst der erste Zugriff (lazyFieldModels), nach dem Anlegen
 // der Textur - ihre Bilder (Weizenkarte) darum gleich hier, mit ihrer Farbe (Kd) wie in farmModel.
-for (const part of Object.values(FIELD_PART_MODELS)) {
+// Die drei Stufen einer Feldkarte müssen hintereinander liegen (cropCard).
+const FIELD_PART_LAYERS = FIELD_PARTS.map((name) => {
+  const part = FIELD_PART_MODELS[name];
   const colors = parseMtl(part.mtl);
-  for (const [material, url] of parseMtlImages(part.mtl)) imageLayer(url, colors.get(material) ?? [1, 1, 1]);
-}
+  return [...parseMtlImages(part.mtl)].map(([material, url]) => imageLayer(url, colors.get(material) ?? [1, 1, 1]))[0];
+});
+FIELD_PARTS.forEach((name, i) => {
+  const stage = /_card_(\d)$/.exec(name);
+  if (stage && FIELD_PART_LAYERS[i] !== FIELD_PART_LAYERS[i - Number(stage[1])] + Number(stage[1])) {
+    throw new Error(`${name}: Bild nicht direkt hinter der vorigen Stufe`);
+  }
+});
 /**
  * So viele Drehungen je Baumart hat ein Billboard - das Bild liegt höchstens
  * eine halbe Stufe (22,5°) neben der Drehung des Baums.
@@ -527,9 +535,6 @@ export const NATURAL: number[] = [
 
 /** Gebäude schauen schräg zur Kamera (die steht bei +x +y). */
 export const BUILDING_HEADING = 0.5;
-
-/** Wo die Pflanzen ansetzen, in Metern (SOIL in tools/models/farmsGen.mjs). */
-const FIELD_SOIL_METERS = '0.02';
 
 /**
  * Stufen des Werkstücks auf der Werkbank der Bognerei (Objekte "Craft.0" bis
@@ -722,7 +727,7 @@ vec3 gCapNormal = vec3(0.0, 0.0, 1.0);
 // Anhänge liegen in Metern im Rahmen der Hand und werden erst auf den Körper gebracht.
 vec3 gRest = vec3(0.0);
 // Feldpflanzen: 1 = frisch gesät und grün, 0 = reif in ihrer eigenen Farbe.
-float gUnripe = 0.0;
+float gGrowth = -1.0;  // Feldpflanze: Wachstum 0..1 (cropCard), sonst -1
 uniform float uTime;
 // Clips aus Blender (clips.ts): je Bild eine Zeile, je Knochen drei Texel
 // (Zeilen einer 3x4-Matrix). uClipRow: erste Zeile des Clips für diese Figur,
@@ -747,7 +752,7 @@ uniform float uPoseShift[8];
 
 out vec3 vWorld;
 out vec3 vColor;
-out float vUnripe;  // Feldpflanzen: 1 = noch grün (Bildkarten färbt erst der Fragment-Shader)
+out float vGrowth;  // Feldpflanzen: Wachstum 0..1 - die Karte zeigt die passende Stufe (cropCard), sonst -1
 flat out vec3 vParams;
 flat out vec3 vTeam;     // Instanzfarbe (Spielerfarbe) - für den Umriss verdeckter Figuren
 // Bäume: welche Textur (0 keine, 3 Rinde, 4 Birkenrinde, 5 Schnittfläche)
@@ -1111,15 +1116,12 @@ void main() {
           // Erde erscheint, wo schon gepflügt ist.
           hide = hide || (stage < 1.0 && q >= stage - 0.001);
         } else {
-          // Pflanzen: gesät bis q, noch nicht geerntet ab dem Rest; sie
-          // wachsen aus der Erde heraus und reifen von Grün zur eigenen Farbe.
+          // Pflanzen: gesät bis q, noch nicht geerntet ab dem Rest; wie weit
+          // sie gewachsen sind, zeigt die Karte (cropCard im Fragment-Shader).
           // Mit etwas Spielraum: q kommt gerundet aus aCorner.w zurück, die
           // erste Pflanze eines Tiles bliebe sonst abgeerntet stehen.
           hide = hide || stage < 1.0 || (stage < 2.0 && q >= stage - 1.004) || q >= aMotion.z - 0.004;
-          float grown = clamp(stage - 2.0, 0.0, 1.0);
-          float soil = ${FIELD_SOIL_METERS} / uMeters;
-          p.z = soil + (p.z - soil) * mix(0.15, 1.0, grown);
-          gUnripe = 1.0 - smoothstep(0.5, 1.0, grown);
+          gGrowth = clamp(stage - 2.0, 0.0, 1.0);
         }
       } else if (part == P_EDGE) {
         // Abgesteckt: nur die Kanten am Umriss des Felds - das Tile gehört
@@ -1330,7 +1332,7 @@ void main() {
   // Auswahlring: der Fragment-Shader braucht die Lage im Quadrat (0..1).
   if (shape == ${SHAPE_RING}) vWorld = vec3(aCorner.xy, world.z);
   vColor = aColor;
-  vUnripe = 0.0;
+  vGrowth = -1.0;
   vTeam = aColor;
   vTex = 0;
   vSawn = gSawn;
@@ -1347,8 +1349,7 @@ void main() {
     vColor = role == 1 ? paint : role == 2 ? aAccent : aMaterial.rgb;
     if (gSawn > 0.5 && role != ${IMAGE_ROLE}) vColor = vec3(0.86, 0.71, 0.48);
     // Bildflächen tragen in vColor (u, v, Schicht) - sie färbt der Fragment-Shader.
-    if (role != ${IMAGE_ROLE}) vColor = mix(vColor, vec3(0.34, 0.56, 0.2), gUnripe * 0.85);
-    vUnripe = gUnripe;
+    vGrowth = gGrowth;
     bool tree = ${TREES.map((n) => `shape == ${n}`).join(' || ')};
     bool villager = ${FIGURE_TEST};
     bool figureTex = role >= ${FIGURE_TEX.cloth} && role <= ${FIGURE_TEX.skin};
@@ -1384,7 +1385,7 @@ precision highp float;
 
 in vec3 vWorld;
 in vec3 vColor;
-in float vUnripe;
+in float vGrowth;
 flat in vec3 vTeam;
 flat in int vTex;
 flat in float vCut;
@@ -1515,6 +1516,33 @@ vec3 figureTexture(vec3 base) {
   float flush = smoothstep(0.55, 0.9, texNoise(q * 4.0 + 2.2));
   vec3 c = base * (0.95 + 0.1 * mix(0.5, mottle, texDetail(18.0, px)));
   return mix(c, c * vec3(1.06, 0.93, 0.9), flush * 0.4);
+}
+
+// Eine Wachstumsstufe einer Feldkarte: ihr Bild auf \`scale\` der Karte
+// verkleinert, unten mittig - vormultipliziert, außerhalb durchsichtig.
+vec4 cropStage(vec2 uv, float layer, float scale) {
+  vec2 q = (uv - vec2(0.5, 0.0)) / scale + vec2(0.5, 0.0);
+  vec4 t = texture(uModelImages, vec3(q.x, 1.0 - q.y, layer));
+  float inside = step(0.0, q.x) * step(q.x, 1.0) * step(q.y, 1.0);
+  return vec4(t.rgb * t.a, t.a) * inside;
+}
+
+// Feldpflanze auf ihrer Karte (tools/models/crop-cards.mjs): base = (u, v,
+// Schicht des Sätzlings), die Jungpflanze und die erwachsene liegen in den
+// beiden Schichten dahinter. Wachstum t 0..1: der Sätzling wächst, geht in die
+// Jungpflanze über, die wächst, geht in die erwachsene über, die wächst bis
+// zur vollen Karte. Zwei Abtastungen je Pixel, ohne Verzweigung davor.
+vec3 cropCard(vec3 base, float t) {
+  float layer = floor(base.z + 0.5);
+  float s0 = mix(0.3, 0.5, smoothstep(0.0, 0.3, t));
+  float s1 = mix(0.5, 0.78, smoothstep(0.4, 0.62, t));
+  float s2 = mix(0.78, 1.0, smoothstep(0.72, 1.0, t));
+  bool early = t < 0.4;
+  vec4 a = cropStage(base.xy, layer + (early ? 0.0 : 1.0), early ? s0 : s1);
+  vec4 b = cropStage(base.xy, layer + (early ? 1.0 : 2.0), early ? s1 : s2);
+  vec4 c = mix(a, b, early ? smoothstep(0.3, 0.4, t) : smoothstep(0.62, 0.72, t));
+  if (c.a < 0.5) discard;
+  return c.rgb / c.a;
 }
 
 // Bildtextur aus der .glb: base = (u, v, Schicht); v = 0 ist unten im Bild.
@@ -1867,9 +1895,7 @@ void main() {
   else if (uPlain == 1 && vTex == ${IMAGE_ROLE}) base = vec3(0.7);
   else if (uPlain == 1 && vTex != ${BLOSSOM_CARD_ROLE} && vTex != ${FLOWER_SHADOW_ROLE}) base = vColor;
   else if (vTex == ${IMAGE_ROLE}) {
-    base = vSawn > 0.5 ? treeTexture(vec3(0.86, 0.71, 0.48)) : imageTexture(base);
-    // Unreife Feldpflanzen (Weizenkarte): grün, die Helligkeit des Bilds bleibt.
-    base = mix(base, vec3(0.34, 0.56, 0.2) * dot(base, vec3(0.3, 0.59, 0.11)) / 0.45, vUnripe * 0.85);
+    base = vSawn > 0.5 ? treeTexture(vec3(0.86, 0.71, 0.48)) : vGrowth >= 0.0 ? cropCard(base, vGrowth) : imageTexture(base);
   }
   else if (vTex >= ${FIGURE_TEX.cloth} && vTex <= ${FIGURE_TEX.skin}) base = figureTexture(base);
   else if (vTex == ${BLOSSOM_CARD_ROLE}) base = blossomCard(base, shape, uSunDir, uLight.y);
@@ -1905,7 +1931,11 @@ void main() {
     return;
   }
 
-  float light = mix(OVERCAST_LIGHT, 0.45 + 0.75 * max(dot(normal, uSunDir), 0.0), uLight.y) * uLight.x;
+  // Feldkarten sind fertig schattiert gemalt - nur Helligkeit und Farbe der
+  // Sonne, wie das Gras (grassRenderer.ts); als Fläche beleuchtet würde eine
+  // von der Sonne abgewandte Karte dunkel.
+  float light = vGrowth >= 0.0 ? mix(OVERCAST_LIGHT, 1.0, uLight.y) * uLight.x
+      : mix(OVERCAST_LIGHT, 0.45 + 0.75 * max(dot(normal, uSunDir), 0.0), uLight.y) * uLight.x;
   fragColor = vec4(base * light * uSunColor, alpha * gCardAlpha);
 }
 `;
