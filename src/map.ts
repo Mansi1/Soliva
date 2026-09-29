@@ -480,7 +480,7 @@ export class MapRenderer {
   /** Flächen, die unter Gebäuden eingeebnet werden - Gelände und Gebäude gleich. */
   setFlatZones(zones: readonly FlatZone[]) {
     const data = packZones(zones);
-    const count = Math.min(zones.length, MAX_FLAT_ZONES);
+    const count = Math.min(zones.length, MAX_FLAT_ZONES - 1);
     this.terrain.flatZones = data;
     this.terrain.flatCount = count;
     this.entities.flatZones = data;

@@ -53,6 +53,9 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-29, M4: Timer-Queries je Abschnitt (Gelände, Gras, Modelle, ...) sind auf ANGLE Metal unbrauchbar: jede Grenze kostet selbst GPU-Zeit, Werte sprangen zwischen Läufen auf 66-130 ms bei 60 fps. `gl.finish()` blockiert dort nicht (0 ms).
 - 2026-09-29, M4, ohne Deckel, Demo über den Äckern (`/game/Demo?lat=62&lng=100&zoom=4`): Weizen als Halme kostete ~5 ms je Bild (76 → 120 fps als Karten, 5,7 → 1,8 Mio. Eckpunkte), das Gras 0,5-1,1 ms (als Karten bei Zoom 5 ~0, bei Zoom 4 etwa gleich). Die Wärme des Rechners verschiebt fps zwischen Läufen um bis zu 40 % - nur direkt aufeinanderfolgende Paare vergleichen.
 
+- 2026-09-29, M4, `stadt` ohne Deckel nach Gras/Weizen: Modelle 3,5 ms, alles andere (Gelände, Gras, Partikel, Effekte) zusammen ~1,7 ms. Im Modell-Pass: Figuren 1,4 ms (davon Silhouetten 0,9), Gebäude 0,5, Natur 0,8, Äcker 0,3 - vor dem Indizieren. Danach nicht neu zerlegt.
+- Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
+
 ## Optimierungsplan
 
 - 2026-09-26: Falsch im Plan, am Code geprüft: 2.2 ist nicht bit-identisch (ein grober Vorlauf überspringt schmale Grate); ein Early-out in `World.armoryStock` ändert das Verhalten, weil `world/render.ts` `has()` prüft. Die Zeilenangaben des Plans stimmen seit 2026-09-26 (Merge von PR #4) nicht mehr.

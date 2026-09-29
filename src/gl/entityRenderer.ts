@@ -31,7 +31,7 @@ import { TERRAIN_COMMON } from './terrainShader';
 import { CLASSIC_LIGHT, LIGHT_GLSL, setLightUniforms, type Light } from './light';
 import { addRenderStats } from '../renderStats';
 import { FLATTEN_GLSL, MAX_FLAT_ZONES } from '../world/flatten';
-import { parseMtl, parseMtlImages, parseObj, parseObjBones, type BoneWeight, type ObjTriangle, type RGB01 } from './obj';
+import { indexVertices, parseMtl, parseMtlImages, parseObj, parseObjBones, type BoneWeight, type ObjTriangle, type RGB01 } from './obj';
 import villagerMaleModel from '../models/villagers/male.glb?model';
 import villagerFemaleModel from '../models/villagers/female.glb?model';
 import propAxeModel from '../models/props/axe.glb?model';
@@ -2923,8 +2923,15 @@ export function modelSize(shape: number): { height: number; width: number } | un
 
 interface Mesh {
   vao: WebGLVertexArrayObject;
+  /** Gezeichnete Eckpunkte: drei je Dreieck (Länge des Index). */
   vertices: number;
+  /** Index der Dreiecke - gehört zum VAO; das Drahtgitter bindet kurz seine Kanten. */
+  index: WebGLBuffer;
+  indices: Uint32Array;
+  /** Kanten fürs Drahtgitter (Galerie), beim ersten Bedarf gebaut. */
+  edges?: WebGLBuffer;
 }
+
 
 /** Ein Modell auf der Grafikkarte und die Instanzen, die es in diesem Bild zeichnet. */
 interface ModelSlot {
@@ -3073,9 +3080,6 @@ export class EntityRenderer {
   /** Modellarten des Ausgewählten in diesem Bild (render) und ob draw gerade eine davon zeichnet. */
   private selected = new Set<number>();
   private probing = false;
-  /** Kanten je Dreieck (3i-3i+1, 3i+1-3i+2, 3i+2-3i) für das Drahtgitter, wächst bei Bedarf. */
-  private edgeBuffer: WebGLBuffer | null = null;
-  private edgeVertices = 0;
   /** Spielerfarbe (0..255) - Felder bekommen sie als Uniform (siehe uPlayerColor). */
   playerColor: [number, number, number] = [64, 160, 72];
   private models: ModelSlot[];
@@ -3357,14 +3361,18 @@ export class EntityRenderer {
   }
 
   /** @param components Floats je Eckpunkt: 4 (aCorner), 8 (+ aMaterial), 10 (+ aDetail) oder 13 (+ aBones). */
-  private createMesh(vertices: Float32Array, components = 4): Mesh {
+  private createMesh(soup: Float32Array, components = 4): Mesh {
     const gl = this.gl;
+    const { vertices, indices } = indexVertices(soup, components);
     const vao = gl.createVertexArray()!;
     gl.bindVertexArray(vao);
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    const index = gl.createBuffer()!;
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 4, gl.FLOAT, false, components * 4, 0);
     if (components >= 8) {
@@ -3388,7 +3396,7 @@ export class EntityRenderer {
       gl.vertexAttribDivisor(loc, 1);
     }
     gl.bindVertexArray(null);
-    return { vao, vertices: vertices.length / components };
+    return { vao, vertices: indices.length, index, indices };
   }
 
   /** Datei des Modells einer Form (tree_oak.glb) - oder keine (Felder, Klötze). */
@@ -3605,20 +3613,21 @@ export class EntityRenderer {
     gl.vertexAttribPointer(5, 3, gl.FLOAT, false, bytes, offset + 48);
     gl.vertexAttribPointer(7, 1, gl.FLOAT, false, bytes, offset + 60);
     if (this.wireframe) {
-      // Die Meshes sind Dreieckslisten ohne Index - eine Kantenliste passt auf alle.
-      if (mesh.vertices > this.edgeVertices) {
-        this.edgeVertices = mesh.vertices;
-        const edges = new Uint32Array(mesh.vertices * 2);
-        for (let i = 0; i < mesh.vertices; i += 3) edges.set([i, i + 1, i + 1, i + 2, i + 2, i], i * 2);
-        this.edgeBuffer ??= gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.edgeBuffer);
+      // Je Dreieck seine drei Kanten. Die Bindung gehört zum VAO - danach
+      // wieder den Index der Dreiecke.
+      if (!mesh.edges) {
+        const t = mesh.indices;
+        const edges = new Uint32Array(t.length * 2);
+        for (let i = 0; i < t.length; i += 3) edges.set([t[i], t[i + 1], t[i + 1], t[i + 2], t[i + 2], t[i]], i * 2);
+        mesh.edges = gl.createBuffer()!;
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.edges);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, edges, gl.STATIC_DRAW);
       }
-      // Die Bindung gehört zum VAO des Meshes.
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.edgeBuffer);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.edges);
       gl.drawElementsInstanced(gl.LINES, mesh.vertices * 2, gl.UNSIGNED_INT, 0, count);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.index);
     } else {
-      gl.drawArraysInstanced(gl.TRIANGLES, 0, mesh.vertices, count);
+      gl.drawElementsInstanced(gl.TRIANGLES, mesh.vertices, gl.UNSIGNED_INT, 0, count);
     }
     // Nur Modelle - Flächen (Auswahl, Boden der Galerie) zählen nicht mit.
     if (mesh !== this.flat) this.drawnVertices += mesh.vertices * count;
