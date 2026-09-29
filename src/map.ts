@@ -533,6 +533,7 @@ export class MapRenderer {
     const post = this.postEnabled && this.post.active;
     if (post) this.post.begin();
     this.terrain.time = animationTime();
+    this.terrain.pixelRatio = this.pixelRatio;
     gpuFrameBegin();
     if (!this.terrain.render(camera)) {
       gpuFrameEnd();

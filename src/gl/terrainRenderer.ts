@@ -365,8 +365,15 @@ export class TerrainRenderer {
   hoverTile: { x: number; y: number } | null = null;
   /** Ausschnitt der Hauptansicht in Geräte-Pixeln dieses Canvas - nur für die Minimap. */
   viewRect: { x: number; y: number; width: number; height: number } | null = null;
-  /** Kantenlänge einer Gitterzelle in Geräte-Pixeln. Flach reicht ein grobes Gitter. */
+  /** Kantenlänge einer Gitterzelle in CSS-Pixeln. Flach reicht ein grobes Gitter. */
   cellPixels = 4;
+  /**
+   * Geräte-Pixel je CSS-Pixel. Die Grenzen des Gitters gelten in CSS-Pixeln:
+   * in Geräte-Pixeln hätte Retina (2) viermal so viele Eckpunkte, jeder mit
+   * der vollen Höhenfunktion - das kostete dort bis 1,9 ms je Bild (M4), und
+   * das Relief wird davon nicht feiner.
+   */
+  pixelRatio = 1;
   /**
    * Vorrat-Blase um den Bildschirm, in Geräte-Pixeln je Seite. Sie wird im
    * Hintergrund vorausberechnet, damit beim Verschieben fertiges Gelände ins
@@ -379,11 +386,11 @@ export class TerrainRenderer {
   /**
    * Zellgröße in u/v-Einheiten. Nie feiner als ein Achtel Tile: so kleine
    * Formen hat das Relief nicht, und bei starkem Zoom würden aus vier Pixeln
-   * sonst fast eine Million Eckpunkte. Aber auch nie gröber als 16 Pixel -
+   * sonst fast eine Million Eckpunkte. Aber auch nie gröber als 16 CSS-Pixel -
    * bei der stärksten Zoomstufe sähe man sonst die Kanten der Dreiecke.
    */
   private cellSize(camera: GpuCamera): number {
-    const ppt = camera.pixelsPerTile;
+    const ppt = camera.pixelsPerTile / this.pixelRatio;
     const cell = Math.min(Math.max(this.cellPixels / ppt, 1 / 4), Math.max(16, this.cellPixels) / ppt);
     // Auf eine Zweierpotenz gerundet - auf den Zoomstufen ist sie das ohnehin.
     // Beim weichen Zoomen bleiben die Eckpunkte so an derselben Weltstelle,
