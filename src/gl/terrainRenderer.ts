@@ -396,6 +396,18 @@ export class TerrainRenderer {
   private readonly store: TileStore | null;
   private readonly seed: string;
   private arrivals: { b: CacheBuffer; generation: number; tile: string; data: StoredTile }[] = [];
+  /**
+   * Vorausrechnen (bake): Weltpunkte, um die herum Kacheln vorab in den
+   * Speicher gerechnet werden - zuerst der erste (die Ansicht), dann die
+   * übrigen (Gebäude). Setzt MapRenderer.
+   */
+  bakeFocus: { x: number; y: number }[] = [];
+  /** Die Stufen (Texel je Tile), für die vorausgerechnet wird - alle Zoomstufen. */
+  bakeScales: number[] = [];
+  /** Eine Kachel groß, zum Vorausrechnen - wird nie gezeichnet. */
+  private baker: CacheBuffer | null = null;
+  private bakeQueue: { scale: number; key: string; tx: number; ty: number }[] = [];
+  private bakeScan = 0;
   private readbacks: { key: string; buffer: WebGLBuffer; fence: WebGLSync }[] = [];
   /** Ist das Bild vollständig aus dem Cache der jetzigen Stufe (nicht der vorigen, gestreckt)? */
   complete = false;
@@ -796,7 +808,7 @@ export class TerrainRenderer {
       // einer anderen Stelle stehen.
       const state = b.tiles.get(tile);
       if (state === 'looking' || state === 'absent') continue;
-      if (!this.store || this.debugMode !== 0) {
+      if (!this.store || this.debugMode !== 0 || (this.store.loaded && !this.store.has(this.storePrefix(b) + tile))) {
         b.tiles.set(tile, 'absent');
         continue;
       }
@@ -885,6 +897,9 @@ export class TerrainRenderer {
       if (started++ >= 8) break;
       b.touched.delete(tile);
       b.tiles.set(tile, 'stored');
+      const storeKey = this.storePrefix(b) + tile;
+      if (this.store.has(storeKey)) continue;
+      this.store.reserve(storeKey);
       const buffer = gl.createBuffer()!;
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
       gl.bufferData(gl.PIXEL_PACK_BUFFER, TILE * TILE * 8, gl.STREAM_READ);
@@ -907,20 +922,118 @@ export class TerrainRenderer {
       });
       for (const name of [gl.PACK_ROW_LENGTH, gl.PACK_SKIP_PIXELS, gl.PACK_SKIP_ROWS]) gl.pixelStorei(name, 0);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-      this.readbacks.push({ key: this.storePrefix(b) + tile, buffer, fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)! });
+      this.readbacks.push({ key: storeKey, buffer, fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)! });
     }
     bindScreen(gl);
   }
 
-  /** Fertige Rücklesungen abholen und in IndexedDB legen - ohne zu warten. */
-  private pollReadbacks() {
+  /** Schlüssel des Cache-Inhalts für eine Stufe beim jetzigen Blick (wie selectCache). */
+  private cacheKey(scale: number, camera: GpuCamera): string {
+    const relief = camera.reliefScale > 0 ? 1 : 0;
+    const groundV = camera.cacheGroundV ?? viewGroundV();
+    return `${scale}|${groundV.toFixed(5)}|${relief}|${this.debugMode}|${viewRotation()}`;
+  }
+
+  /**
+   * Vorausrechnen: `count` Kacheln, die noch nicht im Speicher sind, in die
+   * eigene Kachel rechnen und speichern (saveTiles). Reihenfolge ringförmig:
+   * erst um die Ansicht auf allen Stufen, dann um jedes Gebäude, bis
+   * BAKE_SCREENS Bildschirme je Seite (in der jeweiligen Stufe).
+   */
+  private bake(camera: GpuCamera, count: number) {
+    const store = this.store;
+    if (!store?.loaded || this.debugMode !== 0 || store.size >= MAX_STORED_TILES) return;
+    if (this.bakeQueue.length === 0) {
+      // Neu suchen höchstens jede Sekunde - ist alles da, prüft das sonst jedes Bild alle Kacheln.
+      if (++this.bakeScan % 60 !== 1) return;
+      this.bakeQueue = this.bakeCandidates(camera);
+      if (this.bakeQueue.length === 0) return;
+    }
     const gl = this.gl;
+    if (!this.baker) {
+      this.baker = createCacheBuffer(gl);
+      this.allocateCache(this.baker, TILE, TILE);
+    }
+    const b = this.baker;
+    const groundV = camera.cacheGroundV ?? viewGroundV();
+    for (let done = 0; done < count && this.bakeQueue.length > 0;) {
+      const { scale, key, tx, ty } = this.bakeQueue.shift()!;
+      // Der Blick hat sich geändert (Drehung, Neigung): diese Liste gilt nicht mehr.
+      if (key !== this.cacheKey(scale, camera)) {
+        this.bakeQueue = [];
+        return;
+      }
+      if (store.has(`${this.seed}|${this.cacheRatio}|${key}|${tx},${ty}`)) continue;
+      b.key = key;
+      b.scale = scale;
+      b.groundV = groundV;
+      b.view = `${this.debugMode}|${viewRotation()}`;
+      b.window = { u: tx * TILE, v: ty * TILE };
+      b.covered = TILE;
+      const tile = `${tx},${ty}`;
+      b.pending = [{ u: tx * TILE, v: ty * TILE, width: TILE, height: TILE }];
+      b.background = [];
+      b.tiles.clear();
+      b.tiles.set(tile, 'absent');
+      b.touched.clear();
+      this.fillPending(b, camera, TILE * TILE, 0);
+      this.saveTiles(b);
+      addRenderStats('bakedTiles', 1);
+      done++;
+    }
+  }
+
+  /** Kacheln zum Vorausrechnen, die noch fehlen - höchstens 200, die vordersten Ringe zuerst. */
+  private bakeCandidates(camera: GpuCamera): { scale: number; key: string; tx: number; ty: number }[] {
+    const store = this.store!;
+    const { width, height } = this.gl.canvas;
+    // Ein Bildschirm in Cache-Texeln - auf jeder Stufe gleich (CSS-Pixel * Texel je CSS-Pixel).
+    const halfU = Math.ceil((BAKE_SCREENS + 0.5) * (width / this.pixelRatio) * this.cacheRatio / TILE);
+    const halfV = Math.ceil((BAKE_SCREENS + 0.5) * (height / this.pixelRatio) * this.cacheRatio / TILE);
+    const stretch = (camera.cacheGroundV ?? viewGroundV()) / viewGroundV();
+    const out: { scale: number; key: string; tx: number; ty: number }[] = [];
+    for (const focus of this.bakeFocus) {
+      const g = worldToGround(focus.x, focus.y);
+      const levels = this.bakeScales.map((scale) => {
+        const key = this.cacheKey(scale, camera);
+        return { scale, key, prefix: `${this.seed}|${this.cacheRatio}|${key}|`,
+          cu: Math.floor((g.u * scale) / TILE), cv: Math.floor((g.v * stretch * scale) / TILE) };
+      });
+      for (let r = 0; r <= Math.max(halfU, halfV); r++) {
+        for (const l of levels) {
+          for (let dy = -Math.min(r, halfV); dy <= Math.min(r, halfV); dy++) {
+            for (let dx = -Math.min(r, halfU); dx <= Math.min(r, halfU); dx++) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              const tx = l.cu + dx, ty = l.cv + dy;
+              if (store.has(`${l.prefix}${tx},${ty}`)) continue;
+              out.push({ scale: l.scale, key: l.key, tx, ty });
+              if (out.length >= 200) return out;
+            }
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Fertige Rücklesungen abholen und in IndexedDB legen - ohne zu warten,
+   * höchstens `limit` je Bild: getBufferSubData kopiert je Kachel 512 KB
+   * (~0,4 ms, unter Last mehr), alle auf einmal kosteten gemessen ~100 ms je Sekunde.
+   */
+  private pollReadbacks(limit: number) {
+    const gl = this.gl;
+    let taken = 0;
     this.readbacks = this.readbacks.filter(({ key, buffer, fence }) => {
+      if (taken >= limit) return true;
       const status = gl.clientWaitSync(fence, 0, 0);
       if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) return true;
       const data = new Uint8Array(TILE * TILE * 8);
+      const start = performance.now();
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
       gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, data);
+      addRenderStats('tileReadMs', performance.now() - start);
+      addRenderStats('tileReads', 1);
       gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
       gl.deleteBuffer(buffer);
       gl.deleteSync(fence);
@@ -931,6 +1044,7 @@ export class TerrainRenderer {
         normal[i + 1] = data[j + 1];
       }
       this.store?.put(key, { color, normal });
+      taken++;
       return false;
     });
   }
@@ -1016,8 +1130,13 @@ export class TerrainRenderer {
     }
     if (smooth && left > 0) this.fillPending(active, camera, 0, left);
     this.settled = ready && this.filledThisFrame === 0 && this.arrivals.length === 0;
+    // Fertige Kacheln speichern; vorausrechnen, wenn das Bild fertig ist -
+    // steht die Kamera, drei Kacheln je Bild, sonst eine (je ~65.000 Texel,
+    // ~2 ms GPU; Abholen ~0,4-1 ms, das Speichern macht der Worker).
     for (const b of [active, ...this.prefetch]) this.saveTiles(b);
-    this.pollReadbacks();
+    const still = !active.moved && this.previous === null;
+    if (ready && !this.boost) this.bake(camera, still ? 3 : 1);
+    this.pollReadbacks(still ? 3 : 1);
     if (frozen && !ready) {
       addRenderStats('frozen', 1);
       return false;
@@ -1210,6 +1329,17 @@ function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
     needed: null,
   };
 }
+
+/**
+ * Vorausgerechnet wird bis so viele Bildschirme je Seite um Ansicht und Gebäude.
+ * Bei Zoom 5 auf Retina sind das je Stufe ~700 Kacheln (~270 MB).
+ */
+const BAKE_SCREENS = 2;
+/**
+ * ponytail: Obergrenze des Speichers statt Aufräumen (~384 KB je Kachel, ~1,1 GB);
+ * eine LRU-Grenze einbauen, wenn Spieler weit herumkommen.
+ */
+const MAX_STORED_TILES = 3000;
 
 /** Kachel (tileStore.ts) eines Rechtecks, das in einer liegt (splitTiles). */
 function tileOf(r: TexelRect): string {

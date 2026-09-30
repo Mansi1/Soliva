@@ -789,8 +789,8 @@ function refreshPointer(objects = true) {
 let menuWasOpen = true;
 let loading = false;
 let loadingSince = 0;
-const LOADING_MS = 2000;
 const LOADING_MAX_MS = 6000;
+let bakeBuildingsAt = 0;
 const loadingEl = document.getElementById('loading')!;
 /** Bewegte sich die Kamera im letzten Bild? Kommt sie zur Ruhe, sucht der Zeiger wieder Objekte. */
 let cameraMoving = false;
@@ -992,11 +992,18 @@ function loop(now: number) {
   }
   if (start.isOpen()) menuWasOpen = true;
   renderer.loading = loading;
-  // Mindestens LOADING_MS und bis auch Vorrat und Nachbarstufen gefüllt sind,
-  // nicht nur das Bild - das erste Scrollen und Zoomen ruckelt nicht nach.
-  // Höchstens LOADING_MAX_MS, falls ein Gerät das nicht schafft.
+  // Bis auch Vorrat und Nachbarstufen gefüllt sind, nicht nur das Bild - das
+  // erste Scrollen und Zoomen ruckelt nicht nach. Kommt alles aus dem
+  // Speicher, geht das schnell. Höchstens LOADING_MAX_MS, falls ein Gerät es nicht schafft.
   const waited = performance.now() - loadingSince;
-  if (loading && renderer.terrainComplete && waited >= LOADING_MS && (renderer.terrainSettled || waited >= LOADING_MAX_MS)) loading = false;
+  if (loading && renderer.terrainComplete && (renderer.terrainSettled || waited >= LOADING_MAX_MS)) loading = false;
+  // Gebäude für das Vorausrechnen des Bodens, in Gruppen (16 Tiles) - einmal je Sekunde.
+  if (now - bakeBuildingsAt > 1000) {
+    bakeBuildingsAt = now;
+    const groups = new Map<string, { x: number; y: number }>();
+    for (const b of world.allBuildings()) groups.set(`${Math.floor(b.x / 16)},${Math.floor(b.y / 16)}`, { x: b.x, y: b.y });
+    renderer.bakeBuildings = [...groups.values()];
+  }
   if (loadingEl.hidden === loading) loadingEl.hidden = !loading;
   if (!start.isOpen()) {
     const seen = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()}`;

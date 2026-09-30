@@ -370,6 +370,9 @@ const MIN_TILE_SIZE = 1;
  * Hauptansicht in isometrischer 3D-Sicht. Das Gelände entsteht komplett auf der
  * GPU, die Gebäude kommen als zweiter, instanzierter Durchgang darüber.
  */
+/** CSS-Pixel je Tile der Zoomstufen 1 bis 5 - für sie wird vorausgerechnet. */
+const BAKE_TILE_SIZES = [8, 16, 32, 64, 128];
+
 export class MapRenderer {
   private terrain: TerrainRenderer;
   private entities: EntityRenderer;
@@ -441,6 +444,9 @@ export class MapRenderer {
   get cacheRatio(): number {
     return Math.min(this.pixelRatio, 1.5);
   }
+
+  /** Mitten der Gebäudegruppen des Spielers - um sie herum wird vorausgerechnet (TerrainRenderer.bake). */
+  bakeBuildings: { x: number; y: number }[] = [];
 
   /** Bodenhöhe (Tiles, grob, ohne Relief-Stärke) für peakReach - setzt main.ts. */
   groundHeight: ((x: number, y: number) => number) | null = null;
@@ -618,6 +624,9 @@ export class MapRenderer {
     this.terrain.time = animationTime();
     this.terrain.pixelRatio = this.pixelRatio;
     this.terrain.reachZ = this.peakReach(camera, canvas.width, canvas.height);
+    // Vorausrechnen auf allen Zoomstufen, zuerst um das, was man sieht.
+    this.terrain.bakeScales = BAKE_TILE_SIZES.map((t) => t * this.cacheRatio);
+    this.terrain.bakeFocus = [this.seenCenter ?? { x: centerX, y: centerY }, ...this.bakeBuildings];
     this.terrain.cacheRatio = this.cacheRatio;
     gpuFrameBegin();
     if (!this.terrain.render(camera)) {

@@ -95,6 +95,8 @@ function saveBillboards(): Plugin {
 export default defineConfig({
   // add the defuss() plugin to make JSX transpilation work
   plugins: [glbModels(), glbClips(), saveBillboards(), defuss()],
+  // Module-Worker (gl/tileStore.worker.ts) auch im Build als ES-Modul.
+  worker: { format: 'es' },
   // Skelett-Clips aus Blender (src/models/clips/*.glb) werden mit ?inline eingebettet.
   assetsInclude: ['**/*.glb'],
   build: {

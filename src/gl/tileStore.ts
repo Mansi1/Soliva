@@ -9,7 +9,8 @@
 // Ändert sich, was der Befüll-Shader rechnet (`version`: Shader-Code,
 // Palette, Schwellen), wird alles gelöscht - alte Kacheln passten nicht mehr.
 // Ohne IndexedDB (privates Fenster in manchen Browsern) gibt es keinen Speicher,
-// dann rechnet die GPU wie bisher.
+// dann rechnet die GPU wie bisher. Lesen und Schreiben laufen in einem Worker
+// (tileStore.worker.ts); hier bleibt nur der Index der Schlüssel.
 // ponytail: kein Aufräumen nach Alter oder Größe; eine LRU-Grenze einbauen,
 // wenn der Speicher im Browser merklich wächst (Kacheln ~384 KB).
 
@@ -17,71 +18,74 @@ export const TILE = 256;
 
 export interface StoredTile {
   /** TILE * TILE * 4 Byte, Zeile für Zeile von unten (wie die Textur). */
-  color: Uint8Array;
+  color: Uint8Array<ArrayBuffer>;
   /** TILE * TILE * 2 Byte. */
-  normal: Uint8Array;
-}
-
-const DB = 'soliva-terrain';
-const TILES = 'tiles';
-const META = 'meta';
-
-const done = <T>(req: IDBRequest<T>) => new Promise<T>((resolve, reject) => {
-  req.onsuccess = () => resolve(req.result);
-  req.onerror = () => reject(req.error);
-});
-
-async function open(version: string): Promise<IDBDatabase | null> {
-  if (typeof indexedDB === 'undefined') return null;
-  try {
-    const req = indexedDB.open(DB, 1);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(TILES);
-      req.result.createObjectStore(META);
-    };
-    const db = await done(req);
-    const stored = await done(db.transaction(META, 'readonly').objectStore(META).get('version'));
-    if (stored !== version) {
-      const tx = db.transaction([TILES, META], 'readwrite');
-      tx.objectStore(TILES).clear();
-      tx.objectStore(META).put(version, 'version');
-      await new Promise((resolve) => { tx.oncomplete = resolve; tx.onerror = resolve; });
-    }
-    return db;
-  } catch (error) {
-    console.warn('Gelände-Kacheln: kein IndexedDB - es wird jedes Mal gerechnet', error);
-    return null;
-  }
+  normal: Uint8Array<ArrayBuffer>;
 }
 
 export class TileStore {
-  private readonly db: Promise<IDBDatabase | null>;
+  /** IndexedDB läuft in einem eigenen Thread (tileStore.worker.ts) - null ohne Worker. */
+  private readonly worker: Worker | null = null;
+  /** Alle gespeicherten (oder gerade gespeichert werdenden) Schlüssel - beim Öffnen einmal gelesen. */
+  private readonly known = new Set<string>();
+  /** Steht der Index (known)? Vorher weiß nur IndexedDB selbst, was fehlt. */
+  loaded = false;
+  private nextId = 0;
+  private readonly waiting = new Map<number, (tiles: (StoredTile | undefined)[]) => void>();
 
   constructor(version: string) {
-    this.db = open(version);
-  }
-
-  /** Die Kacheln zu `keys`, fehlende als undefined - in einer Transaktion. */
-  async get(keys: string[]): Promise<(StoredTile | undefined)[]> {
-    const db = await this.db;
-    if (!db) return keys.map(() => undefined);
+    if (typeof Worker === 'undefined' || typeof indexedDB === 'undefined') return;
     try {
-      const store = db.transaction(TILES, 'readonly').objectStore(TILES);
-      return await Promise.all(keys.map((k) => done(store.get(k) as IDBRequest<StoredTile | undefined>)));
-    } catch {
-      return keys.map(() => undefined);
+      this.worker = new Worker(new URL('./tileStore.worker.ts', import.meta.url), { type: 'module' });
+    } catch (error) {
+      console.warn('Gelände-Kacheln: kein Worker - es wird jedes Mal gerechnet', error);
+      return;
     }
+    this.worker.onmessage = (e) => {
+      const msg = e.data;
+      if (msg.type === 'opened') {
+        if (!msg.keys) {
+          console.warn('Gelände-Kacheln: kein IndexedDB - es wird jedes Mal gerechnet', msg.error);
+          return;
+        }
+        for (const k of msg.keys as string[]) this.known.add(k);
+        this.loaded = true;
+      } else if (msg.type === 'got') {
+        this.waiting.get(msg.id)?.(msg.tiles);
+        this.waiting.delete(msg.id);
+      }
+    };
+    this.worker.postMessage({ type: 'open', version });
   }
 
-  put(key: string, tile: StoredTile) {
-    void this.db.then((db) => {
-      if (!db) return;
-      try {
-        db.transaction(TILES, 'readwrite').objectStore(TILES).put(tile, key);
-      } catch {
-        // Voll oder geschlossen - dann eben nicht gespeichert.
-      }
+  /** Gespeichert oder vorgemerkt? Erst verlässlich, wenn `loaded`. */
+  has(key: string): boolean {
+    return this.known.has(key);
+  }
+
+  /** Wird gerade gerechnet und gespeichert - nicht noch einmal anfangen. */
+  reserve(key: string) {
+    this.known.add(key);
+  }
+
+  get size(): number {
+    return this.known.size;
+  }
+
+  /** Die Kacheln zu `keys`, fehlende als undefined. */
+  get(keys: string[]): Promise<(StoredTile | undefined)[]> {
+    if (!this.worker || !this.loaded) return Promise.resolve(keys.map(() => undefined));
+    const id = this.nextId++;
+    return new Promise((resolve) => {
+      this.waiting.set(id, resolve);
+      this.worker!.postMessage({ type: 'get', id, keys });
     });
+  }
+
+  /** Speichern - die Puffer der Kachel gehen an den Worker über (danach hier leer). */
+  put(key: string, tile: StoredTile) {
+    this.known.add(key);
+    this.worker?.postMessage({ type: 'put', key, tile }, [tile.color.buffer, tile.normal.buffer]);
   }
 }
 
