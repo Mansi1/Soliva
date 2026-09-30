@@ -10,11 +10,18 @@
 // Palette, Schwellen), wird alles gelöscht - alte Kacheln passten nicht mehr.
 // Ohne IndexedDB (privates Fenster in manchen Browsern) gibt es keinen Speicher,
 // dann rechnet die GPU wie bisher. Lesen und Schreiben laufen in einem Worker
-// (tileStore.worker.ts); hier bleibt nur der Index der Schlüssel.
-// ponytail: kein Aufräumen nach Alter oder Größe; eine LRU-Grenze einbauen,
-// wenn der Speicher im Browser merklich wächst (Kacheln ~384 KB).
+// (tileStore.worker.ts); hier bleibt nur der Index der Schlüssel. Über
+// MAX_TILES räumt der Worker die am längsten ungenutzten Kacheln weg.
 
 export const TILE = 256;
+/**
+ * Höchstens so viele Kacheln (~384 KB je Kachel, ~1,9 GB); darüber gehen die
+ * am längsten ungenutzten. Auf Retina braucht allein das Vorausrechnen um die
+ * Ansicht (alle fünf Stufen, 2 Bildschirme je Seite) mehr.
+ */
+export const MAX_TILES = 5000;
+/** Vorausgerechnet wird nur bis hierhin - der Rest bleibt für das, was beim Spielen gerechnet wird. */
+const BAKE_SHARE = 0.9;
 
 export interface StoredTile {
   /** TILE * TILE * 4 Byte, Zeile für Zeile von unten (wie die Textur). */
@@ -50,12 +57,15 @@ export class TileStore {
         }
         for (const k of msg.keys as string[]) this.known.add(k);
         this.loaded = true;
+      } else if (msg.type === 'dropped') {
+        // Aufgeräumt oder nicht gespeichert (Worker).
+        for (const k of msg.keys as string[]) this.known.delete(k);
       } else if (msg.type === 'got') {
         this.waiting.get(msg.id)?.(msg.tiles);
         this.waiting.delete(msg.id);
       }
     };
-    this.worker.postMessage({ type: 'open', version });
+    this.worker.postMessage({ type: 'open', version, limit: MAX_TILES });
   }
 
   /** Gespeichert oder vorgemerkt? Erst verlässlich, wenn `loaded`. */
@@ -68,8 +78,9 @@ export class TileStore {
     this.known.add(key);
   }
 
-  get size(): number {
-    return this.known.size;
+  /** Platz zum Vorausrechnen? Darüber wartet es, bis der Worker aufräumt. */
+  get roomToBake(): boolean {
+    return this.known.size < MAX_TILES * BAKE_SHARE;
   }
 
   /** Die Kacheln zu `keys`, fehlende als undefined. */

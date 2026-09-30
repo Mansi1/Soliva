@@ -941,7 +941,7 @@ export class TerrainRenderer {
    */
   private bake(camera: GpuCamera, count: number) {
     const store = this.store;
-    if (!store?.loaded || this.debugMode !== 0 || store.size >= MAX_STORED_TILES) return;
+    if (!store?.loaded || this.debugMode !== 0 || !store.roomToBake) return;
     if (this.bakeQueue.length === 0) {
       // Neu suchen höchstens jede Sekunde - ist alles da, prüft das sonst jedes Bild alle Kacheln.
       if (++this.bakeScan % 60 !== 1) return;
@@ -1331,14 +1331,10 @@ function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
 
 /**
  * Vorausgerechnet wird bis so viele Bildschirme je Seite um Ansicht und Gebäude.
- * Bei Zoom 5 auf Retina sind das je Stufe ~700 Kacheln (~270 MB).
+ * Auf Retina sind das je Stufe ~1.700 Kacheln (~650 MB) - für alle Stufen mehr,
+ * als der Speicher behält (MAX_TILES); die vordersten Ringe kommen zuerst.
  */
 const BAKE_SCREENS = 2;
-/**
- * ponytail: Obergrenze des Speichers statt Aufräumen (~384 KB je Kachel, ~1,1 GB);
- * eine LRU-Grenze einbauen, wenn Spieler weit herumkommen.
- */
-const MAX_STORED_TILES = 3000;
 
 /** Kachel (tileStore.ts) eines Rechtecks, das in einer liegt (splitTiles). */
 function tileOf(r: TexelRect): string {
