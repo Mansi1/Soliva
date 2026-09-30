@@ -604,10 +604,13 @@ export class MapRenderer {
       pixelsPerTile: this.tileSize * this.pixelRatio,
       cachePixelsPerTile: this.cacheTileSize * this.cacheRatio,
       cacheGroundV: this.cacheGroundV,
-      // Beim Hineinzoomen zuerst die Zielstufe, damit sie beim Ankommen fertig
-      // ist; die zwei nächstkleineren liegen so beim Herauszoomen bereit.
-      prefetchPixelsPerTile: [...(goal > this.cacheTileSize ? [goal] : []), this.cacheTileSize / 2, this.cacheTileSize / 4]
-          .filter((t) => t >= MIN_TILE_SIZE)
+      // Beim Hineinzoomen zuerst die Zielstufe, sonst immer die nächstfeinere -
+      // auch beim Scrollen wandert sie mit (aus dem Speicher oder mit dem
+      // übrigen Budget), und Hineinzoomen trifft sie fertig an. Die zwei
+      // nächstgröberen liegen fürs Herauszoomen bereit; reicht der Pool
+      // (MAX_CACHES) nicht, fällt die gröbste weg.
+      prefetchPixelsPerTile: [goal > this.cacheTileSize ? goal : this.cacheTileSize * 2, this.cacheTileSize / 2, this.cacheTileSize / 4]
+          .filter((t) => t >= MIN_TILE_SIZE && t <= BAKE_TILE_SIZES[BAKE_TILE_SIZES.length - 1])
           .map((t) => t * this.cacheRatio),
       reliefScale: this.relief,
     }, canvas.width, canvas.height);
