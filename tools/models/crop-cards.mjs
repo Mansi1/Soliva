@@ -6,7 +6,10 @@
 // src/models/fields/: <feld>_card (die Karte, die der Acker benutzt),
 // <feld>_card_1, <feld>_card_2 (nur ihr Bild zählt). Ein Quadrat so breit wie hoch.
 // Ebenso die Steine aus src/textures/stone/ als src/models/foliage/stone_<n>.glb
-// (1 m, die Größe gibt gl/grassRenderer.ts je Stein vor).
+// (1 m, die Größe gibt gl/grassRenderer.ts je Stein vor) und die Wiesenpflanzen
+// aus src/textures/grass/ als src/models/foliage/meadow_<name>.glb (Kante des
+// Quadrats in m, etwa die natürliche Höhe; welche wie oft wächst, steht in
+// gl/grassRenderer.ts), ebenso die Büsche aus src/textures/bush/ als bush_<name>.glb.
 //
 // Aufruf: node tools/models/crop-cards.mjs  (braucht Chrome, wie tools/ui)
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -24,6 +27,22 @@ const CROPS = {
   tomato: [['tomate_saetzling', 'tomate_jungpflanze', 'tomate_erwachsen'], 1.45],
   potato: [['Kartoffel_saetzling', 'kartoffel_jungpflanze', 'kartoffel_erwachsen'], 0.55],
   hop: [['hopfen_saetzling', 'hopfen_jungpflanze', 'hopfen_erwachsen'], 3.2],
+};
+/** Wiesenpflanzen: Bild in src/textures/grass/ und Kante der Karte in m. */
+const MEADOW = {
+  'deutsches-weidelgras': 1.0, 'deutsches-weidelgras2': 1.0, 'deutsches-weidelgras3': 1.0,
+  'diamant-reitgras': 1.3, 'diamant-reisgras2': 1.3, glatthafer: 1.3, knaulgras: 1.15, reitgras: 1.3,
+  'wiesen-lieschengras1': 1.15, 'wiesen-lieschengras2': 1.15, 'wiesen-lieschengras3': 1.15,
+  'wiesen-rispengras1': 1.0, 'wiesen-rispengras2': 1.0, ziergras: 1.15, wollgras: 0.7, spitzwegerich: 0.5,
+  gaensebluemchen: 0.26, hahnenfuss: 0.8, 'kuckucks-lichtnelke': 1.05, rotklee: 0.6, weissklee: 0.4,
+  schafgabe: 1.05, 'wiesen-flockenblume': 1.05, 'wiesen-glockenblume': 0.85, 'wiesen-labkraut': 1.05,
+  'wiesen-margerite': 1.05, 'wiesen-schaumkraut': 0.7, wiesensauerampfer: 1.15,
+  besenginster: 1.5, ginster: 1.2, besenheide: 0.5, heidekraut: 0.45, schneeheide: 0.3, preiselbeere: 0.25,
+};
+/** Büsche: Bild in src/textures/bush/ und Kante der Karte in m - als src/models/foliage/bush_<name>.glb. */
+const BUSHES = {
+  gemeiner_schneeball_busch: 2.0, ginsterbusch: 1.6, haselnussbusch: 2.5, roter_hartriegel_busch: 1.8,
+  roter_holunderbusch: 2.2, schlehenbusch: 2.0, schwarzer_holunderbusch: 2.5, 'wacholder-busch': 2.2, weissdorn: 2.4,
 };
 const SIZE = 256;
 
@@ -83,5 +102,17 @@ for (const [i, name] of STONES.entries()) {
   const png = await squared(readFileSync(new URL(`stone/${name}.png`, textures)));
   writeFileSync(new URL(`stone_${i + 1}.glb`, foliage), card(`Stone${i + 1}`, 1, png));
   console.log(`stone_${i + 1}.glb: ${name}`);
+}
+for (const [name, height] of Object.entries(MEADOW)) {
+  const png = await squared(readFileSync(new URL(`grass/${name}.png`, textures)));
+  const material = `Meadow${name.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`;
+  writeFileSync(new URL(`meadow_${name}.glb`, foliage), card(material, height, png));
+  console.log(`meadow_${name}.glb: ${height} m`);
+}
+for (const [name, height] of Object.entries(BUSHES)) {
+  const png = await squared(readFileSync(new URL(`bush/${name}.png`, textures)));
+  const material = `Bush${name.replace(/(^|[-_])(\w)/g, (_, __, c) => c.toUpperCase())}`;
+  writeFileSync(new URL(`bush_${name}.glb`, foliage), card(material, height, png));
+  console.log(`bush_${name}.glb: ${height} m`);
 }
 await browser.close();

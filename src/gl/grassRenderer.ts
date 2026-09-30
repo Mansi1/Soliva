@@ -1,7 +1,7 @@
 // grassRenderer.ts
 // Gras in der Wiese, nur herangezoomt: je Rasterzelle ein Büschel als Bild
-// (src/models/foliage/*.glb - Wiesengras, Gras mit Samenständen, am Ufer
-// Schilf und Rohrkolben), eine Karte, die zur Kamera zeigt und oben im Wind
+// (src/models/foliage/*.glb - auf der Wiese Gräser, Blumen und Zwergsträucher
+// aus src/textures/grass/, am Ufer Schilf und Rohrkolben), eine Karte, die zur Kamera zeigt und oben im Wind
 // wiegt. Kein Vertex-Puffer; Alpha als Maske (verworfen), mit Tiefe, ohne
 // Sortieren. Die Büschel liegen auf einem festen Weltraster um die Kamera -
 // der Zufall hängt an der Weltzelle, so springt beim Verschieben nichts.
@@ -24,14 +24,34 @@ import { CARDS_FROM, FIELD_WINDOW, link, uploadTerrainParams } from './terrainRe
 import { parseMtlImages } from './obj';
 import { FLATTEN_GLSL } from '../world/flatten';
 import { addRenderStats } from '../renderStats';
-import meadowGrass from '../models/foliage/meadow_grass.glb?model';
-import seedheads from '../models/foliage/wild_grass_seedheads.glb?model';
 import reed from '../models/foliage/reed.glb?model';
 import cattails from '../models/foliage/cattails.glb?model';
 
 /** Die Steine (tools/models/crop-cards.mjs aus src/textures/stone/), je 1 m. */
 const STONE_FILES = import.meta.glob('../models/foliage/stone_*.glb', { eager: true, query: '?model', import: 'default' }) as Record<string, { obj: string; mtl: string }>;
 const STONES = Array.from({ length: Object.keys(STONE_FILES).length }, (_, i) => STONE_FILES[`../models/foliage/stone_${i + 1}.glb`]);
+const MEADOW_FILES = import.meta.glob(['../models/foliage/meadow_*.glb', '../models/foliage/bush_*.glb'], { eager: true, query: '?model', import: 'default' }) as Record<string, { obj: string; mtl: string }>;
+/**
+ * Wiesenpflanzen (tools/models/crop-cards.mjs, Datei meadow_<name> bzw.
+ * bush_<name>): wie oft sie wachsen und ob sie den Grünton des Bodens
+ * annehmen. Gräser oft und getönt - sonst stünde ihr Fotogrün neben dem der
+ * Wiese -, Blumen seltener, Zwergsträucher selten, alle übrigen in ihren
+ * eigenen Farben. Büsche sind rund 3 % aller Büschel. Gezählt in Losen je Art.
+ */
+const GRASS = { lots: 14, tint: 0.6 };
+const FLOWER = { lots: 4, tint: 0 };
+const SHRUB = { lots: 1, tint: 0 };
+const BUSH = { lots: 1, tint: 0 };
+const MEADOW: (readonly [string, { lots: number; tint: number }])[] = [
+  ...['deutsches-weidelgras', 'deutsches-weidelgras2', 'deutsches-weidelgras3', 'diamant-reitgras', 'diamant-reisgras2',
+    'glatthafer', 'knaulgras', 'reitgras', 'wiesen-lieschengras1', 'wiesen-lieschengras2', 'wiesen-lieschengras3',
+    'wiesen-rispengras1', 'wiesen-rispengras2', 'ziergras', 'wollgras', 'spitzwegerich'].map((n) => [`meadow_${n}`, GRASS] as const),
+  ...['gaensebluemchen', 'hahnenfuss', 'kuckucks-lichtnelke', 'rotklee', 'weissklee', 'schafgabe', 'wiesen-flockenblume',
+    'wiesen-glockenblume', 'wiesen-labkraut', 'wiesen-margerite', 'wiesen-schaumkraut', 'wiesensauerampfer'].map((n) => [`meadow_${n}`, FLOWER] as const),
+  ...['besenginster', 'ginster', 'besenheide', 'heidekraut', 'schneeheide', 'preiselbeere'].map((n) => [`meadow_${n}`, SHRUB] as const),
+  ...['gemeiner_schneeball_busch', 'ginsterbusch', 'haselnussbusch', 'roter_hartriegel_busch', 'roter_holunderbusch',
+    'schlehenbusch', 'schwarzer_holunderbusch', 'wacholder-busch', 'weissdorn'].map((n) => [`bush_${n}`, BUSH] as const),
+];
 
 /**
  * Die Pflanzen und Steine, je eine Schicht in uFoliage - bei den Pflanzen ist
@@ -39,7 +59,12 @@ const STONES = Array.from({ length: Object.keys(STONE_FILES).length }, (_, i) =>
  * STONE_FIRST. Die Karten (tools/models/billboard-card.mjs, crop-cards.mjs)
  * stehen unten mittig, ihr Bild ist 256 px hoch.
  */
-const PLANTS = [meadowGrass, seedheads, reed, cattails];
+/** Schilf, Rohrkolben, dann die Wiesenpflanzen (MEADOW_FIRST). */
+const PLANTS = [reed, cattails, ...MEADOW.map(([file]) => MEADOW_FILES[`../models/foliage/${file}.glb`])];
+const MEADOW_FIRST = 2;
+/** Je Los eine Art (Index in PLANTS) - gezogen wird ein Los. */
+const MEADOW_LOTS = MEADOW.flatMap(([, g], i) => Array<number>(g.lots).fill(MEADOW_FIRST + i));
+
 const STONE_FIRST = PLANTS.length;
 const KINDS = [...PLANTS, ...STONES];
 /**
@@ -54,9 +79,11 @@ const TILES_PER_METER = 0.2;
 /**
  * Büschel je Tile-Kante, ab CARDS_FROM (Zoom 3) auf jeder Stufe gleich - so
  * stehen beim Zoomen dieselben Büschel an derselben Stelle, nur kleiner.
- * Darunter (Zoom 2, 1) keins, die Bodentextur reicht.
+ * Darunter (Zoom 2, 1) keins, die Bodentextur reicht. 3,46 statt 3: gut
+ * ein Drittel mehr Gräser für eine wilde Wiese, Blumen etwa so häufig wie
+ * mit 3 (Lose in MEADOW).
  */
-const PER_TILE = 3;
+const PER_TILE = 3.46;
 /** Höhen bis hierhin (Tiles) passen in die 16 Bit der Daten-Textur. */
 const MAX_Z = 64;
 /** Texture-Units beim Zeichnen (0: Rauschtabelle, 2: Äcker). */
@@ -133,14 +160,15 @@ void main() {
   float beach = 1.0 - smoothstep(uShoreLevel - band, uShoreLevel + band, height + jitter * band * 0.8);
   float rock = smoothstep(uHillLevel - 0.05, uHillLevel + 0.05, height + jitter * 0.025);
   float meadow = (1.0 - wood) * (1.0 - desert) * (1.0 - beach) * (1.0 - rock);
-  // Pflanze: Wiesengras, hier und da mit Samenständen; nah am Wasser und wo
-  // es feucht ist Schilf, am feuchtesten Ufer Rohrkolben - auch am Strand.
+  // Pflanze: auf der Wiese eine der Wiesenpflanzen (MEADOW, nach Losen); nah
+  // am Wasser und wo es feucht ist Schilf, am feuchtesten Ufer Rohrkolben - auch am Strand.
   uint seed = cellSeed(cell);
-  float kind = rnd(seed + 9u) < 0.3 ? 1.0 : 0.0;
+  const int LOTS[${MEADOW_LOTS.length}] = int[](${MEADOW_LOTS.join(', ')});
+  float kind = float(LOTS[min(int(rnd(seed + 9u) * ${MEADOW_LOTS.length}.0), ${MEADOW_LOTS.length - 1})]);
   float shore = 1.0 - smoothstep(uShoreLevel + band, uShoreLevel + band * 3.0, height + jitter * band);
   float wet = shore * (1.0 - desert) * (1.0 - rock) * (1.0 - wood) * smoothstep(-0.25, -0.05, moisture);
   if (wet > 0.3) {
-    kind = moisture > -0.12 && height < uShoreLevel + band * 1.5 ? 3.0 : 2.0;
+    kind = moisture > -0.12 && height < uShoreLevel + band * 1.5 ? 1.0 : 0.0;
     meadow = max(meadow, wet);
   }
   // Nicht auf Äckern und nicht unter Gebäuden (eingeebnete Flächen).
@@ -257,12 +285,13 @@ void main() {
     return;
   }
   int kind = int(data.a * ${PLANTS.length - 1}.0 + 0.5);
-  // Quer zur Blickrichtung, je Büschel um bis zu 18° gedreht, etwas größer
-  // oder kleiner und oben bis etwa 10° in eine eigene Richtung geneigt.
+  // Quer zur Blickrichtung, je Büschel um bis zu 18° gedreht, bis 15 % kleiner
+  // oder 20 % größer als die Grundgröße der Art und oben bis etwa 10° in eine
+  // eigene Richtung geneigt.
   float turn = (rnd(seed + 3u) - 0.5) * 0.63;
   vec2 across = vec2(-view.y, view.x);
   across = across * cos(turn) + view * sin(turn);
-  vec2 size = uSize[kind] * (0.8 + 0.4 * rnd(seed + 4u));
+  vec2 size = uSize[kind] * (0.85 + 0.35 * rnd(seed + 4u));
   vec2 foot = pos + across * (corner.x - 0.5) * size.x;
   // Oben wiegt es im Wind, jedes Büschel in seinem Takt.
   float wind = sin(uTime * 1.3 + pos.x * 0.37 + pos.y * 0.23 + rnd(seed + 5u) * 6.0) * 0.08 * size.y;
@@ -275,9 +304,10 @@ void main() {
   // und Farbe der Sonne, dazu je Büschel eine leichte eigene Tönung.
   float tone = 0.9 + 0.2 * rnd(seed + 7u);
   vLight = vec3(tone) * mix(0.95, 1.0, uLight.y) * uLight.x * uSunColor;
-  // Gras im Farbton des Bodens darunter (sonst gelblich neben dem Grün der
-  // Wiese); Schilf und Rohrkolben in ihren eigenen Farben.
-  vGrass = vec4(mix(uGrassLo, uGrassHi, rnd(seed + 8u)), kind < 2 ? 0.7 : 0.0);
+  // Gräser im Farbton des Bodens darunter (sonst stünde ihr Fotogrün neben
+  // dem der Wiese); Blumen, Sträucher, Schilf und Rohrkolben in ihren eigenen Farben.
+  const float TINT[${PLANTS.length}] = float[](0.0, 0.0, ${MEADOW.map(([, g]) => g.tint.toFixed(2)).join(', ')});
+  vGrass = vec4(mix(uGrassLo, uGrassHi, rnd(seed + 8u)), TINT[kind]);
 }
 `;
 
@@ -318,7 +348,8 @@ void main() {
     fragColor = vec4(c * vLight, uPass == 1 ? 1.0 : a);
     return;
   }
-  if (t.a < 0.35) discard;
+  // Niedrige Schwelle: die dünnen Halme der Gräser verlören sich sonst in den Mipmaps.
+  if (t.a < 0.2) discard;
   vec3 c = t.rgb / t.a;
   // Helligkeit aus dem Bild (0.45 ist sein Mittel), Farbton aus der Palette.
   c = mix(c, vGrass.rgb * dot(c, vec3(0.3, 0.59, 0.11)) / 0.45, vGrass.a);

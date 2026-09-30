@@ -26,6 +26,7 @@
 //   tileUploads, tileUploadMs - aus dem Speicher gelesene Kacheln, hochgeladen, und ihre Kosten
 //   instances, batched - Objekte einzeln je Bild gepackt / aus festen Puffern
 //   billboards - Anteil der Bilder mit Bäumen als Bild (0..1)
+//   billboardBakes - gebackene Baum- bzw. Blumenarten (je Art alle Blickwinkel, teuer)
 //   terrainTexels - neu erzeugtes Gelände; hoch = Cache wird befüllt
 //   tileSize, relief - Zoom (CSS-Pixel je Tile) und Reliefstärke
 //   idle - Anteil der Bilder, die gedrosselt kamen (Kamera steht, 30 fps gewollt)

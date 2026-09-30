@@ -10,7 +10,8 @@
 
 import type { RGB } from '../functions/Color';
 import {
-  PROJECT_GLSL, bindScreen, cameraDirection, groundToWorld, setCameraUniforms, viewGroundV, viewRotation, viewZScreen, worldToGround, type GpuCamera,
+  PROJECT_GLSL, TILT_DEFAULT, bindScreen, cameraDirection, groundToWorld, setCameraUniforms, setViewElevation, viewElevation, viewGroundV,
+  viewRotation, viewZScreen, worldToGround, type GpuCamera,
 } from './iso';
 import { link, uploadTerrainParams } from './terrainRenderer';
 // Beim Bauen gelesen (vite.config.ts, glbClips) - hier nur ausgepackt.
@@ -3058,6 +3059,8 @@ interface BillboardBand {
   boxes: Float32Array;
   /** Breite des weichen Rands in Bildschirmpixeln (uBillboardFeather) - Blumen sind dafür zu klein. */
   feather: number;
+  /** Drehung der Ansicht (viewRotation), in der die Bilder gerendert sind. */
+  rotation: number;
   /**
    * Lage in der Textur (x, y von unten, w, h), Fuß im Bild (fx, fy von oben
    * links) und daraus Ausschnitt und Lage zum Fuß für den Shader
@@ -3084,6 +3087,19 @@ const BILLBOARD_TREE_COLOR: [number, number, number] = [42, 97, 52];
 const BILLBOARD_FLOWER_SIZE = 0.052 * 1.25 * 4;
 /** Was als Bild gezeichnet werden kann (aus festen Puffern, siehe render). */
 const BILLBOARDED: readonly number[] = [...TREES, ...FLOWERS];
+/** Die Bäume unter BILLBOARDED - ihre Bilder folgen der Neigung. */
+const BILLBOARD_TREES = BILLBOARDED.filter((shape) => !FLOWERS.includes(shape));
+
+/** `f` bei der Standard-Neigung (TILT_DEFAULT) ausführen, danach die jetzige wieder. */
+function atDefaultTilt<T>(f: () => T): T {
+  const elevation = viewElevation();
+  setViewElevation(TILT_DEFAULT);
+  try {
+    return f();
+  } finally {
+    setViewElevation(elevation);
+  }
+}
 /** In dieser Größe (Instanzgröße) wird eine Form für ihr Bild gerendert. */
 const billboardSize = (shape: number) => (TREES.includes(shape) ? BILLBOARD_TREE_SIZE : BILLBOARD_FLOWER_SIZE);
 /** Breite der Textur mit den Baumbildern; Rand um jedes Bild in Pixeln. */
@@ -3293,6 +3309,8 @@ export class EntityRenderer {
   billboardsActive = false;
   /** Die Baumbilder der jetzigen Blickrichtung und Zoomstufe - erst gerendert, wenn sie gebraucht werden. */
   private billboardSet: BillboardSet | null = null;
+  /** Die Blumenbilder - fest bei TILT_DEFAULT gebacken, beim Neigen nicht neu (ensureBillboards). */
+  private flowerSet: BillboardSet | null = null;
   /** Zeichenfläche, wenn nicht ins Canvas gezeichnet wird (die Baumbilder). */
   /** Zeichenfläche statt des Canvas - Baumbilder, Dreh-Gizmo der Galerie (eigener Ausschnitt). */
   targetSize: { width: number; height: number } | null = null;
@@ -3589,11 +3607,11 @@ export class EntityRenderer {
    * Eine Baumart, deren Textur zu groß für die Grafikkarte wäre, fehlt - sie
    * bleibt Modell.
    */
-  private planBillboards(key: string, ppt: number): BillboardSet {
+  private planBillboards(key: string, ppt: number, shapes: readonly number[]): BillboardSet {
     const max = this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number;
     const zScreen = viewZScreen();
     const set: BillboardSet = { key, rotation: viewRotation(), shapes: new Map() };
-    for (const shape of BILLBOARDED) {
+    for (const shape of shapes) {
       const m = this.modelByShape.get(shape);
       if (!m) continue;
       const unit = ppt * billboardSize(shape);
@@ -3601,7 +3619,7 @@ export class EntityRenderer {
       const s = m.scale * billboardSize(shape);
       const band: BillboardBand = {
         w: 0, h: 0, texture: null, cells: [], rects: new Float32Array(0), boxes: new Float32Array(0),
-        feather: TREES.includes(shape) ? 1.5 : 0,
+        feather: TREES.includes(shape) ? 1.5 : 0, rotation: set.rotation,
       };
       let x = 0, y = 0, row = 0;
       for (let k = 0; k < BILLBOARD_HEADINGS; k++) {
@@ -3649,6 +3667,7 @@ export class EntityRenderer {
    */
   private renderBillboardBand(shape: number, band: BillboardBand, ppt: number, pixelRatio: number) {
     const gl = this.gl;
+    addRenderStats('billboardBakes', 1);
     const samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) as number);
     const color = gl.createRenderbuffer()!;
     gl.bindRenderbuffer(gl.RENDERBUFFER, color);
@@ -3723,19 +3742,32 @@ export class EntityRenderer {
     const key = `${pixelsPerTile}|${groundV.toFixed(4)}|${pixelRatio}|${this.leafReady}|${this.imagesLoaded}`;
     if (this.billboardSet?.key !== key) {
       for (const band of this.billboardSet?.shapes.values() ?? []) if (band.texture) this.gl.deleteTexture(band.texture);
-      this.billboardSet = this.planBillboards(key, pixelsPerTile);
+      this.billboardSet = this.planBillboards(key, pixelsPerTile, BILLBOARD_TREES);
     }
-    const set = this.billboardSet;
-    // Höchstens eine Baumart je Bild - alle auf einmal hielten das Bild spürbar
+    // Blumen wie Grasbüschel: einmal bei der Standard-Neigung gebacken und
+    // beim Neigen nur zur Kamera gedreht - neu gebacken flackerten sie beim
+    // Neigen (je Art ein Bild lang Modell, der Schatten sprang).
+    const flowerKey = `${pixelsPerTile}|${pixelRatio}|${this.imagesLoaded}`;
+    if (this.flowerSet?.key !== flowerKey) {
+      for (const band of this.flowerSet?.shapes.values() ?? []) if (band.texture) this.gl.deleteTexture(band.texture);
+      this.flowerSet = atDefaultTilt(() => this.planBillboards(flowerKey, pixelsPerTile, FLOWERS));
+    }
+    // Höchstens eine Art je Bild - alle auf einmal hielten das Bild spürbar
     // an. Bis ihr Bild da ist, steht eine Art als Modell da (siehe drawModel).
     for (const shape of shapes) {
-      const band = set.shapes.get(shape);
+      const band = this.bandOf(shape);
       if (band && !band.texture) {
-        this.renderBillboardBand(shape, band, pixelsPerTile, pixelRatio);
+        if (FLOWERS.includes(shape)) atDefaultTilt(() => this.renderBillboardBand(shape, band, pixelsPerTile, pixelRatio));
+        else this.renderBillboardBand(shape, band, pixelsPerTile, pixelRatio);
         break;
       }
     }
-    return set.shapes.size > 0;
+    return this.billboardSet.shapes.size + this.flowerSet.shapes.size > 0;
+  }
+
+  /** Die Bilder einer Art - Baum oder Blume. */
+  private bandOf(shape: number): BillboardBand | undefined {
+    return (FLOWERS.includes(shape) ? this.flowerSet : this.billboardSet)?.shapes.get(shape);
   }
 
   /**
@@ -3938,7 +3970,7 @@ export class EntityRenderer {
       // Hat ein Modell weniger Fassungen (Felder: zwei), gilt seine gröbste.
       const mesh = level > 0 && m.lodMeshes.length > 0 ? m.lodMeshes[Math.min(level, m.lodMeshes.length) - 1] : m.mesh;
       this.draw(mesh, offset, m.list.length);
-      const band = billboards ? this.billboardSet!.shapes.get(m.shape) : undefined;
+      const band = billboards ? this.bandOf(m.shape) : undefined;
       const cells = band?.texture ? band.cells : undefined;
       if (cells) {
         useBand(band!, 1);
@@ -3960,7 +3992,7 @@ export class EntityRenderer {
       gl.uniform4fv(this.location('uBillboardBox[0]'), band.boxes);
       gl.uniform1i(this.location('uBillboard'), pass);
       gl.uniform1f(this.location('uBillboardFeather'), band.feather);
-      const turns = (viewRotation() - this.billboardSet!.rotation + 4) % 4;
+      const turns = (viewRotation() - band.rotation + 4) % 4;
       // Geprüft gegen neu gerenderte Bilder: gleiche Bäume, nur das gebackene Licht dreht mit.
       gl.uniform1i(this.location('uBillboardShift'), (turns * (BILLBOARD_HEADINGS / 4)) % BILLBOARD_HEADINGS);
     };
@@ -3991,7 +4023,7 @@ export class EntityRenderer {
       // Baum dahinter, und durch ihn schiene der Boden (wie ein Umriss).
       gl.depthMask(false);
       for (const shape of edges) {
-        useBand(this.billboardSet!.shapes.get(shape)!, 2);
+        useBand(this.bandOf(shape)!, 2);
         for (const batch of batches) {
           const range = batch.ranges.get(shape);
           if (range) this.draw(this.quad, range.first, range.count, batch.buffer);

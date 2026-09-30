@@ -1,14 +1,23 @@
-// Bildkarten (tools/models/billboard-card.mjs): die Weizenkarte der Felder und
+// Bildkarten (tools/models/billboard-card.mjs, crop-cards.mjs): die Weizenkarte der Felder und
 // die Pflanzen des Grases (gl/grassRenderer.ts) - je ein Rechteck, unten
 // mittig am Ursprung, mit Texturkoordinaten und eingebettetem Bild. Das Gras
 // liest davon nur Bild und Größe, der Weizen wird aus der Karte gebaut.
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { glbToObj } from '../tools/models/glb.mjs';
 
-const CARDS = ['fields/wheat_card', 'foliage/meadow_grass', 'foliage/wild_grass_seedheads', 'foliage/reed', 'foliage/cattails'];
+// Dazu alle Wiesenpflanzen und Büsche (tools/models/crop-cards.mjs).
+const MEADOW = readdirSync(new URL('../src/models/foliage/', import.meta.url))
+  .filter((f) => /^(meadow|bush)_.*\.glb$/.test(f)).map((f) => `foliage/${f.replace('.glb', '')}`);
+const CARDS = ['fields/wheat_card', 'foliage/meadow_grass', 'foliage/wild_grass_seedheads', 'foliage/reed', 'foliage/cattails', ...MEADOW];
+
+test('alle Wiesenpflanzen und Büsche aus src/textures/ haben ihre Karte', () => {
+  const sources = ['grass', 'bush'].flatMap((dir) => readdirSync(new URL(`../src/textures/${dir}/`, import.meta.url))
+    .filter((f) => f.endsWith('.png')).map((f) => `foliage/${dir === 'grass' ? 'meadow' : 'bush'}_${f.replace('.png', '')}`));
+  assert.deepEqual(sources.filter((c) => !MEADOW.includes(c)), []);
+});
 
 test('jede Bildkarte ist ein Rechteck mit Bild, unten mittig', () => {
   for (const name of CARDS) {
