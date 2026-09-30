@@ -280,7 +280,7 @@ Hintergrund und Plan: `docs/OPTIMIZATION_PLAN.md`.
 - Zählwerte (`drawCalls`, `vertices`, `terrainVertices`, `terrainTexels`) rauschen um ±2 %. Sie sind die harten Belege.
 - Zeiten um 1 ms (`cpuMs`, `renderMs`) rauschen bis ±40 %. Kleine Zeitunterschiede belegen nichts.
 - `fps` steht bei 60 an (vsync). Ein Gewinn zeigt sich in `cpuMs` und den Zählwerten, nicht in `fps`.
-- GPU-Last: `npm run bench -- --uncapped` (Chrome ohne vsync und Bildraten-Deckel), dann zeigen `fps`/`frameMs` sie. `gpuMs` mit vsync misst auf Apple (ANGLE Metal) das Warten aufs nächste Bild mit und taugt dort nicht zum Vergleich. Abschalten statt Vermuten: einen Teil testweise nicht zeichnen und die fps ohne Deckel vergleichen.
+- GPU-Last: `npm run bench -- --uncapped` (Chrome ohne vsync und Bildraten-Deckel), dann zeigen `fps`/`frameMs` sie. `gpuMs` mit vsync misst auf Apple (ANGLE Metal) das Warten aufs nächste Bild mit und taugt dort nicht zum Vergleich. Abschalten statt Vermuten: einen Teil testweise nicht zeichnen und die fps ohne Deckel vergleichen. Dafür hat das Entwickler-Panel (`showDebug`) die Zeile „Aus“: Gras, Modelle, Partikel, Vorausrechnen (`MapRenderer.off`), per Playwright `page.click('#dev-off input[data-off=models]')`. `getRenderInfo().off` nennt, was aus ist. Die Leertaste (flaches Gelände) spart die Höhen im Gelände-Gitter. Das Vorausrechnen läuft im Stand mit (3 Kacheln je Bild) - für Bildzeiten im Stand abschalten.
 - Die Bench-Ausgabe gehört mit Vorher/Nachher in Commit oder PR. Zeigt die Messung keinen Effekt, das offen sagen und keinen behaupten.
 
 **Screenshots bei jeder Shader-Änderung** (`src/gl/*Shader*`, GLSL in `src/gl/`):

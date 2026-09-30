@@ -411,6 +411,8 @@ export class TerrainRenderer {
   complete = false;
   /** Beim Laden (Ladeschild verdeckt das Bild): mehr Befüllen je Bild, das Bild selbst zählt nicht. */
   boost = false;
+  /** Vorausrechnen an - im Entwickler-Panel abschaltbar, um ohne es zu messen. */
+  baking = true;
   /** Im letzten Bild nichts mehr zu füllen - Bild, Vorrat und Nachbarstufen fertig. */
   settled = false;
   private filledThisFrame = 0;
@@ -1140,7 +1142,7 @@ export class TerrainRenderer {
     // ~2 ms GPU; Abholen ~0,4-1 ms, das Speichern macht der Worker).
     for (const b of [active, ...this.prefetch]) this.saveTiles(b);
     const still = !active.moved && this.previous === null;
-    if (ready && !this.boost) this.bake(camera, still ? 3 : 1);
+    if (ready && !this.boost && this.baking) this.bake(camera, still ? 3 : 1);
     this.pollReadbacks(still ? 3 : 1);
     if (frozen && !ready) {
       addRenderStats('frozen', 1);

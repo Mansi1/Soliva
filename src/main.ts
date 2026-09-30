@@ -215,6 +215,12 @@ function stateLink() {
 }
 const shareButton = document.getElementById('share-link') as HTMLButtonElement;
 shareButton.addEventListener('click', () => copyLink(shareButton, stateLink()));
+// Abschalter im Entwickler-Panel (MapRenderer.off).
+for (const box of document.querySelectorAll<HTMLInputElement>('#dev-off input[data-off]')) {
+  box.addEventListener('change', () => {
+    renderer.off[box.dataset.off as keyof typeof renderer.off] = box.checked;
+  });
+}
 
 function startNewGame() {
   world.reset();
@@ -1123,6 +1129,8 @@ setRenderInfo(() => {
     seed,
     idleFps: settings.idleFps,
     minimapFps: settings.minimapFps,
+    // Im Entwickler-Panel abgeschaltet - dann misst der Lauf nicht das ganze Bild.
+    off: Object.keys(renderer.off).filter((k) => renderer.off[k as keyof typeof renderer.off]),
     billboards: settings.billboards,
     fxaa: settings.fxaa,
     colorGrading: settings.colorGrading,

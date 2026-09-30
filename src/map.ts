@@ -444,6 +444,13 @@ export class MapRenderer {
     return Math.min(this.pixelRatio, 2);
   }
 
+  /**
+   * Abschalter aus dem Entwickler-Panel: diese Teile nicht zeichnen bzw. nicht
+   * vorausrechnen - so misst man, was sie kosten (Bildzeit ohne Deckel vorher
+   * und nachher). Die Kosten des flachen Geländes zeigt schon die Leertaste.
+   */
+  readonly off = { grass: false, models: false, particles: false, bake: false };
+
   /** Mitten der Gebäudegruppen des Spielers - um sie herum wird vorausgerechnet (TerrainRenderer.bake). */
   bakeBuildings: { x: number; y: number }[] = [];
 
@@ -630,6 +637,7 @@ export class MapRenderer {
     this.terrain.bakeScales = BAKE_TILE_SIZES.map((t) => t * this.cacheRatio);
     this.terrain.bakeFocus = [this.seenCenter ?? { x: centerX, y: centerY }, ...this.bakeBuildings];
     this.terrain.cacheRatio = this.cacheRatio;
+    this.terrain.baking = !this.off.bake;
     gpuFrameBegin();
     if (!this.terrain.render(camera)) {
       gpuFrameEnd();
@@ -640,13 +648,13 @@ export class MapRenderer {
     // herausgezoomten Karte zum Einzelpunkt und ist nicht mehr zu erkennen.
     this.entities.groundStep = this.terrain.gridCell;
     // Gras in den Tiefenpuffer des Geländes, vor den Modellen - undurchsichtig, ohne Sortieren.
-    this.grass.render(camera, this.tileSize, {
+    if (!this.off.grass) this.grass.render(camera, this.tileSize, {
       light: this.terrain.light, time: this.terrain.time, gridCell: this.terrain.gridCell,
       flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
       center: this.seenCenter ?? { x: centerX, y: centerY },
     });
-    this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
-    this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
+    if (!this.off.models) this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
+    if (!this.off.particles) this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
     if (post) this.post.end();
     gpuFrameEnd();
     return true;

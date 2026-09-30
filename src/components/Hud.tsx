@@ -73,12 +73,27 @@ function DebugPanel() {
       {/* Was das Ausgewählte kostet: seine Modellart und je Objekt gemittelt. */}
       <div>Auswahl <b id="selection-cost">-</b></div>
       <div>je Objekt <b id="selection-each">-</b></div>
+      {/* Teile abschalten, um ihre Kosten zu messen (MapRenderer.off, main.ts). */}
+      <div id="dev-off">
+        Aus
+        {DEV_OFF.map(([key, label, hint]) => (
+          <label title={hint}><input type="checkbox" data-off={key} /> {label}</label>
+        ))}
+      </div>
       {/* Welt, Ansicht und Spielstand als Link (main.ts) - wie "Link teilen" im Menü. */}
       <div><button type="button" id="share-link" class="panel-btn"
         title="Welt, Kamera (Position, Zoom, Drehung, Neigung) und Spielstand als Link in die Zwischenablage">Link kopieren: Spielstand + Kamera</button></div>
     </div>
   );
 }
+
+/** Abschalter im Entwickler-Panel: Schlüssel in MapRenderer.off, Name, Hinweis. */
+const DEV_OFF = [
+  ['grass', 'Gras', 'Gras- und Steinkarten nicht zeichnen'],
+  ['models', 'Modelle', 'Gebäude, Bäume, Blumen, Figuren, Felder nicht zeichnen'],
+  ['particles', 'Partikel', 'Rauch, Staub, Insekten, Fische nicht zeichnen'],
+  ['bake', 'Vorausrechnen', 'Boden nicht im Hintergrund vorausrechnen'],
+] as const;
 
 /** Ton an/aus - das Lautsprecher-Symbol, durchgestrichen, wenn aus (Klasse muted). */
 function SoundButton() {

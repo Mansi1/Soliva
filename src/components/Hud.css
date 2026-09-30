@@ -158,6 +158,20 @@
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
 }
+/* Abschalter in den Entwickler-Infos - dürfen umbrechen */
+#debug > div#dev-off {
+  white-space: normal;
+}
+#dev-off label {
+  margin-left: 6px;
+  cursor: pointer;
+}
+#dev-off input {
+  margin: 0 1px 0 0;
+  width: 9px;
+  height: 9px;
+  vertical-align: -1px;
+}
 /* Knopf in den Entwickler-Infos */
 .panel-btn {
   font: inherit;
