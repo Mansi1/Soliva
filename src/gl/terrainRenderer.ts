@@ -1110,15 +1110,21 @@ export class TerrainRenderer {
     // das Bild ohnehin, darf es noch mehr kosten.
     const smooth = !frozen && (isReady(active) || this.previous !== null);
     let left = 0;
-    // Zeigt das Bild noch die vorige Stufe gestreckt (unscharf), doppelt so viel -
-    // das kostet ein paar ms je Bild, halbiert aber die unscharfe Zeit.
+    // Zeigt das Bild noch die vorige Stufe gestreckt (unscharf) oder fährt die
+    // Kamera, doppelt so viel - das kostet ein paar ms je Bild, halbiert aber
+    // die unscharfe Zeit, und beim Fahren reicht es für Blase und feinere Stufe.
     // Beim Laden (boost) verdeckt das Ladeschild das Bild: dann Vorrat und
     // Nachbarstufen mit vollem Budget.
-    const smoothBudget = this.boost ? 4 * FILL_BUDGET : isReady(active) ? SMOOTH_BUDGET : 2 * SMOOTH_BUDGET;
+    const smoothBudget = this.boost ? 4 * FILL_BUDGET : isReady(active) && !active.moved ? SMOOTH_BUDGET : 2 * SMOOTH_BUDGET;
     if (smooth) left = smoothBudget - this.fillPending(active, camera, smoothBudget, 0);
     else this.fillPending(active, camera, FILL_BUDGET * (frozen ? 2 : 1) * (this.boost ? 4 : 1));
     const ready = isReady(active);
     this.complete = ready && this.previous === null;
+    // Beim Fahren zuerst die Blase: sie rückt als Nächstes ins Bild. Die
+    // feinere Stufe im Vorrat wandert mit und braucht viermal so viele Texel -
+    // vorher bekam sie das Budget zuerst, die Blase lief leer, und beim
+    // Pannen blieben Flächen leer.
+    if (smooth && active.moved && left > 0) left -= this.fillPending(active, camera, 0, left);
     // Vorrat: erst, wenn das Bild selbst vollständig ist. Beim Scrollen nur
     // die Zielstufe beim Hineinzoomen (größerer Maßstab) - das Zoomen um den
     // Mauszeiger verschiebt das Bild ja auch -, sonst braucht die Blase das
