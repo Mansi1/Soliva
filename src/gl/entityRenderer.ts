@@ -1554,16 +1554,20 @@ vec4 cropStage(vec2 uv, float layer, float scale) {
 // Schicht des Sätzlings), die Jungpflanze und die erwachsene liegen in den
 // beiden Schichten dahinter. Wachstum t 0..1: der Sätzling wächst, geht in die
 // Jungpflanze über, die wächst, geht in die erwachsene über, die wächst bis
-// zur vollen Karte. Zwei Abtastungen je Pixel, ohne Verzweigung davor.
+// zur vollen Karte. Die Übergänge dauern je knapp ein Drittel des Wachstums
+// und lösen das eine Bild Punkt für Punkt ins andere auf (fest je Stelle der
+// Karte, flimmert beim Fahren nicht) - mit dem Alpha-Test sprang beim
+// Mischen sonst der ganze Umriss auf einmal um. Zwei Abtastungen je Pixel.
 vec3 cropCard(vec3 base, float t) {
   float layer = floor(base.z + 0.5);
-  float s0 = mix(0.3, 0.5, smoothstep(0.0, 0.3, t));
-  float s1 = mix(0.5, 0.78, smoothstep(0.4, 0.62, t));
-  float s2 = mix(0.78, 1.0, smoothstep(0.72, 1.0, t));
-  bool early = t < 0.4;
+  float s0 = mix(0.3, 0.5, smoothstep(0.0, 0.45, t));
+  float s1 = mix(0.5, 0.78, smoothstep(0.15, 0.85, t));
+  float s2 = mix(0.78, 1.0, smoothstep(0.5, 1.0, t));
+  bool early = t < 0.45;
   vec4 a = cropStage(base.xy, layer + (early ? 0.0 : 1.0), early ? s0 : s1);
   vec4 b = cropStage(base.xy, layer + (early ? 1.0 : 2.0), early ? s1 : s2);
-  vec4 c = mix(a, b, early ? smoothstep(0.3, 0.4, t) : smoothstep(0.62, 0.72, t));
+  float m = early ? smoothstep(0.15, 0.45, t) : smoothstep(0.5, 0.85, t);
+  vec4 c = texHash(floor(base.xy * 48.0)) < m ? b : a;
   if (c.a < 0.5) discard;
   return c.rgb / c.a;
 }
