@@ -36,13 +36,15 @@ const WARMUP_MAX_S = 10;
 /**
  * Die Szenen. Welt "Demo" ist die Stadt aus public/savegame/demo.json, sonst
  * eine leere Welt; Kamera am Startpunkt der Welt. zoom: Mausrad-Rasten
- * (+ hinein, - heraus). during: was während der Messung passiert.
+ * (+ hinein, - heraus) ab Zoom 5, auf dem das Spiel beginnt - so dieselben
+ * Stufen wie früher ab Zoom 3 (weit-leer 1, stadt 3, nah 5, zoom-wechsel ab 3).
+ * during: was während der Messung passiert.
  */
 const SCENES = [
   { name: 'weit-leer', seed: 'Bench', zoom: -6 },
-  { name: 'stadt', seed: 'Demo', zoom: 0 },
-  { name: 'nah', seed: 'Bench', zoom: 2 },
-  { name: 'zoom-wechsel', seed: 'Bench', zoom: 0, during: 'zoom' },
+  { name: 'stadt', seed: 'Demo', zoom: -2 },
+  { name: 'nah', seed: 'Bench', zoom: 0 },
+  { name: 'zoom-wechsel', seed: 'Bench', zoom: -2, during: 'zoom' },
 ];
 
 /** Die Felder, die im Vergleich gezeigt werden - alle anderen stehen im JSON. */
@@ -89,6 +91,8 @@ async function runScene(scene) {
   await started();
   await wait(1500);
   if (!(await page.$eval('#start', (e) => e.hidden))) throw new Error(`${scene.name}: Hauptmenü offen statt Spiel`);
+  // Das Ladeschild fängt Eingaben ab - erst danach zoomen.
+  await page.waitForFunction(() => document.getElementById('loading')?.hidden, null, { timeout: 15000 });
   await wheel(scene.zoom);
 
   // Anlauf: bis eine Sekunde ohne Geländeerzeugung und ohne lange Aufgaben kommt.

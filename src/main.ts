@@ -30,7 +30,7 @@ import {
 import { World } from './world/world';
 import { worldInstances } from './world/render';
 import { Selection } from './game/Selection';
-import { Camera, ZOOM_LEVELS } from './game/Camera';
+import { Camera, MAX_ZOOM, ZOOM_LEVELS } from './game/Camera';
 import { GameUi } from './game/ui';
 import { steerCamera } from './game/cameraControl';
 import { startPoint } from './game/startPoint';
@@ -347,6 +347,7 @@ camera.moveTo(startX, startY);
 /** Gelände, wie man es sieht, und sein Abgleich mit dem Shader (game/Ground.ts). */
 const ground = new Ground(mapGen, world, renderer, camera);
 world.groundAt = (x, y, step) => ground.groundAt(x, y, step);
+renderer.groundHeight = (x, y) => ground.coarseGroundAt(x, y);
 
 /** Was unter dem Zeiger liegt: Welt-Punkt, Tile, Dorfbewohner, Vorkommen (game/Picker.ts). */
 /** Tierarten weit draußen ausgeblendet (Einstellung animalsBelow). */
@@ -784,6 +785,13 @@ function updateSelectable(object = pointer.pixel && picker.target(pointer.pixel.
 function refreshPointer(objects = true) {
   if (pointer.pixel) updateHoveredTile(pointer.pixel.x, pointer.pixel.y, objects);
 }
+/** Stand das Hauptmenü offen (oder lädt die Seite gerade)? Beim Wechsel ins Spiel: Zoom 5, Ladeschild. */
+let menuWasOpen = true;
+let loading = false;
+let loadingSince = 0;
+const LOADING_MS = 2000;
+const LOADING_MAX_MS = 6000;
+const loadingEl = document.getElementById('loading')!;
 /** Bewegte sich die Kamera im letzten Bild? Kommt sie zur Ruhe, sucht der Zeiger wieder Objekte. */
 let cameraMoving = false;
 
@@ -968,6 +976,28 @@ function loop(now: number) {
   cameraMoving = moving;
   // Schaut man in einen Berg? Geprüft, wenn sich die Ansicht ändert - und
   // solange flachgelegt ist, bis die Sicht eine Weile frei ist.
+  // Ins Spiel (aus dem Hauptmenü oder beim Laden): auf Zoom 5, außer die
+  // Adresse nennt eine Stufe - und das Ladeschild, bis das Gelände im Bild
+  // fertig ist. Zoom 5 ist der kleinste Ausschnitt, am schnellsten berechnet.
+  if (!start.isOpen() && menuWasOpen) {
+    menuWasOpen = false;
+    if (!gameUrl?.zoom) {
+      camera.jumpToZoom(MAX_ZOOM);
+      renderer.tileSize = camera.tileSize;
+      showZoom();
+    }
+    loading = true;
+    // Nicht der Zeitstempel des Bildes: nach der langen Startphase liegt er weit zurück.
+    loadingSince = performance.now();
+  }
+  if (start.isOpen()) menuWasOpen = true;
+  renderer.loading = loading;
+  // Mindestens LOADING_MS und bis auch Vorrat und Nachbarstufen gefüllt sind,
+  // nicht nur das Bild - das erste Scrollen und Zoomen ruckelt nicht nach.
+  // Höchstens LOADING_MAX_MS, falls ein Gerät das nicht schafft.
+  const waited = performance.now() - loadingSince;
+  if (loading && renderer.terrainComplete && waited >= LOADING_MS && (renderer.terrainSettled || waited >= LOADING_MAX_MS)) loading = false;
+  if (loadingEl.hidden === loading) loadingEl.hidden = !loading;
   if (!start.isOpen()) {
     const seen = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()}`;
     if ((seen !== autoFlatView || (autoFlat && clearSince > 0)) && now - lastCheck >= CHECK_MS) {

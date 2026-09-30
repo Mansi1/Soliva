@@ -93,9 +93,10 @@ await wait(100);
 check('Untermenü der Felder offen', await page.$eval('#build .cmd-page:nth-child(2)', (e) => !e.hidden));
 await page.keyboard.press('2');
 const farmsBefore = count(await saved(), 'farm');
-await page.mouse.move(560, 520);
+// Das Spiel beginnt auf Zoom 5 (128 px je Tile) - das Rechteck deckt so ein paar Tiles.
+await page.mouse.move(460, 460);
 await page.mouse.down();
-await page.mouse.move(660, 580, { steps: 10 });
+await page.mouse.move(760, 700, { steps: 10 });
 await page.mouse.up();
 await wait(200);
 const farmsAfter = count(await saved(), 'farm');

@@ -9,12 +9,18 @@ import { ParticleRenderer } from './gl/particleRenderer';
 import { MAX_SOURCES, ParticleSources } from './particles';
 import { gpuFrameBegin, gpuFrameEnd } from './gpuTimer';
 import {
+  MAX_RELIEF,
+  groundToWorld,
   screenToGround,
   setViewElevation,
   snapCamera,
   viewElevation,
   viewGroundV,
+  viewRotation,
+  viewZScreen,
   visibleWorldRect,
+  worldToGround,
+  type GpuCamera,
   type IsoView,
 } from './gl/iso';
 import {
@@ -436,6 +442,62 @@ export class MapRenderer {
     return Math.min(this.pixelRatio, 1.5);
   }
 
+  /** Bodenhöhe (Tiles, grob, ohne Relief-Stärke) für peakReach - setzt main.ts. */
+  groundHeight: ((x: number, y: number) => number) | null = null;
+  private reachKey = '';
+  private reachZ: number = MAX_RELIEF;
+
+  /**
+   * Wie weit (Tiles Höhe) Gelände unter dem Bildrand ins Bild ragen kann (Plan
+   * 5.2): grob abgetastet, bis zu der Tiefe, aus der der höchste mögliche Berg
+   * noch hereinragte. Ein Punkt d v-Einheiten unter dem Rand ragt herein, wenn
+   * zScreen * z > d - gebraucht wird bis zum tiefsten solchen Punkt. Vorher galt
+   * pauschal der höchste Berg: im Flachland eine ganze Bildhöhe Cache und
+   * Gitter umsonst. Neu gemessen, wenn sich die Ansicht um ein paar Tiles bewegt.
+   */
+  private peakReach(camera: GpuCamera, width: number, height: number): number {
+    const height_ = this.groundHeight;
+    if (!height_ || camera.reliefScale <= 0) return MAX_RELIEF;
+    const ppt = camera.pixelsPerTile;
+    const halfU = width / 2 / ppt;
+    const halfV = height / 2 / ppt;
+    const step = Math.max(1, (2 * halfU) / 24);
+    const { u: cu, v: cv } = worldToGround(camera.centerX, camera.centerY);
+    const key = `${Math.round(cu / step)},${Math.round(cv / step)},${halfU.toFixed(1)},${viewRotation()},${viewElevation()}`;
+    if (key === this.reachKey) return this.reachZ;
+    const zs = viewZScreen();
+    const bottom = cv + halfV;
+    let deepest = 0;
+    for (let d = 0; d <= zs * MAX_RELIEF; d += step) {
+      for (let u = cu - halfU - step; u <= cu + halfU + step; u += step) {
+        const p = groundToWorld(u, bottom + d);
+        if (zs * height_(p.x, p.y) > d) deepest = d;
+      }
+    }
+    // Eine Stufe tiefer und zwei Tiles Höhe Luft: zwischen den Stichproben und
+    // im Feindetail (grob nicht mitgerechnet) kann es höher sein.
+    this.reachKey = key;
+    this.reachZ = Math.min(MAX_RELIEF, (deepest + step) / zs + 2);
+    return this.reachZ;
+  }
+
+  /** Gelände im Bild vollständig (für das Ladeschild, main.ts). */
+  get terrainComplete(): boolean {
+    return this.terrain.complete;
+  }
+
+  /** Nichts mehr zu füllen: Bild, Vorrat und Nachbarstufen fertig. */
+  get terrainSettled(): boolean {
+    return this.terrain.settled;
+  }
+
+  /** Beim Laden mehr Gelände je Bild füllen - das Ladeschild verdeckt es ohnehin. */
+  set loading(on: boolean) {
+    // Neu beginnendes Laden: was bisher fertig war, gilt nicht mehr (andere Stufe).
+    if (on && !this.terrain.boost) this.terrain.complete = false;
+    this.terrain.boost = on;
+  }
+
   get flowerObjects(): boolean {
     return this.cacheTileSize * this.cacheRatio >= FLOWER_OBJECT_PIXELS;
   }
@@ -555,6 +617,7 @@ export class MapRenderer {
     if (post) this.post.begin();
     this.terrain.time = animationTime();
     this.terrain.pixelRatio = this.pixelRatio;
+    this.terrain.reachZ = this.peakReach(camera, canvas.width, canvas.height);
     this.terrain.cacheRatio = this.cacheRatio;
     gpuFrameBegin();
     if (!this.terrain.render(camera)) {

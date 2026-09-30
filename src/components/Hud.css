@@ -189,6 +189,20 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: bold 26px Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.15em;
+  color: var(--cream);
+  text-shadow: 2px 2px 0 #000;
+  background: #1e1006;
+}
+#loading[hidden],
 #paused[hidden],
 .panel[hidden] {
   display: none;

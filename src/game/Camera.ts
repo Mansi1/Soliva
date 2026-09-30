@@ -15,7 +15,7 @@ import { centerFor, panDelta, type IsoView } from '../gl/iso';
  * Erst die letzte Stufe (128) zeigt die Dorfbewohner groß genug für ihre Details.
  */
 const MIN_ZOOM = 3;
-const MAX_ZOOM = 7;
+export const MAX_ZOOM = 7;
 /** Die Zoomstufen in CSS-Pixeln je Tile (Zoom 1 bis 5). */
 export const ZOOM_LEVELS = Array.from({ length: MAX_ZOOM - MIN_ZOOM + 1 }, (_, i) => 2 ** (MIN_ZOOM + i));
 /** Wie schnell der Zoom seinem Ziel folgt (je Sekunde) - nach 0,2 s ist er fast da. */
@@ -63,6 +63,11 @@ export class Camera {
   /** Die Zoomstufe, wie das Spiel sie zeigt: 1 (weit draußen) bis 5 (ganz nah) - die, auf der der Zoom einrastet. */
   get zoomNumber(): number {
     return Math.round(this.targetZoom) - MIN_ZOOM + 1;
+  }
+
+  /** Sofort auf die Stufe `zoom` (log2 der Pixel je Tile), ohne Gleiten. */
+  jumpToZoom(zoom: number) {
+    this.zoom = this.targetZoom = clampZoom(zoom);
   }
 
   /**

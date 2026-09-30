@@ -258,6 +258,8 @@ function Hud() {
       </div>
       <Minimap />
       <div id="paused" hidden>Pause</div>
+      {/* Bis das Gelände im Bild berechnet ist (main.ts). */}
+      <div id="loading" hidden>Lädt …</div>
     </>
   );
 }

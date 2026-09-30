@@ -4,6 +4,7 @@
 // in isometrischer Ansicht; der Vertex-Shader hebt es auf die Geländehöhe, die
 // Farbe kommt aus dem Cache.
 
+import { TILE, TileStore, hashText, type StoredTile } from './tileStore';
 import { MAX_FLAT_ZONES } from '../world/flatten';
 import { NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS } from '../noise';
 import {
@@ -255,6 +256,10 @@ export class TerrainRenderer {
     gl.activeTexture(gl.TEXTURE0);
 
     this.uploadPermutations(seed);
+    this.seed = seed;
+    // Was der Befüll-Shader rechnet - ändert es sich, passen gespeicherte Kacheln nicht mehr.
+    this.store = new TileStore(hashText([FILL_FRAGMENT_SOURCE, JSON.stringify(TERRAIN_PARAMS), JSON.stringify(palette),
+      FLOWER_OBJECT_PIXELS, CARDS_FROM, TILE].join('|')));
 
     gl.useProgram(this.program);
     uploadTerrainParams(gl, (name) => this.location(name));
@@ -381,6 +386,24 @@ export class TerrainRenderer {
   pixelRatio = 1;
   /** Texel des Caches je CSS-Pixel (MapRenderer.cacheRatio) - für Schwellen, die mit den Texeln vergleichen. */
   cacheRatio = 1;
+  /**
+   * Wie hoch (Tiles) Gelände unter dem Bildrand höchstens ins Bild ragen kann -
+   * gemessen an der Stelle (MapRenderer.peakReach), sonst pauschal der höchste
+   * mögliche Berg. So viel wird unter dem Bild mitgerechnet (Cache, Gitter).
+   */
+  reachZ: number = MAX_RELIEF;
+  /** Fertige Kacheln in IndexedDB (tileStore.ts) - null ohne Speicher. */
+  private readonly store: TileStore | null;
+  private readonly seed: string;
+  private arrivals: { b: CacheBuffer; generation: number; tile: string; data: StoredTile }[] = [];
+  private readbacks: { key: string; buffer: WebGLBuffer; fence: WebGLSync }[] = [];
+  /** Ist das Bild vollständig aus dem Cache der jetzigen Stufe (nicht der vorigen, gestreckt)? */
+  complete = false;
+  /** Beim Laden (Ladeschild verdeckt das Bild): mehr Befüllen je Bild, das Bild selbst zählt nicht. */
+  boost = false;
+  /** Im letzten Bild nichts mehr zu füllen - Bild, Vorrat und Nachbarstufen fertig. */
+  settled = false;
+  private filledThisFrame = 0;
   /**
    * Vorrat-Blase um den Bildschirm, in Geräte-Pixeln je Seite. Sie wird im
    * Hintergrund vorausberechnet, damit beim Verschieben fertiges Gelände ins
@@ -586,7 +609,7 @@ export class TerrainRenderer {
     // bleibt sie beim Neigen dieselbe. Was wirklich hereinragt, hängt vom
     // jetzigen ab.
     const reachSize = Math.ceil(relief * Z_SCREEN_MAX * MAX_RELIEF * ppt);
-    const reach = Math.ceil(relief * viewZScreen() * MAX_RELIEF * ppt * stretch);
+    const reach = Math.ceil(relief * viewZScreen() * this.reachZ * ppt * stretch);
     // Mit der Zellgröße der Cache-Stufe: beim weichen Zoomen bleibt die Textur
     // so gleich groß - eine neue müsste ganz neu befüllt werden.
     const margin = CACHE_MARGIN + Math.ceil(this.cellSize({ ...camera, pixelsPerTile: ppt }) * ppt);
@@ -613,7 +636,11 @@ export class TerrainRenderer {
     const cam = worldToGround(camera.centerX, camera.centerY);
     const u = Math.floor(cam.u * ppt - width / 2 - margin - bubbleU);
     const v = Math.floor(cam.v * stretch * ppt - viewHeight / 2 - margin - bubbleV);
-    const next: TexelRect = { u, v, width: cacheWidth, height: cacheHeight };
+    // Nur so tief wie gebraucht: das Bild, darunter die gemessene Reichweite
+    // der Berge (reachZ) und die Blase. Die Textur ist für den höchsten
+    // möglichen Berg bemessen - ganz befüllt hieß das bei Retina ein Vielfaches
+    // an Texeln, die niemand sieht.
+    const depth = Math.min(cacheHeight, bubbleV + viewHeight + 2 * margin + reach + this.bubblePixels);
 
     // Dringend ist nur, was im Bild liegt (plus schmaler Rand). Alles andere -
     // die Blase und der Bereich unter dem Bildrand, der nur für von unten
@@ -649,10 +676,19 @@ export class TerrainRenderer {
     b.moved = !!old && (old.u !== u || old.v !== v);
     if (!old) {
       // Alles neu - von oben nach unten, der sichtbare Teil zuerst.
-      const { urgent, rest } = split([next]);
-      b.pending = urgent;
-      b.background = byDistance(rest);
-    } else if (old.u !== u || old.v !== v) {
+      b.covered = depth;
+      b.generation++;
+      b.tiles.clear();
+      b.touched.clear();
+      const { urgent, rest } = split([{ u, v, width: cacheWidth, height: depth }]);
+      b.pending = urgent.flatMap(splitTiles);
+      b.background = byDistance(rest.flatMap(splitTiles));
+    } else if (old.u !== u || old.v !== v || depth > b.covered) {
+      // Die Reichweite ist gewachsen: die Zeilen darunter (im alten Fenster) nachreichen.
+      const deeper: TexelRect[] = depth > b.covered
+        ? [{ u: old.u, v: old.v + b.covered, width: cacheWidth, height: depth - b.covered }] : [];
+      b.covered = Math.max(b.covered, depth);
+      const next: TexelRect = { u, v, width: cacheWidth, height: b.covered };
       const strips: TexelRect[] = [];
       const du = u - old.u;
       const dv = v - old.v;
@@ -661,19 +697,21 @@ export class TerrainRenderer {
         strips.push({ u: du > 0 ? u + cacheWidth - w : u, v, width: w, height: cacheHeight });
       }
       if (dv !== 0) {
-        const h = Math.min(Math.abs(dv), cacheHeight);
-        strips.push({ u, v: dv > 0 ? v + cacheHeight - h : v, width: cacheWidth, height: h });
+        // Unten rückt neu herein, was unter dem befüllten Bereich lag (covered).
+        const h = Math.min(Math.abs(dv), b.covered);
+        strips.push({ u, v: dv > 0 ? v + b.covered - h : v, width: cacheWidth, height: h });
       }
       // Was aus dem Fenster gefallen ist, braucht niemand mehr. Was noch
       // nicht berechnet ist und jetzt ins Bild rückt, wird dringend.
-      const waiting = [...strips, ...b.pending, ...b.background]
+      const waiting = [...deeper, ...strips, ...b.pending, ...b.background]
           .map((r) => intersect(r, next))
           .filter((r): r is TexelRect => r !== null);
       const { urgent, rest } = split(waiting);
-      b.pending = urgent;
-      b.background = byDistance(rest);
+      b.pending = urgent.flatMap(splitTiles);
+      b.background = byDistance(rest.flatMap(splitTiles));
     }
     b.window = { u, v };
+    this.lookupTiles(b);
   }
 
   /**
@@ -720,22 +758,176 @@ export class TerrainRenderer {
     bindScreen(gl);
     // Geländeerzeugung ist teuer (ein Bild voll ~180 ms) - neu berechnete Texel.
     addRenderStats('terrainTexels', spent + spentRest);
+    this.filledThisFrame += spent + spentRest;
     return spent + spentRest;
   }
 
   /** Befüllt Bereiche vom Anfang der Liste, bis das Budget aufgebraucht ist. */
   private drain(b: CacheBuffer, queue: TexelRect[], budget: number): number {
     const initial = budget;
-    while (budget > 0 && queue.length > 0) {
-      const rect = queue[0];
+    for (let i = 0; budget > 0 && i < queue.length;) {
+      const rect = queue[i];
+      // Wird die Kachel noch im Speicher gesucht (oder kommt sie gleich von
+      // dort), nicht rechnen.
+      const tile = tileOf(rect);
+      if (b.tiles.get(tile) !== 'absent') {
+        i++;
+        continue;
+      }
       // Zu groß fürs Restbudget: nur die oberen Zeilen, der Rest bleibt stehen.
       const rows = Math.min(rect.height, Math.max(1, Math.floor(budget / rect.width)));
       this.fillRect(b, { ...rect, height: rows });
+      b.touched.add(tile);
       budget -= rows * rect.width;
-      if (rows === rect.height) queue.shift();
-      else queue[0] = { ...rect, v: rect.v + rows, height: rect.height - rows };
+      if (rows === rect.height) queue.splice(i, 1);
+      else queue[i] = { ...rect, v: rect.v + rows, height: rect.height - rows };
     }
     return initial - budget;
+  }
+
+  /** Kacheln der Warteschlange, die noch niemand gesucht hat, in IndexedDB suchen - höchstens 64 je Bild. */
+  private lookupTiles(b: CacheBuffer) {
+    const keys: string[] = [];
+    for (const r of [...b.pending, ...b.background]) {
+      const tile = tileOf(r);
+      if (b.tiles.has(tile)) continue;
+      if (!this.store || this.debugMode !== 0) {
+        b.tiles.set(tile, 'absent');
+        continue;
+      }
+      b.tiles.set(tile, 'looking');
+      keys.push(tile);
+      if (keys.length >= 64) break;
+    }
+    if (keys.length === 0) return;
+    const generation = b.generation;
+    const prefix = this.storePrefix(b);
+    void this.store!.get(keys.map((k) => prefix + k)).then((found) => {
+      if (b.generation !== generation) return;
+      found.forEach((tile, i) => {
+        if (tile) this.arrivals.push({ b, generation, tile: keys[i], data: tile });
+        else b.tiles.set(keys[i], 'absent');
+      });
+    });
+  }
+
+  /** Schlüssel einer Kachel in IndexedDB ohne ihre Lage: Seed, Texel je CSS-Pixel, Stufe, Neigung, Relief, Drehung. */
+  private storePrefix(b: CacheBuffer): string {
+    return `${this.seed}|${this.cacheRatio}|${b.key}|`;
+  }
+
+  /**
+   * Aus IndexedDB gekommene Kacheln hochladen (höchstens 64 je Bild), soweit
+   * sie im Fenster liegen, und ihre Stücke aus der Warteschlange nehmen.
+   */
+  private applyArrivals() {
+    const gl = this.gl;
+    const now = this.arrivals.splice(0, 64);
+    if (now.length === 0) return;
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, TILE);
+    for (const { b, generation, tile, data } of now) {
+      if (b.generation !== generation || b.tiles.get(tile) !== 'looking' || !b.window) continue;
+      const [tx, ty] = tile.split(',').map(Number);
+      const part = intersect({ u: tx * TILE, v: ty * TILE, width: TILE, height: TILE },
+          { u: b.window.u, v: b.window.v, width: b.width, height: b.covered });
+      if (part) {
+        for (const [texture, format, bytes] of [[b.texture, gl.RGBA, data.color], [b.normal, gl.RG, data.normal]] as const) {
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          let du = 0;
+          for (const [x, w] of ringPieces(part.u, part.width, b.width)) {
+            let dv = 0;
+            for (const [y, h] of ringPieces(part.v, part.height, b.height)) {
+              gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, part.u - tx * TILE + du);
+              gl.pixelStorei(gl.UNPACK_SKIP_ROWS, part.v - ty * TILE + dv);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, format, gl.UNSIGNED_BYTE, bytes);
+              dv += h;
+            }
+            du += w;
+          }
+        }
+      }
+      b.tiles.set(tile, 'stored');
+      b.pending = b.pending.filter((r) => tileOf(r) !== tile);
+      b.background = b.background.filter((r) => tileOf(r) !== tile);
+    }
+    for (const name of [gl.UNPACK_ROW_LENGTH, gl.UNPACK_SKIP_PIXELS, gl.UNPACK_SKIP_ROWS]) gl.pixelStorei(name, 0);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
+  /**
+   * Fertig gerechnete Kacheln zurücklesen und speichern: ganz im befüllten
+   * Fenster, kein Stück mehr in der Warteschlange. Über einen Pixel-Puffer mit
+   * Fence - readPixels ohne hielte die GPU an. Höchstens 8 je Bild.
+   */
+  private saveTiles(b: CacheBuffer) {
+    if (!this.store || this.debugMode !== 0 || !b.window || b.touched.size === 0) return;
+    const gl = this.gl;
+    const queued = new Set([...b.pending, ...b.background].map(tileOf));
+    const win = { u: b.window.u, v: b.window.v, width: b.width, height: b.covered };
+    let started = 0;
+    for (const tile of b.touched) {
+      const [tx, ty] = tile.split(',').map(Number);
+      const rect = { u: tx * TILE, v: ty * TILE, width: TILE, height: TILE };
+      const inside = intersect(rect, win);
+      if (!inside) {
+        b.touched.delete(tile);
+        continue;
+      }
+      if (queued.has(tile) || inside.width < TILE || inside.height < TILE || b.tiles.get(tile) !== 'absent') continue;
+      if (started++ >= 8) break;
+      b.touched.delete(tile);
+      b.tiles.set(tile, 'stored');
+      const buffer = gl.createBuffer()!;
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, TILE * TILE * 8, gl.STREAM_READ);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, b.framebuffer);
+      gl.pixelStorei(gl.PACK_ROW_LENGTH, TILE);
+      [0, 1].forEach((attachment) => {
+        gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachment);
+        let du = 0;
+        for (const [x, w] of ringPieces(rect.u, TILE, b.width)) {
+          let dv = 0;
+          for (const [y, h] of ringPieces(rect.v, TILE, b.height)) {
+            gl.pixelStorei(gl.PACK_SKIP_PIXELS, du);
+            gl.pixelStorei(gl.PACK_SKIP_ROWS, dv);
+            // Die Normale (RG8) als RGBA gelesen - das geht mit jedem Treiber.
+            gl.readPixels(x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, attachment * TILE * TILE * 4);
+            dv += h;
+          }
+          du += w;
+        }
+      });
+      for (const name of [gl.PACK_ROW_LENGTH, gl.PACK_SKIP_PIXELS, gl.PACK_SKIP_ROWS]) gl.pixelStorei(name, 0);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      this.readbacks.push({ key: this.storePrefix(b) + tile, buffer, fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)! });
+    }
+    bindScreen(gl);
+  }
+
+  /** Fertige Rücklesungen abholen und in IndexedDB legen - ohne zu warten. */
+  private pollReadbacks() {
+    const gl = this.gl;
+    this.readbacks = this.readbacks.filter(({ key, buffer, fence }) => {
+      const status = gl.clientWaitSync(fence, 0, 0);
+      if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) return true;
+      const data = new Uint8Array(TILE * TILE * 8);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, data);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      gl.deleteBuffer(buffer);
+      gl.deleteSync(fence);
+      const color = data.slice(0, TILE * TILE * 4);
+      const normal = new Uint8Array(TILE * TILE * 2);
+      for (let i = 0, j = TILE * TILE * 4; i < normal.length; i += 2, j += 4) {
+        normal[i] = data[j];
+        normal[i + 1] = data[j + 1];
+      }
+      this.store!.put(key, { color, normal });
+      return false;
+    });
   }
 
   /** Zeichnet ein absolutes Rechteck in den Ringpuffer - über den Rand hinweg in bis zu vier Teilen. */
@@ -743,13 +935,8 @@ export class TerrainRenderer {
     const gl = this.gl;
     const W = b.width;
     const H = b.height;
-    const pieces = (start: number, length: number, size: number): [number, number][] => {
-      const s = mod(start, size);
-      const first = Math.min(length, size - s);
-      return first < length ? [[s, first], [0, length - first]] : [[s, first]];
-    };
-    for (const [x, w] of pieces(rect.u, rect.width, W)) {
-      for (const [y, h] of pieces(rect.v, rect.height, H)) {
+    for (const [x, w] of ringPieces(rect.u, rect.width, W)) {
+      for (const [y, h] of ringPieces(rect.v, rect.height, H)) {
         gl.scissor(x, y, w, h);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       }
@@ -769,7 +956,7 @@ export class TerrainRenderer {
     const stretch = b.groundV / viewGroundV();
     const halfU = width / 2 / camera.pixelsPerTile;
     const halfV = height / 2 / camera.pixelsPerTile;
-    const reach = Math.min(camera.reliefScale * viewZScreen() * MAX_RELIEF, 2 * halfV);
+    const reach = Math.min(camera.reliefScale * viewZScreen() * this.reachZ, 2 * halfV);
     const c = worldToGround(camera.centerX, camera.centerY);
     const u0 = Math.floor((c.u - halfU) * s);
     const v0 = Math.floor((c.v - halfV) * stretch * s);
@@ -793,9 +980,11 @@ export class TerrainRenderer {
   render(camera: GpuCamera, now = performance.now()): boolean {
     const gl = this.gl;
 
+    this.filledThisFrame = 0;
     this.selectCache(camera);
     const active = this.active;
     this.updateCache(active, camera);
+    this.applyArrivals();
     const prevCovers = this.previous !== null && this.covers(this.previous, camera);
     const frozen = this.previous !== null && !isReady(active) && !prevCovers;
     // Ist etwas Vollständiges im Bild, wird gleichmäßig wenig je Bild befüllt.
@@ -803,9 +992,15 @@ export class TerrainRenderer {
     // das Bild ohnehin, darf es noch mehr kosten.
     const smooth = !frozen && (isReady(active) || this.previous !== null);
     let left = 0;
-    if (smooth) left = SMOOTH_BUDGET - this.fillPending(active, camera, SMOOTH_BUDGET, 0);
-    else this.fillPending(active, camera, FILL_BUDGET * (frozen ? 2 : 1));
+    // Zeigt das Bild noch die vorige Stufe gestreckt (unscharf), doppelt so viel -
+    // das kostet ein paar ms je Bild, halbiert aber die unscharfe Zeit.
+    // Beim Laden (boost) verdeckt das Ladeschild das Bild: dann Vorrat und
+    // Nachbarstufen mit vollem Budget.
+    const smoothBudget = this.boost ? 4 * FILL_BUDGET : isReady(active) ? SMOOTH_BUDGET : 2 * SMOOTH_BUDGET;
+    if (smooth) left = smoothBudget - this.fillPending(active, camera, smoothBudget, 0);
+    else this.fillPending(active, camera, FILL_BUDGET * (frozen ? 2 : 1) * (this.boost ? 4 : 1));
     const ready = isReady(active);
+    this.complete = ready && this.previous === null;
     // Vorrat: erst, wenn das Bild selbst vollständig ist. Beim Scrollen nur
     // die Zielstufe beim Hineinzoomen (größerer Maßstab) - das Zoomen um den
     // Mauszeiger verschiebt das Bild ja auch -, sonst braucht die Blase das
@@ -815,6 +1010,9 @@ export class TerrainRenderer {
       if (ready && left > 0 && (!active.moved || b.scale > active.scale)) left -= this.fillPending(b, camera, left, 0);
     }
     if (smooth && left > 0) this.fillPending(active, camera, 0, left);
+    this.settled = ready && this.filledThisFrame === 0 && this.arrivals.length === 0;
+    for (const b of [active, ...this.prefetch]) this.saveTiles(b);
+    this.pollReadbacks();
     if (frozen && !ready) {
       addRenderStats('frozen', 1);
       return false;
@@ -966,6 +1164,23 @@ interface CacheBuffer {
   moved: boolean;
   /** Was fertig sein muss für ein vollständiges Bild (absolute Texel), oder null. */
   needed: TexelRect | null;
+  /**
+   * Zeilen ab der Oberkante des Fensters, die befüllt sind oder in der
+   * Warteschlange stehen. Darunter liegt Platz für die höchsten möglichen
+   * Berge, der hier nicht gebraucht wird (reachZ) - er bleibt leer, bis die
+   * Reichweite wächst.
+   */
+  covered: number;
+  /** Zählt bei jedem neuen Fenster - Antworten aus IndexedDB für ein altes verfallen. */
+  generation: number;
+  /**
+   * Kacheln (tileStore.ts) des jetzigen Fensters: 'looking' wird in IndexedDB
+   * gesucht (so lange nicht rechnen), 'absent' rechnet die GPU, 'stored' ist
+   * gespeichert bzw. aus dem Speicher geladen.
+   */
+  tiles: Map<string, 'looking' | 'absent' | 'stored'>;
+  /** Kacheln, in die gerechnet wurde - fertige werden gespeichert (saveTiles). */
+  touched: Set<string>;
 }
 
 function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
@@ -980,11 +1195,39 @@ function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
     groundV: 0.5,
     view: '',
     window: null,
+    covered: 0,
+    generation: 0,
+    tiles: new Map(),
+    touched: new Set(),
     pending: [],
     background: [],
     moved: false,
     needed: null,
   };
+}
+
+/** Kachel (tileStore.ts) eines Rechtecks, das in einer liegt (splitTiles). */
+function tileOf(r: TexelRect): string {
+  return `${Math.floor(r.u / TILE)},${Math.floor(r.v / TILE)}`;
+}
+
+/** Ein Rechteck in Stücke je Kachel - so gehört jedes Stück der Warteschlange zu genau einer. */
+function splitTiles(r: TexelRect): TexelRect[] {
+  const out: TexelRect[] = [];
+  for (let ty = Math.floor(r.v / TILE); ty * TILE < r.v + r.height; ty++) {
+    for (let tx = Math.floor(r.u / TILE); tx * TILE < r.u + r.width; tx++) {
+      const part = intersect(r, { u: tx * TILE, v: ty * TILE, width: TILE, height: TILE });
+      if (part) out.push(part);
+    }
+  }
+  return out;
+}
+
+/** Teile eines absoluten Bereichs im Ringpuffer der Größe `size`: [Start im Puffer, Länge]. */
+function ringPieces(start: number, length: number, size: number): [number, number][] {
+  const s = mod(start, size);
+  const first = Math.min(length, size - s);
+  return first < length ? [[s, first], [0, length - first]] : [[s, first]];
 }
 
 /** Ob der Cache ein vollständiges Bild ergibt - das Sichtbare samt Gipfeln von unten ist befüllt. */
