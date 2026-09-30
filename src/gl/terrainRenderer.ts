@@ -790,7 +790,12 @@ export class TerrainRenderer {
     const keys: string[] = [];
     for (const r of [...b.pending, ...b.background]) {
       const tile = tileOf(r);
-      if (b.tiles.has(tile)) continue;
+      // 'stored' mit Stücken in der Warteschlange: die Kachel war schon da, hat
+      // das Fenster verlassen und kommt wieder herein - neu suchen. Sonst
+      // rechnete niemand ihre Stücke, und im Ringpuffer bliebe dort der Inhalt
+      // einer anderen Stelle stehen.
+      const state = b.tiles.get(tile);
+      if (state === 'looking' || state === 'absent') continue;
       if (!this.store || this.debugMode !== 0) {
         b.tiles.set(tile, 'absent');
         continue;
@@ -925,7 +930,7 @@ export class TerrainRenderer {
         normal[i] = data[j];
         normal[i + 1] = data[j + 1];
       }
-      this.store!.put(key, { color, normal });
+      this.store?.put(key, { color, normal });
       return false;
     });
   }
