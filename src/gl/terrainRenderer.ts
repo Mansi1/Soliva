@@ -579,6 +579,7 @@ export class TerrainRenderer {
     b.view = view;
     b.groundV = groundV;
     b.window = null;
+    b.shown = false;
     b.pending = [];
     b.background = [];
     b.needed = null;
@@ -600,7 +601,7 @@ export class TerrainRenderer {
    * Schiebt das Cache-Fenster zur Kamera und merkt vor, was neu hineinkommt.
    * Beim Verschieben sind das zwei schmale Streifen an den Rändern.
    */
-  private updateCache(b: CacheBuffer, camera: GpuCamera, prefetch = false) {
+  private updateCache(b: CacheBuffer, camera: GpuCamera) {
     const gl = this.gl;
     const { width, height } = gl.canvas;
     const ppt = b.scale;
@@ -642,6 +643,7 @@ export class TerrainRenderer {
     if (cacheWidth !== b.width || cacheHeight !== b.height) {
       this.allocateCache(b, cacheWidth, cacheHeight);
       b.window = null;
+      b.shown = false;
     }
 
     // Kameramitte in den Boden-Koordinaten des Caches (seine Stauchung).
@@ -664,13 +666,19 @@ export class TerrainRenderer {
       height: Math.min(viewHeight + 2 * margin, cacheHeight - bubbleV),
     };
     // Was fertig sein muss, damit der Cache ein vollständiges Bild ergibt:
-    // das Sichtbare samt der Gipfel, die von unten hereinragen - aber höchstens
-    // eine Bildhöhe tief. Stark herangezoomt reichte die volle Gipfelhöhe
-    // sonst viele Bildhöhen hinab, und das Vorberechnen würde nie fertig;
-    // was darunter liegt, kommt wie bisher im Hintergrund nach.
-    b.needed = { ...visible, height: Math.min(visible.height + Math.min(reach, viewHeight), cacheHeight - bubbleV) };
-    // Beim Vorberechnen zählt nur das vollständige Bild - die Blase nicht.
-    const focus = prefetch ? b.needed : visible;
+    // das Sichtbare samt der Gipfel, die von unten hereinragen (reachZ ist
+    // gemessen, nicht der höchstmögliche Berg). Im Gebirge bei Zoom 5 sind das
+    // bis drei Bildhöhen - früher auf eine gedeckelt, dann blieben hohe Hänge
+    // im Bild leer, bis der Hintergrund sie nach Sekunden nachreichte (nach
+    // dem Neigen gemessen). Nur vorausgerechnete Stufen bleiben bei einer
+    // Bildhöhe: stark herangezoomt würden sie sonst nie fertig.
+    const deep = b === this.active ? reach : Math.min(reach, viewHeight);
+    b.needed = { ...visible, height: Math.min(visible.height + deep, cacheHeight - bubbleV) };
+    // Dringend ist das vollständige Bild samt der Gipfel, die von unten
+    // hereinragen - nicht nur das Sichtbare: sonst liefen sie mit dem kleinen
+    // Hintergrund-Budget, im Gebirge war der Cache beim Pannen nie fertig, und
+    // ihre Hänge kamen ohne Textur ins Bild.
+    const focus = b.needed;
     const split = (rects: TexelRect[]) => {
       const urgent: TexelRect[] = [];
       const rest: TexelRect[] = [];
@@ -842,6 +850,7 @@ export class TerrainRenderer {
     const gl = this.gl;
     const now = this.arrivals.splice(0, 64);
     if (now.length === 0) return;
+    const start = performance.now();
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.pixelStorei(gl.UNPACK_ROW_LENGTH, TILE);
     for (const { b, generation, tile, data } of now) {
@@ -873,6 +882,8 @@ export class TerrainRenderer {
     for (const name of [gl.UNPACK_ROW_LENGTH, gl.UNPACK_SKIP_PIXELS, gl.UNPACK_SKIP_ROWS]) gl.pixelStorei(name, 0);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.activeTexture(gl.TEXTURE0);
+    addRenderStats('tileUploads', now.length);
+    addRenderStats('tileUploadMs', performance.now() - start);
   }
 
   /**
@@ -1106,7 +1117,10 @@ export class TerrainRenderer {
     this.updateCache(active, camera);
     this.applyArrivals();
     const prevCovers = this.previous !== null && this.covers(this.previous, camera);
-    const frozen = this.previous !== null && !isReady(active) && !prevCovers;
+    // Kein Bild mit Lücken zeigen, solange es besser geht: steht die vorige
+    // Stufe nicht ganz bereit - oder gibt es keine (Drehen, erster Cache) und
+    // der neue war noch nie vollständig -, bleibt das letzte Bild stehen.
+    const frozen = !isReady(active) && (this.previous !== null ? !prevCovers : !active.shown);
     // Ist etwas Vollständiges im Bild, wird gleichmäßig wenig je Bild befüllt.
     // Sonst (Laden, Bild steht) zählt nur, schnell fertig zu werden - steht
     // das Bild ohnehin, darf es noch mehr kosten.
@@ -1119,7 +1133,8 @@ export class TerrainRenderer {
     // Nachbarstufen mit vollem Budget.
     const smoothBudget = this.boost ? 4 * FILL_BUDGET : isReady(active) && !active.moved ? SMOOTH_BUDGET : 2 * SMOOTH_BUDGET;
     if (smooth) left = smoothBudget - this.fillPending(active, camera, smoothBudget, 0);
-    else this.fillPending(active, camera, FILL_BUDGET * (frozen ? 2 : 1) * (this.boost ? 4 : 1));
+    // Eingefroren ohne vorige Stufe (Drehen) steht das Bild ohnehin - so schnell wie beim Laden.
+    else this.fillPending(active, camera, FILL_BUDGET * (frozen ? (this.previous ? 2 : 4) : 1) * (this.boost ? 4 : 1));
     const ready = isReady(active);
     this.complete = ready && this.previous === null;
     // Beim Fahren zuerst die Blase: sie rückt als Nächstes ins Bild. Die
@@ -1132,22 +1147,32 @@ export class TerrainRenderer {
     // Mauszeiger verschiebt das Bild ja auch -, sonst braucht die Blase das
     // Budget. Die Fenster wandern trotzdem jedes Bild mit der Kamera.
     for (const b of this.prefetch) {
-      this.updateCache(b, camera, true);
+      this.updateCache(b, camera);
       if (ready && left > 0 && (!active.moved || b.scale > active.scale)) left -= this.fillPending(b, camera, left, 0);
     }
     if (smooth && left > 0) this.fillPending(active, camera, 0, left);
     this.settled = ready && this.filledThisFrame === 0 && this.arrivals.length === 0;
-    // Fertige Kacheln speichern; vorausrechnen, wenn das Bild fertig ist -
-    // steht die Kamera, drei Kacheln je Bild, sonst eine (je ~65.000 Texel,
-    // ~2 ms GPU; Abholen ~0,4-1 ms, das Speichern macht der Worker).
-    for (const b of [active, ...this.prefetch]) this.saveTiles(b);
+    // Fertige Kacheln speichern und vorausrechnen - nur, wenn die Kamera
+    // steht: drei Kacheln je Bild (je ~65.000 Texel, ~2 ms GPU; Abholen
+    // ~0,4-1 ms, das Speichern macht der Worker). Beim Fahren nichts davon:
+    // das Abholen von der GPU (getBufferSubData) hielt dort gemessen einzelne
+    // Bilder bis 300 ms auf (M4, Retina, Zoom 2-3). Was beim Fahren
+    // vorbeizieht, wird nicht gespeichert - das holt das Vorausrechnen nach.
     const still = !active.moved && this.previous === null;
-    if (ready && !this.boost && this.baking) this.bake(camera, still ? 3 : 1);
-    this.pollReadbacks(still ? 3 : 1);
+    if (still) {
+      for (const b of [active, ...this.prefetch]) this.saveTiles(b);
+      if (ready && !this.boost && this.baking) this.bake(camera, 3);
+      this.pollReadbacks(3);
+    }
     if (frozen && !ready) {
       addRenderStats('frozen', 1);
       return false;
     }
+    if (ready) active.shown = true;
+
+    // Im Bild fehlt Boden, und keine vorige Stufe springt ein - der Ringpuffer
+    // zeigt dort Leere oder eine andere Stelle. Anteil der Bilder.
+    if (!ready && !this.previous) addRenderStats('holes', 1);
 
     // Wie viel vom alten Cache zu sehen ist: ganz, solange der neue fehlt,
     // dann weich ausgeblendet.
@@ -1295,6 +1320,8 @@ interface CacheBuffer {
   moved: boolean;
   /** Was fertig sein muss für ein vollständiges Bild (absolute Texel), oder null. */
   needed: TexelRect | null;
+  /** Seit dem Leeren schon einmal vollständig gezeichnet? Vorher wird er nie gezeigt. */
+  shown: boolean;
   /**
    * Zeilen ab der Oberkante des Fensters, die befüllt sind oder in der
    * Warteschlange stehen. Darunter liegt Platz für die höchsten möglichen
@@ -1333,6 +1360,7 @@ function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
     pending: [],
     background: [],
     moved: false,
+    shown: false,
     needed: null,
   };
 }

@@ -20,8 +20,10 @@
 //   mpx - Geräte-Pixel in Millionen (Retina: viermal so viele)
 //   frozen - Anteil der Bilder ohne Gelände, weil sein Cache noch fehlt
 //   stretched - Anteil der Bilder mit der vorigen Zoomstufe gestreckt, weil die neue noch fehlt
+//   holes - Anteil der Bilder, in denen sichtbarer Boden fehlt (Cache nicht fertig, keine vorige Stufe)
 //   bakedTiles - vorausgerechnete Gelände-Kacheln; tileReads, tileReadMs - von der GPU
 //   zurückgelesene Kacheln und ihre Kosten im Hauptthread (gl/terrainRenderer.ts, tileStore.ts)
+//   tileUploads, tileUploadMs - aus dem Speicher gelesene Kacheln, hochgeladen, und ihre Kosten
 //   instances, batched - Objekte einzeln je Bild gepackt / aus festen Puffern
 //   billboards - Anteil der Bilder mit Bäumen als Bild (0..1)
 //   terrainTexels - neu erzeugtes Gelände; hoch = Cache wird befüllt
