@@ -292,6 +292,8 @@ Hintergrund und Plan: `docs/OPTIMIZATION_PLAN.md`.
 
 ### Stolperfallen, in die schon ein Agent gelaufen ist
 
+- **Große Dateien in Git LFS:** GitHub nimmt das Repo nur an, wenn der Nicht-LFS-Teil unter 100 MB bleibt (Stand 2026-09-30: ~34 MB gepackt). LFS verwaltet `src/textures/**`, `assets/music/*.mp3` und `*.blend` (`.gitattributes`). Neue Quellbilder, Musik oder andere Dateien über ~1 MB gehören dorthin - vor dem Commit mit `git lfs ls-files` prüfen, nötigenfalls `.gitattributes` ergänzen. Was schon committet, aber nicht gepusht ist, lässt sich mit `git lfs migrate import --include=<muster> --include-ref=<branch> --exclude-ref=main` nachträglich umstellen. Größe des Push prüfen: `git bundle create /tmp/x.bundle main <branch>`.
+
 - **Szenen per Playwright aufsetzen:** `entry.ts` lädt `main.ts` erst nach dem `load`-Ereignis nach.
   - Einfacher für Test-Spielstände: `/game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&rot=<0-3>&tilt=<Grad>&save=<base64url>` startet direkt ohne Hauptmenü, `pgm.seed` bleibt unberührt (im Spiel erzeugt „Link teilen“ im Menü genau so einen Link). `save` ist das Spielstand-JSON (`world/save.ts`), die Welt beginnt bei jedem Aufruf damit. Danach steht nur noch `/game/<seed>` in der Adresse (im Hauptmenü `/`); neu laden bleibt im Spiel. Keine Datei ins Repo legen, den Link ins Review posten. Kodieren: `node -e "console.log(Buffer.from(JSON.stringify(require('./stand.json'))).toString('base64url'))"`.
   - Test-Spielstände immer in der Welt `Testseed`, von Hand geschrieben mit nur dem, was das Todo braucht. Freie Lichtung dort: x 12, y -43. Die Kamera rechnet die Geländehöhe nicht mit, das Ziel liegt über der Bildmitte - mit `zoom=4` bleibt es gut im Bild.
