@@ -379,6 +379,8 @@ export class TerrainRenderer {
    * das Relief wird davon nicht feiner.
    */
   pixelRatio = 1;
+  /** Texel des Caches je CSS-Pixel (MapRenderer.cacheRatio) - für Schwellen, die mit den Texeln vergleichen. */
+  cacheRatio = 1;
   /**
    * Vorrat-Blase um den Bildschirm, in Geräte-Pixeln je Seite. Sie wird im
    * Hintergrund vorausberechnet, damit beim Verschieben fertiges Gelände ins
@@ -695,7 +697,7 @@ export class TerrainRenderer {
 
     const f = (name: string) => this.fillLocation(name);
     gl.uniform1f(f('uPixelsPerTile'), ppt);
-    gl.uniform1f(f('uStoneCardPixels'), CARDS_FROM * this.pixelRatio);
+    gl.uniform1f(f('uStoneCardPixels'), CARDS_FROM * this.cacheRatio);
     gl.uniform1f(f('uReliefScale'), camera.reliefScale > 0 ? 1 : 0);
     setViewUniforms(gl, f);
     // Berechnet wird für die Stauchung des Caches, nicht für den jetzigen Blickwinkel.
@@ -824,6 +826,8 @@ export class TerrainRenderer {
     if (this.previous) {
       if (!ready) {
         prevMix = 1;
+        // Das Bild zeigt noch die vorige Stufe, gestreckt (unscharf) - Anteil der Bilder.
+        addRenderStats('stretched', 1);
       } else {
         this.fadeStart ??= now;
         const t = (now - this.fadeStart) / CACHE_FADE_MS;

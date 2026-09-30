@@ -422,8 +422,22 @@ export class MapRenderer {
    */
   seenCenter: { x: number; y: number } | null = null;
 
+  /**
+   * Texel des Gelände-Caches je CSS-Pixel. Auf Retina nicht die vollen 2: jeder
+   * Texel rechnet die ganze Geländefunktion, bei 2 viermal so viele - nach dem
+   * Zoom auf Stufe 5 war das Bild rund 1 s unscharf (vorige Stufe gestreckt),
+   * und das Füllen kostete 33-50 ms je Bild (M4, gemessen). 1,5 statt 2 heißt
+   * 44 % weniger Texel; der Boden ist kaum weicher (bei 1 verschwimmen kleine
+   * Dinge wie Blätter). Gras, Steine und Modelle darüber bleiben scharf.
+   * ponytail: fester Deckel; als Einstellung anbieten, wenn jemand die volle
+   * Schärfe will oder ein schwächeres Gerät noch weniger braucht.
+   */
+  get cacheRatio(): number {
+    return Math.min(this.pixelRatio, 1.5);
+  }
+
   get flowerObjects(): boolean {
-    return this.cacheTileSize * this.pixelRatio >= FLOWER_OBJECT_PIXELS;
+    return this.cacheTileSize * this.cacheRatio >= FLOWER_OBJECT_PIXELS;
   }
 
   constructor(
@@ -520,13 +534,13 @@ export class MapRenderer {
       centerX,
       centerY,
       pixelsPerTile: this.tileSize * this.pixelRatio,
-      cachePixelsPerTile: this.cacheTileSize * this.pixelRatio,
+      cachePixelsPerTile: this.cacheTileSize * this.cacheRatio,
       cacheGroundV: this.cacheGroundV,
       // Beim Hineinzoomen zuerst die Zielstufe, damit sie beim Ankommen fertig
       // ist; die zwei nächstkleineren liegen so beim Herauszoomen bereit.
       prefetchPixelsPerTile: [...(goal > this.cacheTileSize ? [goal] : []), this.cacheTileSize / 2, this.cacheTileSize / 4]
           .filter((t) => t >= MIN_TILE_SIZE)
-          .map((t) => t * this.pixelRatio),
+          .map((t) => t * this.cacheRatio),
       reliefScale: this.relief,
     }, canvas.width, canvas.height);
 
@@ -541,6 +555,7 @@ export class MapRenderer {
     if (post) this.post.begin();
     this.terrain.time = animationTime();
     this.terrain.pixelRatio = this.pixelRatio;
+    this.terrain.cacheRatio = this.cacheRatio;
     gpuFrameBegin();
     if (!this.terrain.render(camera)) {
       gpuFrameEnd();

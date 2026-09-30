@@ -749,14 +749,19 @@ minimapCanvas.addEventListener('mouseleave', () => devPanel.showMinimapPointer()
  * Zeiger auf die Canvas-Stelle (mouseX, mouseY) setzen: Objekt und Tile
  * darunter, Mauszeiger und Entwickler-Infos. true, wenn das Tile wechselte.
  */
-function updateHoveredTile(mouseX: number, mouseY: number): boolean {
+/**
+ * @param objects auch das Objekt unter dem Zeiger suchen - während sich die
+ * Kamera bewegt nicht: weit draußen prüft das Tausende Vorkommen und kostete
+ * beim schnellen Zoomen bis 150 ms je Bild (M4). Danach einmal mit (loop).
+ */
+function updateHoveredTile(mouseX: number, mouseY: number, objects = true): boolean {
   pointer.pixel = { x: mouseX, y: mouseY };
   // Nur mit ausgewählten Dorfbewohnern zählt, worauf der Zeiger zeigt.
-  const target = picker.target(mouseX, mouseY);
+  const target = objects ? picker.target(mouseX, mouseY) : undefined;
   pointer.setObject(selection.villagers.size > 0 ? target : undefined);
   const tile = picker.tile(mouseX, mouseY);
   const tileChanged = pointer.setTile(tile);
-  updateSelectable(target);
+  if (objects) updateSelectable(target);
   if (!tileChanged) return false;
   devPanel.showTile({ ...terrain.getTile(tile.x, tile.y), x: tile.x, y: tile.y });
   updateHoverInfo();
@@ -776,9 +781,11 @@ function updateSelectable(object = pointer.pixel && picker.target(pointer.pixel.
 }
 
 /** Die Kamera hat sich bewegt: unter dem stehenden Zeiger liegt jetzt anderes. */
-function refreshPointer() {
-  if (pointer.pixel) updateHoveredTile(pointer.pixel.x, pointer.pixel.y);
+function refreshPointer(objects = true) {
+  if (pointer.pixel) updateHoveredTile(pointer.pixel.x, pointer.pixel.y, objects);
 }
+/** Bewegte sich die Kamera im letzten Bild? Kommt sie zur Ruhe, sucht der Zeiger wieder Objekte. */
+let cameraMoving = false;
 
 /**
  * Was unter dem Zeiger steht, in den Entwickler-Infos (game/hoverInfo.ts).
@@ -956,7 +963,9 @@ function loop(now: number) {
   const [cameraX, cameraY] = [camera.x, camera.y];
   const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
   if (held && renderer.relief !== reliefBefore && camera.x === cameraX && camera.y === cameraY) keepFocus(held);
-  if (steered || zoomed || tilted || flying) refreshPointer();
+  const moving = steered || zoomed || tilted || flying;
+  if (moving || cameraMoving) refreshPointer(!moving);
+  cameraMoving = moving;
   // Schaut man in einen Berg? Geprüft, wenn sich die Ansicht ändert - und
   // solange flachgelegt ist, bis die Sicht eine Weile frei ist.
   if (!start.isOpen()) {

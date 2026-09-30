@@ -436,7 +436,10 @@ export class GrassRenderer {
       const map = this.maps[stones];
 
       // 1. Daten je Rasterzelle.
-      if (map.size !== columns) this.allocate(map, columns);
+      // Nur wachsen, mit Luft: beim stufenlosen Zoomen ändert sich die Zahl fast
+      // jedes Bild, und neu anlegen (samt checkFramebufferStatus) wartet auf
+      // die GPU - gemessen bis 200 ms je Sekunde (M4, Retina).
+      if (map.size < columns) this.allocate(map, Math.ceil(columns * 1.25));
       gl.bindFramebuffer(gl.FRAMEBUFFER, map.framebuffer);
       gl.viewport(0, 0, columns, columns);
       gl.disable(gl.DEPTH_TEST);

@@ -19,6 +19,7 @@
 //   vertices, terrainVertices - Eckpunkte der Modelle / des Geländegitters
 //   mpx - Geräte-Pixel in Millionen (Retina: viermal so viele)
 //   frozen - Anteil der Bilder ohne Gelände, weil sein Cache noch fehlt
+//   stretched - Anteil der Bilder mit der vorigen Zoomstufe gestreckt, weil die neue noch fehlt
 //   instances, batched - Objekte einzeln je Bild gepackt / aus festen Puffern
 //   billboards - Anteil der Bilder mit Bäumen als Bild (0..1)
 //   terrainTexels - neu erzeugtes Gelände; hoch = Cache wird befüllt
