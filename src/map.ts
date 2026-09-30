@@ -432,17 +432,16 @@ export class MapRenderer {
   seenCenter: { x: number; y: number } | null = null;
 
   /**
-   * Texel des Gelände-Caches je CSS-Pixel. Auf Retina nicht die vollen 2: jeder
-   * Texel rechnet die ganze Geländefunktion, bei 2 viermal so viele - nach dem
-   * Zoom auf Stufe 5 war das Bild rund 1 s unscharf (vorige Stufe gestreckt),
-   * und das Füllen kostete 33-50 ms je Bild (M4, gemessen). 1,5 statt 2 heißt
-   * 44 % weniger Texel; der Boden ist kaum weicher (bei 1 verschwimmen kleine
-   * Dinge wie Blätter). Gras, Steine und Modelle darüber bleiben scharf.
-   * ponytail: fester Deckel; als Einstellung anbieten, wenn jemand die volle
-   * Schärfe will oder ein schwächeres Gerät noch weniger braucht.
+   * Texel des Gelände-Caches je CSS-Pixel: auf jeder Zoomstufe 1 Texel je
+   * Bildpunkt - mehr sähe man nicht (der Cache hat keine Mipmaps), weniger
+   * ist weicher. Früher 1,5 auf Retina (44 % weniger Texel), als Zoom und
+   * Pannen noch alles live rechneten; heute kommt das meiste aus dem Speicher
+   * (TileStore) und der vorausgerechneten nächsten Stufe.
+   * ponytail: Deckel 2 für Geräte mit Pixel-Verhältnis 3; als Einstellung
+   * anbieten, wenn ein schwächeres Gerät weniger braucht.
    */
   get cacheRatio(): number {
-    return Math.min(this.pixelRatio, 1.5);
+    return Math.min(this.pixelRatio, 2);
   }
 
   /** Mitten der Gebäudegruppen des Spielers - um sie herum wird vorausgerechnet (TerrainRenderer.bake). */
@@ -505,7 +504,7 @@ export class MapRenderer {
   }
 
   get flowerObjects(): boolean {
-    return this.cacheTileSize * this.cacheRatio >= FLOWER_OBJECT_PIXELS;
+    return this.cacheTileSize >= FLOWER_OBJECT_PIXELS;
   }
 
   constructor(

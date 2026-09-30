@@ -134,17 +134,16 @@ const MAX_CACHES = 4;
 const CACHE_FADE_MS = 200;
 
 /**
- * Ab so vielen Geräte-Pixeln je Tile (Stufe des Gelände-Caches) stehen die
- * Blumen als 3D-Objekte in der Wiese - darunter sind sie nur wenige Pixel
- * groß und das Gelände malt sie als Tupfen. Bei 32 wären es auf Retina schon
- * bei 16 px je Tile ~12.000 Blumen im Bild, das kostete merklich Bildrate.
+ * Ab so vielen CSS-Pixeln je Tile (Stufe des Gelände-Caches, ab Zoom 3) stehen
+ * die Blumen als Objekte (Bilder) in der Wiese - darunter sind sie nur wenige
+ * Pixel groß und das Gelände malt sie als Tupfen (uFlowerObjectPixels).
  */
-export const FLOWER_OBJECT_PIXELS = 64;
+export const FLOWER_OBJECT_PIXELS = 32;
 /**
  * Ab so vielen CSS-Pixeln je Tile zeichnet grassRenderer.ts Gras und Steine als
- * Karten; darunter malt der Gelände-Cache die Steine (uStoneCardPixels).
+ * Karten (ab Stufe 3); darunter malt der Gelände-Cache die Steine (uStoneCardPixels).
  */
-export const CARDS_FROM = 48;
+export const CARDS_FROM = 24;
 
 /** Rand um den Bildschirm, damit beim Verschieben nichts Ungefülltes ins Bild rutscht. */
 const CACHE_MARGIN = 64;
@@ -275,7 +274,6 @@ export class TerrainRenderer {
     // Zwei Geräte-Pixel: entspricht der Zellgröße, gegen die Mikro-Detail und
     // Farbtextur ursprünglich abgestimmt wurden.
     gl.uniform1f(this.fillLocation('uDetailPixels'), 2);
-    gl.uniform1f(this.fillLocation('uFlowerObjectPixels'), FLOWER_OBJECT_PIXELS);
     this.uploadPalette(palette);
   }
 
@@ -748,6 +746,7 @@ export class TerrainRenderer {
     const f = (name: string) => this.fillLocation(name);
     gl.uniform1f(f('uPixelsPerTile'), ppt);
     gl.uniform1f(f('uStoneCardPixels'), CARDS_FROM * this.cacheRatio);
+    gl.uniform1f(f('uFlowerObjectPixels'), FLOWER_OBJECT_PIXELS * this.cacheRatio);
     gl.uniform1f(f('uReliefScale'), camera.reliefScale > 0 ? 1 : 0);
     setViewUniforms(gl, f);
     // Berechnet wird für die Stauchung des Caches, nicht für den jetzigen Blickwinkel.

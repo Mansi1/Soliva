@@ -47,8 +47,11 @@ export interface Settings {
   bloom: boolean;
 }
 
-/** Vorgabe für animalsBelow: bei Zoom 1 (8 px je Tile) keine Tiere. */
-export const ANIMALS_BELOW_DEFAULT = 16;
+/**
+ * Vorgabe für animalsBelow: bei Zoom 1 und 2 (8 und 16 px je Tile) keine
+ * Tiere - und keine Dorfbewohner ("villager", ohne eigene Einstellung).
+ */
+export const ANIMALS_BELOW_DEFAULT = 32;
 
 /** billboards: auf allen Zoomstufen (Zoom 5 sind 128 px je Tile, das Menü bietet px * 2). */
 const BILLBOARDS_ALL = 256;

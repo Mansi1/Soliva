@@ -56,7 +56,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
  * @param hovered Gebäude unter dem Zeiger (Ankerpunkt) - eine Waffenkammer
  *   zeigt sich dann ohne Dach, wie in Stronghold (ausgewählt ebenso)
  * @param hideAnimal Tierarten, die nicht gezeichnet werden - weit draußen
- *   ausgeblendet (Menü → Grafik → Tiere ausblenden)
+ *   ausgeblendet (Menü → Grafik → Tiere ausblenden); "villager" für die Dorfbewohner
  */
 export function worldInstances(
   world: World,
@@ -169,8 +169,10 @@ export function worldInstances(
     }
   }
 
+  // Weit draußen keine Figuren - Dorfbewohner wie Tiere (ANIMALS_BELOW_DEFAULT).
+  const hideVillagers = hideAnimal('villager');
   for (const v of world.villagers) {
-    if (!v.isVisible) continue;
+    if (!v.isVisible || hideVillagers) continue;
     const { x, y } = v.positionAt(blend);
     if (x < x0 || x > x1 || y < y0 || y > y1) continue;
     const phase = v.pose === POSE.walk

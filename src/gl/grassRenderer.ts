@@ -52,11 +52,11 @@ const FOLIAGE_SIZE = 256;
 /** Welt-Tiles je Meter der Karten (1 Tile = 5 m). */
 const TILES_PER_METER = 0.2;
 /**
- * Büschel je Tile-Kante nach CSS-Pixeln je Tile: Zoom 5 (128) dichter, Zoom 4
- * (64) weniger - dort ist viermal so viel Wiese im Bild und die Büschel sind
- * halb so groß. Darunter (ab Zoom 3) keins, die Bodentextur reicht.
+ * Büschel je Tile-Kante, ab CARDS_FROM (Zoom 3) auf jeder Stufe gleich - so
+ * stehen beim Zoomen dieselben Büschel an derselben Stelle, nur kleiner.
+ * Darunter (Zoom 2, 1) keins, die Bodentextur reicht.
  */
-const DENSITY: [number, number][] = [[96, 3], [CARDS_FROM, 2]];
+const PER_TILE = 3;
 /** Höhen bis hierhin (Tiles) passen in die 16 Bit der Daten-Textur. */
 const MAX_Z = 64;
 /** Texture-Units beim Zeichnen (0: Rauschtabelle, 2: Äcker). */
@@ -419,8 +419,7 @@ export class GrassRenderer {
     /** Weltpunkt in der Bildmitte - um ihn liegt das Quadrat (nicht der Kamerapunkt auf Meereshöhe). */
     center: { x: number; y: number };
   }) {
-    const perTile = DENSITY.find(([from]) => tileSize >= from)?.[1];
-    if (!perTile) return;
+    if (tileSize < CARDS_FROM) return;
     const ppt = camera.pixelsPerTile;
     const gl = this.gl;
     const { width, height } = gl.canvas;
@@ -429,7 +428,7 @@ export class GrassRenderer {
     let cells = 0;
     // Erst die Pflanzen, dann die Steine - je auf ihrem eigenen Raster.
     for (const stones of [0, 1]) {
-      const spacing = stones ? STONE_SPACING : 1 / perTile;
+      const spacing = stones ? STONE_SPACING : 1 / PER_TILE;
       const columns = Math.ceil(side / spacing);
       const originX = Math.floor((o.center.x - side / 2) / spacing);
       const originY = Math.floor((o.center.y - side / 2) / spacing);
