@@ -75,6 +75,24 @@ function Slider({ refs, min, max, step, onInput }: {
   );
 }
 
+/** Regler mit Stufen (zoomChoices): Aus, Zoom 1 bis 5 - die Wörter darunter stehen an den Stufen. */
+function StopSlider({ input, choices, onPick }: {
+  input: Ref<HTMLInputElement>; choices: [number, string, string][]; onPick: (value: number) => void;
+}) {
+  return (
+    <span class="menu-stops">
+      <input type="range" min="0" max={String(choices.length - 1)} step="1" ref={input}
+        onInput={(e: Event) => onPick(choices[Number((e.target as HTMLInputElement).value)][0])} />
+      <span class="menu-stop-labels">{choices.map(([, label, hint]) => <span title={hint}>{label}</span>)}</span>
+    </span>
+  );
+}
+
+/** Stellt einen Stufenregler auf `value`; ein Wert zwischen den Stufen zeigt die Stufe darunter. */
+function setStop(input: HTMLInputElement, choices: [number, string, string][], value: number) {
+  input.value = String(Math.max(0, choices.findLastIndex(([v]) => v <= value)));
+}
+
 /** Link in die Zwischenablage, der Knopf bestätigt es kurz; ohne Zwischenablage (kein HTTPS) zum Abschreiben. */
 export async function copyLink(button: HTMLButtonElement, url: string) {
   try {
@@ -94,7 +112,7 @@ export class SettingsMenu {
   private pauseButton = createRef<HTMLButtonElement>();
   private soundButton = createRef<HTMLButtonElement>();
   private billboards = createRef<HTMLInputElement>();
-  private animalButtons = new Map(ANIMAL_KINDS.map(([kind]) => [kind, HIDE_ANIMALS.map(() => createRef<HTMLButtonElement>())]));
+  private animalSliders = new Map(ANIMAL_KINDS.map(([kind]) => [kind, createRef<HTMLInputElement>()]));
   private colorButtons = new Map(Object.keys(PLAYER_COLORS).map((key) => [key, createRef<HTMLButtonElement>()]));
   private volume = sliderRefs();
   private music = sliderRefs();
@@ -223,13 +241,24 @@ export class SettingsMenu {
         <section>
           <h3>Grafik</h3>
           <div class="menu-row">
+            <span>Teile zeichnen</span>
+          </div>
+          {/* Dieselben Schalter wie im Entwickler-Panel, nur umgekehrt: Haken = wird gezeichnet (data-on, main.ts). */}
+          <div class="menu-off">
+            {DEV_OFF.map(([key, label, hint]) => (
+              <label title={hint}><input type="checkbox" data-on={key} /> {label}</label>
+            ))}
+          </div>
+          <p class="menu-hint">
+            Zum Messen, was ein Teil kostet - die Entwickler-Infos (P) zeigen die Bildzeit. Ohne Haken wird der
+            Teil nicht gezeichnet. Gras: Gras- und Steinkarten; Modelle: Gebäude, Bäume, Blumen, Figuren und
+            Felder; Partikel: Rauch, Staub, Insekten und Fische; Vorausrechnen: der Boden wird im Hintergrund
+            für die Nachbarschaft und die nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im
+            Entwickler-Panel.
+          </p>
+          <div class="menu-row">
             <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
-            {/* Regler mit Stufen: Aus, Zoom 1 bis 5 - die Wörter darunter stehen an den Stufen. */}
-            <span class="menu-stops">
-              <input type="range" min="0" max={String(BILLBOARDS.length - 1)} step="1" ref={this.billboards}
-                onInput={(e: Event) => this.change({ billboards: BILLBOARDS[Number((e.target as HTMLInputElement).value)][0] })} />
-              <span class="menu-stop-labels">{BILLBOARDS.map(([, label, hint]) => <span title={hint}>{label}</span>)}</span>
-            </span>
+            <StopSlider input={this.billboards} choices={BILLBOARDS} onPick={(billboards) => this.change({ billboards })} />
           </div>
           <p class="menu-hint">
             Bis zu dieser Zoomstufe (1 = weit draußen, 5 = ganz nah) werden Bäume als flaches Bild statt als
@@ -242,12 +271,8 @@ export class SettingsMenu {
             {ANIMAL_KINDS.map(([kind, name]) => (
               <div class="menu-row">
                 <span>{name}</span>
-                <span class="menu-choice">
-                  {HIDE_ANIMALS.map(([value, label, hint], i) => (
-                    <button type="button" class="wood-btn" title={hint} ref={this.animalButtons.get(kind)![i]}
-                      onClick={() => this.change({ animalsBelow: { ...this.settings.animalsBelow, [kind]: value } })}>{label}</button>
-                  ))}
-                </span>
+                <StopSlider input={this.animalSliders.get(kind)!} choices={HIDE_ANIMALS}
+                  onPick={(value) => this.change({ animalsBelow: { ...this.settings.animalsBelow, [kind]: value } })} />
               </div>
             ))}
             <p class="menu-hint">
@@ -291,21 +316,6 @@ export class SettingsMenu {
             Effekte über dem fertigen Bild: Kantenglättung gegen Treppenstufen, Farbgebung mit etwas mehr Kontrast,
             leicht warm und zum Rand dunkler, Glühen um helle Stellen. Alle aus: das Bild geht ohne Umweg auf
             den Schirm - Regen läuft trotzdem.
-          </p>
-          <div class="menu-row">
-            <span>Teile nicht zeichnen</span>
-          </div>
-          {/* Dieselben Schalter wie im Entwickler-Panel - main.ts hält beide gleich (data-off). */}
-          <div class="menu-off">
-            {DEV_OFF.map(([key, label, hint]) => (
-              <label title={hint}><input type="checkbox" data-off={key} /> {label}</label>
-            ))}
-          </div>
-          <p class="menu-hint">
-            Zum Messen, was ein Teil kostet - die Entwickler-Infos (P) zeigen die Bildzeit. Gras: Gras- und
-            Steinkarten; Modelle: Gebäude, Bäume, Blumen, Figuren und Felder; Partikel: Rauch, Staub, Insekten
-            und Fische; Vorausrechnen: der Boden wird nicht mehr im Hintergrund für die Nachbarschaft und die
-            nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im Entwickler-Panel.
           </p>
         </section>
         <section>
@@ -373,12 +383,8 @@ export class SettingsMenu {
     const s = this.settings;
     this.pauseButton.current.textContent = this.hooks.paused() ? 'Fortsetzen' : 'Anhalten';
     this.soundButton.current.textContent = this.hooks.soundEnabled() ? 'An' : 'Aus';
-    // Gespeichert ist die Grenze in Pixeln; ein Wert zwischen den Stufen zeigt die Stufe darunter.
-    this.billboards.current.value = String(Math.max(0, BILLBOARDS.findLastIndex(([value]) => value <= s.billboards)));
-    for (const [kind, refs] of this.animalButtons) {
-      const below = s.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT;
-      HIDE_ANIMALS.forEach(([value], i) => refs[i].current.classList.toggle('active', value === below));
-    }
+    setStop(this.billboards.current, BILLBOARDS, s.billboards);
+    for (const [kind, ref] of this.animalSliders) setStop(ref.current, HIDE_ANIMALS, s.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT);
     for (const [key, ref] of this.colorButtons) ref.current.classList.toggle('active', key === s.playerColor);
     const slider = (refs: SliderRefs, v: number) => {
       refs.input.current.value = String(Math.round(v * 100));

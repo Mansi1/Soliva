@@ -138,25 +138,8 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-#menu .menu-btn,
-#menu .menu-choice button {
+#menu .menu-btn {
   padding: 5px 12px;
-}
-#menu .menu-choice {
-  display: inline-flex;
-}
-#menu .menu-choice button {
-  border-radius: 0;
-  margin-left: -2px;
-  font-size: 13px;
-  /* Auch wenn die Bildlaufleiste Platz nimmt: jede Wahl in einer Zeile. */
-  white-space: nowrap;
-}
-#menu .menu-choice button:first-child {
-  border-radius: 4px 0 0 4px;
-}
-#menu .menu-choice button:last-child {
-  border-radius: 0 4px 4px 0;
 }
 /* Spielerfarben: runde Farbfelder, das gewählte mit goldenem Rand */
 #menu .menu-colors {
