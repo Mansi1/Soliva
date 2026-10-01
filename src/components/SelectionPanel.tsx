@@ -13,7 +13,7 @@ import { formatDuration } from '../format';
 import {
   CROP_ORDER, CROPS, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
 } from '../world/catalog';
-import { animalIcon, buildingIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
+import { animalIcon, buildingIcon, populationIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
 
 /** Werkstatt fürs Panel: wer dort arbeitet (fehlt, wenn niemand), was er tut, Fortschritt des Bogens. */
@@ -411,7 +411,8 @@ interface Command {
 function trainCommand(train: TrainView): Command {
   return {
     action: 'train', title: `${train.label} ausbilden (V) - ${train.cost}\nMit Umschalt: 5 auf einmal`,
-    icon: villagerIcon(false, rgb()), key: 'V', disabled: !train.affordable,
+    // Frau und Mann wie in der Rohstoffleiste - ausgebildet wird beides.
+    icon: populationIcon(rgb()), key: 'V', disabled: !train.affordable,
   };
 }
 
