@@ -218,10 +218,14 @@ function stateLink() {
 }
 const shareButton = document.getElementById('share-link') as HTMLButtonElement;
 shareButton.addEventListener('click', () => copyLink(shareButton, stateLink()));
-// Abschalter im Entwickler-Panel (MapRenderer.off).
-for (const box of document.querySelectorAll<HTMLInputElement>('#dev-off input[data-off]')) {
+// Abschalter im Entwickler-Panel und im Menü unter Grafik (MapRenderer.off) -
+// beide zeigen denselben Stand.
+const offBoxes = document.querySelectorAll<HTMLInputElement>('input[data-off]');
+for (const box of offBoxes) {
   box.addEventListener('change', () => {
-    renderer.off[box.dataset.off as keyof typeof renderer.off] = box.checked;
+    const key = box.dataset.off as keyof typeof renderer.off;
+    renderer.off[key] = box.checked;
+    for (const other of offBoxes) if (other.dataset.off === key) other.checked = box.checked;
   });
 }
 

@@ -14,6 +14,7 @@ import { ANIMAL_CLASSES } from '../world/unit';
 import { ZOOM_LEVELS } from '../game/Camera';
 import { ShortcutList } from './Shortcuts';
 import { confirmDialog } from './ConfirmDialog';
+import { DEV_OFF } from './Hud';
 
 /** Seiten des Menüs: die Übersicht und die Untermenüs. */
 type Page = 'main' | 'ton' | 'steuerung' | 'grafik';
@@ -95,7 +96,7 @@ export class SettingsMenu {
   private opened = false;
   private pauseButton = createRef<HTMLButtonElement>();
   private soundButton = createRef<HTMLButtonElement>();
-  private billboardButtons = BILLBOARDS.map(() => createRef<HTMLButtonElement>());
+  private billboards = createRef<HTMLInputElement>();
   private animalButtons = new Map(ANIMAL_KINDS.map(([kind]) => [kind, HIDE_ANIMALS.map(() => createRef<HTMLButtonElement>())]));
   private colorButtons = new Map(Object.keys(PLAYER_COLORS).map((key) => [key, createRef<HTMLButtonElement>()]));
   private volume = sliderRefs();
@@ -237,10 +238,11 @@ export class SettingsMenu {
           <h3>Grafik</h3>
           <div class="menu-row">
             <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
-            <span class="menu-choice">
-              {BILLBOARDS.map(([value, label, hint], i) => (
-                <button type="button" class="wood-btn" title={hint} ref={this.billboardButtons[i]} onClick={() => this.change({ billboards: value })}>{label}</button>
-              ))}
+            {/* Regler mit Stufen: Aus, Zoom 1 bis 5 - die Wörter darunter stehen an den Stufen. */}
+            <span class="menu-stops">
+              <input type="range" min="0" max={String(BILLBOARDS.length - 1)} step="1" ref={this.billboards}
+                onInput={(e: Event) => this.change({ billboards: BILLBOARDS[Number((e.target as HTMLInputElement).value)][0] })} />
+              <span class="menu-stop-labels">{BILLBOARDS.map(([, label, hint]) => <span title={hint}>{label}</span>)}</span>
             </span>
           </div>
           <p class="menu-hint">
@@ -303,6 +305,21 @@ export class SettingsMenu {
             Effekte über dem fertigen Bild: Kantenglättung gegen Treppenstufen, Farbgebung mit etwas mehr Kontrast,
             leicht warm und zum Rand dunkler, Glühen um helle Stellen. Alle aus: das Bild geht ohne Umweg auf
             den Schirm - Regen läuft trotzdem.
+          </p>
+          <div class="menu-row">
+            <span>Teile nicht zeichnen</span>
+          </div>
+          {/* Dieselben Schalter wie im Entwickler-Panel - main.ts hält beide gleich (data-off). */}
+          <div class="menu-off">
+            {DEV_OFF.map(([key, label, hint]) => (
+              <label title={hint}><input type="checkbox" data-off={key} /> {label}</label>
+            ))}
+          </div>
+          <p class="menu-hint">
+            Zum Messen, was ein Teil kostet - die Entwickler-Infos (P) zeigen die Bildzeit. Gras: Gras- und
+            Steinkarten; Modelle: Gebäude, Bäume, Blumen, Figuren und Felder; Partikel: Rauch, Staub, Insekten
+            und Fische; Vorausrechnen: der Boden wird nicht mehr im Hintergrund für die Nachbarschaft und die
+            nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im Entwickler-Panel.
           </p>
         </section>
         <section data-page="main">
@@ -379,7 +396,8 @@ export class SettingsMenu {
     const s = this.settings;
     this.pauseButton.current.textContent = this.hooks.paused() ? 'Fortsetzen' : 'Anhalten';
     this.soundButton.current.textContent = this.hooks.soundEnabled() ? 'An' : 'Aus';
-    BILLBOARDS.forEach(([value], i) => this.billboardButtons[i].current.classList.toggle('active', value === s.billboards));
+    // Gespeichert ist die Grenze in Pixeln; ein Wert zwischen den Stufen zeigt die Stufe darunter.
+    this.billboards.current.value = String(Math.max(0, BILLBOARDS.findLastIndex(([value]) => value <= s.billboards)));
     for (const [kind, refs] of this.animalButtons) {
       const below = s.animalsBelow[kind] ?? ANIMALS_BELOW_DEFAULT;
       HIDE_ANIMALS.forEach(([value], i) => refs[i].current.classList.toggle('active', value === below));

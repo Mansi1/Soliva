@@ -275,3 +275,33 @@
   margin-left: 4px;
   color: var(--gold);
 }
+/* Regler mit Stufen (Bäume als Bild): Wörter unter den Stufen, so breit wie Regler und Zahl daneben. */
+#menu .menu-stops {
+  display: flex;
+  flex-direction: column;
+  width: 226px;
+}
+#menu .menu-stops input[type='range'] {
+  width: 100%;
+  margin: 0;
+}
+/* Abstand zum Rand = halbe Breite des Reglerknopfs - so stehen die Wörter unter den Stufen. */
+#menu .menu-stop-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--cream-muted);
+}
+/* Teile nicht zeichnen: vier Schalter nebeneinander. */
+#menu .menu-off {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0 4px;
+  font-size: 14px;
+}
+#menu .menu-off label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
