@@ -43,6 +43,6 @@ output/*
 input/*
 
 # Persönliches Gedächtnis, nicht fürs Repo (AGENTS.md "memory.md").
-# CLAUDE.local.md ausgeschlossen: committet würde sie bei allen AGENTS.md verdrängen.
+# CLAUDE.local.md: persönliche Anweisungen für Claude Code (CLAUDE.md).
 memory.local.md
 CLAUDE.local.md

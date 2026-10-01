@@ -321,10 +321,9 @@ In `memory.md` (Projektwurzel) hältst du fest, was du beim Arbeiten gelernt has
   - Gilt er dauerhaft für alle Agenten, als Regel oder Arbeitsweise: in `AGENTS.md`.
   - Lässt er sich prüfen: als Test oder Prüfschritt, nicht als Eintrag.
   - Alles andere, was für alle gilt: in `memory.md`.
-  - Gilt er nur für deinen Rechner oder für dich (Pfade, deine Node-Version, Namen deiner Remotes, Zugänge, Eigenheiten deines Geräts): nicht ins Repo. Claude Code merkt sich so etwas im Auto-Memory (`/memory`), andere Werkzeuge in `memory.local.md` (steht in `.gitignore`).
+  - Gilt er nur für deinen Rechner oder für dich (Pfade, deine Node-Version, Namen deiner Remotes, Zugänge, Eigenheiten deines Geräts): nicht ins Repo, sondern in deine eigene `memory.local.md` (steht in `.gitignore`). Hat dein Werkzeug ein eigenes Gedächtnis, geht auch das.
 - **Messwerte nennen die GPU** wie `getRenderInfo().gpu` (z. B. M1, M4) und den Stand, nie „dieser Rechner“. Der nächste Agent sitzt vielleicht an einem anderen.
-- **`.agents/` gehört defuss-vae:** `.agents/MEMORY.md` zeigt nur hierher. Dort und in `.agents/CLI_GIST.md` keine eigenen Einträge anlegen. Auch Befehle und wiederkehrende Lehren aus `.agents/EPISODES.md` kommen nach `memory.md`. `EPISODES.md` schreibt das Gate selbst.
-- **Keine `CLAUDE.local.md` anlegen und keine `CLAUDE.md` ohne `@AGENTS.md`:** Sobald eine davon da ist, liest Claude Code `AGENTS.md` in der Grundeinstellung nicht mehr.
+- **`.agents/MEMORY.md`, `CLI_GIST.md` und `EPISODES.md` gehören defuss-vae:** `.agents/MEMORY.md` zeigt nur hierher. Dort und in `.agents/CLI_GIST.md` keine eigenen Einträge anlegen. Auch Befehle und wiederkehrende Lehren aus `.agents/EPISODES.md` kommen nach `memory.md`. `EPISODES.md` schreibt das Gate selbst.
 - **Bewusst überarbeiten, nicht nur anhängen:**
   - Bei jedem Besuch die Einträge prüfen, die deine Arbeit berühren.
   - Was nicht mehr stimmt oder nicht mehr gebraucht wird, *löschen*. Das betrifft etwa behobene Fehler, erledigte Folgearbeiten und Werte, die eine neue Messung ersetzt.
