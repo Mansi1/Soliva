@@ -40,13 +40,9 @@ Non-trivial logic leaves one cheap runnable invariant/check behind. No testing f
 
 ---
 
-# WebGL / OpenGL ES 2
+# WebGL 2 / OpenGL ES 3.0
 
-Assume **WebGL 1 / OpenGL ES 2.0 / GLSL ES 1.00** unless the project explicitly says otherwise.
-
-**Soliva nutzt WebGL 2 / GLSL ES 3.00** (`getContext('webgl2')`, Shader mit `#version 300 es`) – die ES2-Einschränkungen unten (NPOT, `OES_element_index_uint`, GLSL-ES-1.00-Schleifen) gelten hier nicht. Kein Rückweg auf WebGL 1 einbauen.
-
-Do not introduce WebGL 2 / ES3 features into an ES2 path.
+**Soliva nutzt WebGL 2 / GLSL ES 3.00** (`getContext('webgl2')`, Shader mit `#version 300 es`), die Regeln unten gelten dafür. Einen WebGL-1-Pfad gibt es nicht, keinen einbauen. Was WebGL 1 nur über Erweiterungen oder gar nicht kann (32-Bit-Indizes, VAOs, Instancing, Mipmaps für NPOT-Texturen), gehört hier zum Kern: direkt nutzen.
 
 Extension-backed functionality requires runtime detection and either an existing fallback, a minimal fallback, or explicit failure.
 
@@ -122,7 +118,7 @@ Keep shaders minimal.
 
 Rules:
 
-- GLSL ES 1.00 for WebGL 1.
+- GLSL ES 3.00: `#version 300 es` as the very first line, `in`/`out`, `texture()`, an own `out vec4` for the fragment color. No `attribute`, `varying`, `texture2D`, `gl_FragColor`.
 - Fragment precision declaration is mandatory.
 - Compile and link failures are fatal and must expose logs.
 - Static GLSL > generated GLSL unless generation solves a real variant problem.
@@ -158,7 +154,7 @@ clip = projection × view × model × local
 
 according to the existing convention.
 
-`uniformMatrix*fv(..., transpose, ...)` uses `transpose = false` in WebGL.
+`uniformMatrix*fv(..., transpose, ...)` uses `transpose = false` here (column-major data). WebGL 2 would allow `true`; do not mix both.
 
 Normals under non-uniform scale require the appropriate inverse-transpose transform. If the renderer intentionally supports only rigid/uniform-scale transforms, preserve the simpler invariant and document the ceiling.
 
@@ -176,7 +172,7 @@ Generated/uploaded geometry must maintain:
 
 Prefer indexed geometry when reuse is natural, but do not invent deduplication infrastructure for tiny meshes.
 
-WebGL 1 32-bit element indices require `OES_element_index_uint`.
+32-bit element indices (`UNSIGNED_INT`, `Uint32Array`) are core in WebGL 2; no extension check.
 
 Do not upload/recreate static geometry per frame.
 
@@ -188,11 +184,7 @@ Do not allocate typed arrays in hot paths unless data genuinely changes.
 
 Uploads are expensive; upload only when content changes.
 
-Respect WebGL 1 NPOT restrictions.
-
-Do not power-of-two-resize assets unless required by the desired wrap/filter/mipmap behavior.
-
-Do not generate mipmaps for unsupported NPOT usage.
+WebGL 2 supports NPOT textures fully, including mipmaps and `REPEAT`. Do not resize assets to powers of two for GL reasons.
 
 Preserve the existing Y-flip convention. Never compensate twice.
 
@@ -324,37 +316,36 @@ In `memory.md` (Projektwurzel) hältst du fest, was du beim Arbeiten gelernt has
   - Ein veralteter Eintrag ist schädlicher als ein fehlender: Der nächste Agent handelt danach.
 - **Nichts doppeln:** Gilt etwas dauerhaft für alle Agenten, gehört es hierher in `AGENTS.md`. Aus `memory.md` wird es dann gelöscht.
 
-## Loop unrolling
+# Loop unrolling
 
-Loop unrolling is a valid optimization when the iteration count is **small, fixed, and hot**, especially in GLSL ES 1.00 where older ES2-era compilers/drivers may optimize or accept statically expanded code more reliably than dynamic loop structures.
+Loop unrolling is a valid optimization when the iteration count is **small, fixed, and hot**. GLSL ES 3.00 accepts dynamic loop bounds, so unrolling is a measured performance choice, not a portability fix.
 
 Prefer the compiler first. Manually unroll only when at least one applies:
 
 - profiling shows loop overhead or compiler output matters;
-- a target ES2 implementation handles the loop poorly;
+- a target GPU/driver measurably handles the loop poorly;
 - the loop bound is compile-time fixed and very small;
-- unrolling enables constant propagation/dead-code elimination;
-- GLSL ES 1.00 loop restrictions or driver behavior make the explicit form more portable.
+- unrolling enables constant propagation/dead-code elimination.
 
 Example:
 
 ```glsl
 // Fixed 4-tap kernel: explicit operations are intentional.
-sum += texture2D(uTexture, uv + offsets[0]);
-sum += texture2D(uTexture, uv + offsets[1]);
-sum += texture2D(uTexture, uv + offsets[2]);
-sum += texture2D(uTexture, uv + offsets[3]);
+sum += texture(uTexture, uv + offsets[0]);
+sum += texture(uTexture, uv + offsets[1]);
+sum += texture(uTexture, uv + offsets[2]);
+sum += texture(uTexture, uv + offsets[3]);
 ```
 
 may be preferable to:
 
 ```glsl
 for (int i = 0; i < 4; ++i) {
-    sum += texture2D(uTexture, uv + offsets[i]);
+    sum += texture(uTexture, uv + offsets[i]);
 }
 ```
 
-when the target compiler benefits from or requires it.
+when measurement shows the target compiler benefits from it.
 
 Rules:
 
@@ -370,8 +361,8 @@ Rules:
 If manually unrolling for a known platform/compiler ceiling, document why:
 
 ```text
-ponytail: manually unrolled 4-tap fragment loop for ES2 compiler stability;
-return to the loop when minimum targets compile/benchmark equivalently.
+ponytail: manually unrolled 4-tap fragment loop, measured faster on <GPU/driver>;
+return to the loop when the targets benchmark equivalently.
 ```
 
 Unrolling is an implementation choice, not an architecture.
@@ -589,7 +580,7 @@ A WebGL change is done when the smallest implementation:
 1. solves the requested behavior;
 2. modifies the correct layer;
 3. reuses existing renderer/resource/math paths;
-4. preserves ES2/WebGL 1 compatibility where required;
+4. uses WebGL 2 core features and detects optional extensions at runtime;
 5. owns only the state/resources it should own;
 6. avoids unnecessary per-frame work/allocation/upload;
 7. fails explicitly on real setup errors;
