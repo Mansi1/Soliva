@@ -6,7 +6,7 @@
 // die Teile dann über ihre IDs; was sich ändert, setzt es gezielt (Texte,
 // hidden, Klassen) oder rendert die jeweilige Komponente hinein.
 
-import { render, type Props } from 'defuss';
+import { createRef, render, type Props } from 'defuss';
 import './Hud.css';
 import { TILE_TYPE_COLOR, TILE_TYPE_LABEL } from '../map';
 import type { TileType } from '../noise';
@@ -124,6 +124,33 @@ function FlatButton() {
 }
 
 /**
+ * Vollbild an/aus über die Fullscreen-API. Das Symbol folgt fullscreenchange,
+ * also auch Esc. Ohne die API (iPhone-Safari) fehlt der Knopf.
+ */
+function FullscreenButton() {
+  const button = createRef<HTMLButtonElement>();
+  document.addEventListener('fullscreenchange', () => {
+    const on = !!document.fullscreenElement;
+    button.current.classList.toggle('on', on);
+    button.current.title = on ? 'Vollbild beenden' : 'Vollbild';
+  });
+  const toggle = () => {
+    const request = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    request.catch((err: unknown) => console.warn('Fullscreen toggle failed:', err));
+  };
+  return (
+    <button id="fullscreen" type="button" title="Vollbild" ref={button} onClick={toggle}
+      hidden={!document.fullscreenEnabled}>
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path class="enter" d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5" />
+        <path class="exit" d="M7.5 3v4.5H3M17 7.5h-4.5V3M12.5 17v-4.5H17M3 12.5h4.5V17" />
+      </svg>
+    </button>
+  );
+}
+
+/**
  * Eine Spitze der Windrose: zeigt von der Mitte nach außen, halb dunkel, halb
  * hell, hinten eingekerbt. Oben und unten liegt die dunkle Hälfte links bzw.
  * rechts, seitlich unten bzw. oben - wie auf einer gezeichneten Karte.
@@ -189,7 +216,7 @@ function TurnIcon({ flip }: { flip?: boolean }) {
  * Minimap wie in AoE4, ohne Kasten: die runde Karte in einem Holzreif mit
  * Nägeln, drumherum die Windrose - frei über dem Spielfeld. Außen am Reif
  * hängen kleine runde Holzknöpfe auf den Diagonalen: oben Speichern und Menü
- * (mountMinimapMenu), unten links der Ton und das flache Gelände,
+ * (mountMinimapMenu), daneben Vollbild, unten links der Ton und das flache Gelände,
  * unten rechts das Drehen.
  */
 function Minimap() {
@@ -232,6 +259,7 @@ function Minimap() {
       <Compass />
       <RingSlot deg={225} id="minimap-save" />
       <RingSlot deg={315} id="minimap-menu" />
+      <RingSlot deg={338}><FullscreenButton /></RingSlot>
       <RingSlot deg={135}><SoundButton /></RingSlot>
       <RingSlot deg={158}><FlatButton /></RingSlot>
       <RingSlot deg={112}>

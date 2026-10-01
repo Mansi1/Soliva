@@ -452,3 +452,17 @@
 #sound.muted .off {
   display: inline;
 }
+/* Ohne Fullscreen-API versteckt - sonst gewinnt display: grid der Reif-Knöpfe. */
+#fullscreen[hidden] {
+  display: none;
+}
+/* Vollbild an: die Ecken zeigen nach innen - ein Klick beendet es. */
+#fullscreen .exit {
+  display: none;
+}
+#fullscreen.on .enter {
+  display: none;
+}
+#fullscreen.on .exit {
+  display: inline;
+}
