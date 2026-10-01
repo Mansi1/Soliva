@@ -23,6 +23,12 @@ function check(what, ok, detail = '') {
 }
 
 const wait = (ms) => page.waitForTimeout(ms);
+const menuOpen = () => page.$eval('#menu', (e) => !e.hidden);
+/** Esc bricht ab, was läuft - ist nichts mehr da, öffnet es das Menü; das dann gleich wieder zu. */
+async function cancel() {
+  await page.keyboard.press('Escape');
+  if (await menuOpen()) await page.keyboard.press('Escape');
+}
 /** Vorrat einer Rohstoffart laut Rohstoffleiste. */
 const stock = async (kind) => Number(await page.$eval(`#stock [data-key=${kind}] .rb-amount`, (e) => e.textContent));
 /** Speichern-Knopf drücken und den Spielstand der Welt lesen. */
@@ -75,10 +81,10 @@ console.log(`  GPU: ${await page.evaluate(() => window.getRenderInfo?.().gpu)}`)
 // Bauen: Hauptgebäude (1), dann ein Haus (2)
 await page.keyboard.press('1');
 check('Hauptgebäude gebaut', await placeNearCenter('town_center'));
-await page.keyboard.press('Escape');
+await cancel();
 await page.keyboard.press('2');
 check('Haus gebaut', await placeNearCenter('house'));
-await page.keyboard.press('Escape');
+await cancel();
 
 // Ausbilden: Hauptgebäude wählen (H), Dorfbewohner einreihen (V)
 await page.keyboard.press('h');
@@ -87,7 +93,7 @@ const foodBefore = await stock('food');
 await page.keyboard.press('v');
 await wait(300);
 check('Dorfbewohner in Ausbildung', (await stock('food')) < foodBefore, `Nahrung ${foodBefore} → ${await stock('food')}`);
-await page.keyboard.press('Escape');
+await cancel();
 
 // Feld: 6 öffnet das Untermenü, 2 wählt die zweite Frucht, Ziehen steckt ab
 await page.keyboard.press('6');
@@ -103,7 +109,13 @@ await page.mouse.up();
 await wait(200);
 const farmsAfter = count(await saved(), 'farm');
 check('Feld abgesteckt', farmsAfter > farmsBefore, `${farmsBefore} → ${farmsAfter} Feldstücke`);
+await cancel();
+
+// Ist nichts mehr abzubrechen, öffnet Esc das Menü, ein weiteres Esc schließt es.
+for (let i = 0; i < 4 && !(await menuOpen()); i++) await page.keyboard.press('Escape');
+check('Esc öffnet zuletzt das Menü', await menuOpen());
 await page.keyboard.press('Escape');
+check('Esc schließt das Menü', !(await menuOpen()));
 
 // Speichern und neu laden
 const before = await saved();

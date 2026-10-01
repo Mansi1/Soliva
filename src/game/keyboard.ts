@@ -28,7 +28,7 @@ export interface KeyCommands {
   turn(direction: 1 | -1): void;
   /** R: Blickrichtung Norden, Blickwinkel wie zu Beginn. */
   resetView(): void;
-  /** Esc im Spiel: Untermenü zu, Baumodus aus, sonst Auswahl aufheben. */
+  /** Esc im Spiel: Untermenü zu, Baumodus aus, Auswahl aufheben - ist nichts davon da, das Menü. */
   cancel(): void;
   demolish(): void;
   /** Zum (nächsten) Hauptgebäude springen. */

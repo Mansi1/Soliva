@@ -73,7 +73,7 @@ export const CONTROLS: readonly Control[] = [
     keys: [VILLAGER.key], run: (c, e) => c.train(e.shiftKey ? 5 : 1),
   },
   { label: ['Entf'], what: 'Abreißen', short: 'abreißen', keys: ['delete', 'backspace'], run: (c) => c.demolish() },
-  { label: ['Esc'], what: 'Abbrechen, Auswahl aufheben', short: 'abbrechen', keys: ['escape'], run: (c) => c.cancel() },
+  { label: ['Esc'], what: 'Abbrechen, Auswahl aufheben, sonst Menü', short: 'abbrechen', keys: ['escape'], run: (c) => c.cancel() },
   // F3 und F10 wie in AoE2 - sie behandelt keyboard.ts vorab, weil sie auch im Menü gelten.
   { label: ['F3'], what: 'Pause', short: 'Pause' },
   { label: ['F10'], what: 'Menü', short: 'Menü' },
