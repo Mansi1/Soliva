@@ -92,7 +92,7 @@ nichts.
 
 | Cheat | Wirkung |
 |---|---|
-| `iam the king` | je +30.000 Nahrung, Holz, Stein und Gold, Bevölkerungsgrenze +100 |
+| `im the king` | je +30.000 Nahrung, Holz, Stein und Gold, Bevölkerungsgrenze +100 |
 | `i need help` | 20 Dorfbewohner rund um den Mauszeiger – nur auf begehbarem Boden; über Wasser, Wald oder Gebäuden nichts |
 | `muh`, `muh muh`, `muh muh muh`, … | je „muh“ eine Kuh am Mauszeiger, weitere rundherum – nicht auf Wasser, Gebirge, Schnee oder in Gebäuden |
 | `speedy gonzales` | an/aus, siehe unten |
@@ -107,7 +107,7 @@ aus. Solange es an ist:
   voll; abgeliefert wird wie sonst.
 
 Neu säen kostet auch dann 2 Holz je Furche; Stein und Gold werden normal
-abgebaut. Die Bevölkerungsgrenze aus `iam the king` und `speedy gonzales`
+abgebaut. Die Bevölkerungsgrenze aus `im the king` und `speedy gonzales`
 stehen nicht im Spielstand – nach dem Laden sind sie weg. Die Cheats stehen
 in `src/main.ts` (`CHEATS`).
 

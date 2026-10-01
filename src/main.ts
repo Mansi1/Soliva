@@ -645,7 +645,7 @@ function showZoom() {
  * Jeder gibt die Meldung zurück, wenn er gewirkt hat, sonst nichts.
  */
 const CHEATS: Record<string, () => string | undefined> = {
-  iamtheking: () => {
+  imtheking: () => {
     for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.stock[kind] += 30000;
     world.bonusHousing += 100;
     return '+30.000 Nahrung, Holz, Stein und Gold, +100 Bevölkerung';
