@@ -7,7 +7,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 - 2026-09-26: Headless-Chrome aus `tools/ui/browser.mjs` rendert auf Apple-Rechnern über Metal auf der echten GPU (`ANGLE Metal Renderer: Apple M4` bzw. `Apple M1`), kein Software-Renderer; `EXT_disjoint_timer_query_webgl2` ist vorhanden. Worauf ein Lauf rechnete, zeigt `getRenderInfo().gpu` - anderswo (etwa in der CI) erst dort nachsehen, bevor Zeiten etwas belegen.
 - Bench, Rauchtest und Screenshots brauchen den laufenden Dev-Server (`npm run dev`, http://localhost:5173). Für einen zweiten Stand (Worktree) einen eigenen Port nehmen (`npx vite --port 5188`) und die Adresse übergeben: `node tools/perf/bench.mjs http://localhost:5188`.
-- 2026-09-27: `npm test` braucht Node ≥ 22.6: `tests/lighting.test.mjs` importiert `.ts` direkt. Mit Node 20 schlägt er fehl (`ERR_UNKNOWN_FILE_EXTENSION`). Die CI nimmt Node 24 (`.github/workflows/verify.yml`), lokal dieselbe Hauptversion nehmen.
+- 2026-09-27: `npm test` braucht Node ≥ 22.6: `tests/lighting.test.mjs` importiert `.ts` direkt. Mit Node 20 schlägt er fehl (`ERR_UNKNOWN_FILE_EXTENSION`). Die Version steht in `.nvmrc` (24), die CI liest sie (`node-version-file`); lokal `nvm use`.
 - 2026-09-27: Spielzustand per Playwright auslesen ohne Debug-Global: `window.dispatchEvent(new Event('beforeunload'))` speichert, dann `localStorage['pgm.world.<seed>']` lesen (Aufgaben, Lagen, Vorrat). Gebäude anklicken: Bäume dahinter fangen den Klick - Treffer am Panel prüfen (z. B. `[data-action=dismiss]`).
 
 - 2026-09-27: Mehrere Modelle in einer Blender-Szene: Blender hängt `.001` an gleiche Objekt- *und Materialnamen* (`Tunic.001`, `Skin.001`). Materialnamen bestimmen das Aussehen im Spiel - vor dem Export je Modell die Namen gegen `git show HEAD:<glb>` vergleichen oder ein Modell je Szene.
@@ -20,7 +20,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Repo
 
-- Haupt-Repo ist `Mansi1/Soliva-one-who-wanders-alone` (früher `procedurally-generated-map`, alte Adressen leiten um). PRs laufen gegen dessen `main`, ohne Schreibrecht dort aus einem eigenen Fork. Welcher Remote wohin zeigt, ist je Checkout anders - vor dem Push `git remote -v` ansehen.
+- Haupt-Repo ist `Mansi1/Soliva` (früher `Soliva-one-who-wanders-alone` und `procedurally-generated-map`, alte Adressen leiten um). PRs laufen gegen dessen `main`, ohne Schreibrecht dort aus einem eigenen Fork. Welcher Remote wohin zeigt, ist je Checkout anders - vor dem Push `git remote -v` ansehen.
 
 - 2026-09-28: Die Adresse ist `/game/<seed>` im Spiel, `/` im Hauptmenü (`StartScreen.open/close`, `history.replaceState`), die Abfrage fällt beim Start weg. Adress-Schalter nur über `startParams` lesen, das vorher gelesen wird. Prüfschalter: `?festesLicht` (Sonne wie früher, kein Wetter), `?regen` (Dauerregen), `?ohneEffekte` (keine Post-Effekte). Nur mit `?festesLicht&ohneEffekte` ist das Bild mit dem vor dem Lichtsystem vergleichbar.
 - 2026-09-27: Der Gelände-Cache (RGBA8) speichert die Farbe geteilt durch `CACHE_HEADROOM` (1,5), weil das Licht jetzt erst im Bild dazukommt. Ohne das werden helle Felsfarben auf der Schattenseite zu dunkel. Wer Farben im Cache ausliest, muss mit `uCacheGain` multiplizieren. Der Alpha-Kanal ist belegt: Tiefe im Flachwasser 0..1 für die Brandung, 1 = Land oder tiefes Wasser.
@@ -60,7 +60,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Offen
 
-- 2026-10-01: `pages.yml` und `verify.yml` liefen nach dem Merge von #26 auf `Mansi1/Soliva-one-who-wanders-alone` und schlugen fehl. Pages ist dort nicht eingeschaltet (`configure-pages`: Not Found) - in den Repo-Einstellungen unter Pages die Quelle „GitHub Actions“ wählen. In `verify` bricht `make e2e` mit Zeitüberschreitung beim Klick auf „Einzelspieler“ ab (`tools/ui/smoke.mjs:54`); ob Chrome auf ubuntu-latest WebGL2 bekommt, ist ungeprüft.
+- 2026-10-01: `pages.yml` und `verify.yml` liefen nach dem Merge von #26 auf `Mansi1/Soliva` und schlugen fehl. Pages ist dort nicht eingeschaltet (`configure-pages`: Not Found) - in den Repo-Einstellungen unter Pages die Quelle „GitHub Actions“ wählen. In `verify` bricht `make e2e` mit Zeitüberschreitung beim Klick auf „Einzelspieler“ ab (`tools/ui/smoke.mjs:54`); ob Chrome auf ubuntu-latest WebGL2 bekommt, ist ungeprüft.
 - Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.
 - 2026-09-30, M4: Leere Flächen beim Pannen messen: Löschfarbe des Geländes ist (19, 31, 56) - Anteil solcher Pixel in Screenshots während gehaltener Taste. Pannen nach Westen in die Berge ab `Testseed` lat -43 lng 12 ist der harte Fall (Zoom 4, DPR 1: ~16-18 % leer schon auf HEAD 9536faa). Mit DPR 2 schafft Playwright dabei nur 4-30 fps, auch auf HEAD - dort nur grob vergleichbar.
