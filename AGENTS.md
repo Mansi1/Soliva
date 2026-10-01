@@ -306,6 +306,7 @@ Hintergrund und Plan: `docs/OPTIMIZATION_PLAN.md`.
   - Zeilenangaben dort sind veraltet. Nach Funktionsnamen suchen, nicht nach Zeilennummern.
   - Befunde vor dem Umsetzen am Code prüfen. Behauptungen wie „bit-identisch“ oder „harmlos“ waren schon falsch. Aufrufer lesen, bevor ein Early-out das Ergebnis ändert.
   - Umgesetztes und bewusst Ausgelassenes vermerkt der Plan zu Beginn von Abschnitt 2. Das bei jeder Änderung nachführen.
+- **Pfade zur eigenen Seite:** Auf GitHub Pages liegt das Spiel unter `/<repo>/` (`.github/workflows/pages.yml` setzt `BASE_PATH`). Adressen, `fetch` und Bilder aus `public/` darum über `import.meta.env.BASE_URL` bilden, nie fest mit `/` beginnen. Lokal ist der Wert `/`. Prüfen: `BASE_PATH=/soliva/ npm run build`, `BASE_PATH=/soliva/ npx vite preview`, `node tools/ui/smoke.mjs http://localhost:4173/soliva`.
 - **`Array.find` durch eine Map ersetzen:** `find` liefert den *ersten* Treffer, `new Map(entries)` behält den *letzten*. Bei möglichen Doppelten die Map aus der umgekehrten Liste bauen.
 
 ---
@@ -608,3 +609,18 @@ The best abstraction is usually the one already present.
 The best optimization is removal.
 
 The best draw call is the one that never needs to happen.
+
+<!-- defuss-vae:start -->
+## defuss-vae
+Read `.agents/MEMORY.md` + `.agents/CLI_GIST.md` before engineering work; `grep` `.agents/EPISODES.md` for recurring failures.
+Skills `plan` `implement` `review` `finalize` are human-triggered only; never auto-invoke them. Outside skills write plain concise prose.
+Evidence > assumption: IF a runtime fact is unknown THEN observe before editing (read → existing test/command → smallest discriminating probe → ask). Temporary probe lines carry `vae:probe` and the gate rejects leftovers; read logs bounded (`make log`, tail, grep); no log spraying.
+Layout: `.agents/` agent state; `Makefile` verbs setup start stop status log metrics bench test coverage lint e2e verify; services only via `make start` → `var/log/<svc>.stdout|.stderr`, `tmp/<svc>.pid` (gitignored); programs read `input/`, write `output/` (both gitignored; commit e2e fixtures via `!input/<file>`).
+test = real subsystems in isolation, no mocks; e2e = build the publishable artifact and consume it like a user. lint = `uv run ruff check .` (Python) | `bunx oxlint --deny-warnings` (JS/TS; plain oxlint exits 0 on findings). verify = lint + test + coverage + e2e; CI on a GitHub remote is `.github/workflows/verify.yml` running `make setup` then `make verify`.
+Toolchain: new projects and subprojects start on `bun` (JS/TS, `bun init`) or `uv` (Python, `uv init`), never npm/yarn/pnpm/pip/poetry; the gate rejects newly added foreign lockfiles. In uv projects use `uv run`/`uv add`, not venv activation, which agent shells do not keep. A repo already on another toolchain keeps it unless the human approves migrating; propose it. Missing uv/bun: `make setup` installs them with the official installers (brand-new project: `curl -LsSf https://astral.sh/uv/install.sh | sh`, `curl -fsSL https://bun.sh/install | bash`).
+Habits: separate concerns (pure core logic; I/O, config and framework glue at the edges) in small single-purpose modules testable with real inputs; split by responsibility, never speculatively. Logs: one line per event, ISO-8601 UTC timestamp first (`2026-10-01T12:00:00.123Z`), then level, message, key=value; never secrets. Config: env vars from a gitignored `.env` (bun loads it itself; Python `uv run --env-file .env`); every key the code reads stays in `.env.example` without secret values, updated in the same change (gate-checked); validate config once at startup and fail fast. Services exit cleanly on SIGTERM (`make stop`).
+Epistemics: `VERIFIED` = direct evidence; `HYPOTHESIS` = testable inference + falsifier; `UNKNOWN` = not established. Never promote by rhetoric.
+Ponytail: understand → YAGNI → reuse → stdlib → native → installed dependency → minimum code; bug fix = root cause + sibling callers.
+Docs: why this design beats a plausible alternative; prefix material claims `VERIFIED:`, `HYPOTHESIS:` or `UNKNOWN:`.
+Lessons: test | `.agents/VERIFY.py` rule > MEMORY line > EPISODES line.
+<!-- defuss-vae:end -->

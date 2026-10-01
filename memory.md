@@ -71,6 +71,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Offen
 
+- 2026-10-01: GitHub Pages per Actions (`pages.yml`) ist eingerichtet, aber noch nie auf GitHub gelaufen. `kyr0/soliva` hatte Pages noch auf „Branch `perf-optimization`“, dafür muss die Quelle auf „GitHub Actions“ stehen. Ob `make e2e` in `verify.yml` auf ubuntu-latest WebGL2 bekommt (Chrome ohne GPU), ist ungeprüft.
+- GPU-Zeit fehlt im Bench: `gpuFillMs` über `EXT_disjoint_timer_query_webgl2` würde Shader-Optimierungen belegbar machen - vor Plan 5.1 (Höhen-Textur) einbauen.
 - Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.
 - 2026-09-30, M4: Leere Flächen beim Pannen messen: Löschfarbe des Geländes ist (19, 31, 56) - Anteil solcher Pixel in Screenshots während gehaltener Taste. Pannen nach Westen in die Berge ab `Testseed` lat -43 lng 12 ist der harte Fall (Zoom 4, DPR 1: ~16-18 % leer schon auf HEAD 9536faa). Mit DPR 2 schafft Playwright dabei nur 4-30 fps, auch auf HEAD - dort nur grob vergleichbar.

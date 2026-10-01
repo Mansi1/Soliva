@@ -105,7 +105,7 @@ await page.keyboard.press('Escape');
 
 // Speichern und neu laden
 const before = await saved();
-check('Adresse im Spiel', new URL(page.url()).pathname === `/game/${SEED}`, page.url());
+check('Adresse im Spiel', page.url() === `${BASE}/game/${SEED}`, page.url());
 await page.reload();
 await wait(2500);
 check('neu laden bleibt im Spiel', await page.$eval('#start', (e) => e.hidden));

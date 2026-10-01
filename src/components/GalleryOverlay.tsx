@@ -177,7 +177,7 @@ export function mountGallery(root: HTMLElement, items: GalleryItem[], labels: st
       <nav class="gal-list">
         <div class="gal-brand">
           <b>Soliva</b> · Galerie
-          <a href="/">zum Spiel</a>
+          <a href={import.meta.env.BASE_URL}>zum Spiel</a>
         </div>
         <button type="button" class="gal-item gal-all" ref={allRef} onClick={() => hooks.select(-1)}>Alle auf einmal</button>
         {/* Flach, Gruppe für Gruppe - verschachtelte Fragmente rendert defuss nicht. */}

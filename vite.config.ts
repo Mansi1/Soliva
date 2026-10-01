@@ -93,6 +93,9 @@ function saveBillboards(): Plugin {
 }
 
 export default defineConfig({
+  // VERIFIED: Nur der Pages-Build setzt BASE_PATH ("/<repo>/", .github/workflows/pages.yml), sonst "/".
+  // Aus der Umgebung statt fest "/soliva/": Forks und eigene Domain bekommen ihren Pfad von configure-pages.
+  base: process.env.BASE_PATH || '/',
   // add the defuss() plugin to make JSX transpilation work
   plugins: [glbModels(), glbClips(), saveBillboards(), defuss()],
   // Module-Worker (gl/tileStore.worker.ts) auch im Build als ES-Modul.
