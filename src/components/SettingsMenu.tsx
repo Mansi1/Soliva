@@ -211,7 +211,7 @@ export class SettingsMenu {
         <section>
           <h3>Grafik</h3>
           <div class="menu-row">
-            <span title="Bäume als flaches Bild statt als 3D-Modell - weit draußen sieht man kaum einen Unterschied, das Spiel läuft aber flüssiger.">Bäume als Bild bis Zoom</span>
+            <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
             <span class="menu-choice">
               {BILLBOARDS.map(([value, label, hint], i) => (
                 <button type="button" class="wood-btn" title={hint} ref={this.billboardButtons[i]} onClick={() => this.change({ billboards: value })}>{label}</button>
@@ -220,7 +220,8 @@ export class SettingsMenu {
           </div>
           <p class="menu-hint">
             Bis zu dieser Zoomstufe (1 = weit draußen, 5 = ganz nah) werden Bäume als flaches Bild statt als
-            3D-Modell gezeichnet - das Spiel läuft flüssiger, weit draußen sieht man kaum einen Unterschied.
+            3D-Modell gezeichnet - das Spiel läuft viel flüssiger, man sieht kaum einen Unterschied. Bäume, an
+            denen gearbeitet wird, bleiben 3D-Modelle; als Bild wiegen sie nicht im Wind.
             {import.meta.env.DEV ? ' Entwicklermodus: die Bilder liegen in tools/export/out/billboards/.' : ''}
           </p>
           <details class="menu-keys-box">

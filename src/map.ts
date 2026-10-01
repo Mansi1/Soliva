@@ -7,13 +7,20 @@ import { PostRenderer } from './gl/postRenderer';
 import { GrassRenderer } from './gl/grassRenderer';
 import { ParticleRenderer } from './gl/particleRenderer';
 import { MAX_SOURCES, ParticleSources } from './particles';
+import { gpuFrameBegin, gpuFrameEnd } from './gpuTimer';
 import {
+  MAX_RELIEF,
+  groundToWorld,
   screenToGround,
   setViewElevation,
   snapCamera,
   viewElevation,
   viewGroundV,
+  viewRotation,
+  viewZScreen,
   visibleWorldRect,
+  worldToGround,
+  type GpuCamera,
   type IsoView,
 } from './gl/iso';
 import {
@@ -363,6 +370,9 @@ const MIN_TILE_SIZE = 1;
  * Hauptansicht in isometrischer 3D-Sicht. Das Gelände entsteht komplett auf der
  * GPU, die Gebäude kommen als zweiter, instanzierter Durchgang darüber.
  */
+/** CSS-Pixel je Tile der Zoomstufen 1 bis 5 - für sie wird vorausgerechnet. */
+const BAKE_TILE_SIZES = [8, 16, 32, 64, 128];
+
 export class MapRenderer {
   private terrain: TerrainRenderer;
   private entities: EntityRenderer;
@@ -414,8 +424,94 @@ export class MapRenderer {
    * Stehen die Blumen als 3D-Objekte in der Wiese? Hängt an der Stufe des
    * Gelände-Caches, nicht am Zoom: so malt er sie nie zugleich als Tupfen.
    */
+  /**
+   * Weltpunkt, den man in der Bildmitte sieht (mit Geländehöhe) - Gras und
+   * Steine liegen um ihn. camera.x/y ist der Punkt auf Meereshöhe; im Gebirge
+   * lägen sie sonst weit neben dem Bild. Setzt main.ts, wenn sich die Ansicht ändert.
+   */
+  seenCenter: { x: number; y: number } | null = null;
+
+  /**
+   * Texel des Gelände-Caches je CSS-Pixel: auf jeder Zoomstufe 1 Texel je
+   * Bildpunkt - mehr sähe man nicht (der Cache hat keine Mipmaps), weniger
+   * ist weicher. Früher 1,5 auf Retina (44 % weniger Texel), als Zoom und
+   * Pannen noch alles live rechneten; heute kommt das meiste aus dem Speicher
+   * (TileStore) und der vorausgerechneten nächsten Stufe.
+   * ponytail: Deckel 2 für Geräte mit Pixel-Verhältnis 3; als Einstellung
+   * anbieten, wenn ein schwächeres Gerät weniger braucht.
+   */
+  get cacheRatio(): number {
+    return Math.min(this.pixelRatio, 2);
+  }
+
+  /**
+   * Abschalter aus dem Entwickler-Panel: diese Teile nicht zeichnen bzw. nicht
+   * vorausrechnen - so misst man, was sie kosten (Bildzeit ohne Deckel vorher
+   * und nachher). Die Kosten des flachen Geländes zeigt schon die Leertaste.
+   */
+  readonly off = { grass: false, models: false, particles: false, bake: false };
+
+  /** Mitten der Gebäudegruppen des Spielers - um sie herum wird vorausgerechnet (TerrainRenderer.bake). */
+  bakeBuildings: { x: number; y: number }[] = [];
+
+  /** Bodenhöhe (Tiles, grob, ohne Relief-Stärke) für peakReach - setzt main.ts. */
+  groundHeight: ((x: number, y: number) => number) | null = null;
+  private reachKey = '';
+  private reachZ: number = MAX_RELIEF;
+
+  /**
+   * Wie weit (Tiles Höhe) Gelände unter dem Bildrand ins Bild ragen kann (Plan
+   * 5.2): grob abgetastet, bis zu der Tiefe, aus der der höchste mögliche Berg
+   * noch hereinragte. Ein Punkt d v-Einheiten unter dem Rand ragt herein, wenn
+   * zScreen * z > d - gebraucht wird bis zum tiefsten solchen Punkt. Vorher galt
+   * pauschal der höchste Berg: im Flachland eine ganze Bildhöhe Cache und
+   * Gitter umsonst. Neu gemessen, wenn sich die Ansicht um ein paar Tiles bewegt.
+   */
+  private peakReach(camera: GpuCamera, width: number, height: number): number {
+    const height_ = this.groundHeight;
+    if (!height_ || camera.reliefScale <= 0) return MAX_RELIEF;
+    const ppt = camera.pixelsPerTile;
+    const halfU = width / 2 / ppt;
+    const halfV = height / 2 / ppt;
+    const step = Math.max(1, (2 * halfU) / 24);
+    const { u: cu, v: cv } = worldToGround(camera.centerX, camera.centerY);
+    const key = `${Math.round(cu / step)},${Math.round(cv / step)},${halfU.toFixed(1)},${viewRotation()},${viewElevation()}`;
+    if (key === this.reachKey) return this.reachZ;
+    const zs = viewZScreen();
+    const bottom = cv + halfV;
+    let deepest = 0;
+    for (let d = 0; d <= zs * MAX_RELIEF; d += step) {
+      for (let u = cu - halfU - step; u <= cu + halfU + step; u += step) {
+        const p = groundToWorld(u, bottom + d);
+        if (zs * height_(p.x, p.y) > d) deepest = d;
+      }
+    }
+    // Eine Stufe tiefer und zwei Tiles Höhe Luft: zwischen den Stichproben und
+    // im Feindetail (grob nicht mitgerechnet) kann es höher sein.
+    this.reachKey = key;
+    this.reachZ = Math.min(MAX_RELIEF, (deepest + step) / zs + 2);
+    return this.reachZ;
+  }
+
+  /** Gelände im Bild vollständig (für das Ladeschild, main.ts). */
+  get terrainComplete(): boolean {
+    return this.terrain.complete;
+  }
+
+  /** Nichts mehr zu füllen: Bild, Vorrat und Nachbarstufen fertig. */
+  get terrainSettled(): boolean {
+    return this.terrain.settled;
+  }
+
+  /** Beim Laden mehr Gelände je Bild füllen - das Ladeschild verdeckt es ohnehin. */
+  set loading(on: boolean) {
+    // Neu beginnendes Laden: was bisher fertig war, gilt nicht mehr (andere Stufe).
+    if (on && !this.terrain.boost) this.terrain.complete = false;
+    this.terrain.boost = on;
+  }
+
   get flowerObjects(): boolean {
-    return this.cacheTileSize * this.pixelRatio >= FLOWER_OBJECT_PIXELS;
+    return this.cacheTileSize >= FLOWER_OBJECT_PIXELS;
   }
 
   constructor(
@@ -479,7 +575,7 @@ export class MapRenderer {
   /** Flächen, die unter Gebäuden eingeebnet werden - Gelände und Gebäude gleich. */
   setFlatZones(zones: readonly FlatZone[]) {
     const data = packZones(zones);
-    const count = Math.min(zones.length, MAX_FLAT_ZONES);
+    const count = Math.min(zones.length, MAX_FLAT_ZONES - 1);
     this.terrain.flatZones = data;
     this.terrain.flatCount = count;
     this.entities.flatZones = data;
@@ -512,13 +608,16 @@ export class MapRenderer {
       centerX,
       centerY,
       pixelsPerTile: this.tileSize * this.pixelRatio,
-      cachePixelsPerTile: this.cacheTileSize * this.pixelRatio,
+      cachePixelsPerTile: this.cacheTileSize * this.cacheRatio,
       cacheGroundV: this.cacheGroundV,
-      // Beim Hineinzoomen zuerst die Zielstufe, damit sie beim Ankommen fertig
-      // ist; die zwei nächstkleineren liegen so beim Herauszoomen bereit.
-      prefetchPixelsPerTile: [...(goal > this.cacheTileSize ? [goal] : []), this.cacheTileSize / 2, this.cacheTileSize / 4]
-          .filter((t) => t >= MIN_TILE_SIZE)
-          .map((t) => t * this.pixelRatio),
+      // Beim Hineinzoomen zuerst die Zielstufe, sonst immer die nächstfeinere -
+      // auch beim Scrollen wandert sie mit (aus dem Speicher oder mit dem
+      // übrigen Budget), und Hineinzoomen trifft sie fertig an. Die zwei
+      // nächstgröberen liegen fürs Herauszoomen bereit; reicht der Pool
+      // (MAX_CACHES) nicht, fällt die gröbste weg.
+      prefetchPixelsPerTile: [goal > this.cacheTileSize ? goal : this.cacheTileSize * 2, this.cacheTileSize / 2, this.cacheTileSize / 4]
+          .filter((t) => t >= MIN_TILE_SIZE && t <= BAKE_TILE_SIZES[BAKE_TILE_SIZES.length - 1])
+          .map((t) => t * this.cacheRatio),
       reliefScale: this.relief,
     }, canvas.width, canvas.height);
 
@@ -532,7 +631,16 @@ export class MapRenderer {
     const post = this.postEnabled && this.post.active;
     if (post) this.post.begin();
     this.terrain.time = animationTime();
+    this.terrain.pixelRatio = this.pixelRatio;
+    this.terrain.reachZ = this.peakReach(camera, canvas.width, canvas.height);
+    // Vorausrechnen auf allen Zoomstufen, zuerst um das, was man sieht.
+    this.terrain.bakeScales = BAKE_TILE_SIZES.map((t) => t * this.cacheRatio);
+    this.terrain.bakeFocus = [this.seenCenter ?? { x: centerX, y: centerY }, ...this.bakeBuildings];
+    this.terrain.cacheRatio = this.cacheRatio;
+    this.terrain.baking = !this.off.bake;
+    gpuFrameBegin();
     if (!this.terrain.render(camera)) {
+      gpuFrameEnd();
       this.post.cancel();
       return false;
     }
@@ -540,13 +648,15 @@ export class MapRenderer {
     // herausgezoomten Karte zum Einzelpunkt und ist nicht mehr zu erkennen.
     this.entities.groundStep = this.terrain.gridCell;
     // Gras in den Tiefenpuffer des Geländes, vor den Modellen - undurchsichtig, ohne Sortieren.
-    this.grass.render(camera, this.tileSize, {
+    if (!this.off.grass) this.grass.render(camera, this.tileSize, {
       light: this.terrain.light, time: this.terrain.time, gridCell: this.terrain.gridCell,
       flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
+      center: this.seenCenter ?? { x: centerX, y: centerY },
     });
-    this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
-    this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
+    if (!this.off.models) this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
+    if (!this.off.particles) this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
     if (post) this.post.end();
+    gpuFrameEnd();
     return true;
   }
 }

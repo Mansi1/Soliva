@@ -38,9 +38,10 @@ export class Ground {
   /**
    * Geländehöhe (Tiles) ohne Reliefstärke - mit derselben Feinheit wie das
    * Geländegitter der jetzigen Zoomstufe (oder mit `step`) und mit den
-   * eingeebneten Flächen.
+   * eingeebneten Flächen. Das Gitter hat Zellen von 4 CSS-Pixeln (cellPixels in
+   * gl/terrainRenderer.ts), auch auf Retina.
    */
-  groundAt(x: number, y: number, step = 4 / (this.camera.tileSize * this.camera.pixelRatio)): number {
+  groundAt(x: number, y: number, step = 4 / this.camera.tileSize): number {
     return flatten(x, y, reliefZ(this.mapGen.heightAt(x, y, step)), this.flatZones);
   }
 

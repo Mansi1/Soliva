@@ -7,12 +7,17 @@
 // blühenden Wiesen mehr Gruppen, zu Wald, Strand, Wüste und Fels hin keine
 // (MapGenerator.bloomAt). Wie die Vorkommen
 // in Stücken einmal ausgerechnet und gemerkt (fillChunks in resources.ts).
+// Mit `batcher` liegen je Region (REGION x REGION Stücke) alle Blumen in einem
+// festen Puffer auf der Grafikkarte - dort werden sie zu Bildern wie die
+// Bäume -, neu gebaut nur, wenn Stücke dazukommen oder wegfallen oder Gebäude
+// hinzukommen oder wegfallen (World.buildingsRevision). Je Stück ein Puffer
+// hieß gemessen 300-350 statt 48 Draw-Calls.
 
-import { FLOWERS, type EntityInstance } from '../gl/entityRenderer';
+import { FLOWERS, type EntityInstance, type StaticBatch } from '../gl/entityRenderer';
 import { FLOWER_KINDS } from '../gl/flowerModel';
 import type { Terrain } from '../map';
 import type { MapGenerator } from '../noise';
-import { CHUNK, fillChunks, hash } from './resources';
+import { CHUNK, fillChunks, hash, type Batcher } from './resources';
 import type { ViewRect, World } from './world';
 
 /** Zellen je Tile-Kante: je Zelle höchstens eine Blume. */
@@ -33,6 +38,8 @@ const STRAY_CHANCE = 0.004;
 export const FLOWER_SIZE = 0.052;
 
 interface Clump { x: number; y: number; r: number; kind: number }
+/** Stücke je Kante einer Region mit festem Puffer (wie REGION in resources.ts). */
+const REGION = 4;
 /** Nah heran ist der Bildschirm klein - so viele Stücke reichen weit darüber hinaus. */
 const MAX_CHUNKS = 1200;
 
@@ -44,17 +51,51 @@ const smoothstep = (a: number, b: number, v: number) => {
 export class FlowerField {
   /** Je Stück die Blumen. */
   private chunks = new Map<string, EntityInstance[]>();
+  /** Je Region der feste Puffer, aus wie vielen Stücken und für welchen Stand der Gebäude er gebaut ist. */
+  private batches = new Map<string, { batch: StaticBatch | null; chunks: number; revision: number }>();
+  private batcher?: Batcher;
 
   constructor(private terrain: Terrain, private mapGen: MapGenerator) {}
 
   update(view: ViewRect, centerX: number, centerY: number, budgetMs = 3) {
-    fillChunks(this.chunks, view, centerX, centerY, budgetMs, MAX_CHUNKS, (cx, cy) => this.generate(cx, cy));
+    fillChunks(this.chunks, view, centerX, centerY, budgetMs, MAX_CHUNKS, (cx, cy) => this.generate(cx, cy), {
+      dropped: (cx, cy) => this.dropBatch(`${Math.floor(cx / REGION)},${Math.floor(cy / REGION)}`),
+    }, 'flowerChunkMs');
   }
 
-  /** Die Blumen im Rechteck - nicht auf Gebäuden und Feldern. */
-  instances(view: ViewRect, world: World, out: EntityInstance[]) {
+  /**
+   * Die Blumen im Rechteck - nicht auf Gebäuden und Feldern. Mit `statics`
+   * ganze Stücke als feste Puffer (statics.out) statt einzeln nach `out`.
+   */
+  instances(view: ViewRect, world: World, out: EntityInstance[], statics?: { batcher: Batcher; out: StaticBatch[] }) {
     const x1 = view.x + view.width;
     const y1 = view.y + view.height;
+    const free = (plant: EntityInstance) => !world.at(Math.floor(plant.x + 0.5), Math.floor(plant.y + 0.5));
+    if (statics) {
+      this.batcher = statics.batcher;
+      const size = REGION * CHUNK;
+      for (let ry = Math.floor(view.y / size); ry <= Math.floor(y1 / size); ry++) {
+        for (let rx = Math.floor(view.x / size); rx <= Math.floor(x1 / size); rx++) {
+          const key = `${rx},${ry}`;
+          const lists: EntityInstance[][] = [];
+          for (let cy = ry * REGION; cy < (ry + 1) * REGION; cy++) {
+            for (let cx = rx * REGION; cx < (rx + 1) * REGION; cx++) {
+              const list = this.chunks.get(`${cx},${cy}`);
+              if (list) lists.push(list);
+            }
+          }
+          let entry = this.batches.get(key);
+          if (!entry || entry.chunks !== lists.length || entry.revision !== world.buildingsRevision) {
+            if (entry?.batch) statics.batcher.deleteBatch(entry.batch);
+            const plants = lists.flat().filter(free);
+            entry = { batch: plants.length > 0 ? statics.batcher.createBatch(plants) : null, chunks: lists.length, revision: world.buildingsRevision };
+            this.batches.set(key, entry);
+          }
+          if (entry.batch) statics.out.push(entry.batch);
+        }
+      }
+      return;
+    }
     for (let cy = Math.floor(view.y / CHUNK); cy <= Math.floor(y1 / CHUNK); cy++) {
       for (let cx = Math.floor(view.x / CHUNK); cx <= Math.floor(x1 / CHUNK); cx++) {
         const list = this.chunks.get(`${cx},${cy}`);
@@ -64,11 +105,17 @@ export class FlowerField {
           const x = plant.x + 0.5;
           const y = plant.y + 0.5;
           if (x < view.x || x > x1 || y < view.y || y > y1) continue;
-          if (world.at(Math.floor(x), Math.floor(y))) continue;
+          if (!free(plant)) continue;
           out.push(plant);
         }
       }
     }
+  }
+
+  private dropBatch(key: string) {
+    const entry = this.batches.get(key);
+    if (entry?.batch) this.batcher?.deleteBatch(entry.batch);
+    this.batches.delete(key);
   }
 
   /** Die Gruppe im Feld (kx, ky) des Gruppenrasters - oder keine. */

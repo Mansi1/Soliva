@@ -124,3 +124,40 @@ export function parseObjBones(source: string): Map<string, RGB01> {
   }
   return bones;
 }
+
+/**
+ * Gleiche Eckpunkte (alle `n` Floats bitgleich) nur einmal, dazu der Index.
+ * Die Modelle kommen als Dreieckssuppe; mit Index rechnet die GPU einen
+ * geteilten Eckpunkt einmal (Post-Transform-Cache) statt je Dreieck - der
+ * Modell-Pass hängt an den Eckpunkten (Skinning, Wind, Geländehöhe).
+ */
+export function indexVertices(v: Float32Array, n: number): { vertices: Float32Array; indices: Uint32Array } {
+  const count = v.length / n;
+  const bits = new Uint32Array(v.buffer, v.byteOffset, v.length);
+  const out = new Float32Array(v.length);
+  const outBits = new Uint32Array(out.buffer);
+  const indices = new Uint32Array(count);
+  const size = 2 ** Math.ceil(Math.log2(count * 2 + 1));
+  const table = new Int32Array(size).fill(-1);
+  let unique = 0;
+  for (let i = 0; i < count; i++) {
+    let h = 2166136261;
+    for (let k = 0; k < n; k++) h = Math.imul(h ^ bits[i * n + k], 16777619);
+    for (let slot = h & (size - 1); ; slot = (slot + 1) & (size - 1)) {
+      const u = table[slot];
+      if (u < 0) {
+        table[slot] = unique;
+        outBits.set(bits.subarray(i * n, i * n + n), unique * n);
+        indices[i] = unique++;
+        break;
+      }
+      let same = true;
+      for (let k = 0; k < n && same; k++) same = outBits[u * n + k] === bits[i * n + k];
+      if (same) {
+        indices[i] = u;
+        break;
+      }
+    }
+  }
+  return { vertices: out.slice(0, unique * n), indices };
+}

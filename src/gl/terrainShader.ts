@@ -346,6 +346,9 @@ uniform float uDetailPixels;
 // Ab so vielen Geräte-Pixeln je Tile stehen die Blumen als 3D-Objekte in der
 // Wiese (world/flowers.ts) - dann malt das Gelände sie nicht mehr.
 uniform float uFlowerObjectPixels;
+// Ab so vielen Geräte-Pixeln je Tile liegen Steine als Karten (grassRenderer.ts)
+// - gemalt werden sie nur darunter.
+uniform float uStoneCardPixels;
 // Nur für den Abgleich mit der CPU-Fassung: 1 = Höhe, 2 = Hangneigung,
 // jeweils als 16-Bit-Wert über R und G gepackt.
 uniform int uDebug;
@@ -697,6 +700,7 @@ vec4 grassProp(vec2 tile, float ds, out float shadow) {
   float sharp = detailFade(r * 0.5, ds);
   shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.35)), CONTACT(q)) * sharp * fade;
   if (hash21(id + 5.3) < 0.55) {
+    if (uPixelsPerTile >= uStoneCardPixels) { shadow = 0.0; return vec4(0.0); }
     vec4 st = stoneShape(q, hash21(id + 4.4), hash21(id + 2.2) < 0.5 ? vec3(0.56, 0.54, 0.5) : vec3(0.6, 0.5, 0.4), toSun, sharp);
     return vec4(st.rgb, st.a * fade);
   }
@@ -816,6 +820,7 @@ vec4 beachProp(vec2 tile, float ds, out float shadow) {
     gPropNormal = normalize(vec3(up, 1.0));
     gPropNormalWeight = max(gPropNormalWeight, mask * sharp);
   } else {
+    if (uPixelsPerTile >= uStoneCardPixels) { shadow = 0.0; return vec4(0.0); }
     float pick = hash21(cell + 2.2);
     vec3 base = pick < 0.45 ? vec3(0.55, 0.53, 0.5) : pick < 0.75 ? vec3(0.8, 0.77, 0.72) : vec3(0.62, 0.5, 0.42);
     vec4 st = stoneShape(q, hash21(cell + 4.4), base, toSun, sharp);
@@ -872,7 +877,7 @@ vec4 rockProp(vec2 tile, float ds, out float shadow) {
   shadow = 0.0;
   float fade = detailFade(0.07, ds);
   vec2 q; float r; vec2 id;
-  if (fade <= 0.0 || !propCell(tile, 2.5, 0.1, 0.06, 0.14, q, r, id)) return vec4(0.0);
+  if (fade <= 0.0 || uPixelsPerTile >= uStoneCardPixels || !propCell(tile, 2.5, 0.1, 0.06, 0.14, q, r, id)) return vec4(0.0);
   vec2 toSun = normalize(SUN_XY);
   float sharp = detailFade(r * 0.5, ds);
   shadow = max(smoothstep(1.0, 0.5, length(q + toSun * 0.4)), CONTACT(q)) * sharp * fade;

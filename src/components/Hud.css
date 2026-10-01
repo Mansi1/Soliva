@@ -158,6 +158,20 @@
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
 }
+/* Abschalter in den Entwickler-Infos - dürfen umbrechen */
+#debug > div#dev-off {
+  white-space: normal;
+}
+#dev-off label {
+  margin-left: 6px;
+  cursor: pointer;
+}
+#dev-off input {
+  margin: 0 1px 0 0;
+  width: 9px;
+  height: 9px;
+  vertical-align: -1px;
+}
 /* Knopf in den Entwickler-Infos */
 .panel-btn {
   font: inherit;
@@ -189,6 +203,20 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
   pointer-events: none;
 }
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: bold 26px Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.15em;
+  color: var(--cream);
+  text-shadow: 2px 2px 0 #000;
+  background: #1e1006;
+}
+#loading[hidden],
 #paused[hidden],
 .panel[hidden] {
   display: none;

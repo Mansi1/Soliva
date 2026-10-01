@@ -3,9 +3,10 @@
 // API aus Rauschen und Oszillatoren. Das spart Dateien und Lizenzfragen, und
 // jeder Axthieb klingt ein wenig anders.
 //
-// Browser erlauben Ton erst nach einer Nutzeraktion - der AudioContext wird
-// darum beim ersten Klick oder Tastendruck angelegt und bei jedem weiteren
-// fortgesetzt, falls der Browser ihn angehalten hat.
+// Browser erlauben Ton erst nach einer Nutzeraktion. Den AudioContext
+// anzulegen kostet aber selbst 150-190 ms (M4, gemessen) - mitten im Spiel
+// ein Ruckler. Darum wird er vorab angelegt, sobald der Browser Luft hat
+// (prepare), und beim ersten Klick oder Tastendruck nur noch fortgesetzt.
 
 export type SoundName =
   | 'chop' // Axthieb
@@ -50,6 +51,13 @@ export class Sound {
     window.addEventListener('pageshow', (e) => {
       if (e.persisted && this.ctx?.state !== 'running') void this.ctx?.resume();
     });
+  }
+
+  /** Den AudioContext anlegen, wenn der Browser nichts zu tun hat - er beginnt angehalten. */
+  prepare() {
+    const idle = (window as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+    if (idle) idle(() => this.ensure(), { timeout: 3000 });
+    else setTimeout(() => this.ensure(), 1000);
   }
 
   get enabled(): boolean {

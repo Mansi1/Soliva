@@ -14,7 +14,7 @@ export interface FlatZone {
 
 /** So breit (Tiles) ist der Rand, über den die Ebene ins Gelände ausläuft. */
 export const FLAT_BLEND = 1.25;
-/** So viele Flächen bekommt der Shader - die der Bildmitte nächsten. */
+/** Plätze im Shader-Feld uFlat: so viele Flächen minus einer - der letzte hält die Hülle (packZones). */
 export const MAX_FLAT_ZONES = 48;
 
 /** Höhe z an (x, y) nach dem Einebnen. */
@@ -29,10 +29,21 @@ export function flatten(x: number, y: number, z: number, zones: readonly FlatZon
   return z;
 }
 
-/** Für den Shader: je Fläche (x, y, half, z). */
+/**
+ * Für den Shader: je Fläche (x, y, half, z), die der Bildmitte nächsten
+ * MAX_FLAT_ZONES - 1. Im letzten Platz die Hülle aller samt Rand (x0, y0, x1,
+ * y1): außerhalb wirkt keine, flattenZ spart sich dort die Schleife - sie
+ * lief je Eckpunkt jedes Baums und kostete in der Demo-Stadt ~0,5 ms je Bild.
+ */
 export function packZones(zones: readonly FlatZone[]): Float32Array<ArrayBuffer> {
   const data = new Float32Array(MAX_FLAT_ZONES * 4);
-  zones.slice(0, MAX_FLAT_ZONES).forEach((f, i) => data.set([f.x, f.y, f.half, f.z], i * 4));
+  const used = zones.slice(0, MAX_FLAT_ZONES - 1);
+  used.forEach((f, i) => data.set([f.x, f.y, f.half, f.z], i * 4));
+  const r = (f: FlatZone) => f.half + FLAT_BLEND;
+  data.set(used.length === 0 ? [0, 0, -1, -1] : [
+    Math.min(...used.map((f) => f.x - r(f))), Math.min(...used.map((f) => f.y - r(f))),
+    Math.max(...used.map((f) => f.x + r(f))), Math.max(...used.map((f) => f.y + r(f))),
+  ], (MAX_FLAT_ZONES - 1) * 4);
   return data;
 }
 
@@ -42,7 +53,9 @@ uniform vec4 uFlat[${MAX_FLAT_ZONES}];
 uniform int  uFlatCount;
 
 float flattenZ(vec2 world, float z) {
-  for (int i = 0; i < ${MAX_FLAT_ZONES}; i++) {
+  vec4 hull = uFlat[${MAX_FLAT_ZONES - 1}];
+  if (any(lessThan(world, hull.xy)) || any(greaterThan(world, hull.zw))) return z;
+  for (int i = 0; i < ${MAX_FLAT_ZONES - 1}; i++) {
     if (i >= uFlatCount) break;
     vec4 f = uFlat[i];
     vec2 d2 = abs(world - f.xy) - f.z;

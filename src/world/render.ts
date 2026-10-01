@@ -56,7 +56,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
  * @param hovered Gebäude unter dem Zeiger (Ankerpunkt) - eine Waffenkammer
  *   zeigt sich dann ohne Dach, wie in Stronghold (ausgewählt ebenso)
  * @param hideAnimal Tierarten, die nicht gezeichnet werden - weit draußen
- *   ausgeblendet (Menü → Grafik → Tiere ausblenden)
+ *   ausgeblendet (Menü → Grafik → Tiere ausblenden); "villager" für die Dorfbewohner
  */
 export function worldInstances(
   world: World,
@@ -149,8 +149,10 @@ export function worldInstances(
               building.anchor === hovered || !!selection?.buildings.has(building.anchor))
         : undefined,
       health: selection?.buildings.has(building.anchor) ? building.health : undefined,
-      // Reusen liegen zum Teil unter Wasser.
-      ground: building.type === 'fish_trap' ? -TRAP_DRAFT * def.size : undefined,
+      // Reusen liegen zum Teil unter Wasser. Sonst die Höhe der Mitte (wie der
+      // Shader sie nähme, eingeebnet) - einmal hier statt je Eckpunkt im Shader:
+      // das kostete in der Demo-Stadt (M4, ohne Bildraten-Deckel) ~1,7 ms je Bild.
+      ground: building.type === 'fish_trap' ? -TRAP_DRAFT * def.size : world.groundAt?.(building.x + 0.5, building.y + 0.5),
     });
     // Das Boot liegt an der Hütte, solange es nicht unterwegs ist - längs der Hütte.
     if (building.type === 'fisher_hut' && !boatOut.has(building.anchor)) {
@@ -167,8 +169,10 @@ export function worldInstances(
     }
   }
 
+  // Weit draußen keine Figuren - Dorfbewohner wie Tiere (ANIMALS_BELOW_DEFAULT).
+  const hideVillagers = hideAnimal('villager');
   for (const v of world.villagers) {
-    if (!v.isVisible) continue;
+    if (!v.isVisible || hideVillagers) continue;
     const { x, y } = v.positionAt(blend);
     if (x < x0 || x > x1 || y < y0 || y > y1) continue;
     const phase = v.pose === POSE.walk
@@ -332,6 +336,7 @@ function ruinInstances(world: World, x0: number, y0: number, x1: number, y1: num
       // Knapp unter 1: bleibt so vorn in der Sortierung für Halbdurchsichtiges.
       alpha: Math.max(0.01, fade * 0.999),
       motion,
+      ground: world.groundAt?.(ruin.x + 0.5, ruin.y + 0.5),
     });
 
     // Staub quillt in Wolken rund um das Gebäude auf, steigt und verzieht sich.
