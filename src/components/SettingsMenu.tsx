@@ -221,24 +221,40 @@ export class SettingsMenu {
         </section>
         <section>
           <h3>Grafik</h3>
+          <h4>Effekte</h4>
+          <label class="menu-row">
+            <span>Kantenglättung (FXAA)<span class="menu-hint">gegen Treppenstufen an Kanten</span></span>
+            <input type="checkbox" ref={this.fxaa}
+              onInput={(e: Event) => this.change({ fxaa: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <label class="menu-row">
+            <span>Farbgebung<span class="menu-hint">mehr Kontrast, leicht warm, zum Rand dunkler</span></span>
+            <input type="checkbox" ref={this.colorGrading}
+              onInput={(e: Event) => this.change({ colorGrading: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <label class="menu-row">
+            <span>Glühen (Bloom)<span class="menu-hint">helle Stellen strahlen; alle aus: Regen läuft trotzdem</span></span>
+            <input type="checkbox" ref={this.bloom}
+              onInput={(e: Event) => this.change({ bloom: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <h4>Leistung</h4>
           <div class="menu-row">
-            <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
+            <span title={`Bäume, an denen gearbeitet wird, bleiben 3D-Modelle; als Bild wiegen sie nicht im Wind.${
+              import.meta.env.DEV ? ' Entwicklermodus: die Bilder liegen in tools/export/out/billboards/.' : ''}`}>
+              Bäume als Bild bis Zoom<span class="menu-hint">flach statt 3D, viel flüssiger</span>
+            </span>
             <span class="menu-choice">
               {BILLBOARDS.map(([value, label, hint], i) => (
                 <button type="button" class="wood-btn" title={hint} ref={this.billboardButtons[i]} onClick={() => this.change({ billboards: value })}>{label}</button>
               ))}
             </span>
           </div>
-          <p class="menu-hint">
-            Bis zu dieser Zoomstufe (1 = weit draußen, 5 = ganz nah) werden Bäume als flaches Bild statt als
-            3D-Modell gezeichnet - das Spiel läuft viel flüssiger, man sieht kaum einen Unterschied. Bäume, an
-            denen gearbeitet wird, bleiben 3D-Modelle; als Bild wiegen sie nicht im Wind.
-            {import.meta.env.DEV ? ' Entwicklermodus: die Bilder liegen in tools/export/out/billboards/.' : ''}
-          </p>
           <details class="menu-keys-box">
-            <summary title="Weit draußen sind Tiere kaum zu sehen - ausgeblendet läuft das Spiel flüssiger. Sie leben trotzdem weiter.">Tiere ausblenden bis Zoom</summary>
+            <summary>
+              <span>Tiere ausblenden bis Zoom<span class="menu-hint">weit draußen kaum zu sehen - sie leben trotzdem weiter</span></span>
+            </summary>
             {ANIMAL_KINDS.map(([kind, name]) => (
-              <div class="menu-row">
+              <div class="menu-row menu-sub">
                 <span>{name}</span>
                 <span class="menu-choice">
                   {HIDE_ANIMALS.map(([value, label, hint], i) => (
@@ -248,48 +264,17 @@ export class SettingsMenu {
                 </span>
               </div>
             ))}
-            <p class="menu-hint">
-              Bis zu dieser Zoomstufe wird die Tierart nicht gezeichnet - die Tiere leben trotzdem weiter.
-            </p>
           </details>
           <label class="menu-row">
-            <span>Im Stillstand 30 FPS</span>
+            <span>Im Stillstand 30 FPS<span class="menu-hint">wenn die Kamera stillsteht - schont Akku und Lüfter</span></span>
             <input type="checkbox" ref={this.idleFps}
               onInput={(e: Event) => this.change({ idleFps: (e.target as HTMLInputElement).checked })} />
           </label>
-          <p class="menu-hint">
-            Steht die Kamera eine Sekunde still, zeichnet das Spiel nur noch 30 Bilder je Sekunde - schont Akku
-            und Lüfter. Beim Verschieben, Zoomen oder Drehen sofort wieder volle Bildrate.
-          </p>
           <label class="menu-row">
-            <span>Minimap mit 10 FPS</span>
+            <span>Minimap mit 10 FPS<span class="menu-hint">sie bewegt sich langsam, man sieht es kaum</span></span>
             <input type="checkbox" ref={this.minimapFps}
               onInput={(e: Event) => this.change({ minimapFps: (e.target as HTMLInputElement).checked })} />
           </label>
-          <p class="menu-hint">
-            Die Minimap wird nur 10-mal je Sekunde gezeichnet - sie bewegt sich langsam, man sieht es kaum.
-            Aus: so oft wie das Spiel.
-          </p>
-          <label class="menu-row">
-            <span>Kantenglättung (FXAA)</span>
-            <input type="checkbox" ref={this.fxaa}
-              onInput={(e: Event) => this.change({ fxaa: (e.target as HTMLInputElement).checked })} />
-          </label>
-          <label class="menu-row">
-            <span>Farbgebung</span>
-            <input type="checkbox" ref={this.colorGrading}
-              onInput={(e: Event) => this.change({ colorGrading: (e.target as HTMLInputElement).checked })} />
-          </label>
-          <label class="menu-row">
-            <span>Glühen (Bloom)</span>
-            <input type="checkbox" ref={this.bloom}
-              onInput={(e: Event) => this.change({ bloom: (e.target as HTMLInputElement).checked })} />
-          </label>
-          <p class="menu-hint">
-            Effekte über dem fertigen Bild: Kantenglättung gegen Treppenstufen, Farbgebung mit etwas mehr Kontrast,
-            leicht warm und zum Rand dunkler, Glühen um helle Stellen. Alle aus: das Bild geht ohne Umweg auf
-            den Schirm - Regen läuft trotzdem.
-          </p>
         </section>
         <section>
           <div class="menu-row">
