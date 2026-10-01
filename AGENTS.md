@@ -272,35 +272,19 @@ Reuse a few explicit scratch arrays/vectors instead.
 
 ## Soliva: messen und belegen
 
-Hintergrund und Plan: `docs/OPTIMIZATION_PLAN.md`.
+**Belegen ist Pflicht.** Vor der ersten Änderung den passenden Skill laden, ohne Skill-Unterstützung die Datei direkt lesen. Diese beiden Skills lädt der Agent selbst, anders als die defuss-vae-Skills unten.
+- Rendering oder Leistung (z. B. `src/gl/`, `src/map.ts`, `src/renderStats.ts`, die Render-Schleife in `src/main.ts`): Bench vorher und nachher, Skill `bench` (`.claude/skills/bench/SKILL.md`).
+- Shader (GLSL in `src/gl/`): zusätzlich Screenshots vergleichen, Skill `screenshots` (`.claude/skills/screenshots/SKILL.md`).
+- Bench-Ausgabe und Bildvergleich gehören mit Vorher/Nachher in Commit oder PR. Zeigt die Messung keinen Effekt, das offen sagen und keinen behaupten.
 
-**Render-Stats für die Diagnose.** `window.getRenderStats()` (`src/renderStats.ts`) liefert die letzten 30 Sekunden, je Sekunde ein JSON-Objekt: fps, `frameMs`/`cpuMs` samt Aufteilung (`simMs`, `collectMs`, `renderMs`, `minimapMs`, `pickMs`), `longTaskMs`, `drawCalls`, `vertices`, `terrainVertices`, `terrainTexels`, `instances`/`batched` und mehr. Vor einer Vermutung über die Ursache erst dort nachsehen, per Playwright mit `page.evaluate(() => window.getRenderStats())`. Neue teure Pfade melden ihre Kosten mit `addRenderStats(key, value)`. Das gilt je Bild. `window.getRenderInfo()` liefert die Umstände eines Laufs: GPU, Pixel-Verhältnis und Einstellungen.
-
-**Bench bei jeder Änderung am Rendering oder an der Leistung.** Vorher und nachher `npm run bench` ausführen, der Dev-Server muss laufen. Das Skript vergleicht die Mediane von vier festen Szenen mit `tools/perf/baseline.json`. `npm run bench -- --save` setzt die Basis neu, das nur bewusst und nur auf demselben Rechner tun. So lesen:
-- Zählwerte (`drawCalls`, `vertices`, `terrainVertices`, `terrainTexels`) rauschen um ±2 %. Sie sind die harten Belege.
-- Zeiten um 1 ms (`cpuMs`, `renderMs`) rauschen bis ±40 %. Kleine Zeitunterschiede belegen nichts.
-- `fps` steht bei 60 an (vsync). Ein Gewinn zeigt sich in `cpuMs` und den Zählwerten, nicht in `fps`.
-- GPU-Last: `npm run bench -- --uncapped` (Chrome ohne vsync und Bildraten-Deckel), dann zeigen `fps`/`frameMs` sie. `gpuMs` mit vsync misst auf Apple (ANGLE Metal) das Warten aufs nächste Bild mit und taugt dort nicht zum Vergleich. Abschalten statt Vermuten: einen Teil testweise nicht zeichnen und die fps ohne Deckel vergleichen. Dafür hat das Entwickler-Panel (`showDebug`) die Zeile „Aus“: Gras, Modelle, Partikel, Vorausrechnen (`MapRenderer.off`), per Playwright `page.click('#dev-off input[data-off=models]')`. `getRenderInfo().off` nennt, was aus ist. Die Leertaste (flaches Gelände) spart die Höhen im Gelände-Gitter. Das Vorausrechnen läuft im Stand mit (3 Kacheln je Bild) - für Bildzeiten im Stand abschalten.
-- Die Bench-Ausgabe gehört mit Vorher/Nachher in Commit oder PR. Zeigt die Messung keinen Effekt, das offen sagen und keinen behaupten.
-
-**Screenshots bei jeder Shader-Änderung** (`src/gl/*Shader*`, GLSL in `src/gl/`):
-1. Vorher feste Szenen aufnehmen, mit Playwright bei festem Fenster (1280×800) und Pixel-Verhältnis 1. Das Spiel dabei anhalten (`paused` in `pgm.settings`) und die Maus aus dem Bild nehmen. Die Szenen sollen weit, mittel, nah, Stadt (Welt `Demo`) und Wasser oder Fels abdecken.
-2. Einen zweiten Lauf desselben Codes aufnehmen, sein Pixel-Unterschied ist das Rauschen der Animationen.
-3. Nach der Änderung dieselben Szenen aufnehmen und pixelweise vergleichen.
-- Liegt der Unterschied im Rauschen, ist das Bild gleich. Liegt er darüber, die Bilder ansehen und die Änderung begründen oder zurücknehmen.
-- Soll sich das Bild nicht ändern (reine Optimierung), muss die Abweichung im Rauschen liegen.
+**Erst nachsehen, dann vermuten.** `window.getRenderStats()` (`src/renderStats.ts`) liefert je Sekunde fps, Zeiten und Zählwerte der letzten 30 Sekunden, `window.getRenderInfo()` die Umstände eines Laufs: GPU, Pixel-Verhältnis und Einstellungen. Neue teure Pfade melden ihre Kosten je Bild mit `addRenderStats(key, value)`.
 
 ### Stolperfallen, in die schon ein Agent gelaufen ist
 
 - **Große Dateien in Git LFS:** GitHub nimmt das Repo nur an, wenn der Nicht-LFS-Teil unter 100 MB bleibt (Stand 2026-09-30: ~34 MB gepackt). LFS verwaltet `src/textures/**`, `assets/music/*.mp3` und `*.blend` (`.gitattributes`). Neue Quellbilder, Musik oder andere Dateien über ~1 MB gehören dorthin - vor dem Commit mit `git lfs ls-files` prüfen, nötigenfalls `.gitattributes` ergänzen. Was schon committet, aber nicht gepusht ist, lässt sich mit `git lfs migrate import --include=<muster> --include-ref=<branch> --exclude-ref=main` nachträglich umstellen. Größe des Push prüfen: `git bundle create /tmp/x.bundle main <branch>`.
 
-- **Szenen per Playwright aufsetzen:** `entry.ts` lädt `main.ts` erst nach dem `load`-Ereignis nach.
-  - Einfacher für Test-Spielstände: `/game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&rot=<0-3>&tilt=<Grad>&save=<base64url>` startet direkt ohne Hauptmenü, `pgm.seed` bleibt unberührt (im Spiel erzeugt „Link teilen“ im Menü genau so einen Link). `save` ist das Spielstand-JSON (`world/save.ts`), die Welt beginnt bei jedem Aufruf damit. Danach steht nur noch `/game/<seed>` in der Adresse (im Hauptmenü `/`); neu laden bleibt im Spiel. Keine Datei ins Repo legen, den Link ins Review posten. Kodieren: `node -e "console.log(Buffer.from(JSON.stringify(require('./stand.json'))).toString('base64url'))"`.
+- **Test-Spielstände als Link:** `/game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&rot=<0-3>&tilt=<Grad>&save=<base64url>` startet direkt ohne Hauptmenü, `pgm.seed` bleibt unberührt (im Spiel erzeugt „Link teilen“ im Menü genau so einen Link). `save` ist das Spielstand-JSON (`world/save.ts`), die Welt beginnt bei jedem Aufruf damit. Danach steht nur noch `/game/<seed>` in der Adresse (im Hauptmenü `/`); neu laden bleibt im Spiel. Keine Datei ins Repo legen, den Link ins Review posten. Kodieren: `node -e "console.log(Buffer.from(JSON.stringify(require('./stand.json'))).toString('base64url'))"`.
   - Test-Spielstände immer in der Welt `Testseed`, von Hand geschrieben mit nur dem, was das Todo braucht. Freie Lichtung dort: x 12, y -43. Die Kamera rechnet die Geländehöhe nicht mit, das Ziel liegt über der Bildmitte - mit `zoom=4` bleibt es gut im Bild.
-  - Wer Welt und Start-Vermerk setzt (`pgm.seed`, `sessionStorage` `pgm.start`), muss vorher warten, bis `window.getRenderStats` existiert. Sonst verbraucht die laufende Seite den Vermerk, und gemessen wird das Hauptmenü, mit plausibel aussehenden Zahlen.
-  - Danach prüfen, dass `#start` verborgen ist, und in den Stats nachsehen, ob `tileSize` zur Szene passt.
-- **Stillstand ist keine Langsamkeit:** Steht die Kamera eine Sekunde, zeichnet das Spiel absichtlich nur 30 fps (`idleFps`). Das erkennt man in den Stats an `idle` nahe 1. Zum Messen `idleFps: false` setzen, der Bench tut das schon.
-- **Nur gleiche Umstände vergleichen:** Playwright läuft mit Pixel-Verhältnis 1, ein Retina-Bildschirm mit 2, also viermal so vielen Pixeln. Vor einem Vergleich `getRenderInfo()` beider Läufe ansehen: GPU, Pixel-Verhältnis und Einstellungen.
 - **Schichten beim Import:** `src/gl/` importiert nie aus `src/game/`, sondern nur aus `src/world/`, `src/noise.ts`, `src/functions/` und aus `src/gl/` selbst. `src/game/` und `src/main.ts` sitzen darüber. Code, den beide Seiten brauchen, liegt in `src/` selbst, zum Beispiel `renderStats.ts`. Vor einer neuen Datei die Imports der Nachbarn ansehen.
 - **`docs/OPTIMIZATION_PLAN.md` ist ein Hinweis, keine Tatsache:**
   - Zeilenangaben dort sind veraltet. Nach Funktionsnamen suchen, nicht nach Zeilennummern.
