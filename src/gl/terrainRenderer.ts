@@ -4,6 +4,7 @@
 // in isometrischer Ansicht; der Vertex-Shader hebt es auf die Geländehöhe, die
 // Farbe kommt aus dem Cache.
 
+import { TILE, TileStore, hashText, type StoredTile } from './tileStore';
 import { MAX_FLAT_ZONES } from '../world/flatten';
 import { NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS } from '../noise';
 import {
@@ -133,12 +134,16 @@ const MAX_CACHES = 4;
 const CACHE_FADE_MS = 200;
 
 /**
- * Ab so vielen Geräte-Pixeln je Tile (Stufe des Gelände-Caches) stehen die
- * Blumen als 3D-Objekte in der Wiese - darunter sind sie nur wenige Pixel
- * groß und das Gelände malt sie als Tupfen. Bei 32 wären es auf Retina schon
- * bei 16 px je Tile ~12.000 Blumen im Bild, das kostete merklich Bildrate.
+ * Ab so vielen CSS-Pixeln je Tile (Stufe des Gelände-Caches, ab Zoom 3) stehen
+ * die Blumen als Objekte (Bilder) in der Wiese - darunter sind sie nur wenige
+ * Pixel groß und das Gelände malt sie als Tupfen (uFlowerObjectPixels).
  */
-export const FLOWER_OBJECT_PIXELS = 64;
+export const FLOWER_OBJECT_PIXELS = 32;
+/**
+ * Ab so vielen CSS-Pixeln je Tile zeichnet grassRenderer.ts Gras und Steine als
+ * Karten (ab Stufe 3); darunter malt der Gelände-Cache die Steine (uStoneCardPixels).
+ */
+export const CARDS_FROM = 24;
 
 /** Rand um den Bildschirm, damit beim Verschieben nichts Ungefülltes ins Bild rutscht. */
 const CACHE_MARGIN = 64;
@@ -250,6 +255,10 @@ export class TerrainRenderer {
     gl.activeTexture(gl.TEXTURE0);
 
     this.uploadPermutations(seed);
+    this.seed = seed;
+    // Was der Befüll-Shader rechnet - ändert es sich, passen gespeicherte Kacheln nicht mehr.
+    this.store = new TileStore(hashText([FILL_FRAGMENT_SOURCE, JSON.stringify(TERRAIN_PARAMS), JSON.stringify(palette),
+      FLOWER_OBJECT_PIXELS, CARDS_FROM, TILE].join('|')));
 
     gl.useProgram(this.program);
     uploadTerrainParams(gl, (name) => this.location(name));
@@ -265,7 +274,6 @@ export class TerrainRenderer {
     // Zwei Geräte-Pixel: entspricht der Zellgröße, gegen die Mikro-Detail und
     // Farbtextur ursprünglich abgestimmt wurden.
     gl.uniform1f(this.fillLocation('uDetailPixels'), 2);
-    gl.uniform1f(this.fillLocation('uFlowerObjectPixels'), FLOWER_OBJECT_PIXELS);
     this.uploadPalette(palette);
   }
 
@@ -365,8 +373,49 @@ export class TerrainRenderer {
   hoverTile: { x: number; y: number } | null = null;
   /** Ausschnitt der Hauptansicht in Geräte-Pixeln dieses Canvas - nur für die Minimap. */
   viewRect: { x: number; y: number; width: number; height: number } | null = null;
-  /** Kantenlänge einer Gitterzelle in Geräte-Pixeln. Flach reicht ein grobes Gitter. */
+  /** Kantenlänge einer Gitterzelle in CSS-Pixeln. Flach reicht ein grobes Gitter. */
   cellPixels = 4;
+  /**
+   * Geräte-Pixel je CSS-Pixel. Die Grenzen des Gitters gelten in CSS-Pixeln:
+   * in Geräte-Pixeln hätte Retina (2) viermal so viele Eckpunkte, jeder mit
+   * der vollen Höhenfunktion - das kostete dort bis 1,9 ms je Bild (M4), und
+   * das Relief wird davon nicht feiner.
+   */
+  pixelRatio = 1;
+  /** Texel des Caches je CSS-Pixel (MapRenderer.cacheRatio) - für Schwellen, die mit den Texeln vergleichen. */
+  cacheRatio = 1;
+  /**
+   * Wie hoch (Tiles) Gelände unter dem Bildrand höchstens ins Bild ragen kann -
+   * gemessen an der Stelle (MapRenderer.peakReach), sonst pauschal der höchste
+   * mögliche Berg. So viel wird unter dem Bild mitgerechnet (Cache, Gitter).
+   */
+  reachZ: number = MAX_RELIEF;
+  /** Fertige Kacheln in IndexedDB (tileStore.ts) - null ohne Speicher. */
+  private readonly store: TileStore | null;
+  private readonly seed: string;
+  private arrivals: { b: CacheBuffer; generation: number; tile: string; data: StoredTile }[] = [];
+  /**
+   * Vorausrechnen (bake): Weltpunkte, um die herum Kacheln vorab in den
+   * Speicher gerechnet werden - zuerst der erste (die Ansicht), dann die
+   * übrigen (Gebäude). Setzt MapRenderer.
+   */
+  bakeFocus: { x: number; y: number }[] = [];
+  /** Die Stufen (Texel je Tile), für die vorausgerechnet wird - alle Zoomstufen. */
+  bakeScales: number[] = [];
+  /** Eine Kachel groß, zum Vorausrechnen - wird nie gezeichnet. */
+  private baker: CacheBuffer | null = null;
+  private bakeQueue: { scale: number; key: string; tx: number; ty: number }[] = [];
+  private bakeScan = 0;
+  private readbacks: { key: string; buffer: WebGLBuffer; fence: WebGLSync }[] = [];
+  /** Ist das Bild vollständig aus dem Cache der jetzigen Stufe (nicht der vorigen, gestreckt)? */
+  complete = false;
+  /** Beim Laden (Ladeschild verdeckt das Bild): mehr Befüllen je Bild, das Bild selbst zählt nicht. */
+  boost = false;
+  /** Vorausrechnen an - im Entwickler-Panel abschaltbar, um ohne es zu messen. */
+  baking = true;
+  /** Im letzten Bild nichts mehr zu füllen - Bild, Vorrat und Nachbarstufen fertig. */
+  settled = false;
+  private filledThisFrame = 0;
   /**
    * Vorrat-Blase um den Bildschirm, in Geräte-Pixeln je Seite. Sie wird im
    * Hintergrund vorausberechnet, damit beim Verschieben fertiges Gelände ins
@@ -379,11 +428,11 @@ export class TerrainRenderer {
   /**
    * Zellgröße in u/v-Einheiten. Nie feiner als ein Achtel Tile: so kleine
    * Formen hat das Relief nicht, und bei starkem Zoom würden aus vier Pixeln
-   * sonst fast eine Million Eckpunkte. Aber auch nie gröber als 16 Pixel -
+   * sonst fast eine Million Eckpunkte. Aber auch nie gröber als 16 CSS-Pixel -
    * bei der stärksten Zoomstufe sähe man sonst die Kanten der Dreiecke.
    */
   private cellSize(camera: GpuCamera): number {
-    const ppt = camera.pixelsPerTile;
+    const ppt = camera.pixelsPerTile / this.pixelRatio;
     const cell = Math.min(Math.max(this.cellPixels / ppt, 1 / 4), Math.max(16, this.cellPixels) / ppt);
     // Auf eine Zweierpotenz gerundet - auf den Zoomstufen ist sie das ohnehin.
     // Beim weichen Zoomen bleiben die Eckpunkte so an derselben Weltstelle,
@@ -530,6 +579,7 @@ export class TerrainRenderer {
     b.view = view;
     b.groundV = groundV;
     b.window = null;
+    b.shown = false;
     b.pending = [];
     b.background = [];
     b.needed = null;
@@ -551,7 +601,7 @@ export class TerrainRenderer {
    * Schiebt das Cache-Fenster zur Kamera und merkt vor, was neu hineinkommt.
    * Beim Verschieben sind das zwei schmale Streifen an den Rändern.
    */
-  private updateCache(b: CacheBuffer, camera: GpuCamera, prefetch = false) {
+  private updateCache(b: CacheBuffer, camera: GpuCamera) {
     const gl = this.gl;
     const { width, height } = gl.canvas;
     const ppt = b.scale;
@@ -572,7 +622,7 @@ export class TerrainRenderer {
     // bleibt sie beim Neigen dieselbe. Was wirklich hereinragt, hängt vom
     // jetzigen ab.
     const reachSize = Math.ceil(relief * Z_SCREEN_MAX * MAX_RELIEF * ppt);
-    const reach = Math.ceil(relief * viewZScreen() * MAX_RELIEF * ppt * stretch);
+    const reach = Math.ceil(relief * viewZScreen() * this.reachZ * ppt * stretch);
     // Mit der Zellgröße der Cache-Stufe: beim weichen Zoomen bleibt die Textur
     // so gleich groß - eine neue müsste ganz neu befüllt werden.
     const margin = CACHE_MARGIN + Math.ceil(this.cellSize({ ...camera, pixelsPerTile: ppt }) * ppt);
@@ -593,13 +643,18 @@ export class TerrainRenderer {
     if (cacheWidth !== b.width || cacheHeight !== b.height) {
       this.allocateCache(b, cacheWidth, cacheHeight);
       b.window = null;
+      b.shown = false;
     }
 
     // Kameramitte in den Boden-Koordinaten des Caches (seine Stauchung).
     const cam = worldToGround(camera.centerX, camera.centerY);
     const u = Math.floor(cam.u * ppt - width / 2 - margin - bubbleU);
     const v = Math.floor(cam.v * stretch * ppt - viewHeight / 2 - margin - bubbleV);
-    const next: TexelRect = { u, v, width: cacheWidth, height: cacheHeight };
+    // Nur so tief wie gebraucht: das Bild, darunter die gemessene Reichweite
+    // der Berge (reachZ) und die Blase. Die Textur ist für den höchsten
+    // möglichen Berg bemessen - ganz befüllt hieß das bei Retina ein Vielfaches
+    // an Texeln, die niemand sieht.
+    const depth = Math.min(cacheHeight, bubbleV + viewHeight + 2 * margin + reach + this.bubblePixels);
 
     // Dringend ist nur, was im Bild liegt (plus schmaler Rand). Alles andere -
     // die Blase und der Bereich unter dem Bildrand, der nur für von unten
@@ -611,13 +666,19 @@ export class TerrainRenderer {
       height: Math.min(viewHeight + 2 * margin, cacheHeight - bubbleV),
     };
     // Was fertig sein muss, damit der Cache ein vollständiges Bild ergibt:
-    // das Sichtbare samt der Gipfel, die von unten hereinragen - aber höchstens
-    // eine Bildhöhe tief. Stark herangezoomt reichte die volle Gipfelhöhe
-    // sonst viele Bildhöhen hinab, und das Vorberechnen würde nie fertig;
-    // was darunter liegt, kommt wie bisher im Hintergrund nach.
-    b.needed = { ...visible, height: Math.min(visible.height + Math.min(reach, viewHeight), cacheHeight - bubbleV) };
-    // Beim Vorberechnen zählt nur das vollständige Bild - die Blase nicht.
-    const focus = prefetch ? b.needed : visible;
+    // das Sichtbare samt der Gipfel, die von unten hereinragen (reachZ ist
+    // gemessen, nicht der höchstmögliche Berg). Im Gebirge bei Zoom 5 sind das
+    // bis drei Bildhöhen - früher auf eine gedeckelt, dann blieben hohe Hänge
+    // im Bild leer, bis der Hintergrund sie nach Sekunden nachreichte (nach
+    // dem Neigen gemessen). Nur vorausgerechnete Stufen bleiben bei einer
+    // Bildhöhe: stark herangezoomt würden sie sonst nie fertig.
+    const deep = b === this.active ? reach : Math.min(reach, viewHeight);
+    b.needed = { ...visible, height: Math.min(visible.height + deep, cacheHeight - bubbleV) };
+    // Dringend ist das vollständige Bild samt der Gipfel, die von unten
+    // hereinragen - nicht nur das Sichtbare: sonst liefen sie mit dem kleinen
+    // Hintergrund-Budget, im Gebirge war der Cache beim Pannen nie fertig, und
+    // ihre Hänge kamen ohne Textur ins Bild.
+    const focus = b.needed;
     const split = (rects: TexelRect[]) => {
       const urgent: TexelRect[] = [];
       const rest: TexelRect[] = [];
@@ -635,10 +696,19 @@ export class TerrainRenderer {
     b.moved = !!old && (old.u !== u || old.v !== v);
     if (!old) {
       // Alles neu - von oben nach unten, der sichtbare Teil zuerst.
-      const { urgent, rest } = split([next]);
-      b.pending = urgent;
-      b.background = byDistance(rest);
-    } else if (old.u !== u || old.v !== v) {
+      b.covered = depth;
+      b.generation++;
+      b.tiles.clear();
+      b.touched.clear();
+      const { urgent, rest } = split([{ u, v, width: cacheWidth, height: depth }]);
+      b.pending = urgent.flatMap(splitTiles);
+      b.background = byDistance(rest.flatMap(splitTiles));
+    } else if (old.u !== u || old.v !== v || depth > b.covered) {
+      // Die Reichweite ist gewachsen: die Zeilen darunter (im alten Fenster) nachreichen.
+      const deeper: TexelRect[] = depth > b.covered
+        ? [{ u: old.u, v: old.v + b.covered, width: cacheWidth, height: depth - b.covered }] : [];
+      b.covered = Math.max(b.covered, depth);
+      const next: TexelRect = { u, v, width: cacheWidth, height: b.covered };
       const strips: TexelRect[] = [];
       const du = u - old.u;
       const dv = v - old.v;
@@ -647,19 +717,21 @@ export class TerrainRenderer {
         strips.push({ u: du > 0 ? u + cacheWidth - w : u, v, width: w, height: cacheHeight });
       }
       if (dv !== 0) {
-        const h = Math.min(Math.abs(dv), cacheHeight);
-        strips.push({ u, v: dv > 0 ? v + cacheHeight - h : v, width: cacheWidth, height: h });
+        // Unten rückt neu herein, was unter dem befüllten Bereich lag (covered).
+        const h = Math.min(Math.abs(dv), b.covered);
+        strips.push({ u, v: dv > 0 ? v + b.covered - h : v, width: cacheWidth, height: h });
       }
       // Was aus dem Fenster gefallen ist, braucht niemand mehr. Was noch
       // nicht berechnet ist und jetzt ins Bild rückt, wird dringend.
-      const waiting = [...strips, ...b.pending, ...b.background]
+      const waiting = [...deeper, ...strips, ...b.pending, ...b.background]
           .map((r) => intersect(r, next))
           .filter((r): r is TexelRect => r !== null);
       const { urgent, rest } = split(waiting);
-      b.pending = urgent;
-      b.background = byDistance(rest);
+      b.pending = urgent.flatMap(splitTiles);
+      b.background = byDistance(rest.flatMap(splitTiles));
     }
     b.window = { u, v };
+    this.lookupTiles(b);
   }
 
   /**
@@ -683,6 +755,8 @@ export class TerrainRenderer {
 
     const f = (name: string) => this.fillLocation(name);
     gl.uniform1f(f('uPixelsPerTile'), ppt);
+    gl.uniform1f(f('uStoneCardPixels'), CARDS_FROM * this.cacheRatio);
+    gl.uniform1f(f('uFlowerObjectPixels'), FLOWER_OBJECT_PIXELS * this.cacheRatio);
     gl.uniform1f(f('uReliefScale'), camera.reliefScale > 0 ? 1 : 0);
     setViewUniforms(gl, f);
     // Berechnet wird für die Stauchung des Caches, nicht für den jetzigen Blickwinkel.
@@ -705,22 +779,286 @@ export class TerrainRenderer {
     bindScreen(gl);
     // Geländeerzeugung ist teuer (ein Bild voll ~180 ms) - neu berechnete Texel.
     addRenderStats('terrainTexels', spent + spentRest);
+    this.filledThisFrame += spent + spentRest;
     return spent + spentRest;
   }
 
   /** Befüllt Bereiche vom Anfang der Liste, bis das Budget aufgebraucht ist. */
   private drain(b: CacheBuffer, queue: TexelRect[], budget: number): number {
     const initial = budget;
-    while (budget > 0 && queue.length > 0) {
-      const rect = queue[0];
+    for (let i = 0; budget > 0 && i < queue.length;) {
+      const rect = queue[i];
+      // Wird die Kachel noch im Speicher gesucht (oder kommt sie gleich von
+      // dort), nicht rechnen.
+      const tile = tileOf(rect);
+      if (b.tiles.get(tile) !== 'absent') {
+        i++;
+        continue;
+      }
       // Zu groß fürs Restbudget: nur die oberen Zeilen, der Rest bleibt stehen.
       const rows = Math.min(rect.height, Math.max(1, Math.floor(budget / rect.width)));
       this.fillRect(b, { ...rect, height: rows });
+      b.touched.add(tile);
       budget -= rows * rect.width;
-      if (rows === rect.height) queue.shift();
-      else queue[0] = { ...rect, v: rect.v + rows, height: rect.height - rows };
+      if (rows === rect.height) queue.splice(i, 1);
+      else queue[i] = { ...rect, v: rect.v + rows, height: rect.height - rows };
     }
     return initial - budget;
+  }
+
+  /** Kacheln der Warteschlange, die noch niemand gesucht hat, in IndexedDB suchen - höchstens 64 je Bild. */
+  private lookupTiles(b: CacheBuffer) {
+    const keys: string[] = [];
+    for (const r of [...b.pending, ...b.background]) {
+      const tile = tileOf(r);
+      // 'stored' mit Stücken in der Warteschlange: die Kachel war schon da, hat
+      // das Fenster verlassen und kommt wieder herein - neu suchen. Sonst
+      // rechnete niemand ihre Stücke, und im Ringpuffer bliebe dort der Inhalt
+      // einer anderen Stelle stehen.
+      const state = b.tiles.get(tile);
+      if (state === 'looking' || state === 'absent') continue;
+      if (!this.store || this.debugMode !== 0 || (this.store.loaded && !this.store.has(this.storePrefix(b) + tile))) {
+        b.tiles.set(tile, 'absent');
+        continue;
+      }
+      b.tiles.set(tile, 'looking');
+      keys.push(tile);
+      if (keys.length >= 64) break;
+    }
+    if (keys.length === 0) return;
+    const generation = b.generation;
+    const prefix = this.storePrefix(b);
+    void this.store!.get(keys.map((k) => prefix + k)).then((found) => {
+      if (b.generation !== generation) return;
+      found.forEach((tile, i) => {
+        if (tile) this.arrivals.push({ b, generation, tile: keys[i], data: tile });
+        else b.tiles.set(keys[i], 'absent');
+      });
+    });
+  }
+
+  /** Schlüssel einer Kachel in IndexedDB ohne ihre Lage: Seed, Texel je CSS-Pixel, Stufe, Neigung, Relief, Drehung. */
+  private storePrefix(b: CacheBuffer): string {
+    return `${this.seed}|${this.cacheRatio}|${b.key}|`;
+  }
+
+  /**
+   * Aus IndexedDB gekommene Kacheln hochladen (höchstens 64 je Bild), soweit
+   * sie im Fenster liegen, und ihre Stücke aus der Warteschlange nehmen.
+   */
+  private applyArrivals() {
+    const gl = this.gl;
+    const now = this.arrivals.splice(0, 64);
+    if (now.length === 0) return;
+    const start = performance.now();
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, TILE);
+    for (const { b, generation, tile, data } of now) {
+      if (b.generation !== generation || b.tiles.get(tile) !== 'looking' || !b.window) continue;
+      const [tx, ty] = tile.split(',').map(Number);
+      const part = intersect({ u: tx * TILE, v: ty * TILE, width: TILE, height: TILE },
+          { u: b.window.u, v: b.window.v, width: b.width, height: b.covered });
+      if (part) {
+        for (const [texture, format, bytes] of [[b.texture, gl.RGBA, data.color], [b.normal, gl.RG, data.normal]] as const) {
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          let du = 0;
+          for (const [x, w] of ringPieces(part.u, part.width, b.width)) {
+            let dv = 0;
+            for (const [y, h] of ringPieces(part.v, part.height, b.height)) {
+              gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, part.u - tx * TILE + du);
+              gl.pixelStorei(gl.UNPACK_SKIP_ROWS, part.v - ty * TILE + dv);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, w, h, format, gl.UNSIGNED_BYTE, bytes);
+              dv += h;
+            }
+            du += w;
+          }
+        }
+      }
+      b.tiles.set(tile, 'stored');
+      b.pending = b.pending.filter((r) => tileOf(r) !== tile);
+      b.background = b.background.filter((r) => tileOf(r) !== tile);
+    }
+    for (const name of [gl.UNPACK_ROW_LENGTH, gl.UNPACK_SKIP_PIXELS, gl.UNPACK_SKIP_ROWS]) gl.pixelStorei(name, 0);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    gl.activeTexture(gl.TEXTURE0);
+    addRenderStats('tileUploads', now.length);
+    addRenderStats('tileUploadMs', performance.now() - start);
+  }
+
+  /**
+   * Fertig gerechnete Kacheln zurücklesen und speichern: ganz im befüllten
+   * Fenster, kein Stück mehr in der Warteschlange. Über einen Pixel-Puffer mit
+   * Fence - readPixels ohne hielte die GPU an. Höchstens 8 je Bild.
+   */
+  private saveTiles(b: CacheBuffer) {
+    if (!this.store || this.debugMode !== 0 || !b.window || b.touched.size === 0) return;
+    const gl = this.gl;
+    const queued = new Set([...b.pending, ...b.background].map(tileOf));
+    const win = { u: b.window.u, v: b.window.v, width: b.width, height: b.covered };
+    let started = 0;
+    for (const tile of b.touched) {
+      const [tx, ty] = tile.split(',').map(Number);
+      const rect = { u: tx * TILE, v: ty * TILE, width: TILE, height: TILE };
+      const inside = intersect(rect, win);
+      if (!inside) {
+        b.touched.delete(tile);
+        continue;
+      }
+      if (queued.has(tile) || inside.width < TILE || inside.height < TILE || b.tiles.get(tile) !== 'absent') continue;
+      if (started++ >= 8) break;
+      b.touched.delete(tile);
+      b.tiles.set(tile, 'stored');
+      const storeKey = this.storePrefix(b) + tile;
+      if (this.store.has(storeKey)) continue;
+      this.store.reserve(storeKey);
+      const buffer = gl.createBuffer()!;
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+      gl.bufferData(gl.PIXEL_PACK_BUFFER, TILE * TILE * 8, gl.STREAM_READ);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, b.framebuffer);
+      gl.pixelStorei(gl.PACK_ROW_LENGTH, TILE);
+      [0, 1].forEach((attachment) => {
+        gl.readBuffer(gl.COLOR_ATTACHMENT0 + attachment);
+        let du = 0;
+        for (const [x, w] of ringPieces(rect.u, TILE, b.width)) {
+          let dv = 0;
+          for (const [y, h] of ringPieces(rect.v, TILE, b.height)) {
+            gl.pixelStorei(gl.PACK_SKIP_PIXELS, du);
+            gl.pixelStorei(gl.PACK_SKIP_ROWS, dv);
+            // Die Normale (RG8) als RGBA gelesen - das geht mit jedem Treiber.
+            gl.readPixels(x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, attachment * TILE * TILE * 4);
+            dv += h;
+          }
+          du += w;
+        }
+      });
+      for (const name of [gl.PACK_ROW_LENGTH, gl.PACK_SKIP_PIXELS, gl.PACK_SKIP_ROWS]) gl.pixelStorei(name, 0);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      this.readbacks.push({ key: storeKey, buffer, fence: gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)! });
+    }
+    bindScreen(gl);
+  }
+
+  /** Schlüssel des Cache-Inhalts für eine Stufe beim jetzigen Blick (wie selectCache). */
+  private cacheKey(scale: number, camera: GpuCamera): string {
+    const relief = camera.reliefScale > 0 ? 1 : 0;
+    const groundV = camera.cacheGroundV ?? viewGroundV();
+    return `${scale}|${groundV.toFixed(5)}|${relief}|${this.debugMode}|${viewRotation()}`;
+  }
+
+  /**
+   * Vorausrechnen: `count` Kacheln, die noch nicht im Speicher sind, in die
+   * eigene Kachel rechnen und speichern (saveTiles). Reihenfolge ringförmig:
+   * erst um die Ansicht auf allen Stufen, dann um jedes Gebäude, bis
+   * BAKE_SCREENS Bildschirme je Seite (in der jeweiligen Stufe).
+   */
+  private bake(camera: GpuCamera, count: number) {
+    const store = this.store;
+    if (!store?.loaded || this.debugMode !== 0 || !store.roomToBake) return;
+    if (this.bakeQueue.length === 0) {
+      // Neu suchen höchstens jede Sekunde - ist alles da, prüft das sonst jedes Bild alle Kacheln.
+      if (++this.bakeScan % 60 !== 1) return;
+      this.bakeQueue = this.bakeCandidates(camera);
+      if (this.bakeQueue.length === 0) return;
+    }
+    const gl = this.gl;
+    if (!this.baker) {
+      this.baker = createCacheBuffer(gl);
+      this.allocateCache(this.baker, TILE, TILE);
+    }
+    const b = this.baker;
+    const groundV = camera.cacheGroundV ?? viewGroundV();
+    for (let done = 0; done < count && this.bakeQueue.length > 0;) {
+      const { scale, key, tx, ty } = this.bakeQueue.shift()!;
+      // Der Blick hat sich geändert (Drehung, Neigung): diese Liste gilt nicht mehr.
+      if (key !== this.cacheKey(scale, camera)) {
+        this.bakeQueue = [];
+        return;
+      }
+      if (store.has(`${this.seed}|${this.cacheRatio}|${key}|${tx},${ty}`)) continue;
+      b.key = key;
+      b.scale = scale;
+      b.groundV = groundV;
+      b.view = `${this.debugMode}|${viewRotation()}`;
+      b.window = { u: tx * TILE, v: ty * TILE };
+      b.covered = TILE;
+      const tile = `${tx},${ty}`;
+      b.pending = [{ u: tx * TILE, v: ty * TILE, width: TILE, height: TILE }];
+      b.background = [];
+      b.tiles.clear();
+      b.tiles.set(tile, 'absent');
+      b.touched.clear();
+      this.fillPending(b, camera, TILE * TILE, 0);
+      this.saveTiles(b);
+      addRenderStats('bakedTiles', 1);
+      done++;
+    }
+  }
+
+  /** Kacheln zum Vorausrechnen, die noch fehlen - höchstens 200, die vordersten Ringe zuerst. */
+  private bakeCandidates(camera: GpuCamera): { scale: number; key: string; tx: number; ty: number }[] {
+    const store = this.store!;
+    const { width, height } = this.gl.canvas;
+    // Ein Bildschirm in Cache-Texeln - auf jeder Stufe gleich (CSS-Pixel * Texel je CSS-Pixel).
+    const halfU = Math.ceil((BAKE_SCREENS + 0.5) * (width / this.pixelRatio) * this.cacheRatio / TILE);
+    const halfV = Math.ceil((BAKE_SCREENS + 0.5) * (height / this.pixelRatio) * this.cacheRatio / TILE);
+    const stretch = (camera.cacheGroundV ?? viewGroundV()) / viewGroundV();
+    const out: { scale: number; key: string; tx: number; ty: number }[] = [];
+    for (const focus of this.bakeFocus) {
+      const g = worldToGround(focus.x, focus.y);
+      const levels = this.bakeScales.map((scale) => {
+        const key = this.cacheKey(scale, camera);
+        return { scale, key, prefix: `${this.seed}|${this.cacheRatio}|${key}|`,
+          cu: Math.floor((g.u * scale) / TILE), cv: Math.floor((g.v * stretch * scale) / TILE) };
+      });
+      for (let r = 0; r <= Math.max(halfU, halfV); r++) {
+        for (const l of levels) {
+          for (let dy = -Math.min(r, halfV); dy <= Math.min(r, halfV); dy++) {
+            for (let dx = -Math.min(r, halfU); dx <= Math.min(r, halfU); dx++) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              const tx = l.cu + dx, ty = l.cv + dy;
+              if (store.has(`${l.prefix}${tx},${ty}`)) continue;
+              out.push({ scale: l.scale, key: l.key, tx, ty });
+              if (out.length >= 200) return out;
+            }
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Fertige Rücklesungen abholen und in IndexedDB legen - ohne zu warten,
+   * höchstens `limit` je Bild: getBufferSubData kopiert je Kachel 512 KB
+   * (~0,4 ms, unter Last mehr), alle auf einmal kosteten gemessen ~100 ms je Sekunde.
+   */
+  private pollReadbacks(limit: number) {
+    const gl = this.gl;
+    let taken = 0;
+    this.readbacks = this.readbacks.filter(({ key, buffer, fence }) => {
+      if (taken >= limit) return true;
+      const status = gl.clientWaitSync(fence, 0, 0);
+      if (status !== gl.ALREADY_SIGNALED && status !== gl.CONDITION_SATISFIED) return true;
+      const data = new Uint8Array(TILE * TILE * 8);
+      const start = performance.now();
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, buffer);
+      gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, data);
+      addRenderStats('tileReadMs', performance.now() - start);
+      addRenderStats('tileReads', 1);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      gl.deleteBuffer(buffer);
+      gl.deleteSync(fence);
+      const color = data.slice(0, TILE * TILE * 4);
+      const normal = new Uint8Array(TILE * TILE * 2);
+      for (let i = 0, j = TILE * TILE * 4; i < normal.length; i += 2, j += 4) {
+        normal[i] = data[j];
+        normal[i + 1] = data[j + 1];
+      }
+      this.store?.put(key, { color, normal });
+      taken++;
+      return false;
+    });
   }
 
   /** Zeichnet ein absolutes Rechteck in den Ringpuffer - über den Rand hinweg in bis zu vier Teilen. */
@@ -728,13 +1066,8 @@ export class TerrainRenderer {
     const gl = this.gl;
     const W = b.width;
     const H = b.height;
-    const pieces = (start: number, length: number, size: number): [number, number][] => {
-      const s = mod(start, size);
-      const first = Math.min(length, size - s);
-      return first < length ? [[s, first], [0, length - first]] : [[s, first]];
-    };
-    for (const [x, w] of pieces(rect.u, rect.width, W)) {
-      for (const [y, h] of pieces(rect.v, rect.height, H)) {
+    for (const [x, w] of ringPieces(rect.u, rect.width, W)) {
+      for (const [y, h] of ringPieces(rect.v, rect.height, H)) {
         gl.scissor(x, y, w, h);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
       }
@@ -754,7 +1087,7 @@ export class TerrainRenderer {
     const stretch = b.groundV / viewGroundV();
     const halfU = width / 2 / camera.pixelsPerTile;
     const halfV = height / 2 / camera.pixelsPerTile;
-    const reach = Math.min(camera.reliefScale * viewZScreen() * MAX_RELIEF, 2 * halfV);
+    const reach = Math.min(camera.reliefScale * viewZScreen() * this.reachZ, 2 * halfV);
     const c = worldToGround(camera.centerX, camera.centerY);
     const u0 = Math.floor((c.u - halfU) * s);
     const v0 = Math.floor((c.v - halfV) * stretch * s);
@@ -778,32 +1111,68 @@ export class TerrainRenderer {
   render(camera: GpuCamera, now = performance.now()): boolean {
     const gl = this.gl;
 
+    this.filledThisFrame = 0;
     this.selectCache(camera);
     const active = this.active;
     this.updateCache(active, camera);
+    this.applyArrivals();
     const prevCovers = this.previous !== null && this.covers(this.previous, camera);
-    const frozen = this.previous !== null && !isReady(active) && !prevCovers;
+    // Kein Bild mit Lücken zeigen, solange es besser geht: steht die vorige
+    // Stufe nicht ganz bereit - oder gibt es keine (Drehen, erster Cache) und
+    // der neue war noch nie vollständig -, bleibt das letzte Bild stehen.
+    const frozen = !isReady(active) && (this.previous !== null ? !prevCovers : !active.shown);
     // Ist etwas Vollständiges im Bild, wird gleichmäßig wenig je Bild befüllt.
     // Sonst (Laden, Bild steht) zählt nur, schnell fertig zu werden - steht
     // das Bild ohnehin, darf es noch mehr kosten.
     const smooth = !frozen && (isReady(active) || this.previous !== null);
     let left = 0;
-    if (smooth) left = SMOOTH_BUDGET - this.fillPending(active, camera, SMOOTH_BUDGET, 0);
-    else this.fillPending(active, camera, FILL_BUDGET * (frozen ? 2 : 1));
+    // Zeigt das Bild noch die vorige Stufe gestreckt (unscharf) oder fährt die
+    // Kamera, doppelt so viel - das kostet ein paar ms je Bild, halbiert aber
+    // die unscharfe Zeit, und beim Fahren reicht es für Blase und feinere Stufe.
+    // Beim Laden (boost) verdeckt das Ladeschild das Bild: dann Vorrat und
+    // Nachbarstufen mit vollem Budget.
+    const smoothBudget = this.boost ? 4 * FILL_BUDGET : isReady(active) && !active.moved ? SMOOTH_BUDGET : 2 * SMOOTH_BUDGET;
+    if (smooth) left = smoothBudget - this.fillPending(active, camera, smoothBudget, 0);
+    // Eingefroren ohne vorige Stufe (Drehen) steht das Bild ohnehin - so schnell wie beim Laden.
+    else this.fillPending(active, camera, FILL_BUDGET * (frozen ? (this.previous ? 2 : 4) : 1) * (this.boost ? 4 : 1));
     const ready = isReady(active);
+    this.complete = ready && this.previous === null;
+    // Beim Fahren zuerst die Blase: sie rückt als Nächstes ins Bild. Die
+    // feinere Stufe im Vorrat wandert mit und braucht viermal so viele Texel -
+    // vorher bekam sie das Budget zuerst, die Blase lief leer, und beim
+    // Pannen blieben Flächen leer.
+    if (smooth && active.moved && left > 0) left -= this.fillPending(active, camera, 0, left);
     // Vorrat: erst, wenn das Bild selbst vollständig ist. Beim Scrollen nur
     // die Zielstufe beim Hineinzoomen (größerer Maßstab) - das Zoomen um den
     // Mauszeiger verschiebt das Bild ja auch -, sonst braucht die Blase das
     // Budget. Die Fenster wandern trotzdem jedes Bild mit der Kamera.
     for (const b of this.prefetch) {
-      this.updateCache(b, camera, true);
+      this.updateCache(b, camera);
       if (ready && left > 0 && (!active.moved || b.scale > active.scale)) left -= this.fillPending(b, camera, left, 0);
     }
     if (smooth && left > 0) this.fillPending(active, camera, 0, left);
+    this.settled = ready && this.filledThisFrame === 0 && this.arrivals.length === 0;
+    // Fertige Kacheln speichern und vorausrechnen - nur, wenn die Kamera
+    // steht: drei Kacheln je Bild (je ~65.000 Texel, ~2 ms GPU; Abholen
+    // ~0,4-1 ms, das Speichern macht der Worker). Beim Fahren nichts davon:
+    // das Abholen von der GPU (getBufferSubData) hielt dort gemessen einzelne
+    // Bilder bis 300 ms auf (M4, Retina, Zoom 2-3). Was beim Fahren
+    // vorbeizieht, wird nicht gespeichert - das holt das Vorausrechnen nach.
+    const still = !active.moved && this.previous === null;
+    if (still) {
+      for (const b of [active, ...this.prefetch]) this.saveTiles(b);
+      if (ready && !this.boost && this.baking) this.bake(camera, 3);
+      this.pollReadbacks(3);
+    }
     if (frozen && !ready) {
       addRenderStats('frozen', 1);
       return false;
     }
+    if (ready) active.shown = true;
+
+    // Im Bild fehlt Boden, und keine vorige Stufe springt ein - der Ringpuffer
+    // zeigt dort Leere oder eine andere Stelle. Anteil der Bilder.
+    if (!ready && !this.previous) addRenderStats('holes', 1);
 
     // Wie viel vom alten Cache zu sehen ist: ganz, solange der neue fehlt,
     // dann weich ausgeblendet.
@@ -811,6 +1180,8 @@ export class TerrainRenderer {
     if (this.previous) {
       if (!ready) {
         prevMix = 1;
+        // Das Bild zeigt noch die vorige Stufe, gestreckt (unscharf) - Anteil der Bilder.
+        addRenderStats('stretched', 1);
       } else {
         this.fadeStart ??= now;
         const t = (now - this.fadeStart) / CACHE_FADE_MS;
@@ -949,6 +1320,25 @@ interface CacheBuffer {
   moved: boolean;
   /** Was fertig sein muss für ein vollständiges Bild (absolute Texel), oder null. */
   needed: TexelRect | null;
+  /** Seit dem Leeren schon einmal vollständig gezeichnet? Vorher wird er nie gezeigt. */
+  shown: boolean;
+  /**
+   * Zeilen ab der Oberkante des Fensters, die befüllt sind oder in der
+   * Warteschlange stehen. Darunter liegt Platz für die höchsten möglichen
+   * Berge, der hier nicht gebraucht wird (reachZ) - er bleibt leer, bis die
+   * Reichweite wächst.
+   */
+  covered: number;
+  /** Zählt bei jedem neuen Fenster - Antworten aus IndexedDB für ein altes verfallen. */
+  generation: number;
+  /**
+   * Kacheln (tileStore.ts) des jetzigen Fensters: 'looking' wird in IndexedDB
+   * gesucht (so lange nicht rechnen), 'absent' rechnet die GPU, 'stored' ist
+   * gespeichert bzw. aus dem Speicher geladen.
+   */
+  tiles: Map<string, 'looking' | 'absent' | 'stored'>;
+  /** Kacheln, in die gerechnet wurde - fertige werden gespeichert (saveTiles). */
+  touched: Set<string>;
 }
 
 function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
@@ -963,11 +1353,47 @@ function createCacheBuffer(gl: WebGL2RenderingContext): CacheBuffer {
     groundV: 0.5,
     view: '',
     window: null,
+    covered: 0,
+    generation: 0,
+    tiles: new Map(),
+    touched: new Set(),
     pending: [],
     background: [],
     moved: false,
+    shown: false,
     needed: null,
   };
+}
+
+/**
+ * Vorausgerechnet wird bis so viele Bildschirme je Seite um Ansicht und Gebäude.
+ * Auf Retina sind das je Stufe ~1.700 Kacheln (~650 MB) - für alle Stufen mehr,
+ * als der Speicher behält (MAX_TILES); die vordersten Ringe kommen zuerst.
+ */
+const BAKE_SCREENS = 2;
+
+/** Kachel (tileStore.ts) eines Rechtecks, das in einer liegt (splitTiles). */
+function tileOf(r: TexelRect): string {
+  return `${Math.floor(r.u / TILE)},${Math.floor(r.v / TILE)}`;
+}
+
+/** Ein Rechteck in Stücke je Kachel - so gehört jedes Stück der Warteschlange zu genau einer. */
+function splitTiles(r: TexelRect): TexelRect[] {
+  const out: TexelRect[] = [];
+  for (let ty = Math.floor(r.v / TILE); ty * TILE < r.v + r.height; ty++) {
+    for (let tx = Math.floor(r.u / TILE); tx * TILE < r.u + r.width; tx++) {
+      const part = intersect(r, { u: tx * TILE, v: ty * TILE, width: TILE, height: TILE });
+      if (part) out.push(part);
+    }
+  }
+  return out;
+}
+
+/** Teile eines absoluten Bereichs im Ringpuffer der Größe `size`: [Start im Puffer, Länge]. */
+function ringPieces(start: number, length: number, size: number): [number, number][] {
+  const s = mod(start, size);
+  const first = Math.min(length, size - s);
+  return first < length ? [[s, first], [0, length - first]] : [[s, first]];
 }
 
 /** Ob der Cache ein vollständiges Bild ergibt - das Sichtbare samt Gipfeln von unten ist befüllt. */

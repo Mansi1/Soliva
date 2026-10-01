@@ -1630,22 +1630,29 @@
    "Window.Shutter",
    "Window.Shutter.Band"
   ],
+  "fields/billboards/cattails_billboard": [
+   "cattails"
+  ],
+  "fields/billboards/meadow_grass_billboard": [
+   "meadow_grass"
+  ],
+  "fields/billboards/reed_billboard": [
+   "reed"
+  ],
+  "fields/billboards/wild_grass_seedheads_billboard": [
+   "wild_grass_seedheads"
+  ],
   "fields/cord": [
    "Cord"
   ],
-  "fields/corn_1": [
-   "Cob",
-   "Cob.Husk",
-   "Leaf",
-   "Stalk",
-   "Tassel"
+  "fields/corn_card": [
+   "CornCard0"
   ],
-  "fields/corn_2": [
-   "Cob",
-   "Cob.Husk",
-   "Leaf",
-   "Stalk",
-   "Tassel"
+  "fields/corn_card_1": [
+   "CornCard1"
+  ],
+  "fields/corn_card_2": [
+   "CornCard2"
   ],
   "fields/fish_trap": [
    "Bind 0-0",
@@ -1983,47 +1990,93 @@
    "Throat ring 8",
    "Throat ring 9"
   ],
-  "fields/hop": [
-   "Bine",
-   "Cone",
-   "Leaf",
-   "Pole"
+  "fields/hop_card": [
+   "HopCard0"
   ],
-  "fields/potato": [
-   "Flower",
-   "Leaf",
-   "Stem"
+  "fields/hop_card_1": [
+   "HopCard1"
+  ],
+  "fields/hop_card_2": [
+   "HopCard2"
+  ],
+  "fields/potato_card": [
+   "PotatoCard0"
+  ],
+  "fields/potato_card_1": [
+   "PotatoCard1"
+  ],
+  "fields/potato_card_2": [
+   "PotatoCard2"
   ],
   "fields/stake": [
    "Stake",
    "Stake.Top"
   ],
-  "fields/tomato": [
-   "Fruit",
-   "Leaf",
-   "Stake",
-   "Stem"
+  "fields/tomato_card": [
+   "TomatoCard0"
   ],
-  "fields/wheat_leaf": [
-   "Leaf"
+  "fields/tomato_card_1": [
+   "TomatoCard1"
   ],
-  "fields/wheat_stalk": [
-   "Ear",
-   "Stalk"
+  "fields/tomato_card_2": [
+   "TomatoCard2"
   ],
-  "fields/wheat_stalk_dark": [
-   "Ear",
-   "Stalk"
+  "fields/wheat_card": [
+   "WheatCard0"
   ],
-  "fields/wheat_stalk_light": [
-   "Ear",
-   "Stalk"
+  "fields/wheat_card_1": [
+   "WheatCard1"
+  ],
+  "fields/wheat_card_2": [
+   "WheatCard2"
   ],
   "flowers/flower": [
    "Blossom",
    "Leaf",
    "Shadow",
    "Stem"
+  ],
+  "foliage/cattails": [
+   "cattails"
+  ],
+  "foliage/meadow_grass": [
+   "meadow_grass"
+  ],
+  "foliage/reed": [
+   "reed"
+  ],
+  "foliage/stone_1": [
+   "Stone1"
+  ],
+  "foliage/stone_10": [
+   "Stone10"
+  ],
+  "foliage/stone_2": [
+   "Stone2"
+  ],
+  "foliage/stone_3": [
+   "Stone3"
+  ],
+  "foliage/stone_4": [
+   "Stone4"
+  ],
+  "foliage/stone_5": [
+   "Stone5"
+  ],
+  "foliage/stone_6": [
+   "Stone6"
+  ],
+  "foliage/stone_7": [
+   "Stone7"
+  ],
+  "foliage/stone_8": [
+   "Stone8"
+  ],
+  "foliage/stone_9": [
+   "Stone9"
+  ],
+  "foliage/wild_grass_seedheads": [
+   "wild_grass_seedheads"
   ],
   "props/axe": [
    "Arm.R.Lower.Tool.Edge",

@@ -35,9 +35,9 @@ export const PARTICLE = {
 
 /**
  * Ab so vielen CSS-Pixeln je Tile lohnen sich die kleinen Effekte der
- * Arbeit und die Bienen - weiter draußen wären sie Pixel-Krümel.
+ * Arbeit, Bienen, Schmetterlinge, Fische und Krebse - nur auf Stufe 5.
  */
-export const DETAIL_TILE_SIZE = 64;
+export const DETAIL_TILE_SIZE = 128;
 
 /** Höchstens so viele Partikel je Quelle (Eckpunkte je Instanz). */
 export const MAX_PER_SOURCE = 16;

@@ -1,10 +1,9 @@
 // Field models - 3x3 tiles (15 m square) like the AoE2 farm: the staked-out
-// outline and the crop in rows. The parts are Blender models (docs/BLENDER.md,
-// src/models/fields/*.glb): stake, cord, wheat leaf, wheat stalks with
-// ears in three tones, maize plants with one or two cobs. Here only the
-// placing is decided - where each stands, how tall, how it leans and turns -
-// and the game builds the field from it at start-up (src/gl/entityRenderer.ts)
-// rather than storing it: a wheat field is thousands of single stalks.
+// outline and the crop in rows. The parts are in src/models/fields/*.glb:
+// stake and cord from Blender (docs/BLENDER.md), the crops as image cards in
+// three growth stages (tools/models/crop-cards.mjs). Here only the placing is
+// decided - where each stands, how tall, how it leans and turns - and the
+// game builds the field from it at start-up (src/gl/entityRenderer.ts).
 //
 // Every plant is one object "Crop.<row>.<c>.<cols>": the game shows per
 // furrow what is sown and not yet harvested, and lets the plants grow out of
@@ -14,50 +13,59 @@ import { model } from './primitives.mjs';
 
 /** The parts a field is made of (src/models/fields/<name>.glb). */
 export const FIELD_PARTS = [
-  'stake', 'cord', 'wheat_leaf', 'wheat_stalk_light', 'wheat_stalk', 'wheat_stalk_dark', 'corn_1', 'corn_2',
-  'tomato', 'potato', 'hop',
+  'stake', 'cord',
+  // Je Feldart die Karte und die Bilder ihrer weiteren Wachstumsstufen
+  // (tools/models/crop-cards.mjs) - in dieser Reihenfolge, das Spiel legt die
+  // drei Bilder hintereinander in seine Textur.
+  ...['wheat', 'corn', 'tomato', 'potato', 'hop'].flatMap((c) => [`${c}_card`, `${c}_card_1`, `${c}_card_2`]),
 ];
 
 /**
- * A part read from its OBJ, per material: vertices (file coords) and faces
- * (0-based into them).
+ * A part read from its OBJ, per material: vertices (file coords), faces
+ * (0-based into them) and, for an image card, the texture coordinates.
  */
 function readPart(obj) {
   const pos = [];
+  const uv = [];
   const groups = new Map();
   let mtl = '';
   for (const raw of obj.split('\n')) {
     const p = raw.trim().split(/\s+/);
     if (p[0] === 'v') pos.push(p.slice(1, 4).map(Number));
+    else if (p[0] === 'vt') uv.push(p.slice(1, 3).map(Number));
     else if (p[0] === 'usemtl') mtl = p.slice(1).join(' ');
     else if (p[0] === 'f') {
-      if (!groups.has(mtl)) groups.set(mtl, { mtl, map: new Map(), verts: [], faces: [] });
+      if (!groups.has(mtl)) groups.set(mtl, { mtl, map: new Map(), verts: [], faces: [], uvs: undefined });
       const g = groups.get(mtl);
       g.faces.push(p.slice(1).map((a) => {
-        const i = Number(a.split('/')[0]) - 1;
-        if (!g.map.has(i)) {
-          g.map.set(i, g.verts.length);
+        const [i, t] = a.split('/').map((n) => Number(n) - 1);
+        const key = `${i}/${t}`;
+        if (!g.map.has(key)) {
+          g.map.set(key, g.verts.length);
           g.verts.push(pos[i]);
+          if (t >= 0) (g.uvs ??= []).push(uv[t]);
         }
-        return g.map.get(i);
+        return g.map.get(key);
       }));
     }
   }
   return [...groups.values()];
 }
 
-/** Material colours (Kd) of the parts' MTL files. */
-function readColors(mtls) {
+/** Material colours (Kd) and images (map_Kd) of the parts' MTL files. */
+function readMaterials(mtls) {
   const colors = {};
+  const images = {};
   for (const text of mtls) {
     let cur = null;
     for (const raw of text.split('\n')) {
       const p = raw.trim().split(/\s+/);
       if (p[0] === 'newmtl') cur = p.slice(1).join(' ');
       if (p[0] === 'Kd' && cur) colors[cur] = p.slice(1, 4).join(' ');
+      if (p[0] === 'map_Kd' && cur) images[cur] = p.slice(1).join(' ');
     }
   }
-  return colors;
+  return { colors, images };
 }
 
 const sub = (a, b) => a.map((v, i) => v - b[i]);
@@ -89,19 +97,12 @@ function stretch(axis, p0, p1) {
   };
 }
 
-/**
- * Turned by `turn` about the vertical, then moved to (x, y, z). With `grow`
- * everything above `above` metres moves up by `grow` (the top of a maize
- * stalk and its tassel) - leaves and cobs below keep their height.
- */
-function stand(x, y, z, turn = 0, grow = 0, above = Infinity) {
+/** Turned by `turn` about the vertical, then moved to (x, y, z). */
+function stand(x, y, z, turn = 0) {
   const c = Math.cos(turn), s = Math.sin(turn);
-  return ([vx, vy, vz]) => [x + vx * c - vz * s, y + vy + (vy > above ? grow : 0), z + vx * s + vz * c];
+  return ([vx, vy, vz]) => [x + vx * c - vz * s, y + vy, z + vx * s + vz * c];
 }
 
-/** Height of the maize plants in Blender (fields/corn_*.glb) and from where up they grow with the plant. */
-const CORN_HEIGHT = 2.2;
-const CORN_GROWS_ABOVE = 2.0;
 
 /** Half the field edge and half the planted area, metres. */
 const HALF = 7.5;
@@ -119,7 +120,7 @@ function rng(seed) {
   };
 }
 
-/** Where the plants start, metres - they grow from here (FIELD_SOIL_METERS in the shader). */
+/** Where the plants stand, metres above the ground. */
 const SOIL = 0.02;
 /**
  * Furrows per field - the same for every crop (FIELD_ROWS in buildings.ts),
@@ -178,91 +179,32 @@ function planted(rows, cols, plant) {
 }
 
 /**
- * Wheat like a real field: many single stalks, each with its ear, standing
- * close together and leaning a little this way and that.
+ * A crop as image cards (fields/<crop>_card.glb, a square as wide as the grown
+ * plant is tall): per plant two crossed cards, in the full version one such
+ * cross at each of `spots` places across the furrow - so the ground does not
+ * show between the rows. The shader lets the plant grow on the card through
+ * its three stages. A card is 4 vertices where 3D plants were thousands.
  */
-function wheat(m, put, detail = 1) {
-  const rnd = rng(11);
-  const rows = ROWS, cols = 15;
-  ground(m, put);
-  const gapZ = (2 * INNER) / rows, gapX = (2 * INNER) / cols;
-  planted(rows, cols, (name, x, z) => {
-    // Unten dicht an dicht Blätter, die schräg aus dem Boden stehen - so
-    // sieht man zwischen den Halmen nicht bis auf die Erde.
-    for (let i = 0; i < Math.round(24 * detail); i++) {
-      const px = x + (rnd() - 0.5) * gapX;
-      const pz = z + (rnd() - 0.5) * gapZ * 0.95;
-      const a = rnd() * Math.PI * 2;
-      const len = 0.35 + rnd() * 0.25;
-      const tip = [px + Math.cos(a) * len * 0.45, SOIL + len, pz + Math.sin(a) * len * 0.45];
-      put(name, 'wheat_leaf', stretch([0, 1, 0], [px, SOIL * 0.5, pz], tip));
-    }
-    for (let i = 0; i < Math.max(4, Math.round(60 * detail)); i++) {
-      const px = x + (rnd() - 0.5) * gapX;
-      const pz = z + (rnd() - 0.5) * gapZ * 0.95;
-      const h = 0.8 + rnd() * 0.25;
-      const lean = [(rnd() - 0.5) * 0.14, (rnd() - 0.5) * 0.14];
-      rnd(); // (früher die Länge der Ähre - sie steht jetzt im Modell)
-      const tone = rnd();
-      // Der Halm von der Erde bis oben, die Ähre setzt ihn fort.
-      put(name, tone < 0.55 ? 'wheat_stalk_light' : tone < 0.85 ? 'wheat_stalk' : 'wheat_stalk_dark',
-        stretch([0, 1, 0], [px, SOIL * 0.5, pz], [px + lean[0], h, pz + lean[1]]));
-    }
-  });
-}
-
-/**
- * Maize: dense stands of tall stalks - two rows of plants per furrow - with
- * long hanging leaves, a tassel on top and yellow cobs that stick out of
- * their husks. Each plant is one of the two Blender plants (one or two
- * cobs), turned and stretched to its height.
- */
-function corn(m, put, detail = 1) {
-  const rnd = rng(23);
-  const rows = ROWS, cols = 9;
-  ground(m, put);
-  const gapZ = (2 * INNER) / rows, gapX = (2 * INNER) / cols;
-  planted(rows, cols, (name, x, z) => {
-    // Fewer plants in the simpler versions (every second or fourth).
-    const stride = detail >= 1 ? 1 : detail >= 0.3 ? 2 : 4;
-    for (let k = 0; k < 8; k += stride) {
-      const px = x + ((k % 4) + 0.5 - 2) * (gapX / 4) + (rnd() - 0.5) * 0.12;
-      const pz = z + (k < 4 ? -0.22 : 0.22) * gapZ + (rnd() - 0.5) * 0.1;
-      const h = 2.0 + rnd() * 0.45;
-      const turn = rnd() * Math.PI;
-      // Ein oder zwei Kolben - gezogen wie früher: die Bedingung würfelt bei
-      // jeder Prüfung neu, dazu je Kolben seine (jetzt im Modell feste) Höhe.
-      // So stehen alle Pflanzen danach genau wie früher.
-      let cobs = 0;
-      while (cobs < 1 + Math.floor(rnd() * 2)) {
-        rnd();
-        cobs++;
-      }
-      // Die Modelle sind 2,2 m hoch und drehen sich um die Hochachse. Was über
-      // 2 m liegt (Spitze des Stängels, Rispe), wächst mit der Höhe der Pflanze.
-      put(name, cobs === 1 ? 'corn_1' : 'corn_2',
-        stand(px, SOIL * 0.5, pz, turn, h - CORN_HEIGHT, CORN_GROWS_ABOVE));
-    }
-  });
-}
-
-/**
- * Bushes in two rows per furrow (tomatoes, potatoes, hops): `per` plants per spot,
- * each turned and a little off its place. Fewer in the simpler versions.
- */
-function bushes(part, seed, per) {
+function cards(part, seed, cols, spots, widen = 1) {
   return (m, put, detail = 1) => {
     const rnd = rng(seed);
-    const rows = ROWS, cols = 9;
     ground(m, put);
-    const gapZ = (2 * INNER) / rows, gapX = (2 * INNER) / cols;
-    planted(rows, cols, (name, x, z) => {
-      const stride = detail >= 1 ? 1 : detail >= 0.3 ? 2 : 4;
-      for (let k = 0; k < per; k += stride) {
-        const half = Math.ceil(per / 2);
-        const px = x + ((k % half) + 0.5 - half / 2) * (gapX / half) + (rnd() - 0.5) * 0.12;
-        const pz = z + (k < half ? -0.22 : 0.22) * gapZ + (rnd() - 0.5) * 0.1;
-        put(name, part, stand(px, SOIL * 0.5, pz, rnd() * Math.PI * 2));
+    const gapZ = (2 * INNER) / ROWS;
+    const gapX = (2 * INNER) / cols;
+    planted(ROWS, cols, (name, x, z) => {
+      for (const [dx, dz] of detail >= 1 ? spots : [[0, 0]]) {
+        const px = x + dx * gapX + (rnd() - 0.5) * 0.3;
+        const pz = z + dz * gapZ + (rnd() - 0.5) * 0.2;
+        const k = 0.85 + rnd() * 0.3;
+        // Die einfacheren Fassungen (ein Kreuz) breiter, sonst sähe man die Erde.
+        const wide = k * widen * (detail >= 1 ? 1 : 1.5);
+        const turn = rnd() * Math.PI;
+        for (const t of [turn, turn + Math.PI / 2]) {
+          // Jede Karte oben bis etwa 10° zur Seite und nach vorn oder hinten geneigt.
+          const [side, back] = [(rnd() - 0.5) * 0.35, (rnd() - 0.5) * 0.35];
+          const at = stand(px, SOIL * 0.5, pz, t);
+          put(name, part, ([vx, vy, vz]) => at([vx * wide + side * vy * k, vy * k, vz + back * vy * k]));
+        }
       }
     });
   };
@@ -270,7 +212,15 @@ function bushes(part, seed, per) {
 
 /** The fields, in the order of the SHAPE numbers (farmWheat, farmCorn, farmTomato, farmPotato, farmHop). */
 export const FARM_KINDS = ['wheat', 'corn', 'tomato', 'potato', 'hop'];
-const MAKE = { wheat, corn, tomato: bushes('tomato', 31, 4), potato: bushes('potato', 37, 6), hop: bushes('hop', 41, 2) };
+/** Weizen dicht an dicht (15 Plätze je Furche, drei Kreuze quer), die übrigen auf 9 Plätzen in zwei Reihen. */
+const TWO_ROWS = [[0, -0.25], [0, 0.25]];
+const MAKE = {
+  wheat: cards('wheat_card', 11, 15, [[0, -1 / 3], [0, 0], [0, 1 / 3]], 1.3),
+  corn: cards('corn_card', 23, 9, TWO_ROWS),
+  tomato: cards('tomato_card', 31, 9, TWO_ROWS),
+  potato: cards('potato_card', 37, 9, [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]], 1.4),
+  hop: cards('hop_card', 41, 9, TWO_ROWS, 0.8),
+};
 
 /**
  * OBJ and MTL text of one field, from its parts (`parts[name] = { obj, mtl }`,
@@ -282,14 +232,14 @@ export function farmModel(kind, detail, parts) {
   const m = model();
   const read = Object.fromEntries(Object.entries(parts).map(([n, p]) => [n, readPart(p.obj)]));
   const put = (name, part, at) => {
-    for (const g of read[part]) m.mesh(name, g.mtl, g.verts.map(at), g.faces);
+    for (const g of read[part]) m.mesh(name, g.mtl, g.verts.map(at), g.faces, g.uvs);
   };
   MAKE[kind](m, put, detail);
-  const colors = readColors(Object.values(parts).map((p) => p.mtl));
+  const { colors, images } = readMaterials(Object.values(parts).map((p) => p.mtl));
   const obj = `# farm_${kind}.obj (tools/models/farmsGen.mjs)\nmtllib farm_${kind}.mtl\n${m.out.join('\n')}\n`;
   let mtl = `# farm_${kind}.mtl\n`;
   for (const n of [...m.used].sort()) {
-    mtl += `\nnewmtl ${n}\nKd ${colors[n] ?? '0.6 0.6 0.6'}\nKa 0 0 0\nKs 0 0 0\nd 1\nillum 1\n`;
+    mtl += `\nnewmtl ${n}\nKd ${colors[n] ?? '0.6 0.6 0.6'}\nKa 0 0 0\nKs 0 0 0\nd 1\nillum 1\n${images[n] ? `map_Kd ${images[n]}\n` : ''}`;
   }
   return { obj, mtl };
 }

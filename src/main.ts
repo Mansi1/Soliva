@@ -30,7 +30,7 @@ import {
 import { World } from './world/world';
 import { worldInstances } from './world/render';
 import { Selection } from './game/Selection';
-import { Camera, ZOOM_LEVELS } from './game/Camera';
+import { Camera, MAX_ZOOM, ZOOM_LEVELS } from './game/Camera';
 import { GameUi } from './game/ui';
 import { steerCamera } from './game/cameraControl';
 import { startPoint } from './game/startPoint';
@@ -58,6 +58,7 @@ import { ResourceField, type OnScreen } from './world/resources';
 import { FlowerField } from './world/flowers';
 import { Sound } from './audio';
 import { addRenderStats, renderStatsFrame, setRenderInfo, startRenderStats, withoutRenderStats } from './renderStats';
+import { collectGpuTimes, initGpuTimer } from './gpuTimer';
 import { Music } from './music';
 import { currentSeed, deleteSave, gameUrl, shareUrl, switchWorld, takeStartRequest } from './worlds';
 
@@ -214,6 +215,12 @@ function stateLink() {
 }
 const shareButton = document.getElementById('share-link') as HTMLButtonElement;
 shareButton.addEventListener('click', () => copyLink(shareButton, stateLink()));
+// Abschalter im Entwickler-Panel (MapRenderer.off).
+for (const box of document.querySelectorAll<HTMLInputElement>('#dev-off input[data-off]')) {
+  box.addEventListener('change', () => {
+    renderer.off[box.dataset.off as keyof typeof renderer.off] = box.checked;
+  });
+}
 
 function startNewGame() {
   world.reset();
@@ -346,6 +353,7 @@ camera.moveTo(startX, startY);
 /** Gelände, wie man es sieht, und sein Abgleich mit dem Shader (game/Ground.ts). */
 const ground = new Ground(mapGen, world, renderer, camera);
 world.groundAt = (x, y, step) => ground.groundAt(x, y, step);
+renderer.groundHeight = (x, y) => ground.coarseGroundAt(x, y);
 
 /** Was unter dem Zeiger liegt: Welt-Punkt, Tile, Dorfbewohner, Vorkommen (game/Picker.ts). */
 /** Tierarten weit draußen ausgeblendet (Einstellung animalsBelow). */
@@ -748,14 +756,19 @@ minimapCanvas.addEventListener('mouseleave', () => devPanel.showMinimapPointer()
  * Zeiger auf die Canvas-Stelle (mouseX, mouseY) setzen: Objekt und Tile
  * darunter, Mauszeiger und Entwickler-Infos. true, wenn das Tile wechselte.
  */
-function updateHoveredTile(mouseX: number, mouseY: number): boolean {
+/**
+ * @param objects auch das Objekt unter dem Zeiger suchen - während sich die
+ * Kamera bewegt nicht: weit draußen prüft das Tausende Vorkommen und kostete
+ * beim schnellen Zoomen bis 150 ms je Bild (M4). Danach einmal mit (loop).
+ */
+function updateHoveredTile(mouseX: number, mouseY: number, objects = true): boolean {
   pointer.pixel = { x: mouseX, y: mouseY };
   // Nur mit ausgewählten Dorfbewohnern zählt, worauf der Zeiger zeigt.
-  const target = picker.target(mouseX, mouseY);
+  const target = objects ? picker.target(mouseX, mouseY) : undefined;
   pointer.setObject(selection.villagers.size > 0 ? target : undefined);
   const tile = picker.tile(mouseX, mouseY);
   const tileChanged = pointer.setTile(tile);
-  updateSelectable(target);
+  if (objects) updateSelectable(target);
   if (!tileChanged) return false;
   devPanel.showTile({ ...terrain.getTile(tile.x, tile.y), x: tile.x, y: tile.y });
   updateHoverInfo();
@@ -775,9 +788,18 @@ function updateSelectable(object = pointer.pixel && picker.target(pointer.pixel.
 }
 
 /** Die Kamera hat sich bewegt: unter dem stehenden Zeiger liegt jetzt anderes. */
-function refreshPointer() {
-  if (pointer.pixel) updateHoveredTile(pointer.pixel.x, pointer.pixel.y);
+function refreshPointer(objects = true) {
+  if (pointer.pixel) updateHoveredTile(pointer.pixel.x, pointer.pixel.y, objects);
 }
+/** Stand das Hauptmenü offen (oder lädt die Seite gerade)? Beim Wechsel ins Spiel: Zoom 5, Ladeschild. */
+let menuWasOpen = true;
+let loading = false;
+let loadingSince = 0;
+const LOADING_MAX_MS = 6000;
+let bakeBuildingsAt = 0;
+const loadingEl = document.getElementById('loading')!;
+/** Bewegte sich die Kamera im letzten Bild? Kommt sie zur Ruhe, sucht der Zeiger wieder Objekte. */
+let cameraMoving = false;
 
 /**
  * Was unter dem Zeiger steht, in den Entwickler-Infos (game/hoverInfo.ts).
@@ -805,8 +827,20 @@ let lastTime = performance.now();
  */
 const IDLE_AFTER_MS = 1000;
 const IDLE_FPS = 30;
+/**
+ * In der Pause steht das Bild still - ohne Eingabe nur noch so oft, damit
+ * Nachgeladenes (Texturen, Gelände-Cache, Baumbilder) noch ins Bild kommt.
+ * ponytail: feste 2 fps statt gar keinem Bild; auf 0 gehen, wenn jede
+ * Quelle von Änderungen (Laden, Cache, UI) ein Neuzeichnen anstoßen kann.
+ */
+const PAUSED_FPS = 2;
 let lastMove = performance.now();
 let lastFrame = 0;
+/** Letzte Eingabe (Zeiger, Rad, Tasten) - sie zeichnet auch in der Pause sofort wieder. */
+let lastInput = performance.now();
+for (const type of ['pointermove', 'pointerdown', 'pointerup', 'wheel', 'keydown', 'keyup'] as const) {
+  window.addEventListener(type, () => { lastInput = performance.now(); }, { capture: true, passive: true });
+}
 /** So oft je Sekunde wird die Minimap gezeichnet - sie bewegt sich langsam (Einstellung minimapFps). */
 const MINIMAP_FPS = 10;
 let lastMinimap = 0;
@@ -878,13 +912,17 @@ function collectOverlay(blend: number) {
     resources.update(visible, camera.x, camera.y);
     if (camera.tileSize < STATIC_BATCHES_BELOW) {
       resources.instances(visible, world, overlay, selection.resource, blend, { batcher: renderer, out: staticBatches });
+    } else if (camera.tileSize < settings.billboards) {
+      // Bäume als Bild gibt es nur aus den festen Puffern - nah dort nur sie, der Rest einzeln.
+      resources.instances(visible, world, overlay, selection.resource, blend, { batcher: renderer, out: staticBatches }, onScreenTest());
     } else {
       resources.instances(visible, world, overlay, selection.resource, blend, undefined, onScreenTest());
     }
   }
   if (renderer.flowerObjects) {
     flowers.update(visible, camera.x, camera.y);
-    flowers.instances(visible, world, overlay);
+    // Blumen als Bild gibt es nur aus festen Puffern (wie die Bäume).
+    flowers.instances(visible, world, overlay, camera.tileSize < settings.billboards ? { batcher: renderer, out: staticBatches } : undefined);
   }
   // Partikel: erst Wichtiges (Einsturz in worldInstances), zuletzt Schmuck.
   const particles = renderer.particles;
@@ -904,13 +942,16 @@ function collectOverlay(blend: number) {
 
 function loop(now: number) {
   // Stufenloser Zoom und Neigung zählen mit - beides bewegt die Ansicht.
-  const view = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()}`;
+  // Auch das Relief (Flachlegen): es verschiebt, was man in der Bildmitte sieht.
+  const view = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()},${renderer.relief}`;
   if (view !== lastView) {
     lastView = view;
     lastMove = now;
+    renderer.seenCenter = picker.point(camera.centerX, camera.centerY);
   }
   // Etwas Spiel, damit bei 60 Hz jedes zweite Bild kommt und nicht jedes dritte.
-  if (settings.idleFps && now - lastMove > IDLE_AFTER_MS && now - lastFrame < 1000 / IDLE_FPS - 4) {
+  const idleFps = paused && now - lastInput > IDLE_AFTER_MS ? PAUSED_FPS : IDLE_FPS;
+  if (settings.idleFps && now - lastMove > IDLE_AFTER_MS && now - lastFrame < 1000 / idleFps - 4) {
     requestAnimationFrame(loop);
     return;
   }
@@ -936,9 +977,40 @@ function loop(now: number) {
   const [cameraX, cameraY] = [camera.x, camera.y];
   const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
   if (held && renderer.relief !== reliefBefore && camera.x === cameraX && camera.y === cameraY) keepFocus(held);
-  if (steered || zoomed || tilted || flying) refreshPointer();
+  const moving = steered || zoomed || tilted || flying;
+  if (moving || cameraMoving) refreshPointer(!moving);
+  cameraMoving = moving;
   // Schaut man in einen Berg? Geprüft, wenn sich die Ansicht ändert - und
   // solange flachgelegt ist, bis die Sicht eine Weile frei ist.
+  // Ins Spiel (aus dem Hauptmenü oder beim Laden): auf Zoom 5, außer die
+  // Adresse nennt eine Stufe - und das Ladeschild, bis das Gelände im Bild
+  // fertig ist. Zoom 5 ist der kleinste Ausschnitt, am schnellsten berechnet.
+  if (!start.isOpen() && menuWasOpen) {
+    menuWasOpen = false;
+    if (!gameUrl?.zoom) {
+      camera.jumpToZoom(MAX_ZOOM);
+      renderer.tileSize = camera.tileSize;
+      showZoom();
+    }
+    loading = true;
+    // Nicht der Zeitstempel des Bildes: nach der langen Startphase liegt er weit zurück.
+    loadingSince = performance.now();
+  }
+  if (start.isOpen()) menuWasOpen = true;
+  renderer.loading = loading;
+  // Bis auch Vorrat und Nachbarstufen gefüllt sind, nicht nur das Bild - das
+  // erste Scrollen und Zoomen ruckelt nicht nach. Kommt alles aus dem
+  // Speicher, geht das schnell. Höchstens LOADING_MAX_MS, falls ein Gerät es nicht schafft.
+  const waited = performance.now() - loadingSince;
+  if (loading && renderer.terrainComplete && (renderer.terrainSettled || waited >= LOADING_MAX_MS)) loading = false;
+  // Gebäude für das Vorausrechnen des Bodens, in Gruppen (16 Tiles) - einmal je Sekunde.
+  if (now - bakeBuildingsAt > 1000) {
+    bakeBuildingsAt = now;
+    const groups = new Map<string, { x: number; y: number }>();
+    for (const b of world.allBuildings()) groups.set(`${Math.floor(b.x / 16)},${Math.floor(b.y / 16)}`, { x: b.x, y: b.y });
+    renderer.bakeBuildings = [...groups.values()];
+  }
+  if (loadingEl.hidden === loading) loadingEl.hidden = !loading;
   if (!start.isOpen()) {
     const seen = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()}`;
     if ((seen !== autoFlatView || (autoFlat && clearSince > 0)) && now - lastCheck >= CHECK_MS) {
@@ -1009,7 +1081,10 @@ function loop(now: number) {
     lap('minimapMs');
   }
 
+  collectGpuTimes();
   devPanel.frame(now, camera, renderer.billboardsActive);
+  devPanel.showCosts(selection.villagers.size > 0 ? { key: 'simVillagersMs', count: world.villagers.length }
+    : selection.animal !== null ? { key: 'simWildlifeMs', count: world.wildlife.animals.length } : undefined);
 
   if (uiRefresh.due(now)) {
     ui.refreshResources();
@@ -1041,6 +1116,7 @@ if (request) start.close();
 else start.open();
 if (request === 'new') startNewGame();
 startRenderStats();
+initGpuTimer(canvas.getContext('webgl2')!);
 // Umstände der Messung für getRenderInfo() - ohne sie sind Läufe nicht vergleichbar.
 setRenderInfo(() => {
   const gl = canvas.getContext('webgl2');
@@ -1053,6 +1129,8 @@ setRenderInfo(() => {
     seed,
     idleFps: settings.idleFps,
     minimapFps: settings.minimapFps,
+    // Im Entwickler-Panel abgeschaltet - dann misst der Lauf nicht das ganze Bild.
+    off: Object.keys(renderer.off).filter((k) => renderer.off[k as keyof typeof renderer.off]),
     billboards: settings.billboards,
     fxaa: settings.fxaa,
     colorGrading: settings.colorGrading,
@@ -1062,4 +1140,6 @@ setRenderInfo(() => {
   };
 });
 requestAnimationFrame(loop);
+// Nach dem ersten Bild, wenn der Browser Luft hat (audio.ts).
+sound.prepare();
 document.title = `Soliva - ${seed}`;

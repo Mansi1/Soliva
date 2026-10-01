@@ -6,11 +6,12 @@
 // Tausende Tiles; je Bild neu zu rechnen wäre viel zu teuer.
 
 import type { EntityInstance, StaticBatch } from '../gl/entityRenderer';
-import { BILLBOARD_HEADINGS, SHAPE, TREES, modelSize } from '../gl/entityRenderer';
+import { BILLBOARD_HEADINGS, SHAPE, TREES, modelSize, stumpOf } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ, type MapGenerator } from '../noise';
 import type { DepositType } from './catalog';
 import type { ViewRect, World } from './world';
+import { addRenderStats } from '../renderStats';
 
 /** Klein genug, dass ein Stück das Zeitbudget eines Bildes nicht sprengt. */
 export const CHUNK = 16;
@@ -144,7 +145,10 @@ const REGION_TILES = REGION * CHUNK;
 const REGION_BUDGET_MS = 3;
 
 interface Region {
-  batch: StaticBatch | null;
+  /** Die Bäume der Region - nah wie weit gezeichnet (als Bild). */
+  trees: StaticBatch | null;
+  /** Alles andere (Felsen, Gold, Beeren) - nur weit draußen, nah kommt es einzeln. */
+  others: StaticBatch | null;
   /** Stücke kamen hinzu - der Puffer ist unvollständig, zeigt aber nichts Falsches. */
   stale: boolean;
   /** Ein Tile wurde angefasst oder frei, oder die Auswahl wechselte - der Puffer zeigt Falsches. */
@@ -161,6 +165,13 @@ export class ResourceField {
   private touched = new Map<string, { x: number; y: number }[]>();
   private seenDeposits: unknown = null;
   private seenRevision = -1;
+  private seenBuildings = -1;
+  /**
+   * Angefasste Tiles, auf denen nur noch ein Stumpf steht (ganz abgeholzt,
+   * kein Feld darauf): sie liegen als Stumpf-Modell (STUMPS) im Puffer der
+   * Region statt einzeln als ganzer Baum.
+   */
+  private stumps = new Set<string>();
   private selectedKey: string | null = null;
 
   constructor(private terrain: Terrain, private mapGen: MapGenerator) {}
@@ -217,7 +228,7 @@ export class ResourceField {
         if (region) region.stale = true;
       },
       dropped: (cx, cy) => this.dropRegion(cx, cy),
-    });
+    }, 'resourceChunkMs');
   }
 
   private generate(cx: number, cy: number): ResourceNode[] {
@@ -304,6 +315,10 @@ export class ResourceField {
    * festen Puffer auf der Grafikkarte (statics.out) - einmal gebaut, danach
    * nur gezeichnet. Nach `out` kommen dann nur die angefassten Tiles und die
    * Auswahl. Weit herausgezoomt sind das Zehntausende Bäume weniger je Bild.
+   * Mit `statics` und `onScreen` (nah): nur die Bäume im Puffer - sie werden
+   * dort Bilder, eine Region zu zeichnen kostet kaum etwas. Felsen, Gold und
+   * Beeren bleiben Modelle und kommen einzeln, nur was im Bild steht - eine
+   * ganze Region Felsen als Modell kostete gemessen ~1 ms je Bild.
    */
   instances(view: ViewRect, world: World, out: EntityInstance[],
             selected: { x: number; y: number } | null = null, blend = 1,
@@ -325,18 +340,21 @@ export class ResourceField {
 
     this.batcher = statics.batcher;
     this.syncTouched(world, selected);
+    const treesOnly = onScreen !== undefined;
     const start = performance.now();
     for (let ry = Math.floor(view.y / REGION_TILES); ry <= Math.floor(y1 / REGION_TILES); ry++) {
       for (let rx = Math.floor(view.x / REGION_TILES); rx <= Math.floor(x1 / REGION_TILES); rx++) {
         const key = `${rx},${ry}`;
         let region = this.regions.get(key);
-        if (!region) this.regions.set(key, (region = { batch: null, stale: true, wrong: false }));
+        if (!region) this.regions.set(key, (region = { trees: null, others: null, stale: true, wrong: false }));
         // Falsch (angefasst, Auswahl) muss sofort neu - sonst stünde ein Baum
         // doppelt da. Nur unvollständig (neue Stücke) darf warten.
-        if (region.wrong || (region.stale && (!region.batch || performance.now() - start < REGION_BUDGET_MS))) {
+        const built = region.trees || region.others;
+        if (region.wrong || (region.stale && (!built || performance.now() - start < REGION_BUDGET_MS))) {
           this.rebuild(rx, ry, region, statics.batcher);
         }
-        if (region.batch) statics.out.push(region.batch);
+        if (region.trees) statics.out.push(region.trees);
+        if (region.others && !treesOnly) statics.out.push(region.others);
         for (const t of this.touched.get(key) ?? []) {
           const node = this.nodeAt(t.x, t.y);
           if (node && inView(node)) this.pushNode(node, world, out, selected, blend);
@@ -346,6 +364,18 @@ export class ResourceField {
     if (selected && !this.touchedKeys.has(`${selected.x},${selected.y}`)) {
       const node = this.nodeAt(selected.x, selected.y);
       if (node && inView(node)) this.pushNode(node, world, out, selected, blend);
+    }
+    if (!treesOnly) return;
+    // Nah: alles außer Bäumen einzeln, was im Bild steht und nicht schon oben kam.
+    for (let cy = Math.floor(view.y / CHUNK); cy <= Math.floor(y1 / CHUNK); cy++) {
+      for (let cx = Math.floor(view.x / CHUNK); cx <= Math.floor(x1 / CHUNK); cx++) {
+        for (const node of this.chunks.get(`${cx},${cy}`) ?? []) {
+          if (TREES.includes(node.shape) || !inView(node)) continue;
+          const key = `${node.x},${node.y}`;
+          if (this.touchedKeys.has(key) || key === this.selectedKey) continue;
+          this.pushNode(node, world, out, selected, blend);
+        }
+      }
     }
   }
 
@@ -407,13 +437,29 @@ export class ResourceField {
       this.selectedKey = selectedKey;
     }
     const deposits = world.deposits;
-    if (deposits === this.seenDeposits && deposits.revision === this.seenRevision) return;
+    // Auch Gebäude: ein Feld auf einem Stumpf gräbt ihn aus.
+    if (deposits === this.seenDeposits && deposits.revision === this.seenRevision && world.buildingsRevision === this.seenBuildings) return;
     this.seenDeposits = deposits;
     this.seenRevision = deposits.revision;
-    const next = new Set(deposits.touched());
+    this.seenBuildings = world.buildingsRevision;
+    const stumps = new Set<string>();
+    const next = new Set<string>();
+    for (const k of deposits.touched()) {
+      const comma = k.indexOf(',');
+      const x = Number(k.slice(0, comma));
+      const y = Number(k.slice(comma + 1));
+      const node = this.nodeAt(x, y);
+      // Ganz verbraucht steht der Stumpf aufrecht (pushNode) - auch nach dem Fällen.
+      const done = node && TREES.includes(node.shape) && world.remainingShare(x, y, node.total) <= 0
+        && !world.at(x, y)?.isFarm();
+      (done ? stumps : next).add(k);
+    }
     for (const k of next) if (!this.touchedKeys.has(k)) wrong(k);
     for (const k of this.touchedKeys) if (!next.has(k)) wrong(k);
+    for (const k of stumps) if (!this.stumps.has(k)) wrong(k);
+    for (const k of this.stumps) if (!stumps.has(k)) wrong(k);
     this.touchedKeys = next;
+    this.stumps = stumps;
     this.touched.clear();
     for (const k of next) {
       const comma = k.indexOf(',');
@@ -426,24 +472,37 @@ export class ResourceField {
     }
   }
 
-  /** Baut den festen Puffer einer Region: alle Vorkommen ihrer Stücke, an denen niemand arbeitet. */
+  /**
+   * Baut die festen Puffer einer Region aus allen Vorkommen ihrer Stücke, an
+   * denen niemand arbeitet - Bäume und den Rest getrennt: so wechselt beim
+   * Zoomen nur, welche gezeichnet werden, gebaut wird nichts neu.
+   */
   private rebuild(rx: number, ry: number, region: Region, batcher: Batcher) {
-    const list: EntityInstance[] = [];
+    const start = performance.now();
+    const trees: EntityInstance[] = [];
+    const others: EntityInstance[] = [];
     for (let cy = ry * REGION; cy < (ry + 1) * REGION; cy++) {
       for (let cx = rx * REGION; cx < (rx + 1) * REGION; cx++) {
         for (const node of this.chunks.get(`${cx},${cy}`) ?? []) {
           const key = `${node.x},${node.y}`;
           if (this.touchedKeys.has(key) || key === this.selectedKey) continue;
+          if (this.stumps.has(key)) {
+            trees.push({ ...node.instance, shape: stumpOf(node.shape), size: node.size, motion: [node.instance.motion![0], 0, 0, 0], health: undefined });
+            continue;
+          }
           // So, wie pushNode() ein unberührtes Vorkommen zeigt: volle Größe,
           // steht, voller Rest, kein Balken.
-          list.push({ ...node.instance, size: node.size, motion: [node.instance.motion![0], 0, 0, 1], health: undefined });
+          (TREES.includes(node.shape) ? trees : others)
+            .push({ ...node.instance, size: node.size, motion: [node.instance.motion![0], 0, 0, 1], health: undefined });
         }
       }
     }
-    if (region.batch) batcher.deleteBatch(region.batch);
-    region.batch = list.length > 0 ? batcher.createBatch(list) : null;
+    for (const b of [region.trees, region.others]) if (b) batcher.deleteBatch(b);
+    region.trees = trees.length > 0 ? batcher.createBatch(trees) : null;
+    region.others = others.length > 0 ? batcher.createBatch(others) : null;
     region.stale = false;
     region.wrong = false;
+    addRenderStats('regionMs', performance.now() - start);
   }
 
   /** Fallen Stücke weg, wird die Region beim nächsten Zeigen neu gebaut; ihr Puffer ist frei. */
@@ -451,7 +510,7 @@ export class ResourceField {
     const key = `${Math.floor(cx / REGION)},${Math.floor(cy / REGION)}`;
     const region = this.regions.get(key);
     if (!region) return;
-    if (region.batch) this.batcher?.deleteBatch(region.batch);
+    for (const b of [region.trees, region.others]) if (b) this.batcher?.deleteBatch(b);
     this.regions.delete(key);
   }
 }
@@ -466,6 +525,7 @@ export function fillChunks<T>(
     chunks: Map<string, T>, view: ViewRect, centerX: number, centerY: number,
     budgetMs: number, maxChunks: number, generate: (cx: number, cy: number) => T,
     hooks: { added?: (cx: number, cy: number) => void; dropped?: (cx: number, cy: number) => void } = {},
+    stat?: string,
 ) {
   const missing: [number, number][] = [];
   const cx0 = Math.floor(view.x / CHUNK);
@@ -489,6 +549,8 @@ export function fillChunks<T>(
     hooks.added?.(cx, cy);
     if (performance.now() - start > budgetMs) break;
   }
+  // Wie viel Hauptthread das Erzeugen kostet (renderStats.ts) - je Art.
+  if (stat) addRenderStats(stat, performance.now() - start);
 
   // Zu viele gemerkt: die am weitesten entfernten fallen weg.
   if (chunks.size > maxChunks) {

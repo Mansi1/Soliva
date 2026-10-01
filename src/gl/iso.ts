@@ -62,10 +62,14 @@ export function viewZScreen(): number {
   return zScreen;
 }
 
-/** Blickwinkel im Spiel: Vorgabe wie in AoE2 und wie weit man neigen kann. */
+/**
+ * Blickwinkel im Spiel: Vorgabe wie in AoE2 und wie weit man neigen kann.
+ * Steiler als 50° wirkt die Karte flach - Relief und Modelle zeigen sich
+ * von oben kaum noch (vorher bis 70°).
+ */
 export const TILT_DEFAULT = Math.PI / 6;
 export const TILT_MIN = (20 * Math.PI) / 180;
-export const TILT_MAX = (70 * Math.PI) / 180;
+export const TILT_MAX = (50 * Math.PI) / 180;
 /**
  * zScreen beim flachsten Blickwinkel im Spiel - das Höchste, was die Gipfel
  * von unten ins Bild ragen können. Der Gelände-Cache richtet seine Größe

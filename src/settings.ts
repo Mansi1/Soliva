@@ -26,7 +26,9 @@ export interface Settings {
   playerColor: string;
   /**
    * Bäume als Bild statt als Modell unter so vielen CSS-Pixeln je Tile (0:
-   * nie) - weit draußen spart das die meiste Arbeit (EntityRenderer.ensureBillboards).
+   * nie; Vorgabe: auf allen Zoomstufen). Bäume, an denen gearbeitet wird,
+   * bleiben Modelle. Im Wald gemessen (M4): 17,5 statt 2,4 ms je Bild als
+   * Modell, auf Retina 34-67 ms (EntityRenderer.ensureBillboards).
    */
   billboards: number;
   /**
@@ -45,12 +47,20 @@ export interface Settings {
   bloom: boolean;
 }
 
-/** Vorgabe für animalsBelow: bei Zoom 1 (8 px je Tile) keine Tiere. */
-export const ANIMALS_BELOW_DEFAULT = 16;
+/**
+ * Vorgabe für animalsBelow: bei Zoom 1 und 2 (8 und 16 px je Tile) keine
+ * Tiere - und keine Dorfbewohner ("villager", ohne eigene Einstellung).
+ */
+export const ANIMALS_BELOW_DEFAULT = 32;
+
+/** billboards: auf allen Zoomstufen (Zoom 5 sind 128 px je Tile, das Menü bietet px * 2). */
+const BILLBOARDS_ALL = 256;
+/** Die frühere Vorgabe (nur Zoom 1) - gespeichert bei fast allen, die nie etwas geändert haben. */
+const BILLBOARDS_OLD_DEFAULT = 16;
 
 const DEFAULTS: Settings = {
   volume: 1, music: 0.5, speed: 2.5, scroll: 1, showHelp: false, showDebug: false, facing: '', tilt: 30, paused: false,
-  playerColor: 'green', billboards: 16, animalsBelow: {}, idleFps: true, minimapFps: true,
+  playerColor: 'green', billboards: BILLBOARDS_ALL, animalsBelow: {}, idleFps: true, minimapFps: true,
   fxaa: true, colorGrading: true, bloom: true,
 };
 const STORAGE_KEY = 'pgm.settings';
@@ -69,6 +79,9 @@ export function loadSettings(): Settings {
     if (raw) {
       const s = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) };
       if (typeof s.animalsBelow !== 'object' || s.animalsBelow === null) s.animalsBelow = {};
+      // ponytail: die alte Vorgabe wird zur neuen - wer Zoom 1 bewusst gewählt
+      // hatte, muss es neu wählen; eine Versionsnummer, wenn das öfter vorkommt.
+      if (s.billboards === BILLBOARDS_OLD_DEFAULT) s.billboards = BILLBOARDS_ALL;
       return s;
     }
   } catch {

@@ -49,11 +49,30 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - Medianwerte je Szene verstecken Spitzen: Beim Zoom-Wechsel `frameMsMax` und `terrainTexels` mit ansehen, nicht nur `frameMs`.
 - Die Demo-Welt hat 31 Gebäude und 42 Dorfbewohner - weniger als die "große Stadt mit 80+" aus Szenario (b) des Optimierungsplans.
 
+- 2026-09-29, M4: `gpuMs` (eine Timer-Query um die Hauptansicht) und die Wartezeit eines `readPixels` danach zeigen mit vsync beide ~12 ms, auch ohne 4 Mio. Eckpunkte Weizen - sie messen das Warten aufs nächste Bild mit. GPU-Last nur ohne Deckel messen (`npm run bench -- --uncapped`, AGENTS.md).
+- 2026-09-29, M4: Timer-Queries je Abschnitt (Gelände, Gras, Modelle, ...) sind auf ANGLE Metal unbrauchbar: jede Grenze kostet selbst GPU-Zeit, Werte sprangen zwischen Läufen auf 66-130 ms bei 60 fps. `gl.finish()` blockiert dort nicht (0 ms).
+- 2026-09-29, M4, ohne Deckel, Demo über den Äckern (`/game/Demo?lat=62&lng=100&zoom=4`): Weizen als Halme kostete ~5 ms je Bild (76 → 120 fps als Karten, 5,7 → 1,8 Mio. Eckpunkte), das Gras 0,5-1,1 ms (als Karten bei Zoom 5 ~0, bei Zoom 4 etwa gleich). Die Wärme des Rechners verschiebt fps zwischen Läufen um bis zu 40 % - nur direkt aufeinanderfolgende Paare vergleichen.
+
+- 2026-09-29, M4, `stadt` ohne Deckel, Stand `7f1e195`: ~2 ms je Bild bei DPR 1 (vorher 5,2), kein Modell-Teil sticht mehr heraus. Offen: M1 (`stadt` 29-48 fps) mit diesem Stand neu messen - vermutlich war es die GPU.
+- 2026-09-29, M4, DPR 2 (4,1 Mio. Pixel), ohne Deckel: Post-Effekte 1,2-1,4 ms je Bild in jeder Szene (größter fester Posten), Modelle in `stadt` 2,3 ms, Gelände vor dem CSS-Pixel-Gitter 1,2-1,9 ms. `nah` füllt bei DPR 2 nach 4 s noch den Gelände-Cache (100-250k Texel je Bild) - erst nach dem Anlauf messen.
+- 2026-09-29: Die Bench-Szenen haben kaum Bäume - Wald-Kosten dort nie sichtbar. Wald messen: `Testseed` `lat=-10&lng=40` (Zoom 3-5). Holzfäller in der Demo: Baum bei 92,111 (`lat=109&lng=92&zoom=5`).
+- Bildvergleich nach Drehung: Kamera per Taste (Alt+Pfeil) steht anders als per `rot=` in der Adresse - Referenz in derselben Seite per Taste aufnehmen.
+- 2026-09-30, M4: Nach ~15 min Dauermessung drosselt der Rechner - alle Werte (auch unbeteiligte wie `renderMs`) werden bis 3× schlechter. Vor A/B eine Minute ruhen lassen, abwechselnd messen.
+- 2026-09-30, M4, Stand `60cc34e`: Kartenerzeugung beim Durchqueren (Taste gehalten, Zoom 1-5) kostet 3-55 ms je Sekunde zusammen (unter 1 ms je Bild), p95 der Bildzeit 16,7 ms mit vsync - kein Engpass. Lange Aufgaben kommen woanders her: `new AudioContext()` (audio.ts `ensure`, ~150-190 ms, beim ersten Ton oder ersten Tastendruck), beim Zoomen wartet der Hauptthread auf die GPU (JS untätig, ~50 ms). Start vorher ~1,5 s Hauptthread; jetzt (Stand nach Clips beim Bauen) ~1,1-1,4 s: AudioContext im Leerlauf, Clips einmal gebacken statt je EntityRenderer (3 Stück), Clips beim Bauen gelesen (`?clips`). Offen: loadModel/parseObj ~280 ms (Plan 6.2), Symbole der Befehlsleiste ~145 ms, Shader ~90 ms.
+- Profil einer Szene: CDP `Profiler` mit Samples, Zeit mit `performance.now()` direkt nach `Profiler.start` abgleichen (profile.startTime ist eine andere Uhr).
+- 2026-09-30: Gelände-Kacheln liegen in IndexedDB (`soliva-terrain`). Playwright mit `newContext` hat jedes Mal einen leeren Speicher - gut für Messungen. Den zweiten Besuch misst nur ein bleibendes Profil (`chromium.launchPersistentContext`). Beim Ändern des Befüll-Shaders wird der Speicher automatisch geleert (Kennung aus dem Shader-Code).
+- 2026-09-30: Cache-Fehler nach dem Scrollen prüfen: vorübergehend einen Hook einbauen, der alle Cache-Fenster verwirft (`b.window = null`) und den Speicher abschaltet; Bild vorher/nachher vergleichen. So war der Fehler mit wieder hereinkommenden, schon gespeicherten Kacheln zu sehen (1,7-60 % der Pixel).
+- 2026-09-30: Das Ladeschild (`#loading`) fängt Maus und Rad ab, mindestens 2 s nach Spielbeginn. Skripte, die gleich zoomen oder klicken, erst warten: `document.getElementById('loading').hidden`.
+- Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
+
 ## Optimierungsplan
 
 - 2026-09-26: Falsch im Plan, am Code geprüft: 2.2 ist nicht bit-identisch (ein grober Vorlauf überspringt schmale Grate); ein Early-out in `World.armoryStock` ändert das Verhalten, weil `world/render.ts` `has()` prüft. Die Zeilenangaben des Plans stimmen seit 2026-09-26 (Merge von PR #4) nicht mehr.
 
 ## Offen
 
-- GPU-Zeit fehlt im Bench: `gpuFillMs` über `EXT_disjoint_timer_query_webgl2` würde Shader-Optimierungen belegbar machen - vor Plan 5.1 (Höhen-Textur) einbauen.
+- Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.
+- 2026-09-30, M4: Leere Flächen beim Pannen messen: Löschfarbe des Geländes ist (19, 31, 56) - Anteil solcher Pixel in Screenshots während gehaltener Taste. Pannen nach Westen in die Berge ab `Testseed` lat -43 lng 12 ist der harte Fall (Zoom 4, DPR 1: ~16-18 % leer schon auf HEAD 9536faa). Mit DPR 2 schafft Playwright dabei nur 4-30 fps, auch auf HEAD - dort nur grob vergleichbar.
+- 2026-09-30: Aufräumen des Kachel-Speichers im Browser prüfen: `MAX_TILES` in `gl/tileStore.ts` vorübergehend auf 60, mit festem Playwright-Profil stehen und pannen, Anzahl in IndexedDB `soliva-terrain` (`tiles`, `used`) aus der Seite zählen - blieb ≤ 56, Vorausrechnen lief nach jedem Pannen weiter. Upgrade von Datenbank-Version 1 behielt alle Kacheln.
+- 2026-09-30: Kachel-Speicher-Version hängt am ganzen Befüll-Shader-Quelltext samt `PROJECT_GLSL` (iso.ts) - jede Änderung dort leert den Speicher. Beim Eingrenzen mit Shader-Proben irreführend (sah aus wie ein Fix). Pixel aus Cache oder Bild-Framebuffer direkt zurücklesen (readPixels nach dem Zeichnen) war hier der schnellste Weg zur Ursache.
