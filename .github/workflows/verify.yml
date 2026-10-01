@@ -5,7 +5,10 @@ on:
   pull_request:
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # e2e rendert WebGL 2: ubuntu-latest hat keine GPU, SwiftShader braucht dort Sekunden je Bild und der
+    # Rauchtest läuft in Zeitüberschreitungen. Die macOS-Runner (arm64) haben eine Metal-GPU und Chrome am
+    # Standardort von tools/ui/browser.mjs.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       # Tests importieren .ts direkt (Node >= 22.6), Vite 8 braucht ebenfalls ein neues Node.
@@ -14,7 +17,4 @@ jobs:
           node-version-file: .nvmrc
       # setup installs a missing uv/bun with the official installers; later steps get their dirs on PATH.
       - run: make setup && printf '%s\n' "$HOME/.local/bin" "$HOME/.bun/bin" >> "$GITHUB_PATH"
-      # e2e startet Chrome (tools/ui/browser.mjs), auf ubuntu-latest vorinstalliert.
       - run: make verify
-        env:
-          CHROME: /usr/bin/google-chrome
