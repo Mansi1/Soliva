@@ -706,7 +706,8 @@ const keyboard = new Keyboard({
     faceDirection('N');
     tiltBy(TILT_DEFAULT - tiltTarget);
   },
-  cancel: () => ui.cancel(),
+  // Esc: erst abbrechen, was läuft; ist nichts mehr da, das Menü.
+  cancel: () => ui.cancel() || menu.open(),
   demolish: () => actions.demolishSelected(),
   home: () => actions.cycleTownCenter(),
   toggleHelp: () => setPanels({ showHelp: !settings.showHelp }),

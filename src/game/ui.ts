@@ -131,11 +131,13 @@ export class GameUi {
     if (crop && this.state.world.affordable('farm')) this.placeField(crop);
   }
 
-  /** Esc: Untermenü zu, sonst Baumodus aus, sonst Auswahl aufheben. */
-  cancel() {
+  /** Esc: Untermenü zu, sonst Baumodus aus, sonst Auswahl aufheben. false, wenn es nichts abzubrechen gab. */
+  cancel(): boolean {
     if (this.farmsOpen) this.closeFarms();
     else if (this.state.placement.isActive) this.setPlacing(null);
-    else this.clearSelection();
+    else if (!this.state.selection.isEmpty) this.clearSelection();
+    else return false;
+    return true;
   }
 
   /** Baumodus für diese Art ein - oder mit null aus. */
