@@ -15,6 +15,16 @@ const browser = await launch();
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
+// WebGL2-Kontexte merken - der Test unten lässt den der Symbole verloren gehen.
+await page.addInitScript(() => {
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  window.__webgl2 = [];
+  HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+    const ctx = getContext.call(this, type, ...rest);
+    if (type === 'webgl2' && ctx && !window.__webgl2.includes(ctx)) window.__webgl2.push(ctx);
+    return ctx;
+  };
+});
 
 let failed = 0;
 function check(what, ok, detail = '') {
@@ -135,6 +145,24 @@ await newGame('demo');
 const demo = await saved('Demo');
 check('Demo geladen', (await page.title()).endsWith('Demo') && demo.villagers.length > 0,
   `${demo.buildings.length} Gebäude, ${demo.villagers.length} Dorfbewohner`);
+
+// Verliert die Symbol-Bühne (modelIcons.ts, 320×400, nicht auf der Seite) ihren
+// WebGL-Kontext - GPU-Neustart, Ruhezustand -, müssen neue Symbole trotzdem
+// erscheinen: eine andere Spielerfarbe zeichnet die Gebäude im Baumenü neu.
+await page.evaluate(() => window.__webgl2.find((gl) => !gl.canvas.isConnected && gl.canvas.height === 400)
+  .getExtension('WEBGL_lose_context').loseContext());
+await page.keyboard.press('F10');
+await page.click('#menu .menu-colors button >> nth=1');
+await page.keyboard.press('F10');
+await wait(300);
+const iconPixels = await page.evaluate(async () => {
+  const img = document.querySelector('#build .cmd-btn img');
+  await img.decode().catch(() => {});
+  const ctx = Object.assign(document.createElement('canvas'), { width: 34, height: 34 }).getContext('2d');
+  ctx.drawImage(img, 0, 0, 34, 34);
+  return ctx.getImageData(0, 0, 34, 34).data.filter((v, i) => i % 4 === 3 && v > 8).length;
+});
+check('Symbole nach verlorenem WebGL-Kontext', iconPixels > 0, `${iconPixels} deckende Pixel im ersten Gebäude`);
 
 // Alter Spielstand (Version 2): Tiles halb so groß, Nahrung hieß "berries",
 // das Holzfällerlager "lumberjack" - world/save.ts schreibt das beim Laden um.

@@ -63,9 +63,14 @@ const NAMES: IconName[] = ['wood', 'food', 'gold', 'stone', 'population', 'idle'
 
 let stage: { canvas: HTMLCanvasElement; gl: WebGL2RenderingContext; renderer: EntityRenderer } | null = null;
 
-/** Bühne beim ersten Aufruf anlegen - ein WebGL-Kontext für alle Symbole. */
+/**
+ * Bühne beim ersten Aufruf anlegen - ein WebGL-Kontext für alle Symbole. Ist
+ * er verloren (GPU-Neustart, Ruhezustand, Grafikwechsel), eine neue: sonst
+ * blieben alle danach gezeichneten Symbole leer.
+ */
 function getStage() {
-  if (stage) return stage;
+  if (stage && !stage.gl.isContextLost()) return stage;
+  stage = null;
   const canvas = document.createElement('canvas');
   canvas.width = STAGE_W;
   canvas.height = STAGE_H;
@@ -95,7 +100,7 @@ function bounds(gl: WebGL2RenderingContext) {
   return x1 < 0 ? null : { x0, x1, y0, y1 };
 }
 
-/** Zeichnet ein Motiv und schneidet es quadratisch aus - als PNG-URL. */
+/** Zeichnet ein Motiv und schneidet es quadratisch aus - als PNG-URL; leer, wenn nichts zu sehen ist. */
 function draw(instances: EntityInstance[]): string {
   const { canvas, gl, renderer } = getStage()!;
   let box: ReturnType<typeof bounds> = null;
@@ -110,9 +115,9 @@ function draw(instances: EntityInstance[]): string {
     // Berührt das Motiv den Rand, fehlt vielleicht etwas (die Krone eines Baums).
     if (!box || (box.x0 > 0 && box.y0 > 0 && box.x1 < STAGE_W - 1 && box.y1 < STAGE_H - 1)) break;
   }
+  if (!box) return '';
   const out = document.createElement('canvas');
   out.width = out.height = ICON_SIZE;
-  if (!box) return out.toDataURL();
   const { x0, x1, y0, y1 } = box;
   // Quadrat um das Motiv, das Motiv in der Mitte.
   const side = Math.max(x1 - x0 + 1, y1 - y0 + 1) / (1 - 2 * PADDING);
@@ -155,7 +160,8 @@ function cached(key: string, player: RGB, instances: () => EntityInstance[]): st
   if (!st) return '';
   st.renderer.playerColor = player;
   const url = draw(instances());
-  cache.set(full, url);
+  // Leer nicht merken - beim nächsten Mal noch einmal versuchen.
+  if (url) cache.set(full, url);
   return url;
 }
 
