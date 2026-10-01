@@ -93,7 +93,7 @@ export class World {
    * Pflücken und Zerlegen ist die Ladung sofort voll (villagers.ts). Nicht im Spielstand.
    */
   speedy = false;
-  /** Cheat "iam the king": so viel mehr Platz als die Häuser geben. Nicht im Spielstand. */
+  /** Cheat "im the king": so viel mehr Platz als die Häuser geben. Nicht im Spielstand. */
   bonusHousing = 0;
   villagers: Villager[] = [];
   /** Wild - lebend und erlegt. */
