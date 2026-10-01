@@ -271,10 +271,6 @@
   gap: 8px;
   margin: 10px 0;
 }
-/* Nur ein Knopf (Einstellungen): über die ganze Breite. */
-#menu .menu-nav-one {
-  grid-template-columns: 1fr;
-}
 #menu .menu-nav span {
   margin-left: 4px;
   color: var(--gold);

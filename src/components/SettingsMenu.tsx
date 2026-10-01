@@ -1,7 +1,7 @@
 // SettingsMenu.tsx
 // Menü als Holztafel in der Bildmitte (Zahnrad an der Rohstoffleiste oder
-// F10, wie in AoE2): Pause, Speichern, Link teilen, zurück ins Hauptmenü; unter
-// Einstellungen je ein Untermenü für Spieler, Spiel, Ton, Steuerung, Anzeige, Grafik. Einmal gerendert; refresh()
+// F10, wie in AoE2): Spielerfarbe, Pause, Tempo, Anzeigen, Speichern, Link
+// teilen, zurück ins Hauptmenü; Ton, Steuerung und Grafik als Untermenüs. Einmal gerendert; refresh()
 // setzt über Refs, was sich auch von außen ändert (Pause, Ton, laufendes
 // Musikstück).
 
@@ -16,13 +16,8 @@ import { ShortcutList } from './Shortcuts';
 import { confirmDialog } from './ConfirmDialog';
 import { DEV_OFF } from './Hud';
 
-/** Seiten des Menüs: die erste Seite (Spiel), Einstellungen und deren Untermenüs. */
-type Page = 'main' | 'settings' | 'spieler' | 'spiel' | 'ton' | 'steuerung' | 'anzeige' | 'grafik';
-/** Die Untermenüs unter Einstellungen, in dieser Reihenfolge als Knöpfe. */
-const SETTINGS_PAGES: [Page, string][] = [
-  ['spieler', 'Spieler'], ['spiel', 'Spiel'], ['ton', 'Ton'],
-  ['steuerung', 'Steuerung'], ['anzeige', 'Anzeige'], ['grafik', 'Grafik'],
-];
+/** Seiten des Menüs: die Übersicht und die Untermenüs. */
+type Page = 'main' | 'ton' | 'steuerung' | 'grafik';
 
 /** Was das Menü außer den Einstellungen braucht - main.ts liefert es. */
 export interface MenuHooks {
@@ -119,12 +114,12 @@ export class SettingsMenu {
   private colorGrading = createRef<HTMLInputElement>();
   private bloom = createRef<HTMLInputElement>();
   /** Nur im Spiel: Hauptmenü, Pause, Speichern, Weiter spielen - aus dem Hauptmenü heraus stattdessen Zurück. */
+  private pauseRow = createRef<HTMLDivElement>();
   private gameButtons = createRef<HTMLDivElement>();
   private mainMenuRow = createRef<HTMLDivElement>();
   private backButton = createRef<HTMLDivElement>();
   /** Im Untermenü: zurück zur Übersicht - statt „Hauptmenü“. */
   private backRow = createRef<HTMLDivElement>();
-  private page: Page = 'main';
   private fromTitle = false;
   private title = createRef<HTMLDivElement>();
   private saveButton = createRef<HTMLButtonElement>();
@@ -157,24 +152,9 @@ export class SettingsMenu {
           <button type="button" class="wood-btn menu-btn" onClick={() => this.mainMenu()}>← Hauptmenü</button>
         </div>
         <div class="menu-top" ref={this.backRow} hidden>
-          <button type="button" class="wood-btn menu-btn" onClick={() => this.back()}>← Zurück</button>
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('main')}>← Zurück</button>
         </div>
         <section data-page="main">
-          <h3>Spiel</h3>
-          <div class="menu-row">
-            <span>Pause <small>F3</small></span>
-            <button type="button" class="wood-btn menu-btn" ref={this.pauseButton} onClick={act(() => this.hooks.togglePause())} />
-          </div>
-        </section>
-        <nav class="menu-nav menu-nav-one" data-page="main">
-          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('settings')}>Einstellungen <span>›</span></button>
-        </nav>
-        <nav class="menu-nav" data-page="settings">
-          {SETTINGS_PAGES.map(([page, label]) => (
-            <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage(page)}>{label} <span>›</span></button>
-          ))}
-        </nav>
-        <section data-page="spieler">
           <h3>Spieler</h3>
           <div class="menu-row">
             <span>Farbe</span>
@@ -186,13 +166,22 @@ export class SettingsMenu {
             </span>
           </div>
         </section>
-        <section data-page="spiel">
+        <section data-page="main">
           <h3>Spiel</h3>
+          <div class="menu-row" ref={this.pauseRow}>
+            <span>Pause <small>F3</small></span>
+            <button type="button" class="wood-btn menu-btn" ref={this.pauseButton} onClick={act(() => this.hooks.togglePause())} />
+          </div>
           <div class="menu-row">
             <span>Geschwindigkeit</span>
             <Slider refs={this.speed} min={100} max={MAX_SPEED * 100} step={50} onInput={(v) => this.change({ speed: v })} />
           </div>
         </section>
+        <nav class="menu-nav" data-page="main">
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('ton')}>Ton <span>›</span></button>
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('steuerung')}>Steuerung <span>›</span></button>
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('grafik')}>Grafik <span>›</span></button>
+        </nav>
         <section data-page="ton">
           <h3>Ton</h3>
           <div class="menu-row">
@@ -232,7 +221,7 @@ export class SettingsMenu {
             <ShortcutList />
           </details>
         </section>
-        <section data-page="anzeige">
+        <section data-page="main">
           <h3>Anzeige</h3>
           <label class="menu-row">
             <span>Tastenhilfe <small>I</small></span>
@@ -333,7 +322,7 @@ export class SettingsMenu {
             nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im Entwickler-Panel.
           </p>
         </section>
-        <section data-page="settings">
+        <section data-page="main">
           <div class="menu-row">
             <span>Alle Einstellungen</span>
             <button type="button" class="wood-btn menu-btn" onClick={() => this.reset()}>Zurücksetzen</button>
@@ -371,34 +360,25 @@ export class SettingsMenu {
     return this.opened;
   }
 
-  /** @param fromTitle aus dem Hauptmenü: gleich die Einstellungen, ohne Hauptmenü, Pause, Speichern und Weiter spielen - nur Zurück. */
+  /** @param fromTitle aus dem Hauptmenü: ohne Hauptmenü, Pause, Speichern und Weiter spielen - nur Zurück. */
   open(fromTitle = false) {
     this.opened = true;
     this.root.hidden = false;
+    this.pauseRow.current.hidden = fromTitle;
     this.gameButtons.current.hidden = fromTitle;
     this.backButton.current.hidden = !fromTitle;
+    this.title.current.textContent = fromTitle ? 'Einstellungen' : 'Menü';
     this.fromTitle = fromTitle;
-    this.showPage(fromTitle ? 'settings' : 'main');
+    this.showPage('main');
     this.refresh();
   }
 
-  /**
-   * Zeigt nur die Teile der Seite. Die erste Seite hat oben „Hauptmenü“, die
-   * anderen „Zurück“ - außer den Einstellungen aus dem Hauptmenü, die sind dort
-   * die erste Seite.
-   */
+  /** Zeigt nur die Teile der Seite; die Übersicht hat oben „Hauptmenü“, ein Untermenü „Zurück“. */
   private showPage(page: Page) {
-    this.page = page;
     for (const el of this.root.querySelectorAll<HTMLElement>('[data-page]')) el.hidden = el.dataset.page !== page;
-    this.title.current.textContent = page === 'main' ? 'Menü' : 'Einstellungen';
     this.mainMenuRow.current.hidden = this.fromTitle || page !== 'main';
-    this.backRow.current.hidden = page === 'main' || (this.fromTitle && page === 'settings');
+    this.backRow.current.hidden = page === 'main';
     this.root.querySelector('.menu-board')!.scrollTop = 0;
-  }
-
-  /** Zurück: aus einem Untermenü zu den Einstellungen, von dort zur ersten Seite. */
-  private back() {
-    this.showPage(this.page === 'settings' ? 'main' : 'settings');
   }
 
   close() {
