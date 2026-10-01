@@ -272,9 +272,9 @@ Reuse a few explicit scratch arrays/vectors instead.
 
 ## Soliva: messen und belegen
 
-**Belegen ist Pflicht.** Vor der ersten Änderung den passenden Skill laden, ohne Skill-Unterstützung die Datei direkt lesen. Diese beiden Skills lädt der Agent selbst, anders als die defuss-vae-Skills unten.
-- Rendering oder Leistung (z. B. `src/gl/`, `src/map.ts`, `src/renderStats.ts`, die Render-Schleife in `src/main.ts`): Bench vorher und nachher, Skill `bench` (`.claude/skills/bench/SKILL.md`).
-- Shader (GLSL in `src/gl/`): zusätzlich Screenshots vergleichen, Skill `screenshots` (`.claude/skills/screenshots/SKILL.md`).
+**Belegen ist Pflicht.** Vor der ersten Änderung die passende Anleitung lesen. Sie liegen als Skills im offenen Format [Agent Skills](https://agentskills.io) unter `.agents/skills/`: Werkzeuge mit Skill-Unterstützung laden sie selbst, alle anderen lesen die Datei. `.claude/skills/` verlinkt nur dorthin, geändert wird unter `.agents/skills/`. Diese beiden Skills lädt der Agent selbst, anders als die defuss-vae-Skills unten.
+- Rendering oder Leistung (z. B. `src/gl/`, `src/map.ts`, `src/renderStats.ts`, die Render-Schleife in `src/main.ts`): Bench vorher und nachher, Skill `bench` (`.agents/skills/bench/SKILL.md`).
+- Shader (GLSL in `src/gl/`): zusätzlich Screenshots vergleichen, Skill `screenshots` (`.agents/skills/screenshots/SKILL.md`).
 - Bench-Ausgabe und Bildvergleich gehören mit Vorher/Nachher in Commit oder PR. Zeigt die Messung keinen Effekt, das offen sagen und keinen behaupten.
 
 **Erst nachsehen, dann vermuten.** `window.getRenderStats()` (`src/renderStats.ts`) liefert je Sekunde fps, Zeiten und Zählwerte der letzten 30 Sekunden, `window.getRenderInfo()` die Umstände eines Laufs: GPU, Pixel-Verhältnis und Einstellungen. Neue teure Pfade melden ihre Kosten je Bild mit `addRenderStats(key, value)`.
