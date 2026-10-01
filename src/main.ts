@@ -61,10 +61,13 @@ import { addRenderStats, renderStatsFrame, setRenderInfo, startRenderStats, with
 import { collectGpuTimes, initGpuTimer } from './gpuTimer';
 import { Music } from './music';
 import { currentSeed, deleteSave, gameUrl, shareUrl, switchWorld, takeStartRequest } from './worlds';
+import { initMouseLock } from './mouseLock';
 
 // Erst Spielfeld-Canvas und Oberfläche (components/Hud.tsx) - danach werden
 // ihre Teile hier über ihre IDs gefunden.
 mountGame(document.getElementById('app')!);
+// Im Vollbild die Maus einsperren, sonst kommt oben die Menüleiste von macOS.
+initMouseLock();
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement;
