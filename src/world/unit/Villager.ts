@@ -19,8 +19,11 @@ import { UnitBase } from './UnitBase';
 export type Task =
   | { kind: 'idle' }
   | { kind: 'move'; x: number; y: number }
-  /** Sammelt am Feld (x, y), bringt volle Ladungen zum nächsten Lager. */
-  | { kind: 'gather'; type: DepositType; x: number; y: number; delivering: boolean }
+  /**
+   * Sammelt am Feld (x, y), bringt volle Ladungen zum nächsten Lager.
+   * `slot`: sein Platz am Feld (0..MAX_GATHERERS-1), vergeben bei Ankunft.
+   */
+  | { kind: 'gather'; type: DepositType; x: number; y: number; delivering: boolean; slot?: number }
   /** Bringt die Ladung zu genau diesem Gebäude, danach untätig. */
   | { kind: 'deliver'; building: string }
   /**

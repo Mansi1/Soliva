@@ -581,10 +581,11 @@ export class World {
 
   /**
    * Befehl an ausgewählte Dorfbewohner für das Tile (x, y), wie ein Rechtsklick
-   * in AoE2 (villagers.ts). Gibt einen Grund zurück, wenn es nicht geht.
+   * in AoE2 (villagers.ts) - hingehen zum genauen Punkt `point`, falls
+   * angegeben. Gibt einen Grund zurück, wenn es nicht geht.
    */
-  command(ids: ReadonlySet<number>, x: number, y: number): string | null {
-    return this.work.command(ids, x, y);
+  command(ids: ReadonlySet<number>, x: number, y: number, point?: { x: number; y: number }): string | null {
+    return this.work.command(ids, x, y, point);
   }
 
   /** Entlässt den Arbeiter dieser Werkstatt (VillagerWork.dismiss) - gibt ihn zurück. */
@@ -632,6 +633,7 @@ export class World {
       v.pose = POSE.stand;
       this.work.tick(v, dt);
     }
+    this.work.separate();
     // Für die Kosten je Tier und Dorfbewohner im Entwickler-Panel.
     addRenderStats('simWildlifeMs', t1 - t0);
     addRenderStats('simVillagersMs', performance.now() - t1);
