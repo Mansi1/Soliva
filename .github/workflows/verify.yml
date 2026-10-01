@@ -11,7 +11,7 @@ jobs:
       # Tests importieren .ts direkt (Node >= 22.6), Vite 8 braucht ebenfalls ein neues Node.
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
       # setup installs a missing uv/bun with the official installers; later steps get their dirs on PATH.
       - run: make setup && printf '%s\n' "$HOME/.local/bin" "$HOME/.bun/bin" >> "$GITHUB_PATH"
       # e2e startet Chrome (tools/ui/browser.mjs), auf ubuntu-latest vorinstalliert.
