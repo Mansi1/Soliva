@@ -191,7 +191,13 @@ export function stockIcon(kind: ResourceKind): string {
   return cached(`stock:${kind}`, [0, 0, 0], () => scene(kind, [0, 0, 0]));
 }
 
-/** Vorkommen: Eiche, Beerenstrauch, Gold- oder Steinfels. */
-export function resourceIcon(type: DepositType): string {
-  return cached(`resource:${type}`, [0, 0, 0], () => scene(type === 'berries' ? 'food' : type, [0, 0, 0]));
+/**
+ * Vorkommen: Baum, Beerenstrauch, Gold- oder Steinfels. `shape`: das Modell,
+ * das dort steht (ResourceField.modelAt) - sonst Eiche, Johannisbeere, Fels.
+ */
+export function resourceIcon(type: DepositType, shape?: number): string {
+  return cached(`resource:${type}:${shape ?? ''}`, [0, 0, 0], () => {
+    const instances = scene(type === 'berries' ? 'food' : type, [0, 0, 0]);
+    return shape === undefined ? instances : instances.map((i) => ({ ...i, shape }));
+  });
 }

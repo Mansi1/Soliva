@@ -92,6 +92,8 @@ export type SelectionView =
   | {
       kind: 'resource';
       type: DepositType;
+      /** Modell auf dem Tile (ResourceField.modelAt) - Baum-, Strauch- oder Felsart fürs Porträt. */
+      shape?: number;
       title: string;
       subtitle?: string;
       left: number;
@@ -277,7 +279,7 @@ function Resource({ v }: { v: Extract<SelectionView, { kind: 'resource' }> }) {
         {v.subtitle ? <span class="muted"> {v.subtitle}</span> : null}
       </div>
       <div class="sel-body">
-        <Portrait src={resourceIcon(v.type)} />
+        <Portrait src={resourceIcon(v.type, v.shape)} />
         <div class="sel-info">
           <div>Übrig <b>{v.left}/{v.total}</b></div>
           <Bar percent={v.percent} />

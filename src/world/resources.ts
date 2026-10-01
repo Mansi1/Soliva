@@ -209,11 +209,17 @@ export class ResourceField {
     return dims && dims.height * node.size;
   }
 
-  /** Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined. */
-  kindAt(x: number, y: number): string | undefined {
+  /** Modell (SHAPE) des Vorkommens auf Tile (x, y) - dasselbe wie auf der Karte; sonst undefined. */
+  modelAt(x: number, y: number): number | undefined {
     const found = this.terrain.resourceAt(x, y);
     if (found.type === 'none') return undefined;
-    return KIND_LABEL[shapeAt(x, y, found.type as DepositType, found.height)];
+    return shapeAt(x, y, found.type as DepositType, found.height);
+  }
+
+  /** Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined. */
+  kindAt(x: number, y: number): string | undefined {
+    const shape = this.modelAt(x, y);
+    return shape === undefined ? undefined : KIND_LABEL[shape];
   }
 
   /**
