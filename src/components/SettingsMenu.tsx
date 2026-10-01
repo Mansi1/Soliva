@@ -98,6 +98,7 @@ export class SettingsMenu {
   private volume = sliderRefs();
   private music = sliderRefs();
   private scroll = sliderRefs();
+  private edgeSpeed = sliderRefs();
   private speed = sliderRefs();
   private track = createRef<HTMLSpanElement>();
   private showHelp = createRef<HTMLInputElement>();
@@ -196,6 +197,10 @@ export class SettingsMenu {
             <input type="checkbox" ref={this.edgeScroll}
               onInput={(e: Event) => this.change({ edgeScroll: (e.target as HTMLInputElement).checked })} />
           </label>
+          <div class="menu-row">
+            <span>Tempo am Rand</span>
+            <Slider refs={this.edgeSpeed} min={25} max={300} step={25} onInput={(v) => this.change({ edgeSpeed: v })} />
+          </div>
           <details class="menu-keys-box">
             <summary>Tastenkürzel</summary>
             <ShortcutList />
@@ -364,6 +369,7 @@ export class SettingsMenu {
     slider(this.volume, s.volume);
     slider(this.music, s.music);
     slider(this.scroll, s.scroll);
+    slider(this.edgeSpeed, s.edgeSpeed);
     this.speed.input.current.value = String(Math.round(s.speed * 100));
     this.speed.output.current.textContent = s.speed <= 1 ? 'Langsam' : s.speed >= MAX_SPEED ? 'Extrem schnell' : `${s.speed}×`;
     const title = this.hooks.musicTitle();
