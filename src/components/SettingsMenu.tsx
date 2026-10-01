@@ -98,10 +98,12 @@ export class SettingsMenu {
   private volume = sliderRefs();
   private music = sliderRefs();
   private scroll = sliderRefs();
+  private edgeSpeed = sliderRefs();
   private speed = sliderRefs();
   private track = createRef<HTMLSpanElement>();
   private showHelp = createRef<HTMLInputElement>();
   private showDebug = createRef<HTMLInputElement>();
+  private edgeScroll = createRef<HTMLInputElement>();
   private idleFps = createRef<HTMLInputElement>();
   private minimapFps = createRef<HTMLInputElement>();
   private fxaa = createRef<HTMLInputElement>();
@@ -189,6 +191,15 @@ export class SettingsMenu {
           <div class="menu-row">
             <span>Kamera-Tempo</span>
             <Slider refs={this.scroll} min={50} max={200} step={10} onInput={(v) => this.change({ scroll: v })} />
+          </div>
+          <label class="menu-row">
+            <span>Mit der Maus am Rand scrollen</span>
+            <input type="checkbox" ref={this.edgeScroll}
+              onInput={(e: Event) => this.change({ edgeScroll: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <div class="menu-row">
+            <span>Tempo am Rand</span>
+            <Slider refs={this.edgeSpeed} min={25} max={300} step={25} onInput={(v) => this.change({ edgeSpeed: v })} />
           </div>
           <details class="menu-keys-box">
             <summary>Tastenkürzel</summary>
@@ -358,12 +369,14 @@ export class SettingsMenu {
     slider(this.volume, s.volume);
     slider(this.music, s.music);
     slider(this.scroll, s.scroll);
+    slider(this.edgeSpeed, s.edgeSpeed);
     this.speed.input.current.value = String(Math.round(s.speed * 100));
     this.speed.output.current.textContent = s.speed <= 1 ? 'Langsam' : s.speed >= MAX_SPEED ? 'Extrem schnell' : `${s.speed}×`;
     const title = this.hooks.musicTitle();
     this.track.current.textContent = title ? `♪ ${title}` : 'Musik beginnt mit dem ersten Klick';
     this.showHelp.current.checked = s.showHelp;
     this.showDebug.current.checked = s.showDebug;
+    this.edgeScroll.current.checked = s.edgeScroll;
     this.idleFps.current.checked = s.idleFps;
     this.minimapFps.current.checked = s.minimapFps;
     this.fxaa.current.checked = s.fxaa;

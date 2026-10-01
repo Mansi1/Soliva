@@ -376,7 +376,7 @@ const actions = new PlayerActions({ world, camera, selection, placement, picker,
 });
 
 /** Die Maus über dem Spielfeld (game/MouseInput.ts) - hier, was sie im Spiel bedeutet. */
-new MouseInput(canvas, boxEl, {
+const mouse = new MouseInput(canvas, boxEl, {
   // Im Baumodus setzt ein Klick das Gebäude; Felder weiter beim Ziehen (move).
   press: (p) => {
     if (!placement.isActive) return false;
@@ -978,7 +978,7 @@ function loop(now: number) {
   const held = heldFocus();
   const reliefBefore = renderer.relief;
   const [cameraX, cameraY] = [camera.x, camera.y];
-  const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
+  const steered = steerCamera(camera, renderer, keyboard, mouse.edge, settings.edgeScroll ? settings.edgeSpeed : 0, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
   if (held && renderer.relief !== reliefBefore && camera.x === cameraX && camera.y === cameraY) keepFocus(held);
   const moving = steered || zoomed || tilted || flying;
   if (moving || cameraMoving) refreshPointer(!moving);

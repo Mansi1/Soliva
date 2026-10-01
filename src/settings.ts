@@ -12,6 +12,10 @@ export interface Settings {
   speed: number;
   /** Kamera-Tempo mit WASD/Pfeiltasten: 1 = normal. */
   scroll: number;
+  /** Maus an den Fensterrand scrollt die Karte wie WASD (game/MouseInput.ts, edge). */
+  edgeScroll: boolean;
+  /** Tempo beim Randscrollen: 1 = so schnell wie WASD bei normalem Kamera-Tempo. */
+  edgeSpeed: number;
   /** Tastenhilfe oben rechts. */
   showHelp: boolean;
   /** Legende und Tile-, Kamera- und FPS-Anzeige oben links. */
@@ -59,7 +63,7 @@ const BILLBOARDS_ALL = 256;
 const BILLBOARDS_OLD_DEFAULT = 16;
 
 const DEFAULTS: Settings = {
-  volume: 1, music: 0.5, speed: 2.5, scroll: 1, showHelp: false, showDebug: false, facing: '', tilt: 30, paused: false,
+  volume: 1, music: 0.5, speed: 2.5, scroll: 1, edgeScroll: true, edgeSpeed: 1, showHelp: false, showDebug: false, facing: '', tilt: 30, paused: false,
   playerColor: 'green', billboards: BILLBOARDS_ALL, animalsBelow: {}, idleFps: true, minimapFps: true,
   fxaa: true, colorGrading: true, bloom: true,
 };

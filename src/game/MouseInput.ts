@@ -50,6 +50,8 @@ const WHEEL_STEP = 100;
 const PINCH_STEP = 40;
 /** So weit (Pixel) muss man mit Alt waagerecht ziehen für eine Vierteldrehung. */
 const TURN_DRAG = 120;
+/** So nah (CSS-Pixel) am Fensterrand scrollt die Karte wie mit WASD. */
+const EDGE = 8;
 
 /**
  * Alt, Option (Mac) oder AltGr gehalten? AltGr meldet sich unter Windows als
@@ -60,6 +62,8 @@ export function altHeld(e: MouseEvent | KeyboardEvent): boolean {
 }
 
 export class MouseInput {
+  /** Zeiger am Fensterrand: je Achse -1, 0 oder 1 - steerCamera scrollt dorthin wie mit WASD. */
+  readonly edge = { x: 0, y: 0 };
   private drag: { x: number; y: number; active: boolean } | null = null;
   /**
    * Rechte Taste: gedrückt halten und ziehen verschiebt die Karte (wie WASD),
@@ -84,6 +88,9 @@ export class MouseInput {
     canvas.addEventListener('mousemove', (e) => handlers.move(this.point(e), e.buttons));
     canvas.addEventListener('mouseleave', () => handlers.leave());
     canvas.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
+    // Maus verlässt das Fenster oder es verliert den Fokus: kein Rand mehr.
+    document.documentElement.addEventListener('mouseleave', () => this.setEdge(0, 0));
+    window.addEventListener('blur', () => this.setEdge(0, 0));
   }
 
   /** Stelle des Ereignisses auf dem Canvas in CSS-Pixeln. */
@@ -104,6 +111,11 @@ export class MouseInput {
   }
 
   private windowMove(e: MouseEvent) {
+    // Nur über dem Spiel - Menü, Hauptmenü und Rückfragen liegen außerhalb (document.body).
+    if (e.target instanceof Node && this.canvas.parentElement!.contains(e.target)) {
+      this.setEdge(e.clientX < EDGE ? -1 : e.clientX >= innerWidth - EDGE ? 1 : 0,
+        e.clientY < EDGE ? -1 : e.clientY >= innerHeight - EDGE ? 1 : 0);
+    } else this.setEdge(0, 0);
     if (this.drag) {
       const p = this.point(e);
       const drag = this.drag;
@@ -146,6 +158,11 @@ export class MouseInput {
       right.x = e.clientX;
       right.y = e.clientY;
     }
+  }
+
+  private setEdge(x: number, y: number) {
+    this.edge.x = x;
+    this.edge.y = y;
   }
 
   private up(e: MouseEvent) {

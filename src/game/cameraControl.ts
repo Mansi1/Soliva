@@ -1,5 +1,5 @@
 // cameraControl.ts
-// Die Kamera je Bild: mit WASD bzw. den Pfeiltasten scrollen, das Relief
+// Die Kamera je Bild: mit WASD, den Pfeiltasten oder der Maus am Rand scrollen, das Relief
 // flachlegen (Leertaste, Knopf am Reif), und hinter dem Hauptmenü zieht die Welt
 // langsam vorbei.
 
@@ -15,23 +15,29 @@ const TITLE_DRIFT = 24;
 /**
  * Ein Bild weiter. true, wenn sich die Ansicht bewegt hat - dann liegt unter
  * dem stehenden Zeiger anderes Gelände.
+ * @param edge Zeiger am Fensterrand je Achse -1, 0 oder 1 (MouseInput.edge), scrollt wie WASD
+ * @param edgeSpeed Tempo am Rand aus den Einstellungen (1 = normal, 0 = aus) - eigenes, nicht das Kamera-Tempo
  * @param scrollSpeed Kamera-Tempo aus den Einstellungen (1 = normal)
  * @param flatten Gelände flachlegen (Leertaste, Knopf am Reif oder autoFlat in main.ts)
  */
-export function steerCamera(camera: Camera, renderer: MapRenderer, keyboard: Keyboard, dt: number, scrollSpeed: number, onTitle: boolean,
+export function steerCamera(camera: Camera, renderer: MapRenderer, keyboard: Keyboard, edge: { x: number; y: number }, edgeSpeed: number, dt: number, scrollSpeed: number, onTitle: boolean,
                             flatten = false): boolean {
   // Gescrollt wird in Bildschirmrichtung, nicht entlang der Weltachsen - die
   // liegen in der Rautenansicht diagonal. Das Tempo ist in Tiles je Sekunde
   // gleich, aber auf 3200 Pixel je Sekunde gedeckelt: ganz nah heran zoomt
   // man, um genau hinzusehen - dort flöge die Karte sonst in einem
   // Zehntel einer Sekunde vorbei.
-  const speed = Math.min(400 * (camera.tileSize / 4), 3200) * dt * scrollSpeed;
+  const base = Math.min(400 * (camera.tileSize / 4), 3200) * dt;
+  const speed = base * scrollSpeed;
   let dx = 0;
   let dy = 0;
   if (keyboard.isDown('w', 'arrowup')) dy -= speed;
   if (keyboard.isDown('s', 'arrowdown')) dy += speed;
   if (keyboard.isDown('a', 'arrowleft')) dx -= speed;
   if (keyboard.isDown('d', 'arrowright')) dx += speed;
+  // Maus am Rand nur, wo keine Taste lenkt - sonst addierten sich beide.
+  if (dx === 0) dx = edge.x * base * edgeSpeed;
+  if (dy === 0) dy = edge.y * base * edgeSpeed;
   if (onTitle) dx += TITLE_DRIFT * dt;
 
   // Flach: Relief sinkt, um hinter Berge zu sehen. Weich überblendet, damit
