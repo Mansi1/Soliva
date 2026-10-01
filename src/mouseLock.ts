@@ -46,6 +46,23 @@ const FORWARDED = ['mousedown', 'mouseup', 'click', 'dblclick', 'auxclick', 'con
 /** Zu diesen Maus-Ereignissen gibt es ein Pointer-Ereignis, das der Browser vorher schickt. */
 const POINTER_TWIN: Record<string, string> = { mousedown: 'pointerdown', mouseup: 'pointerup', mousemove: 'pointermove' };
 
+/**
+ * Ein nachgebautes Rad-Ereignis scrollt nicht von selbst: das nächste
+ * scrollbare Element über dem Ziel scrollen, wie es der Browser täte.
+ * ponytail: ohne Weiterreichen an äußere Elemente am Ende des Inhalts; nachrüsten, wenn verschachtelte Listen das brauchen.
+ */
+function scrollWheel(target: Element, e: WheelEvent) {
+  for (let el: Element | null = target; el; el = el.parentElement) {
+    const { overflowY } = getComputedStyle(el);
+    if ((overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+      // Zeilen bzw. Seiten (Firefox mit Mausrad) in Pixel umrechnen, wie MouseInput.wheel.
+      const unit = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? el.clientHeight : 1;
+      el.scrollBy(e.deltaX * unit, e.deltaY * unit);
+      return;
+    }
+  }
+}
+
 /** Einmal beim Start: sperrt die Maus, solange die Seite im Vollbild ist. */
 export function initMouseLock() {
   if (!('requestPointerLock' in document.body)) return;
@@ -89,13 +106,14 @@ export function initMouseLock() {
     shiftKey: e.shiftKey,
     relatedTarget: null,
   });
-  const fire = (target: EventTarget, type: string, e: MouseEvent) => {
+  /** Schickt das nachgebaute Ereignis; false, wenn ein Empfänger preventDefault aufrief. */
+  const fire = (target: EventTarget, type: string, e: MouseEvent): boolean => {
     const twin = POINTER_TWIN[type];
     if (twin) target.dispatchEvent(new PointerEvent(twin, { ...init(twin, e), pointerType: 'mouse', isPrimary: true }));
     if (e instanceof WheelEvent) {
-      target.dispatchEvent(new WheelEvent(type, { ...init(type, e), deltaX: e.deltaX, deltaY: e.deltaY, deltaZ: e.deltaZ, deltaMode: e.deltaMode }));
+      return target.dispatchEvent(new WheelEvent(type, { ...init(type, e), deltaX: e.deltaX, deltaY: e.deltaY, deltaZ: e.deltaZ, deltaMode: e.deltaMode }));
     } else {
-      target.dispatchEvent(new MouseEvent(type, init(type, e)));
+      return target.dispatchEvent(new MouseEvent(type, init(type, e)));
     }
   };
 
@@ -165,7 +183,7 @@ export function initMouseLock() {
         slider.dispatchEvent(new Event('change', { bubbles: true }));
         slider = null;
       }
-      fire(target, type, e);
+      if (fire(target, type, e) && e instanceof WheelEvent) scrollWheel(target, e);
     }, { capture: true, passive: false });
   }
 
