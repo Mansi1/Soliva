@@ -1,7 +1,7 @@
 // SettingsMenu.tsx
 // Menü als Holztafel in der Bildmitte (Zahnrad an der Rohstoffleiste oder
-// F10, wie in AoE2): Spielerfarbe, Pause, Tempo, Ton und Musik, Kamera-Tempo,
-// Anzeigen, Grafik, Speichern, Link teilen, zurück ins Hauptmenü. Einmal gerendert; refresh()
+// F10, wie in AoE2): Spielerfarbe, Pause, Tempo, Anzeigen, Speichern, Link
+// teilen, zurück ins Hauptmenü; Ton, Steuerung und Grafik als Untermenüs. Einmal gerendert; refresh()
 // setzt über Refs, was sich auch von außen ändert (Pause, Ton, laufendes
 // Musikstück).
 
@@ -14,6 +14,9 @@ import { ANIMAL_CLASSES } from '../world/unit';
 import { ZOOM_LEVELS } from '../game/Camera';
 import { ShortcutList } from './Shortcuts';
 import { confirmDialog } from './ConfirmDialog';
+
+/** Seiten des Menüs: die Übersicht und die Untermenüs. */
+type Page = 'main' | 'ton' | 'steuerung' | 'grafik';
 
 /** Was das Menü außer den Einstellungen braucht - main.ts liefert es. */
 export interface MenuHooks {
@@ -114,6 +117,9 @@ export class SettingsMenu {
   private gameButtons = createRef<HTMLDivElement>();
   private mainMenuRow = createRef<HTMLDivElement>();
   private backButton = createRef<HTMLDivElement>();
+  /** Im Untermenü: zurück zur Übersicht - statt „Hauptmenü“. */
+  private backRow = createRef<HTMLDivElement>();
+  private fromTitle = false;
   private title = createRef<HTMLDivElement>();
   private saveButton = createRef<HTMLButtonElement>();
   private savedTimer = 0;
@@ -144,7 +150,10 @@ export class SettingsMenu {
         <div class="menu-top" ref={this.mainMenuRow}>
           <button type="button" class="wood-btn menu-btn" onClick={() => this.mainMenu()}>← Hauptmenü</button>
         </div>
-        <section>
+        <div class="menu-top" ref={this.backRow} hidden>
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('main')}>← Zurück</button>
+        </div>
+        <section data-page="main">
           <h3>Spieler</h3>
           <div class="menu-row">
             <span>Farbe</span>
@@ -156,7 +165,7 @@ export class SettingsMenu {
             </span>
           </div>
         </section>
-        <section>
+        <section data-page="main">
           <h3>Spiel</h3>
           <div class="menu-row" ref={this.pauseRow}>
             <span>Pause <small>F3</small></span>
@@ -167,7 +176,12 @@ export class SettingsMenu {
             <Slider refs={this.speed} min={100} max={MAX_SPEED * 100} step={50} onInput={(v) => this.change({ speed: v })} />
           </div>
         </section>
-        <section>
+        <nav class="menu-nav" data-page="main">
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('ton')}>Ton <span>›</span></button>
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('steuerung')}>Steuerung <span>›</span></button>
+          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('grafik')}>Grafik <span>›</span></button>
+        </nav>
+        <section data-page="ton">
           <h3>Ton</h3>
           <div class="menu-row">
             <span>Ton <small>M</small></span>
@@ -186,7 +200,7 @@ export class SettingsMenu {
             <button type="button" class="wood-btn menu-btn" onClick={act(() => this.hooks.nextTrack())}>Nächstes Stück</button>
           </div>
         </section>
-        <section>
+        <section data-page="steuerung">
           <h3>Steuerung</h3>
           <div class="menu-row">
             <span>Kamera-Tempo</span>
@@ -206,7 +220,7 @@ export class SettingsMenu {
             <ShortcutList />
           </details>
         </section>
-        <section>
+        <section data-page="main">
           <h3>Anzeige</h3>
           <label class="menu-row">
             <span>Tastenhilfe <small>I</small></span>
@@ -219,42 +233,26 @@ export class SettingsMenu {
               onInput={(e: Event) => this.change({ showDebug: (e.target as HTMLInputElement).checked })} />
           </label>
         </section>
-        <section>
+        <section data-page="grafik">
           <h3>Grafik</h3>
-          <h4>Effekte</h4>
-          <label class="menu-row">
-            <span>Kantenglättung (FXAA)<span class="menu-hint">gegen Treppenstufen an Kanten</span></span>
-            <input type="checkbox" ref={this.fxaa}
-              onInput={(e: Event) => this.change({ fxaa: (e.target as HTMLInputElement).checked })} />
-          </label>
-          <label class="menu-row">
-            <span>Farbgebung<span class="menu-hint">mehr Kontrast, leicht warm, zum Rand dunkler</span></span>
-            <input type="checkbox" ref={this.colorGrading}
-              onInput={(e: Event) => this.change({ colorGrading: (e.target as HTMLInputElement).checked })} />
-          </label>
-          <label class="menu-row">
-            <span>Glühen (Bloom)<span class="menu-hint">helle Stellen strahlen; alle aus: Regen läuft trotzdem</span></span>
-            <input type="checkbox" ref={this.bloom}
-              onInput={(e: Event) => this.change({ bloom: (e.target as HTMLInputElement).checked })} />
-          </label>
-          <h4>Leistung</h4>
           <div class="menu-row">
-            <span title={`Bäume, an denen gearbeitet wird, bleiben 3D-Modelle; als Bild wiegen sie nicht im Wind.${
-              import.meta.env.DEV ? ' Entwicklermodus: die Bilder liegen in tools/export/out/billboards/.' : ''}`}>
-              Bäume als Bild bis Zoom<span class="menu-hint">flach statt 3D, viel flüssiger</span>
-            </span>
+            <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
             <span class="menu-choice">
               {BILLBOARDS.map(([value, label, hint], i) => (
                 <button type="button" class="wood-btn" title={hint} ref={this.billboardButtons[i]} onClick={() => this.change({ billboards: value })}>{label}</button>
               ))}
             </span>
           </div>
+          <p class="menu-hint">
+            Bis zu dieser Zoomstufe (1 = weit draußen, 5 = ganz nah) werden Bäume als flaches Bild statt als
+            3D-Modell gezeichnet - das Spiel läuft viel flüssiger, man sieht kaum einen Unterschied. Bäume, an
+            denen gearbeitet wird, bleiben 3D-Modelle; als Bild wiegen sie nicht im Wind.
+            {import.meta.env.DEV ? ' Entwicklermodus: die Bilder liegen in tools/export/out/billboards/.' : ''}
+          </p>
           <details class="menu-keys-box">
-            <summary>
-              <span>Tiere ausblenden bis Zoom<span class="menu-hint">weit draußen kaum zu sehen - sie leben trotzdem weiter</span></span>
-            </summary>
+            <summary title="Weit draußen sind Tiere kaum zu sehen - ausgeblendet läuft das Spiel flüssiger. Sie leben trotzdem weiter.">Tiere ausblenden bis Zoom</summary>
             {ANIMAL_KINDS.map(([kind, name]) => (
-              <div class="menu-row menu-sub">
+              <div class="menu-row">
                 <span>{name}</span>
                 <span class="menu-choice">
                   {HIDE_ANIMALS.map(([value, label, hint], i) => (
@@ -264,19 +262,50 @@ export class SettingsMenu {
                 </span>
               </div>
             ))}
+            <p class="menu-hint">
+              Bis zu dieser Zoomstufe wird die Tierart nicht gezeichnet - die Tiere leben trotzdem weiter.
+            </p>
           </details>
           <label class="menu-row">
-            <span>Im Stillstand 30 FPS<span class="menu-hint">wenn die Kamera stillsteht - schont Akku und Lüfter</span></span>
+            <span>Im Stillstand 30 FPS</span>
             <input type="checkbox" ref={this.idleFps}
               onInput={(e: Event) => this.change({ idleFps: (e.target as HTMLInputElement).checked })} />
           </label>
+          <p class="menu-hint">
+            Steht die Kamera eine Sekunde still, zeichnet das Spiel nur noch 30 Bilder je Sekunde - schont Akku
+            und Lüfter. Beim Verschieben, Zoomen oder Drehen sofort wieder volle Bildrate.
+          </p>
           <label class="menu-row">
-            <span>Minimap mit 10 FPS<span class="menu-hint">sie bewegt sich langsam, man sieht es kaum</span></span>
+            <span>Minimap mit 10 FPS</span>
             <input type="checkbox" ref={this.minimapFps}
               onInput={(e: Event) => this.change({ minimapFps: (e.target as HTMLInputElement).checked })} />
           </label>
+          <p class="menu-hint">
+            Die Minimap wird nur 10-mal je Sekunde gezeichnet - sie bewegt sich langsam, man sieht es kaum.
+            Aus: so oft wie das Spiel.
+          </p>
+          <label class="menu-row">
+            <span>Kantenglättung (FXAA)</span>
+            <input type="checkbox" ref={this.fxaa}
+              onInput={(e: Event) => this.change({ fxaa: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <label class="menu-row">
+            <span>Farbgebung</span>
+            <input type="checkbox" ref={this.colorGrading}
+              onInput={(e: Event) => this.change({ colorGrading: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <label class="menu-row">
+            <span>Glühen (Bloom)</span>
+            <input type="checkbox" ref={this.bloom}
+              onInput={(e: Event) => this.change({ bloom: (e.target as HTMLInputElement).checked })} />
+          </label>
+          <p class="menu-hint">
+            Effekte über dem fertigen Bild: Kantenglättung gegen Treppenstufen, Farbgebung mit etwas mehr Kontrast,
+            leicht warm und zum Rand dunkler, Glühen um helle Stellen. Alle aus: das Bild geht ohne Umweg auf
+            den Schirm - Regen läuft trotzdem.
+          </p>
         </section>
-        <section>
+        <section data-page="main">
           <div class="menu-row">
             <span>Alle Einstellungen</span>
             <button type="button" class="wood-btn menu-btn" onClick={() => this.reset()}>Zurücksetzen</button>
@@ -320,10 +349,19 @@ export class SettingsMenu {
     this.root.hidden = false;
     this.pauseRow.current.hidden = fromTitle;
     this.gameButtons.current.hidden = fromTitle;
-    this.mainMenuRow.current.hidden = fromTitle;
     this.backButton.current.hidden = !fromTitle;
     this.title.current.textContent = fromTitle ? 'Einstellungen' : 'Menü';
+    this.fromTitle = fromTitle;
+    this.showPage('main');
     this.refresh();
+  }
+
+  /** Zeigt nur die Teile der Seite; die Übersicht hat oben „Hauptmenü“, ein Untermenü „Zurück“. */
+  private showPage(page: Page) {
+    for (const el of this.root.querySelectorAll<HTMLElement>('[data-page]')) el.hidden = el.dataset.page !== page;
+    this.mainMenuRow.current.hidden = this.fromTitle || page !== 'main';
+    this.backRow.current.hidden = page === 'main';
+    this.root.querySelector('.menu-board')!.scrollTop = 0;
   }
 
   close() {
