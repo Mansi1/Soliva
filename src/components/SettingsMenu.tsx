@@ -1,7 +1,7 @@
 // SettingsMenu.tsx
 // Menü als Holztafel in der Bildmitte (Zahnrad an der Rohstoffleiste oder
-// F10, wie in AoE2): Spielerfarbe, Pause, Tempo, Anzeigen, Speichern, Link
-// teilen, zurück ins Hauptmenü; Ton, Steuerung und Grafik als Untermenüs. Einmal gerendert; refresh()
+// F10, wie in AoE2): Spielerfarbe, Pause, Tempo, Ton und Musik, Kamera-Tempo,
+// Anzeigen, Grafik, Speichern, Link teilen, zurück ins Hauptmenü. Einmal gerendert; refresh()
 // setzt über Refs, was sich auch von außen ändert (Pause, Ton, laufendes
 // Musikstück).
 
@@ -15,9 +15,6 @@ import { ZOOM_LEVELS } from '../game/Camera';
 import { ShortcutList } from './Shortcuts';
 import { confirmDialog } from './ConfirmDialog';
 import { DEV_OFF } from './Hud';
-
-/** Seiten des Menüs: die Übersicht und die Untermenüs. */
-type Page = 'main' | 'ton' | 'steuerung' | 'grafik';
 
 /** Was das Menü außer den Einstellungen braucht - main.ts liefert es. */
 export interface MenuHooks {
@@ -118,9 +115,6 @@ export class SettingsMenu {
   private gameButtons = createRef<HTMLDivElement>();
   private mainMenuRow = createRef<HTMLDivElement>();
   private backButton = createRef<HTMLDivElement>();
-  /** Im Untermenü: zurück zur Übersicht - statt „Hauptmenü“. */
-  private backRow = createRef<HTMLDivElement>();
-  private fromTitle = false;
   private title = createRef<HTMLDivElement>();
   private saveButton = createRef<HTMLButtonElement>();
   private savedTimer = 0;
@@ -151,10 +145,7 @@ export class SettingsMenu {
         <div class="menu-top" ref={this.mainMenuRow}>
           <button type="button" class="wood-btn menu-btn" onClick={() => this.mainMenu()}>← Hauptmenü</button>
         </div>
-        <div class="menu-top" ref={this.backRow} hidden>
-          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('main')}>← Zurück</button>
-        </div>
-        <section data-page="main">
+        <section>
           <h3>Spieler</h3>
           <div class="menu-row">
             <span>Farbe</span>
@@ -166,7 +157,7 @@ export class SettingsMenu {
             </span>
           </div>
         </section>
-        <section data-page="main">
+        <section>
           <h3>Spiel</h3>
           <div class="menu-row" ref={this.pauseRow}>
             <span>Pause <small>F3</small></span>
@@ -177,12 +168,7 @@ export class SettingsMenu {
             <Slider refs={this.speed} min={100} max={MAX_SPEED * 100} step={50} onInput={(v) => this.change({ speed: v })} />
           </div>
         </section>
-        <nav class="menu-nav" data-page="main">
-          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('ton')}>Ton <span>›</span></button>
-          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('steuerung')}>Steuerung <span>›</span></button>
-          <button type="button" class="wood-btn menu-btn" onClick={() => this.showPage('grafik')}>Grafik <span>›</span></button>
-        </nav>
-        <section data-page="ton">
+        <section>
           <h3>Ton</h3>
           <div class="menu-row">
             <span>Ton <small>M</small></span>
@@ -201,7 +187,7 @@ export class SettingsMenu {
             <button type="button" class="wood-btn menu-btn" onClick={act(() => this.hooks.nextTrack())}>Nächstes Stück</button>
           </div>
         </section>
-        <section data-page="steuerung">
+        <section>
           <h3>Steuerung</h3>
           <div class="menu-row">
             <span>Kamera-Tempo</span>
@@ -221,7 +207,7 @@ export class SettingsMenu {
             <ShortcutList />
           </details>
         </section>
-        <section data-page="main">
+        <section>
           <h3>Anzeige</h3>
           <label class="menu-row">
             <span>Tastenhilfe <small>I</small></span>
@@ -234,7 +220,7 @@ export class SettingsMenu {
               onInput={(e: Event) => this.change({ showDebug: (e.target as HTMLInputElement).checked })} />
           </label>
         </section>
-        <section data-page="grafik">
+        <section>
           <h3>Grafik</h3>
           <div class="menu-row">
             <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
@@ -322,7 +308,7 @@ export class SettingsMenu {
             nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im Entwickler-Panel.
           </p>
         </section>
-        <section data-page="main">
+        <section>
           <div class="menu-row">
             <span>Alle Einstellungen</span>
             <button type="button" class="wood-btn menu-btn" onClick={() => this.reset()}>Zurücksetzen</button>
@@ -366,19 +352,10 @@ export class SettingsMenu {
     this.root.hidden = false;
     this.pauseRow.current.hidden = fromTitle;
     this.gameButtons.current.hidden = fromTitle;
+    this.mainMenuRow.current.hidden = fromTitle;
     this.backButton.current.hidden = !fromTitle;
     this.title.current.textContent = fromTitle ? 'Einstellungen' : 'Menü';
-    this.fromTitle = fromTitle;
-    this.showPage('main');
     this.refresh();
-  }
-
-  /** Zeigt nur die Teile der Seite; die Übersicht hat oben „Hauptmenü“, ein Untermenü „Zurück“. */
-  private showPage(page: Page) {
-    for (const el of this.root.querySelectorAll<HTMLElement>('[data-page]')) el.hidden = el.dataset.page !== page;
-    this.mainMenuRow.current.hidden = this.fromTitle || page !== 'main';
-    this.backRow.current.hidden = page === 'main';
-    this.root.querySelector('.menu-board')!.scrollTop = 0;
   }
 
   close() {

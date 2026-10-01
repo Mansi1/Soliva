@@ -11,7 +11,7 @@
   display: none;
 }
 #menu .menu-board {
-  width: min(500px, calc(100vw - 32px));
+  width: min(460px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   overflow-y: auto;
   padding: 18px 22px 16px;
@@ -263,17 +263,6 @@
 #menu .key-note {
   font-size: 11px;
   font-style: italic;
-}
-/* Übersicht: Knöpfe zu den Untermenüs, gleich breit nebeneinander. */
-#menu .menu-nav {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 10px 0;
-}
-#menu .menu-nav span {
-  margin-left: 4px;
-  color: var(--gold);
 }
 /* Regler mit Stufen (Bäume als Bild): Wörter unter den Stufen, so breit wie Regler und Zahl daneben. */
 #menu .menu-stops {
