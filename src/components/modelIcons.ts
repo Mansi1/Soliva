@@ -177,6 +177,11 @@ export function villagerIcon(female: boolean, player: RGB): string {
   return cached(`villager:${female}`, player, () => villager(female, 0, player));
 }
 
+/** Dorfbewohnerin und Dorfbewohner nebeneinander in Spielerfarbe - wie in der Rohstoffleiste. */
+export function populationIcon(player: RGB): string {
+  return cached('population', player, () => scene('population', player));
+}
+
 /** Tier, äsend - erlegt liegend. */
 export function animalIcon(kind: AnimalKind, dead = false): string {
   const def = ANIMALS[kind];
