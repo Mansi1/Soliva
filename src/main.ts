@@ -79,6 +79,8 @@ const pointer = new Pointer();
 
 /** Zoom beim Start: CSS-Pixel je Tile. */
 const DEFAULT_ZOOM = 32;
+/** Randscrollen abgeschaltet (Einstellung edgeScroll). */
+const NO_EDGE = { x: 0, y: 0 };
 /** Kamera: Bildmitte, Zoomstufe, Sichtfläche (game/Camera.ts). */
 const camera = new Camera(ZOOM_LEVELS[(gameUrl?.zoom ?? 0) - 1] ?? DEFAULT_ZOOM);
 
@@ -376,7 +378,7 @@ const actions = new PlayerActions({ world, camera, selection, placement, picker,
 });
 
 /** Die Maus über dem Spielfeld (game/MouseInput.ts) - hier, was sie im Spiel bedeutet. */
-new MouseInput(canvas, boxEl, {
+const mouse = new MouseInput(canvas, boxEl, {
   // Im Baumodus setzt ein Klick das Gebäude; Felder weiter beim Ziehen (move).
   press: (p) => {
     if (!placement.isActive) return false;
@@ -978,7 +980,7 @@ function loop(now: number) {
   const held = heldFocus();
   const reliefBefore = renderer.relief;
   const [cameraX, cameraY] = [camera.x, camera.y];
-  const steered = steerCamera(camera, renderer, keyboard, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
+  const steered = steerCamera(camera, renderer, keyboard, settings.edgeScroll ? mouse.edge : NO_EDGE, dt, settings.scroll, start.isOpen(), autoFlat || flatOn);
   if (held && renderer.relief !== reliefBefore && camera.x === cameraX && camera.y === cameraY) keepFocus(held);
   const moving = steered || zoomed || tilted || flying;
   if (moving || cameraMoving) refreshPointer(!moving);
