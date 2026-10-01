@@ -8,6 +8,7 @@ import { BUILDING_HEADING, CLIPS, POSE, modelEntry, modelWorkSpot } from '../gl/
 import type { Clip } from '../gl/clips';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { findPath, lineOfSight } from './pathfinding';
+import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
 import { FishTrap, furrowFood, type Building, type Farm } from './building';
 import {
   BOWYER, CROPS, FARM_RATE, FISHING, HUNT, MAX_GATHERERS, PLOUGH_TIME, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
@@ -60,6 +61,9 @@ export function workplace(task: Task): string | undefined {
 export const AFLOAT: ReadonlySet<string> = new Set(['row', 'empty', 'return']);
 export const DRAGGING: ReadonlySet<string> = new Set(['launch', 'land']);
 
+/** Sitzt er im Boot oder zieht es? Dann weicht er niemandem aus. */
+const inBoat = (v: Villager) => v.task.kind === 'fish' && (AFLOAT.has(v.task.step) || DRAGGING.has(v.task.step));
+
 export class VillagerWork {
   /**
    * Was ein Tile vom Gelände her versperrt, gemerkt: 0 frei, 1 Wasser,
@@ -67,14 +71,17 @@ export class VillagerWork {
    * (siehe blockedAt).
    */
   private terrainBlock = new Map<string, number>();
+  /** Wer im letzten Tick zu sehen war und Platz braucht - für steer() und separate(). */
+  private present: Villager[] = [];
 
   constructor(private world: World) {}
 
   /**
    * Befehl an ausgewählte Dorfbewohner für das Feld (x, y), wie ein Rechtsklick
-   * in AoE2: Lager -> abliefern, Vorkommen -> sammeln, sonst hingehen.
+   * in AoE2: Lager -> abliefern, Vorkommen -> sammeln, sonst hingehen - zum
+   * genauen Punkt `point`, falls angegeben, sonst zur Mitte des Felds.
    */
-  command(ids: ReadonlySet<number>, x: number, y: number): string | null {
+  command(ids: ReadonlySet<number>, x: number, y: number, point?: Point): string | null {
     const selected = this.controllable(ids);
     if (selected.length === 0) return ids.size > 0 ? WORKER_BUSY : null;
     // Wer gerade im Gebäude ablädt, kommt für den neuen Befehl sofort heraus.
@@ -141,19 +148,43 @@ export class VillagerWork {
       return null;
     }
 
-    const tile = this.world.terrain.getTile(x, y);
-    if (tile.tileType === 'water' || tile.tileType === 'deep_water') return 'Dorfbewohner können nicht schwimmen';
-
-    // Mehrere Dorfbewohner stellen sich im Kreis um das Ziel, statt alle auf
-    // denselben Punkt zu laufen.
-    selected.forEach((v, i) => {
-      const angle = (i / selected.length) * Math.PI * 2;
-      const r = selected.length > 1 ? 0.35 + 0.1 * Math.sqrt(selected.length) : 0;
-      v.task = { kind: 'move', x: x + 0.5 + Math.cos(angle) * r, y: y + 0.5 + Math.sin(angle) * r };
+    // So nah wie möglich an den Punkt, jeder auf einen eigenen Platz - auch
+    // nicht dorthin, wo schon einer steht oder hingeht. Im Wasser: ans Ufer.
+    // Der Nächste bekommt den Platz am Punkt, die anderen stellen sich darum.
+    const at = point ?? { x: x + 0.5, y: y + 0.5 };
+    const taken: Point[] = this.world.villagers
+      .filter((v) => !ids.has(v.id) && v.isVisible)
+      .map((v) => (v.task.kind === 'move' ? { x: v.task.x, y: v.task.y } : { x: v.x, y: v.y }));
+    const blocked = (tx: number, ty: number) => this.blockedAt(tx, ty);
+    let placed = 0;
+    for (const v of [...selected].sort((a, b) => a.distanceTo(at.x, at.y) - b.distanceTo(at.x, at.y))) {
+      const spot = freeSpot(at.x, at.y, taken, blocked);
+      if (!spot) {
+        v.task = { kind: 'idle' };
+        v.problem = 'Dort ist kein Platz';
+        continue;
+      }
+      taken.push(spot);
+      v.task = { kind: 'move', x: spot.x, y: spot.y };
       v.problem = null;
-    });
-    return null;
+      placed++;
+    }
+    if (placed > 0) return null;
+    const tile = this.world.terrain.getTile(x, y);
+    return tile.tileType === 'water' || tile.tileType === 'deep_water' ? 'Dorfbewohner können nicht schwimmen' : 'Dort ist kein Platz';
   }
+
+  /**
+   * Nach den Ticks aller Dorfbewohner: wer sich zu nah ist, wird
+   * auseinandergeschoben (crowd.ts) - wer arbeitet, bleibt stehen. Im
+   * Gebäude und im Boot zählt keiner mit.
+   */
+  separate() {
+    this.present = this.world.villagers.filter((v) => v.isVisible && !inBoat(v));
+    const fixed = this.present.map((v) => v.pose !== POSE.stand && v.pose !== POSE.walk);
+    if (separate(this.present, fixed, (x, y) => this.blockedAt(x, y))) this.world.markDirty();
+  }
+
 
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
   blockedAt(x: number, y: number): boolean {
@@ -210,8 +241,9 @@ export class VillagerWork {
   private walk(v: Villager, tx: number, ty: number, reach: number, dt: number, afloat = false): boolean {
     const d = Math.hypot(tx - v.x, ty - v.y);
     // Mit etwas Spielraum - sonst bliebe nach dem letzten Schritt ein
-    // Rundungsrest, und er käme nie an.
-    if (d <= reach + 1e-4) {
+    // Rundungsrest, und er käme nie an. Steht dort schon einer, ist er
+    // nah genug - sonst schöben sich beide endlos hin und her.
+    if (d <= reach + 1e-4 || (!afloat && d <= reach + CROWDED_ARRIVAL && occupied(v, tx, ty, this.present))) {
       v.path = null;
       v.pathTarget = null;
       return true;
@@ -223,9 +255,15 @@ export class VillagerWork {
     const dy = next.y - v.y;
     const dn = Math.hypot(dx, dy) || 1e-6;
     const step = Math.min(VILLAGER.speed * dt, final ? d - reach : dn);
-    v.x += (dx / dn) * step;
-    v.y += (dy / dn) * step;
-    v.heading = Math.atan2(dy, dx);
+    let [ux, uy] = [dx / dn, dy / dn];
+    // Anderen ausweichen (crowd.ts) - aber nicht in einen Baum oder ins Wasser.
+    if (!afloat) {
+      const [sx, sy] = steer(v, ux, uy, this.present);
+      if (!this.blockedAt(Math.floor(v.x + sx * step), Math.floor(v.y + sy * step))) [ux, uy] = [sx, sy];
+    }
+    v.x += ux * step;
+    v.y += uy * step;
+    v.heading = Math.atan2(uy, ux);
     v.stride += step;
     v.pose = afloat ? POSE.stand : POSE.walk;
     this.world.markDirty();
@@ -290,6 +328,18 @@ export class VillagerWork {
       return false;
     }
     return true;
+  }
+
+  /** Kleinster Platz am Vorkommen des Auftrags, den kein anderer Sammler hat. */
+  private freeSlot(v: Villager, task: Extract<Task, { kind: 'gather' }>): number {
+    const used = new Set<number>();
+    for (const u of this.world.villagers) {
+      const t = u.task;
+      if (u !== v && t.kind === 'gather' && t.x === task.x && t.y === task.y && t.slot !== undefined) used.add(t.slot);
+    }
+    let slot = 0;
+    while (used.has(slot)) slot++;
+    return slot;
   }
 
   /** Wie viele Dorfbewohner je Feld sammeln - Schlüssel "x,y". */
@@ -907,6 +957,7 @@ export class VillagerWork {
           if (next) {
             task.x = next.x;
             task.y = next.y;
+            task.slot = undefined;
           } else if (v.carrying > 0) {
             const site = this.nearestDropSite(v, YIELD[task.type]);
             v.task = site ? { kind: 'deliver', building: key(site.x, site.y) } : { kind: 'idle' };
@@ -918,12 +969,13 @@ export class VillagerWork {
           return;
         }
 
-        // Jeder hat seinen eigenen Platz am Feld - sonst stehen alle
-        // Sammler auf demselben Punkt und sehen aus wie einer. Der goldene
-        // Winkel verteilt mehrere Sammler gleichmäßig; der Anteil je Feld
-        // sorgt dafür, dass derselbe Dorfbewohner nicht an jedem Baum von
-        // derselben Seite kommt - sonst fielen alle seine Bäume gleich.
-        const angle = v.id * 2.39996 + tileAngle(task.x, task.y);
+        // Jeder hat seinen eigenen Platz am Feld (`slot`, frei vergeben) -
+        // sonst stehen Sammler auf demselben Punkt und sehen aus wie einer.
+        // Die Plätze liegen gleichmäßig im Kreis; der Winkel je Feld sorgt
+        // dafür, dass nicht an jedem Baum der erste Platz auf derselben
+        // Seite liegt - sonst fielen alle Bäume gleich.
+        task.slot ??= this.freeSlot(v, task);
+        const angle = task.slot * ((Math.PI * 2) / MAX_GATHERERS) + tileAngle(task.x, task.y);
         let spotX = task.x + 0.5 + Math.cos(angle) * GATHER_SPREAD;
         let spotY = task.y + 0.5 + Math.sin(angle) * GATHER_SPREAD;
         // Wohin er schlägt: die Mitte des Felds - oder beim gefällten Baum der
@@ -943,10 +995,12 @@ export class VillagerWork {
           const [dx, dy] = [Math.cos(fellDir), Math.sin(fellDir)];
           aimX += dx * along;
           aimY += dy * along;
-          // Links oder rechts vom Stamm, mehrere Holzfäller verteilt.
-          const side = (v.id % 2 ? 1 : -1) * (0.3 + (v.id % 3) * 0.08);
-          spotX = aimX - dy * side - dx * (v.id % 3) * 0.15;
-          spotY = aimY + dx * side - dy * (v.id % 3) * 0.15;
+          // Links oder rechts vom Stamm, je Platz ein Stück weiter weg und
+          // zurück - jeder der MAX_GATHERERS Plätze liegt woanders.
+          const row = task.slot >> 1;
+          const side = (task.slot % 2 ? 1 : -1) * (0.3 + row * 0.1);
+          spotX = aimX - dy * side - dx * row * 0.2;
+          spotY = aimY + dx * side - dy * row * 0.2;
         }
         if (!this.walk(v, spotX, spotY, 0.05, dt)) return;
         // Am Platz: zum Vorkommen drehen und arbeiten - Beeren kniend pflücken.

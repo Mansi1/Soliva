@@ -181,7 +181,7 @@ export class PlayerActions {
       this.ui.refreshSelection();
       return;
     }
-    const reason = this.world.command(this.selection.villagers, x, y);
+    const reason = this.world.command(this.selection.villagers, x, y, at);
     if (reason) this.ui.hint(reason);
     else this.sound.play('click', 0.7);
     this.ui.refreshSelection();
