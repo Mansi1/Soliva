@@ -94,7 +94,7 @@ export class StartScreen {
     document.body.appendChild(this.qr);
     render(
       <a class="start-qr" href="https://mannseicher.com" target="_blank" rel="noopener" title="mannseicher.com">
-        <img src="/qr-mannseicher.svg" width="160" height="160" alt="QR-Code zu mannseicher.com" />
+        <img src={`${import.meta.env.BASE_URL}qr-mannseicher.svg`} width="160" height="160" alt="QR-Code zu mannseicher.com" />
         <span>mannseicher.com</span>
       </a>,
       this.qr,
@@ -113,14 +113,14 @@ export class StartScreen {
     if (page !== 'new') this.back = page;
     render(
       <div class="start-board" style={`background-image:url(${woodBar})`}>
-        <img class="start-logo" src="/logo.svg" alt="Soliva" />
+        <img class="start-logo" src={`${import.meta.env.BASE_URL}logo.svg`} alt="Soliva" />
         {page === 'main' ? (
           <nav class="start-list">
             <StartButton label="Einzelspieler" onClick={() => this.show('single')} />
             <StartButton label="Mehrspieler" hint="bald" disabled />
             <StartButton label="Einstellungen" onClick={() => h.openSettings()} />
-            <StartButton label="Galerie" hint="alle Modelle" onClick={() => window.location.assign('/galerie')} />
-            <StartButton label="L-System" hint={'Bäume & Pflanzen'} onClick={() => window.location.assign('/tools/lsystem/')} />
+            <StartButton label="Galerie" hint="alle Modelle" onClick={() => window.location.assign(`${import.meta.env.BASE_URL}galerie`)} />
+            <StartButton label="L-System" hint={'Bäume & Pflanzen'} onClick={() => window.location.assign(`${import.meta.env.BASE_URL}tools/lsystem/`)} />
           </nav>
         ) : page === 'single' ? (
           <nav class="start-list">
@@ -201,7 +201,7 @@ export class StartScreen {
   open(page: Page = 'main') {
     this.opened = true;
     // Im Hauptmenü "/", im Spiel die Welt (close).
-    window.history.replaceState(null, '', '/');
+    window.history.replaceState(null, '', import.meta.env.BASE_URL);
     this.root.hidden = false;
     document.body.classList.add('title-screen');
     this.qr.hidden = false;

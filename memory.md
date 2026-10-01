@@ -55,5 +55,6 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Offen
 
+- 2026-10-01: GitHub Pages per Actions (`pages.yml`) ist eingerichtet, aber noch nie auf GitHub gelaufen. `kyr0/soliva` hatte Pages noch auf „Branch `perf-optimization`“, dafür muss die Quelle auf „GitHub Actions“ stehen. Ob `make e2e` in `verify.yml` auf ubuntu-latest WebGL2 bekommt (Chrome ohne GPU), ist ungeprüft.
 - GPU-Zeit fehlt im Bench: `gpuFillMs` über `EXT_disjoint_timer_query_webgl2` würde Shader-Optimierungen belegbar machen - vor Plan 5.1 (Höhen-Textur) einbauen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.

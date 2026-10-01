@@ -33,3 +33,11 @@ tools/export/out
 
 # Sicherungen, die Blender beim Speichern anlegt
 *.blend1
+
+# defuss-vae: Laufzeitzustand, Geheimnisse, Ein- und Ausgaben
+.env
+__pycache__/
+var/*
+tmp/*
+output/*
+input/*

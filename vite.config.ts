@@ -59,6 +59,9 @@ function saveBillboards(): Plugin {
 }
 
 export default defineConfig({
+  // VERIFIED: Nur der Pages-Build setzt BASE_PATH ("/<repo>/", .github/workflows/pages.yml), sonst "/".
+  // Aus der Umgebung statt fest "/soliva/": Forks und eigene Domain bekommen ihren Pfad von configure-pages.
+  base: process.env.BASE_PATH || '/',
   // add the defuss() plugin to make JSX transpilation work
   plugins: [glbModels(), saveBillboards(), defuss()],
   // Skelett-Clips aus Blender (src/models/clips/*.glb) werden mit ?inline eingebettet.

@@ -8,6 +8,9 @@
 // Im Spiel zeigt die Adresse /game/<seed>, im Hauptmenü "/" (StartScreen).
 // Wer /game/<seed> öffnet (auch neu lädt), geht direkt in diese Welt, ohne
 // Hauptmenü und ohne sich die Welt zu merken. Ohne Seed (/game) eine Zufallswelt.
+// Alle Pfade gelten ab import.meta.env.BASE_URL: lokal "/", auf GitHub Pages
+// "/<repo>/" (BASE_PATH im Workflow .github/workflows/pages.yml). VERIFIED: Relative
+// Pfade reichen nicht, unter /game/<seed> lösten sie sich gegen game/ auf.
 // Zum Teilen und Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&rot=<0-3>&tilt=<Grad>&save=<base64>
 // setzt dazu die Kamera dorthin; mit save (Spielstand-JSON als base64url) beginnt
 // die Welt mit diesem Stand - so passt ein Spielstand in einen Link, ohne
@@ -30,7 +33,7 @@ export type StartRequest = 'new' | 'continue';
 export const gameUrl = parseGameUrl();
 
 function parseGameUrl() {
-  const match = window.location.pathname.match(/^\/game(?:\/([^/]*))?\/?$/);
+  const match = `/${window.location.pathname.slice(import.meta.env.BASE_URL.length)}`.match(/^\/game(?:\/([^/]*))?\/?$/);
   if (!match) return null;
   const seed = decodeURIComponent(match[1] ?? '') || randomSeed();
   const params = new URLSearchParams(window.location.search);
@@ -52,7 +55,7 @@ function parseGameUrl() {
 
 /** Die Adresse der Welt im Spiel. */
 export function gamePath(seed: string): string {
-  return `/game/${encodeURIComponent(seed)}`;
+  return `${import.meta.env.BASE_URL}game/${encodeURIComponent(seed)}`;
 }
 
 /** Link auf diese Welt mit Ansicht und Spielstand - parseGameUrl liest ihn wieder. */
@@ -148,7 +151,7 @@ export function isDemo(seed: string): boolean {
 /** Den Demo-Spielstand als Spielstand der Welt "Demo" ablegen; false, wenn es nicht ging. */
 export async function installDemo(): Promise<boolean> {
   try {
-    const response = await fetch('/savegame/demo.json');
+    const response = await fetch(`${import.meta.env.BASE_URL}savegame/demo.json`);
     if (!response.ok) return false;
     localStorage.setItem(saveKey(DEMO_SEED), JSON.stringify(await response.json()));
     return true;
@@ -166,7 +169,7 @@ export function switchWorld(seed: string, request: StartRequest) {
     // Ohne Speicher bleibt es bei der jetzigen Welt.
     return;
   }
-  window.location.replace('/');
+  window.location.replace(import.meta.env.BASE_URL);
 }
 
 /** Wie diese Seite beginnen soll, wenn eine andere Welt gewählt wurde. Der Vermerk gilt nur einmal. */

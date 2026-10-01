@@ -137,7 +137,7 @@ export class SettingsMenu {
     };
     return (
       <div class="menu-board" role="dialog" aria-label="Menü" style={`background-image:url(${woodBar})`}>
-        <img class="menu-logo" src="/logo.svg" alt="Soliva" />
+        <img class="menu-logo" src={`${import.meta.env.BASE_URL}logo.svg`} alt="Soliva" />
         <div class="menu-title" ref={this.title}>Menü</div>
         <div class="menu-top" ref={this.mainMenuRow}>
           <button type="button" class="wood-btn menu-btn" onClick={() => this.mainMenu()}>← Hauptmenü</button>
