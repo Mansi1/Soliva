@@ -138,25 +138,8 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-#menu .menu-btn,
-#menu .menu-choice button {
+#menu .menu-btn {
   padding: 5px 12px;
-}
-#menu .menu-choice {
-  display: inline-flex;
-}
-#menu .menu-choice button {
-  border-radius: 0;
-  margin-left: -2px;
-  font-size: 13px;
-  /* Auch wenn die Bildlaufleiste Platz nimmt: jede Wahl in einer Zeile. */
-  white-space: nowrap;
-}
-#menu .menu-choice button:first-child {
-  border-radius: 4px 0 0 4px;
-}
-#menu .menu-choice button:last-child {
-  border-radius: 0 4px 4px 0;
 }
 /* Spielerfarben: runde Farbfelder, das gewählte mit goldenem Rand */
 #menu .menu-colors {
@@ -263,4 +246,34 @@
 #menu .key-note {
   font-size: 11px;
   font-style: italic;
+}
+/* Regler mit Stufen (Bäume als Bild): Wörter unter den Stufen, so breit wie Regler und Zahl daneben. */
+#menu .menu-stops {
+  display: flex;
+  flex-direction: column;
+  width: 226px;
+}
+#menu .menu-stops input[type='range'] {
+  width: 100%;
+  margin: 0;
+}
+/* Abstand zum Rand = halbe Breite des Reglerknopfs - so stehen die Wörter unter den Stufen. */
+#menu .menu-stop-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--cream-muted);
+}
+/* Teile nicht zeichnen: vier Schalter nebeneinander. */
+#menu .menu-off {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0 4px;
+  font-size: 14px;
+}
+#menu .menu-off label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

@@ -218,13 +218,6 @@ function stateLink() {
 }
 const shareButton = document.getElementById('share-link') as HTMLButtonElement;
 shareButton.addEventListener('click', () => copyLink(shareButton, stateLink()));
-// Abschalter im Entwickler-Panel (MapRenderer.off).
-for (const box of document.querySelectorAll<HTMLInputElement>('#dev-off input[data-off]')) {
-  box.addEventListener('change', () => {
-    renderer.off[box.dataset.off as keyof typeof renderer.off] = box.checked;
-  });
-}
-
 function startNewGame() {
   world.reset();
   ui.clearSelection();
@@ -340,6 +333,22 @@ function applyFacing(dir: string) {
 window.addEventListener('beforeunload', () => world.save());
 
 const renderer = new MapRenderer(canvas, seed, camera.tileSize, camera.pixelRatio);
+// Abschalter (MapRenderer.off): im Entwickler-Panel "Aus" (data-off, Haken =
+// aus), im Menü unter Grafik "Teile zeichnen" (data-on, Haken = an). Alle
+// zeigen denselben Stand.
+const offBoxes = document.querySelectorAll<HTMLInputElement>('input[data-off], input[data-on]');
+const offKey = (box: HTMLInputElement) => (box.dataset.off ?? box.dataset.on) as keyof typeof renderer.off;
+const showOff = (box: HTMLInputElement) => {
+  const off = renderer.off[offKey(box)];
+  box.checked = box.dataset.off ? off : !off;
+};
+for (const box of offBoxes) {
+  showOff(box);
+  box.addEventListener('change', () => {
+    renderer.off[offKey(box)] = box.dataset.off ? box.checked : !box.checked;
+    offBoxes.forEach(showOff);
+  });
+}
 const minimap = new MiniMap(minimapCanvas, seed, camera.pixelRatio);
 /**
  * Sonne und Wetter (game/Lighting.ts). Mit ?festesLicht in der Adresse steht

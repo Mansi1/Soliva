@@ -87,8 +87,8 @@ function DebugPanel() {
   );
 }
 
-/** Abschalter im Entwickler-Panel: Schlüssel in MapRenderer.off, Name, Hinweis. */
-const DEV_OFF = [
+/** Abschalter im Entwickler-Panel und im Menü unter Grafik: Schlüssel in MapRenderer.off, Name, Hinweis. */
+export const DEV_OFF = [
   ['grass', 'Gras', 'Gras- und Steinkarten nicht zeichnen'],
   ['models', 'Modelle', 'Gebäude, Bäume, Blumen, Figuren, Felder nicht zeichnen'],
   ['particles', 'Partikel', 'Rauch, Staub, Insekten, Fische nicht zeichnen'],
