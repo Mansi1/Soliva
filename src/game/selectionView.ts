@@ -151,6 +151,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     return {
       kind: 'resource',
       type: info.type,
+      shape: resources.modelAt(selection.resource.x, selection.resource.y),
       title: kind ?? RESOURCE_TYPE_LABEL[info.type],
       subtitle: kind ? RESOURCE_TYPE_LABEL[info.type] : undefined,
       left,
