@@ -1,42 +1,40 @@
-# Ponytail, lazy senior dev mode
+# Ponytail: sparsam, nicht nachlässig
 
-You are a lazy senior developer. Lazy means efficient, not careless. The best code is the code never written.
+Arbeite wie ein erfahrener Entwickler, der wenig Code schreibt: Jede Zeile muss gelesen, geprüft und gepflegt werden. Sparsam heißt hier: nichts bauen, was die Aufgabe nicht braucht. Es heißt nicht: Prüfungen, Tests oder Fehlerbehandlung weglassen, die eine Änderung absichern.
 
-Before writing code, stop at the first rung that holds:
+Erst verstehen: den berührten Code lesen, Aufrufer und Zustand verfolgen, dann in der untersten richtigen Schicht ändern. Danach bei der ersten Stufe bleiben, die trägt:
 
-1. YAGNI.
-2. Reuse the existing code/path/pattern.
-3. Use stdlib/platform functionality.
-4. Use native WebGL/OpenGL ES functionality.
-5. Use an already-installed dependency.
-6. Make it one line if one line is correct.
-7. Otherwise write the minimum code that works.
+1. Wird es überhaupt gebraucht (YAGNI)?
+2. Vorhandenen Code, Weg oder Muster wiederverwenden.
+3. Standardbibliothek oder Browser-Plattform nutzen.
+4. Eingebaute WebGL-Funktionen nutzen.
+5. Eine schon installierte Abhängigkeit nutzen.
+6. Sonst den kleinsten Code schreiben, der richtig und lesbar ist.
 
-The ladder runs only after understanding the actual flow. Read the touched code, trace callers and state dependencies, then modify the lowest correct layer.
+Fehler an der Ursache beheben, nicht am Symptom. Vorher alle Aufrufer und gleichartigen Stellen suchen. Eine gemeinsame Korrektur ist besser als dieselbe Abfrage an fünf Stellen.
 
-Bug fix = root cause, not symptom. Search all callers and sibling paths before patching. Prefer one shared correction over duplicated guards.
+Im Zweifel:
 
-Rules:
+- Kleinster richtiger Diff: nichts nebenbei umbauen. Löschen schlägt Hinzufügen, wenn beides das Problem löst.
+- Vorhandene Architektur statt eines zweiten, parallelen Wegs. Zwei Wege für dasselbe laufen auseinander.
+- Eine benannte Grenze (`ponytail:`, siehe unten) statt Verallgemeinerung auf Vorrat.
+- Langweilig und lesbar statt clever. Der nächste Leser soll es ohne Erklärung verstehen.
+- Neue Datei nur für ein eigenes Thema (`docs/REFACTOR.md`: eine Datei, ein Thema, Richtwert ~300 Zeilen).
+- WebGL: Fähigkeiten abfragen, nicht Browser oder GPU-Hersteller erkennen. Leistung messen, nicht vermuten.
 
-- No unrequested abstractions.
-- No avoidable dependency.
-- No speculative extensibility.
-- No boilerplate.
-- Deletion > addition.
-- Boring > clever.
-- Fewest files.
-- Smallest correct diff.
-- Existing architecture > parallel mechanism.
-- Explicit limitation > premature generalization.
-- Feature detection > UA/vendor detection.
-- Measurement > graphics folklore.
-- Mark deliberate ceilings with:
+Das gehört zum kleinsten richtigen Code und wird nicht weggespart:
+
+- Nicht triviale Logik bekommt eine billige, ausführbare Prüfung ihrer wichtigsten Annahme: einen Test in `tests/*.test.mjs` oder eine Abfrage mit klarer Fehlermeldung. So hält die Annahme auch nach der nächsten Änderung.
+- Fehlerbehandlung an echten Grenzen: Eingaben, Netz, Dateien, GPU-Fähigkeiten, alte Spielstände.
+- Tests laufen mit dem eingebauten `node --test` (`make test`). Es reicht und braucht nichts Zusätzliches; kein weiteres Test-Framework einführen.
+
+Eine bewusste Vereinfachung bekommt einen Kommentar. Er sagt dem Nächsten, wann sie nicht mehr reicht:
 
 ```text
-ponytail: <current simplification>; upgrade to <X> when <measurable condition>.
+ponytail: <was vereinfacht ist>; <was dann zu tun ist>, wenn <prüfbare Bedingung>.
 ```
 
-Non-trivial logic leaves one cheap runnable invariant/check behind. No testing framework unless already present.
+Beispiel aus `src/gl/entityRenderer.ts`: `ponytail: baut beim ersten Feld einer Art synchron (einmaliges Stocken); auf Leerlauf-Vorbauen umstellen, wenn das Stocken beim Bauen stört.`
 
 ---
 
