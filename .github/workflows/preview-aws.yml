@@ -1,0 +1,53 @@
+# Lädt den Build eines Pull Requests (Artefakt aus deploy-aws.yml) als Preview hoch und schreibt
+# den Link in den PR. workflow_run läuft im Stand von main mit Zugang zu AWS - vom PR kommen nur
+# Dateien, nie Code, der hier ausgeführt wird. So bekommen auch PRs aus Forks eine Preview.
+name: preview-aws
+on:
+  workflow_run:
+    workflows: [deploy-aws]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  preview:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      # Nur für tools/deploy/ im Stand von main.
+      - uses: actions/checkout@v7
+      # Die PR-Nummer aus GitHub, nicht aus dem Artefakt: Bei PRs aus Forks ist workflow_run.pull_requests leer.
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          n=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" --jq ".[] | select(.head.sha == \"$SHA\") | .number" | head -n 1)
+          case $n in ''|*[!0-9]*) echo "Kein offener PR mit $SHA - nichts hochzuladen."; exit 1 ;; esac
+          echo "number=$n" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v8
+        with:
+          name: preview
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/soliva-github-deploy
+          aws-region: us-east-1
+      # Erst leeren: So trägt jede Datei das Datum des letzten Pushs, und die Lifecycle-Regel
+      # (30 Tage, infra/app.ts) räumt nur Previews ab, die keiner mehr anfasst.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ steps.pr.outputs.number }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          output() { aws cloudformation describe-stacks --stack-name Soliva --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          bucket=$(output PreviewBucket)
+          aws s3 rm --recursive --quiet "s3://$bucket/pr-$N"
+          tools/deploy/s3-upload.sh dist "s3://$bucket/pr-$N"
+          gh pr comment "$N" --edit-last --create-if-none --body "Preview: https://$(output PreviewDomain)/pr-$N/ (Stand $SHA)"

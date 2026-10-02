@@ -45,8 +45,10 @@ npm run preview   # den Build lokal ansehen
 
 Die Hintergrundmusik (`assets/music/*.mp3`) liegt in **Git LFS**. Vor dem Klonen `git lfs install`
 ausführen – sonst kommen statt der Dateien nur kleine Zeiger-Dateien an
-(nachholen mit `git lfs pull`). Beim Hosten auf Vercel muss unter
-*Settings → Git* „Git Large File Storage (LFS)“ eingeschaltet sein.
+(nachholen mit `git lfs pull`).
+
+Gehostet wird auf AWS (S3 + CloudFront, `infra/README.md`): Jeder Push auf `main` geht nach
+`game.mannseicher.com`, jeder Pull Request bekommt einen Preview-Link als Kommentar.
 
 ## Adressen
 

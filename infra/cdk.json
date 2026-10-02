@@ -1,0 +1,6 @@
+{
+  "app": "bun app.ts",
+  "context": {
+    "@aws-cdk/aws-cloudfront:defaultFunctionRuntimeV2_0": true
+  }
+}
