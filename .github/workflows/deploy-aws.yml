@@ -1,0 +1,63 @@
+# Baut das Spiel und bringt es auf AWS (infra/README.md): Push auf main → soliva.mannseicher.com,
+# Pull Request → Build für die Preview. Hochgeladen wird die Preview von preview-aws.yml:
+# Code aus einem PR läuft hier nie mit Zugang zu AWS (die Rolle vertraut nur main).
+name: deploy-aws
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Je PR nur der neueste Build; auf main läuft jeder Deploy zu Ende.
+concurrency:
+  group: deploy-aws-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    # Forks haben kein AWS-Konto; PRs aus Forks laufen trotzdem (github.repository ist dann das Ziel).
+    if: github.repository == 'Mansi1/Soliva'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      # Musik und Texturen liegen in LFS. Jeder Abruf von GitHub zählt gegen das Freikontingent
+      # (10 GiB im Monat, ~105 MB je Build) - darum aus dem Cache, solange sich keine Datei ändert.
+      - run: git lfs ls-files --long | cut -d ' ' -f 1 | sort > .lfs-ids
+      - uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+      - run: git lfs pull
+      # npm test importiert .ts direkt (Node >= 22.6), Vite 8 braucht ebenfalls ein neues Node.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: make setup && echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+      - run: make test
+      # Previews liegen unter /pr-<n>/ auf der Preview-Distribution.
+      - run: bun run build
+        env:
+          BASE_PATH: ${{ github.event_name == 'pull_request' && format('/pr-{0}/', github.event.number) || '/' }}
+
+      - if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: preview
+          path: dist
+          retention-days: 3
+
+      - if: github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/soliva-github-deploy
+          aws-region: eu-central-1
+      - if: github.event_name != 'pull_request'
+        run: |
+          bucket=$(aws cloudformation describe-stacks --stack-name Soliva --query "Stacks[0].Outputs[?OutputKey=='ProdBucket'].OutputValue" --output text)
+          tools/deploy/s3-upload.sh dist "s3://$bucket"

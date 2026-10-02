@@ -46,3 +46,6 @@ input/*
 # CLAUDE.local.md: persönliche Anweisungen für Claude Code (CLAUDE.md).
 memory.local.md
 CLAUDE.local.md
+
+# CDK-Ausgabe (infra/)
+infra/cdk.out

@@ -1,0 +1,67 @@
+# Previews der Pull Requests auf AWS: lädt den Build eines PRs (Artefakt aus deploy-aws.yml) nach
+# pr-<n>/ und schreibt den Link in den PR; ist der PR zu (preview-closed.yml), löscht es pr-<n>/ wieder.
+# workflow_run läuft im Stand von main mit Zugang zu AWS (die Rolle vertraut nur main) - vom PR kommen
+# nur Dateien, nie Code, der hier ausgeführt wird. So bekommen auch PRs aus Forks eine Preview.
+name: preview-aws
+on:
+  workflow_run:
+    workflows: [deploy-aws, preview-closed]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  preview:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      # deploy-aws → hochladen (nur solange der PR offen ist), preview-closed → löschen.
+      STATE: ${{ github.event.workflow_run.name == 'preview-closed' && 'closed' || 'open' }}
+    steps:
+      # Nur für tools/deploy/ im Stand von main.
+      - uses: actions/checkout@v7
+      # Die PR-Nummer aus GitHub, nicht aus dem Artefakt: Bei PRs aus Forks ist workflow_run.pull_requests leer.
+      # Leer, wenn der PR inzwischen zu ist (Upload) bzw. wieder offen (Löschen) - dann bleibt alles, wie es ist.
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          n=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=$STATE&sort=updated&direction=desc&per_page=100" \
+            --jq ".[] | select(.head.sha == \"$SHA\") | .number" | head -n 1)
+          case $n in ''|*[!0-9]*) echo "Kein PR ($STATE) mit $SHA - nichts zu tun."; n= ;; esac
+          echo "number=$n" >> "$GITHUB_OUTPUT"
+      - if: steps.pr.outputs.number && env.STATE == 'open'
+        uses: actions/download-artifact@v8
+        with:
+          name: preview
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - if: steps.pr.outputs.number
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/soliva-github-deploy
+          aws-region: eu-central-1
+      # Erst leeren: Dateien, die im neuen Stand fehlen, verschwinden, und jede Datei trägt das Datum des
+      # letzten Pushs. Die Lifecycle-Regel (30 Tage, infra/app.ts) räumt ab, was hier liegen bleibt.
+      - if: steps.pr.outputs.number
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ steps.pr.outputs.number }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          output() { aws cloudformation describe-stacks --stack-name Soliva --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          bucket=$(output PreviewBucket)
+          aws s3 rm --recursive --quiet "s3://$bucket/pr-$N"
+          if [ "$STATE" = open ]; then
+            tools/deploy/s3-upload.sh dist "s3://$bucket/pr-$N"
+            body="Preview: https://$(output PreviewDomain)/pr-$N/ (Stand $SHA)"
+          else
+            body="Preview gelöscht, der PR ist geschlossen."
+          fi
+          gh pr comment "$N" --edit-last --create-if-none --body "$body"
