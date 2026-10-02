@@ -193,7 +193,10 @@ export class PlayerActions {
     this.ui.setRallyPicking(false);
   }
 
-  /** Rechtsklick: im Baumodus abbrechen, mit Dorfbewohnern ein Befehl. */
+  /**
+   * Rechtsklick: im Baumodus abbrechen, mit Dorfbewohnern ein Befehl, mit
+   * genau einem ausbildenden Gebäude dessen Sammelpunkt (ohne den Schalter).
+   */
   rightClick(p: { x: number; y: number }) {
     if (this.ui.rallyPicking) {
       this.setRallyAt(p);
@@ -201,6 +204,13 @@ export class PlayerActions {
     }
     if (this.placement.placingType) {
       this.ui.setPlacing(null);
+      return;
+    }
+    // Nur bei einem einzelnen: bei mehreren bliebe sonst unklar, ob ein
+    // Rechtsklick alle Fahnen auf einen Fleck setzen soll - dafür gibt es den Schalter.
+    const buildings = this.selection.chosenBuildings();
+    if (buildings.length === 1 && buildings[0].isUnitProducer()) {
+      this.setRallyAt(p);
       return;
     }
     // Auf das Objekt gezielt (Baumkrone, Fels) zählt dessen Feld.
