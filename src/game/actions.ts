@@ -9,14 +9,17 @@ import type { Sound } from '../audio';
 import { CROPS, type BuildingType, type CropType } from '../world/catalog';
 import type { UnitProducer } from '../world/building';
 import { workplace } from '../world/villagers';
-import type { World } from '../world/world';
+import type { Villager, World } from '../world/world';
 import type { Camera } from './Camera';
 import type { Picker } from './Picker';
 import type { Placement } from './Placement';
 import type { Selection } from './Selection';
 
-/** Doppelklick: alle gleichartigen Gebäude in diesem Umkreis (Tiles). */
-const SAME_TYPE_RADIUS = 15;
+/**
+ * Wozu ein Dorfbewohner beim Doppelklick zählt: frei (gehorcht) oder sein
+ * Handwerk in einer Werkstatt (Fischer, Bogner) - die gehorchen nicht.
+ */
+const sameGroup = (v: Villager) => (workplace(v.task) ? v.task.kind : 'free');
 
 /** Was die Aktionen von der Oberfläche brauchen. */
 export interface ActionUi {
@@ -71,7 +74,7 @@ export class PlayerActions {
   /**
    * Linksklick ohne Ziehen: Dorfbewohner, sonst Tier, Gebäude, Vorkommen,
    * Blume, sonst nichts. Mit Umschalt (`add`) kommt es zur Auswahl dazu oder fällt heraus;
-   * ein Doppelklick (`same`) auf ein Gebäude wählt alle gleichartigen in der Nähe.
+   * ein Doppelklick (`same`) wählt alle gleichartigen Dorfbewohner bzw. Gebäude im Bild.
    */
   clickSelect(px: number, py: number, add: boolean, same = false) {
     const villager = this.picker.villager(px, py);
@@ -84,7 +87,13 @@ export class PlayerActions {
     } else if (villager) {
       this.selection.clearBuildings();
       if (!add) this.selection.villagers.clear();
-      if (add && this.selection.villagers.has(villager.id)) this.selection.villagers.delete(villager.id);
+      if (same) {
+        // Alle im Bild, die wie er frei sind bzw. dasselbe Handwerk haben.
+        const group = sameGroup(villager);
+        for (const v of this.world.villagers) {
+          if (sameGroup(v) === group && this.onScreen(this.picker.villagerScreen(v))) this.selection.villagers.add(v.id);
+        }
+      } else if (add && this.selection.villagers.has(villager.id)) this.selection.villagers.delete(villager.id);
       else this.selection.villagers.add(villager.id);
     } else {
       // Nur der Boden unter Gebäude oder Vorkommen getroffen: nichts auswählen (Picker.target).
@@ -94,10 +103,10 @@ export class PlayerActions {
       if (building) {
         const anchor = this.world.anchorOf(building);
         if (same) {
-          // Felder: das ganze zusammenhängende Feld, sonst gleichartige in der Nähe.
-          const near = building.isFarm() ? this.world.farmGroup(building) : [...this.world.allBuildings()].filter((b) => b.type === building.type
-            && Math.hypot(b.x - building.x, b.y - building.y) <= SAME_TYPE_RADIUS);
-          this.selection.selectBuildings([...(add ? this.selection.buildings : []), ...near.map((b) => this.world.anchorOf(b))], anchor);
+          // Mitte des Tiles im Bild zählt - bei Feldern jedes Feldstück für sich.
+          const alike = [...this.world.allBuildings()].filter((b) => b.type === building.type
+            && this.onScreen(this.picker.groundScreen(b.x + 0.5, b.y + 0.5)));
+          this.selection.selectBuildings([...(add ? this.selection.buildings : []), ...alike.map((b) => this.world.anchorOf(b))], anchor);
         } else if (add) {
           const set = new Set(this.selection.buildings);
           if (set.has(anchor)) set.delete(anchor);
@@ -125,13 +134,23 @@ export class PlayerActions {
     if (!add) this.selection.villagers.clear();
     this.selection.clearBuildings();
     this.selection.clearSingle();
-    const hits = this.world.villagers.filter((v) => {
-      const s = this.picker.villagerScreen(v);
-      return s.x >= left && s.x <= right && s.y >= top && s.y <= bottom;
-    });
+    const hits = this.villagersIn(left, top, right, bottom);
     const free = hits.filter((v) => !workplace(v.task));
     for (const v of free.length > 0 ? free : hits) this.selection.villagers.add(v.id);
     this.ui.refreshSelection();
+  }
+
+  /** Liegt der Bildschirmpunkt im Bild? */
+  private onScreen(s: { x: number; y: number }): boolean {
+    return s.x >= 0 && s.x <= this.camera.width && s.y >= 0 && s.y <= this.camera.height;
+  }
+
+  /** Dorfbewohner, deren Figur im Rechteck (Bildschirm-Pixel) steht. */
+  private villagersIn(left: number, top: number, right: number, bottom: number): Villager[] {
+    return this.world.villagers.filter((v) => {
+      const s = this.picker.villagerScreen(v);
+      return s.x >= left && s.x <= right && s.y >= top && s.y <= bottom;
+    });
   }
 
 
