@@ -13,7 +13,7 @@
 
 import type { BuildingDefinition } from './definition';
 import { BuildingBase, type BuildingClass, type BuildingOptions, type BuildingSave } from './BuildingBase';
-import { UnitProducer, type TrainableUnit } from './UnitProducer';
+import { UnitProducer, randomFemale, type TrainableUnit } from './UnitProducer';
 import { StorageBuilding } from './StorageBuilding';
 import { TownCenter } from './TownCenter';
 import { House } from './House';
@@ -27,7 +27,7 @@ import { Armory } from './Armory';
 import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE, type Furrow } from './Farm';
 
 export {
-  BuildingBase, UnitProducer, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, Armory,
+  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, Armory,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
   type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type TrainableUnit,
 };

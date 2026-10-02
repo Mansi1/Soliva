@@ -11,7 +11,7 @@ import { NEAR_STEP, reliefZ } from '../noise';
 import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
 import type { BuildingType, CropType, DepositType, ResourceKind, Resources } from './catalog';
 import {
-  buildingFromSave, createBuilding, furrowPosition, maskCovers, CENTER_TILE, FishTrap,
+  buildingFromSave, createBuilding, furrowPosition, maskCovers, randomFemale, CENTER_TILE, FishTrap,
   type Building, type Farm, type UnitProducer,
 } from './building';
 import { readSave, writeSave, type LoadedSave, type SaveData } from './save';
@@ -551,10 +551,11 @@ export class World {
   /**
    * Sammelpunkt setzen: wer hier fertig ausgebildet wird, bekommt denselben
    * Befehl, als hätte man ihn mit Rechtsklick auf dieses Feld geschickt -
-   * auf ein Vorkommen sammelt er, sonst geht er hin. Ein Klick auf das
+   * auf ein Vorkommen sammelt er, sonst geht er hin - zur genauen Stelle
+   * `point`, wenn angegeben (dort steht auch die Fahne). Ein Klick auf das
    * Gebäude selbst hebt den Sammelpunkt auf.
    */
-  setRally(building: Building, x: number, y: number): string | null {
+  setRally(building: Building, x: number, y: number, point?: { x: number; y: number }): string | null {
     if (!building.isUnitProducer()) return 'Nur ausbildende Gebäude haben einen Sammelpunkt';
     if (this.at(x, y) === building) {
       building.setRallyPoint(null);
@@ -563,9 +564,14 @@ export class World {
     }
     const tile = this.terrain.getTile(x, y);
     if (tile.tileType === 'water' || tile.tileType === 'deep_water') return 'Dorfbewohner können nicht schwimmen';
-    building.setRallyPoint({ x, y });
+    building.setRallyPoint({ x, y, point });
     this.dirty = true;
     return null;
+  }
+
+  /** Der Weg, den ein Dorfbewohner von (fx, fy) nach (tx, ty) ginge: Start, Wegpunkte, Ziel (VillagerWork.route). */
+  route(fx: number, fy: number, tx: number, ty: number): { x: number; y: number }[] {
+    return this.work.route(fx, fy, tx, ty);
   }
 
   /** Stellt einen Dorfbewohner in die Warteschlange. Kosten werden sofort fällig. */
@@ -644,22 +650,28 @@ export class World {
     const pop = this.population();
     // Bevölkerungsgrenze erreicht: die Ausbildung wartet, bis ein Haus steht.
     if (pop.used >= pop.cap) return;
-    if (!building.train(this.speedy ? Infinity : dt)) return;
+    const done = building.train(this.speedy ? Infinity : dt);
+    if (!done) return;
 
-    // Er tritt an der Vorderkante des Gebäudes heraus - zur Kamera hin.
-    const r = building.definition.footprint / 2 + 0.4;
-    const spread = (this.nextId % 5) * 0.4 - 0.8;
-    const x = building.x + 0.5 + r + spread * 0.5;
-    const y = building.y + 0.5 + r - spread * 0.5;
-    const villager = this.addVillager(x, y);
+    // Er kommt durch die Tür heraus (spawnPoint), vom Gebäude weg gewandt.
+    const door = building.spawnPoint();
+    const villager = this.addVillager(door.x, door.y, done.female);
+    villager.heading = Math.atan2(door.y - (building.y + 0.5), door.x - (building.x + 0.5));
     this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
-    if (building.rallyPoint) this.work.command(new Set([villager.id]), building.rallyPoint.x, building.rallyPoint.y);
+    const rally = building.rallyPoint;
+    if (rally) {
+      this.work.command(new Set([villager.id]), rally.x, rally.y, rally.point);
+    } else {
+      // Ohne Sammelpunkt ein paar Schritte vor das Gebäude, etwas zur Seite
+      // gestreut - nicht in der Tür stehen bleiben.
+      const front = building.frontPoint();
+      const spread = (villager.id % 5) * 0.4 - 0.8;
+      villager.task = { kind: 'move', x: front.x + spread * 0.5, y: front.y - spread * 0.5 };
+    }
     this.dirty = true;
   }
 
-  private addVillager(x: number, y: number): Villager {
-    // Etwa jeder zweite ist eine Frau.
-    const female = Math.random() < 0.5;
+  private addVillager(x: number, y: number, female = randomFemale()): Villager {
     const villager = new Villager(this.nextId++, x, y, this.freeName(female), female);
     this.villagers.push(villager);
     return villager;

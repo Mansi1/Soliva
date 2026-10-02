@@ -380,6 +380,10 @@ const actions = new PlayerActions({ world, camera, selection, placement, picker,
   refreshResources: () => ui.refreshResources(),
   refreshPointer,
   setPlacing: (type) => ui.setPlacing(type),
+  get rallyPicking() {
+    return ui.rallyPicking;
+  },
+  setRallyPicking: (on) => ui.setRallyPicking(on),
   lookAt,
   flyTo,
 });
@@ -388,6 +392,11 @@ const actions = new PlayerActions({ world, camera, selection, placement, picker,
 const mouse = new MouseInput(canvas, boxEl, {
   // Im Baumodus setzt ein Klick das Gebäude; Felder weiter beim Ziehen (move).
   press: (p) => {
+    // Sammelpunkt-Schalter an: der Klick setzt den Punkt, statt auszuwählen.
+    if (ui.rallyPicking) {
+      actions.setRallyAt(p);
+      return true;
+    }
     if (!placement.isActive) return false;
     const { x, y } = picker.tile(p.x, p.y);
     placement.sowing = placement.placingType === 'farm';

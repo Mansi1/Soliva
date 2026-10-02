@@ -20,10 +20,10 @@ export interface BuildingSave {
   hp?: number;
   /** Modell-Variante - fehlt in älteren Ständen, dann wie beim Bauen gewählt. */
   v?: number;
-  /** UnitProducer: Einheiten in der Warteschlange. */
-  q?: number;
-  /** UnitProducer: Sammelpunkt. */
-  r?: [number, number];
+  /** UnitProducer: Warteschlange, 1 = Frau, 0 = Mann - ältere Stände: nur die Anzahl. */
+  q?: number | (0 | 1)[];
+  /** UnitProducer: Sammelpunkt - Tile, dahinter die genaue Stelle (fehlt in älteren Ständen). */
+  r?: [number, number] | [number, number, number, number];
   /** Farm: nächste Frucht, Tiles, je Furche [Frucht, gepflügt, gesät, Wuchs, Nahrung, bezahlt]. */
   f?: { p: CropType; t?: number; r: [CropType, number, number, number, number, boolean][] };
   /** Reuse: wie voll sie ist, 0..1. */
