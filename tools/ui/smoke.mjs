@@ -66,6 +66,10 @@ async function placeNearCenter(type) {
   return false;
 }
 
+// Das Menü (#start, im Spiel versteckt) baut erst nachgeladenes JS auf: import() nach dem load-Ereignis,
+// samt ~18 MB world-Chunk. Eine feste Pause allein reichte auf einem langsamen CI-Runner nicht.
+const started = () => page.waitForSelector('#start', { state: 'attached', timeout: 30_000 });
+
 async function newGame(seed) {
   await page.click('#start >> text=Einzelspieler');
   await page.click('#start >> text=Neues Spiel');
@@ -77,6 +81,7 @@ async function newGame(seed) {
 
 // Hauptmenü
 await page.goto(BASE + '/');
+await started();
 await wait(2500);
 check('Hauptmenü beim Öffnen', await page.$eval('#start', (e) => !e.hidden));
 check('Hauptmenü hat Einzelspieler', !!(await page.$('#start >> text=Einzelspieler')));
@@ -193,6 +198,7 @@ await page.evaluate(() => {
   sessionStorage.setItem('pgm.start', 'continue');
 });
 await page.goto(BASE + '/');
+await started();
 await wait(2500);
 const old = await saved('Altstand');
 const camp = old.buildings.find((b) => b.t === 'lumber_camp');
