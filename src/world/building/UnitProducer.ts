@@ -3,6 +3,7 @@
 // Warteschlange, Ausbildung der vordersten Einheit, Sammelpunkt für frisch
 // Ausgebildete. Welche Einheit es ausbildet, sagt die Unterklasse (`unit`).
 
+import { BUILDING_HEADING, modelEntry } from '../../gl/entityRenderer';
 import { MAX_TRAINING_QUEUE, type Resources } from '../catalog';
 import { BuildingBase, type BuildingSave } from './BuildingBase';
 
@@ -75,8 +76,16 @@ export abstract class UnitProducer extends BuildingBase {
     return this.queue.shift()!;
   }
 
-  /** Wo Ausgebildete heraustreten (Mitte, Tiles): an der Vorderkante des Gebäudes, zur Kamera hin. */
+  /**
+   * Wo Ausgebildete herauskommen (Welt, Tiles): die Tür des Modells, durch
+   * die Dorfbewohner auch abliefern - ohne Tür die Vorderkante (frontPoint).
+   */
   spawnPoint(): { x: number; y: number } {
+    return modelEntry(this.model, this.x, this.y, this.definition.size, BUILDING_HEADING) ?? this.frontPoint();
+  }
+
+  /** Vor der Vorderkante des Gebäudes, zur Kamera hin - dort warten Ausgebildete ohne Sammelpunkt. */
+  frontPoint(): { x: number; y: number } {
     const r = this.definition.footprint / 2 + 0.4;
     return { x: this.x + 0.5 + r, y: this.y + 0.5 + r };
   }

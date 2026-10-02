@@ -56,14 +56,19 @@ export function selectionOverlay(
       const rally = building.rallyPoint;
       // Fuß der Fahne: genau, wo geklickt wurde. Ältere Stände kennen nur das
       // Tile - dann etwas zur Kamera hin, vor einem Baum oder Fels statt dahinter.
-      // Eine Instanz steht mit ihrer Mitte bei (x + 0.5, y + 0.5).
+      // Modelle wie Flächen stehen mit ihrer Mitte bei (x + 0.5, y + 0.5).
       const flag = rally.point ?? { x: rally.x + 0.8, y: rally.y + 0.8 };
       const color = player.color.toRGB();
+      // Als Ring (wie unter den Dorfbewohnern): der liegt fast am Boden. Eine
+      // Fläche (SHAPE.flat) schwebt 0,15 Tiles darüber und säße in der
+      // Schrägansicht neben dem Fuß der Fahne; ganz am Boden flackert sie.
+      const onGround = (p: { x: number; y: number }, size: number) =>
+        ({ x: p.x - 0.5, y: p.y - 0.5, size, shape: SHAPE.ring, ground: world.groundAt!(p.x, p.y) });
       out.push({ x: flag.x - 0.5, y: flag.y - 0.5, size: 0.54, color, shape: SHAPE.rallyFlag, alpha: 1 });
-      out.push({ x: flag.x - 0.5, y: flag.y - 0.5, size: 0.5, color: SELECTED, shape: SHAPE.flat, alpha: 0.35 });
-      // Punktlinie vom Ausgang (spawnPoint) zur Fahne in Spielerfarbe, die
-      // Punkte wandern zur Fahne - so sieht man, wohin die Neuen laufen.
-      // Luftlinie, nicht ihr Weg.
+      // Punktlinie von der Tür (spawnPoint) bis an den Fuß der Fahne in
+      // Spielerfarbe, die Punkte wandern zur Fahne - so sieht man, wohin die
+      // Neuen laufen. Luftlinie, nicht ihr Weg. Vor der Fläche unter der
+      // Fahne, sonst verdeckte sie (gleiche Höhe, Tiefenpuffer) die letzten Punkte.
       const from = building.spawnPoint();
       const dx = flag.x - from.x;
       const dy = flag.y - from.y;
@@ -72,11 +77,9 @@ export function selectionOverlay(
       const shift = (animationTime() * RALLY_DOT_SPEED) % RALLY_DOT_SPACING;
       for (let d = shift; d < length; d += RALLY_DOT_SPACING) {
         const t = d / length;
-        out.push({
-          x: from.x + dx * t - 0.5, y: from.y + dy * t - 0.5, size: RALLY_DOT_SIZE,
-          color, shape: SHAPE.flat, alpha: 0.9,
-        });
+        out.push({ ...onGround({ x: from.x + dx * t, y: from.y + dy * t }, RALLY_DOT_SIZE), color, alpha: 1 });
       }
+      out.push({ ...onGround(flag, 0.6), color: SELECTED, alpha: 1 });
     }
   }
   if (selection.resource) {

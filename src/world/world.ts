@@ -648,15 +648,21 @@ export class World {
     const done = building.train(this.speedy ? Infinity : dt);
     if (!done) return;
 
-    // Er tritt an der Vorderkante heraus, etwas zur Seite gestreut.
-    const spawn = building.spawnPoint();
-    const spread = (this.nextId % 5) * 0.4 - 0.8;
-    const x = spawn.x + spread * 0.5;
-    const y = spawn.y - spread * 0.5;
-    const villager = this.addVillager(x, y, done.female);
+    // Er kommt durch die Tür heraus (spawnPoint), vom Gebäude weg gewandt.
+    const door = building.spawnPoint();
+    const villager = this.addVillager(door.x, door.y, done.female);
+    villager.heading = Math.atan2(door.y - (building.y + 0.5), door.x - (building.x + 0.5));
     this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
     const rally = building.rallyPoint;
-    if (rally) this.work.command(new Set([villager.id]), rally.x, rally.y, rally.point);
+    if (rally) {
+      this.work.command(new Set([villager.id]), rally.x, rally.y, rally.point);
+    } else {
+      // Ohne Sammelpunkt ein paar Schritte vor das Gebäude, etwas zur Seite
+      // gestreut - nicht in der Tür stehen bleiben.
+      const front = building.frontPoint();
+      const spread = (villager.id % 5) * 0.4 - 0.8;
+      villager.task = { kind: 'move', x: front.x + spread * 0.5, y: front.y - spread * 0.5 };
+    }
     this.dirty = true;
   }
 
