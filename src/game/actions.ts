@@ -160,9 +160,11 @@ export class PlayerActions {
   setRallyAt(p: { x: number; y: number }) {
     // Auf das Objekt gezielt (Baumkrone, Fels) zählt dessen Feld.
     const { x, y } = this.picker.target(p.x, p.y);
+    // Die Fahne steht genau, wo geklickt wurde.
+    const at = this.picker.point(p.x, p.y);
     let reason: string | null = null;
     for (const b of this.selection.chosenBuildings()) {
-      if (b.isUnitProducer()) reason = this.world.setRally(b, x, y) ?? reason;
+      if (b.isUnitProducer()) reason = this.world.setRally(b, x, y, at) ?? reason;
     }
     if (reason) this.ui.hint(reason);
     else this.sound.play('click');

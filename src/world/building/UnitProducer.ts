@@ -27,8 +27,13 @@ export abstract class UnitProducer extends BuildingBase {
   queue: QueuedUnit[] = [];
   /** Sekunden, die die vorderste Einheit schon ausgebildet wird. */
   trainingSeconds = 0;
-  /** Sammelpunkt (Tile) für frisch Ausgebildete, oder null. */
-  rallyPoint: { x: number; y: number } | null = null;
+  /**
+   * Sammelpunkt für frisch Ausgebildete, oder null: das Tile (es zählt wie ein
+   * Rechtsklick dorthin - auf ein Vorkommen sammeln sie) und `point`, die
+   * genaue Stelle des Klicks - dort steht die Fahne, dorthin gehen sie.
+   * Ältere Stände haben nur das Tile.
+   */
+  rallyPoint: { x: number; y: number; point?: { x: number; y: number } } | null = null;
 
   /** Die Einheit, die hier ausgebildet wird. */
   abstract get unit(): TrainableUnit;
@@ -77,15 +82,15 @@ export abstract class UnitProducer extends BuildingBase {
   }
 
   /** Sammelpunkt setzen, oder mit null aufheben. */
-  setRallyPoint(point: { x: number; y: number } | null) {
-    this.rallyPoint = point;
+  setRallyPoint(rally: UnitProducer['rallyPoint']) {
+    this.rallyPoint = rally;
   }
 
   override toSave(): BuildingSave {
     return {
       ...super.toSave(),
       q: this.queue.map((u) => (u.female ? 1 : 0)),
-      ...(this.rallyPoint ? { r: [this.rallyPoint.x, this.rallyPoint.y] as [number, number] } : {}),
+      ...(this.rallyPoint ? { r: rallySave(this.rallyPoint) } : {}),
     };
   }
 
@@ -96,6 +101,14 @@ export abstract class UnitProducer extends BuildingBase {
     this.queue = typeof q === 'number'
       ? Array.from({ length: q }, () => ({ female: randomFemale() }))
       : q.map((f) => ({ female: f === 1 }));
-    this.rallyPoint = save.r ? { x: save.r[0] * scale, y: save.r[1] * scale } : null;
+    const r = save.r;
+    this.rallyPoint = r
+      ? { x: r[0] * scale, y: r[1] * scale, point: r.length === 4 ? { x: r[2] * scale, y: r[3] * scale } : undefined }
+      : null;
   }
+}
+
+/** Sammelpunkt im Spielstand: [Tile x, y] und, wenn bekannt, die genaue Stelle dazu. */
+function rallySave(rally: NonNullable<UnitProducer['rallyPoint']>): NonNullable<BuildingSave['r']> {
+  return rally.point ? [rally.x, rally.y, rally.point.x, rally.point.y] : [rally.x, rally.y];
 }

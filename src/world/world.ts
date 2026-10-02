@@ -551,10 +551,11 @@ export class World {
   /**
    * Sammelpunkt setzen: wer hier fertig ausgebildet wird, bekommt denselben
    * Befehl, als hätte man ihn mit Rechtsklick auf dieses Feld geschickt -
-   * auf ein Vorkommen sammelt er, sonst geht er hin. Ein Klick auf das
+   * auf ein Vorkommen sammelt er, sonst geht er hin - zur genauen Stelle
+   * `point`, wenn angegeben (dort steht auch die Fahne). Ein Klick auf das
    * Gebäude selbst hebt den Sammelpunkt auf.
    */
-  setRally(building: Building, x: number, y: number): string | null {
+  setRally(building: Building, x: number, y: number, point?: { x: number; y: number }): string | null {
     if (!building.isUnitProducer()) return 'Nur ausbildende Gebäude haben einen Sammelpunkt';
     if (this.at(x, y) === building) {
       building.setRallyPoint(null);
@@ -563,7 +564,7 @@ export class World {
     }
     const tile = this.terrain.getTile(x, y);
     if (tile.tileType === 'water' || tile.tileType === 'deep_water') return 'Dorfbewohner können nicht schwimmen';
-    building.setRallyPoint({ x, y });
+    building.setRallyPoint({ x, y, point });
     this.dirty = true;
     return null;
   }
@@ -654,7 +655,8 @@ export class World {
     const y = spawn.y - spread * 0.5;
     const villager = this.addVillager(x, y, done.female);
     this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
-    if (building.rallyPoint) this.work.command(new Set([villager.id]), building.rallyPoint.x, building.rallyPoint.y);
+    const rally = building.rallyPoint;
+    if (rally) this.work.command(new Set([villager.id]), rally.x, rally.y, rally.point);
     this.dirty = true;
   }
 

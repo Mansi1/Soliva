@@ -53,22 +53,20 @@ export function selectionOverlay(
     // Sammelpunkt: Fahne in der Spielerfarbe, nur solange das Gebäude
     // ausgewählt ist - sonst stünden überall Fahnen herum.
     if (building.isUnitProducer() && building.rallyPoint) {
-      out.push({
-        // Etwas zur Kamera hin versetzt: auf einem Vorkommen steht sie so vor
-        // dem Baum oder Fels statt dahinter.
-        x: building.rallyPoint.x + 0.3, y: building.rallyPoint.y + 0.3, size: 0.54,
-        color: player.color.toRGB(), shape: SHAPE.rallyFlag, alpha: 1,
-      });
-      out.push({
-        x: building.rallyPoint.x, y: building.rallyPoint.y, size: 0.5,
-        color: SELECTED, shape: SHAPE.flat, alpha: 0.35,
-      });
-      // Punktlinie vom Ausgang (spawnPoint) zum Fuß der Fahne, die Punkte
-      // wandern zur Fahne - so sieht man, wohin die Neuen laufen. Luftlinie,
-      // nicht ihr Weg. Eine Instanz steht mit ihrer Mitte bei (x + 0.5, y + 0.5).
+      const rally = building.rallyPoint;
+      // Fuß der Fahne: genau, wo geklickt wurde. Ältere Stände kennen nur das
+      // Tile - dann etwas zur Kamera hin, vor einem Baum oder Fels statt dahinter.
+      // Eine Instanz steht mit ihrer Mitte bei (x + 0.5, y + 0.5).
+      const flag = rally.point ?? { x: rally.x + 0.8, y: rally.y + 0.8 };
+      const color = player.color.toRGB();
+      out.push({ x: flag.x - 0.5, y: flag.y - 0.5, size: 0.54, color, shape: SHAPE.rallyFlag, alpha: 1 });
+      out.push({ x: flag.x - 0.5, y: flag.y - 0.5, size: 0.5, color: SELECTED, shape: SHAPE.flat, alpha: 0.35 });
+      // Punktlinie vom Ausgang (spawnPoint) zur Fahne in Spielerfarbe, die
+      // Punkte wandern zur Fahne - so sieht man, wohin die Neuen laufen.
+      // Luftlinie, nicht ihr Weg.
       const from = building.spawnPoint();
-      const dx = building.rallyPoint.x + 0.8 - from.x;
-      const dy = building.rallyPoint.y + 0.8 - from.y;
+      const dx = flag.x - from.x;
+      const dy = flag.y - from.y;
       const length = Math.hypot(dx, dy);
       // Mit der Spieluhr: angehalten (F3) stehen auch die Punkte.
       const shift = (animationTime() * RALLY_DOT_SPEED) % RALLY_DOT_SPACING;
@@ -76,7 +74,7 @@ export function selectionOverlay(
         const t = d / length;
         out.push({
           x: from.x + dx * t - 0.5, y: from.y + dy * t - 0.5, size: RALLY_DOT_SIZE,
-          color: SELECTED, shape: SHAPE.flat, alpha: 0.9,
+          color, shape: SHAPE.flat, alpha: 0.9,
         });
       }
     }
