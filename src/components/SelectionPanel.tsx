@@ -440,7 +440,7 @@ function trainCommand(train: TrainView): Command {
 function rallyCommand(train: TrainView): Command {
   return {
     action: 'rally', icon: rallyIcon(rgb()), pressed: train.rallyPicking,
-    title: 'Sammelpunkt setzen - dann auf die Karte klicken: dorthin gehen neue Dorfbewohner.\nKlick auf das Gebäude hebt ihn auf, Esc bricht ab',
+    title: 'Sammelpunkt setzen - dann auf die Karte klicken: dorthin gehen neue Dorfbewohner.\nKlick auf das Gebäude hebt ihn auf, Esc bricht ab.\nIst nur ein Gebäude ausgewählt, genügt ein Rechtsklick auf die Karte',
   };
 }
 

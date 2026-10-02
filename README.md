@@ -70,7 +70,7 @@ gewählte Welt unter `pgm.seed`.
 | `W` `A` `S` `D` / Pfeiltasten, rechte Maustaste halten und ziehen | Karte verschieben |
 | Mausrad, `Q` / `E` | zoomen |
 | Linksklick / Ziehen | auswählen (Doppelklick: alle gleichartigen im Bild) |
-| Rechtsklick | Befehl: sammeln, jagen, Feld bestellen, abliefern, hingehen |
+| Rechtsklick | Befehl: sammeln, jagen, Feld bestellen, abliefern, hingehen; mit genau einem Hauptgebäude: Sammelpunkt setzen (aufs Gebäude: aufheben) |
 | `1` – `6` | bauen: Hauptgebäude, Haus, Holzlager, Minenlager, Mühle, Feld |
 | `V` (mit Umschalt: 5) | Dorfbewohner ausbilden |
 | `H` / `.` | zum Hauptgebäude / untätige Dorfbewohner |

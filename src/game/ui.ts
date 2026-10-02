@@ -69,6 +69,8 @@ export class GameUi {
    * Sammelpunkt-Schalter (Knopf mit der Fahne): an, setzt der nächste Klick
    * auf die Karte den Sammelpunkt der ausgewählten Hauptgebäude (actions.ts).
    * Von selbst aus ist er nicht - ein Rechtsklick wäre sonst ein Befehl.
+   * Bei einem einzelnen ausbildenden Gebäude setzt der Rechtsklick den Punkt
+   * auch ohne ihn (PlayerActions.rightClick).
    */
   rallyPicking = false;
 

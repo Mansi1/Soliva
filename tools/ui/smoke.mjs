@@ -51,19 +51,38 @@ const count = (data, type) => data.buildings.filter((b) => b.t === type).length;
 
 /**
  * Im Baumodus Punkte rund um die Bildmitte anklicken, bis eines steht - Wasser
- * oder Hang lassen manche Stellen nicht zu.
+ * oder Hang lassen manche Stellen nicht zu. Liefert die Stelle im Bild, an der
+ * es steht, oder null.
  */
 async function placeNearCenter(type) {
   const before = count(await saved(), type);
   for (let r = 0; r < 6; r++) {
     for (let a = 0; a < 8; a++) {
       const angle = (a / 8) * Math.PI * 2;
-      await page.mouse.click(640 + Math.cos(angle) * r * 60, 400 + Math.sin(angle) * r * 45);
+      const at = { x: 640 + Math.cos(angle) * r * 60, y: 400 + Math.sin(angle) * r * 45 };
+      await page.mouse.click(at.x, at.y);
       await wait(60);
-      if (count(await saved(), type) > before) return true;
+      if (count(await saved(), type) > before) return at;
     }
   }
-  return false;
+  return null;
+}
+
+/**
+ * Rund um `near` klicken, bis das Panel ein Gebäude mit diesem Namen zeigt - das
+ * Modell steht nicht genau dort, wo beim Bauen geklickt wurde. Liefert die
+ * Stelle oder null.
+ */
+async function findNear(label, near) {
+  for (let r = 0; r < 5; r++) {
+    for (let a = 0; a < (r === 0 ? 1 : 8); a++) {
+      const angle = (a / 8) * Math.PI * 2;
+      const at = { x: near.x + Math.cos(angle) * r * 40, y: near.y + Math.sin(angle) * r * 30 };
+      await page.mouse.click(at.x, at.y);
+      if ((await page.$eval('#selection', (e) => e.textContent)).startsWith(label)) return at;
+    }
+  }
+  return null;
 }
 
 // Das Menü (#start, im Spiel versteckt) baut erst nachgeladenes JS auf: import() nach dem load-Ereignis,
@@ -95,10 +114,29 @@ console.log(`  GPU: ${await page.evaluate(() => window.getRenderInfo?.().gpu)}`)
 
 // Bauen: Hauptgebäude (1), dann ein Haus (2)
 await page.keyboard.press('1');
-check('Hauptgebäude gebaut', await placeNearCenter('town_center'));
+const tcPoint = await placeNearCenter('town_center');
+check('Hauptgebäude gebaut', !!tcPoint);
 await cancel();
 await page.keyboard.press('2');
-check('Haus gebaut', await placeNearCenter('house'));
+const housePoint = await placeNearCenter('house');
+check('Haus gebaut', !!housePoint);
+await cancel();
+
+// Sammelpunkt: Ein Rechtsklick setzt ihn nur, wenn genau ein ausbildendes
+// Gebäude ausgewählt ist. Hier sind es zwei (Hauptgebäude und Haus, nahe der
+// Stelle, an der sie gebaut wurden - die Kamera steht noch), also ändert er nichts.
+const rallyAt = async () => (await saved()).buildings.find((b) => b.t === 'town_center')?.r;
+const house = housePoint && await findNear('Haus', housePoint);
+if (tcPoint) await findNear('Hauptgebäude', tcPoint);
+// Fehlt eine Stelle, geht der Klick ins Leere - dann fehlt „2 Gebäude“ und der Check schlägt fehl.
+await page.keyboard.down('Shift');
+await page.mouse.click(house?.x ?? 0, house?.y ?? 0);
+await page.keyboard.up('Shift');
+const many = await page.$eval('#selection', (e) => e.textContent);
+await page.mouse.click(250, 250, { button: 'right' });
+const rallyMany = await rallyAt();
+check('Rechtsklick mit mehreren Gebäuden setzt keinen Sammelpunkt', many.includes('2 Gebäude') && rallyMany === undefined,
+  `Auswahl: ${many.slice(0, 20)}, Sammelpunkt: ${JSON.stringify(rallyMany)}`);
 await cancel();
 
 // Ausbilden: Hauptgebäude wählen (H), Dorfbewohner einreihen (V)
@@ -113,16 +151,17 @@ const queueIcons = await page.$$eval('#selection .sel-queue-unit img', (imgs) =>
 const queued = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;
 check('Warteschlange zeigt Frau oder Mann', queueIcons === 1 && Array.isArray(queued) && queued.length === 1,
   `${queueIcons} im Panel, gespeichert q=${JSON.stringify(queued)}`);
-// Sammelpunkt: nicht von selbst (Rechtsklick ändert nichts), sondern über den
-// Schalter mit der Fahne - dann setzt ein Klick auf die Karte den Punkt.
-const rallyAt = async () => (await saved()).buildings.find((b) => b.t === 'town_center')?.r;
+// Sammelpunkt mit genau einem Hauptgebäude: Rechtsklick auf die Karte setzt
+// ihn. Der Schalter mit der Fahne geht weiter: an, setzt der nächste Klick den Punkt.
+const sameRally = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 await page.mouse.click(250, 250, { button: 'right' });
-const rallyBefore = await rallyAt();
+const rallyRight = await rallyAt();
+check('Rechtsklick setzt Sammelpunkt eines einzelnen Hauptgebäudes', Array.isArray(rallyRight), JSON.stringify(rallyRight));
 await page.click('#actions .cmd-btn[data-action=rally]');
-await page.mouse.click(250, 250);
-const rallyAfter = await rallyAt();
-check('Sammelpunkt nur über den Schalter', rallyBefore === undefined && Array.isArray(rallyAfter),
-  `Rechtsklick: ${JSON.stringify(rallyBefore)}, mit Schalter: ${JSON.stringify(rallyAfter)}`);
+await page.mouse.click(300, 270);
+const rallySwitch = await rallyAt();
+check('Sammelpunkt über den Schalter', Array.isArray(rallySwitch) && !sameRally(rallySwitch, rallyRight),
+  `vorher: ${JSON.stringify(rallyRight)}, mit Schalter: ${JSON.stringify(rallySwitch)}`);
 await cancel();
 
 // Feld: 6 öffnet das Untermenü, 2 wählt die zweite Frucht, Ziehen steckt ab
