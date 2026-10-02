@@ -262,6 +262,15 @@ export const SHAPE = {
   propFishFemale: 132,
   propRod: 133,
   propRodFemale: 134,
+  /**
+   * Weg zum Sammelpunkt, ein Stück davon: Streifen auf dem Boden von der Mitte
+   * um motion[0..1] (Tiles) weiter, `size` breit. Der Shader malt Punkte in
+   * der Farbe darauf, die zum Ende hin wandern; motion[2] = Strecke der Stücke
+   * davor, damit die Punkte an Ecken ohne Sprung weiterlaufen.
+   */
+  rallyLine: 135,
+  /** Am Fuß der Sammelpunkt-Fahne: Ringe in der Farbe, die immer wieder zum Fuß hin schrumpfen. */
+  rallyPulse: 136,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -320,6 +329,15 @@ export function millMotion(x: number, y: number): [number, number, number, numbe
 }
 
 const SHAPE_RING = SHAPE.ring;
+/** Liegt wie der Auswahlring fast am Boden, gemalt im Fragment-Shader: Ring und die Zeichen des Sammelpunkts. */
+const GROUND_MARK_TEST = `(shape == ${SHAPE.ring} || shape == ${SHAPE.rallyLine} || shape == ${SHAPE.rallyPulse})`;
+/** Punkte auf dem Weg zum Sammelpunkt (Tiles, Tiles je Sekunde Spielzeit) und Ring am Fuß der Fahne (Durchläufe je Sekunde). */
+const RALLY_DOT_SPACING = 0.22;
+const RALLY_DOT_RADIUS = 0.035;
+const RALLY_DOT_SPEED = 0.4;
+const RALLY_PULSE_RATE = 0.3;
+/** So viele Ringe schrumpfen gleichzeitig, um einen Bruchteil des Durchlaufs versetzt. */
+const RALLY_PULSE_RINGS = 3;
 
 /** Figuren: verdeckt zeigen sie ihren Umriss. */
 /** Anhänge der Dorfbewohner (Werkzeuge) - gezeichnet wie Figuren, mit deren Gelenken und Clips. */
@@ -982,7 +1000,7 @@ void main() {
     return;
   }
 
-  if (shape >= 5 && shape != 17 && shape != ${SHAPE_RING}) {  // 10 (Lebensbalken) ist oben schon abgefangen
+  if (shape >= 5 && shape != 17 && !${GROUND_MARK_TEST}) {  // 10 (Lebensbalken) ist oben schon abgefangen
     // Modell aus einer OBJ-Datei. Eckpunkte in Modell-Einheiten: x nach vorn,
     // y nach links, z nach oben, Boden bei 0. Figuren sind auf Koerperhoehe 1
     // gebracht, Gebaeude auf Breite 1 (siehe loadModel()).
@@ -1322,16 +1340,23 @@ void main() {
     vParams = aParams;
     vRoof = 0.0;
     return;
-  } else if (shape == 4 || shape == ${SHAPE_RING}) {
+  } else if (shape == 4 || ${GROUND_MARK_TEST}) {
     // Overlays behalten ihre Tile-Größe - sie sollen genau ihr Feld abdecken.
     // Jede Ecke sitzt auf ihrer eigenen Geländehöhe, leicht angehoben, damit
     // sie nicht im Boden verschwindet.
     vec2 p = center + (aCorner.xy - 0.5) * aParams.z;
+    // Weg zum Sammelpunkt: ein Streifen von der Mitte um aMotion.xy weiter,
+    // quer dazu aParams.z breit.
+    if (shape == ${SHAPE.rallyLine}) {
+      vec2 along = aMotion.xy;
+      vec2 across = normalize(vec2(-along.y, along.x));
+      p = center + along * aCorner.x + across * (aCorner.y - 0.5) * aParams.z;
+    }
     // Der Auswahlring liegt fast am Boden - angehoben rutschte er in der
     // Schrägansicht nach oben und säße hinter der Figur statt unter ihr.
     // Mit mitgegebener Bodenhöhe (Mitte) liegt er waagerecht darauf.
     float ground = aGround > ${GROUND_UNKNOWN / 10}.0 ? aGround * uReliefScale : groundZ(p);
-    world = vec3(p, ground + (shape == ${SHAPE_RING} ? 0.012 : aMotion.w > 0.5 ? 0.0 : 0.15));
+    world = vec3(p, ground + (shape == 4 ? (aMotion.w > 0.5 ? 0.0 : 0.15) : 0.012));
     // Galerie: der Boden unter dem Stück dreht sich mit ihm (im Spiel Einheit).
     if (shape == 4) world = uModelRot * (world - uModelPivot) + uModelPivot;
   } else {
@@ -1353,8 +1378,14 @@ void main() {
   }
 
   vWorld = world;
-  // Auswahlring: der Fragment-Shader braucht die Lage im Quadrat (0..1).
-  if (shape == ${SHAPE_RING}) vWorld = vec3(aCorner.xy, world.z);
+  // Auswahlring, Sammelpunkt: der Fragment-Shader braucht die Lage im Quadrat
+  // (0..1) - beim Weg längs in Tiles ab seinem Anfang (aMotion.z davor).
+  if (${GROUND_MARK_TEST}) vWorld = vec3(aCorner.xy, world.z);
+  // Die Spieluhr (uTime) kennt nur dieser Shader: die Punkte des Wegs wandern,
+  // indem ihre Lage längs verschoben wird; der Ring am Fuß der Fahne bekommt
+  // seine Phase 0..1 in vWorld.z (die Höhe braucht er nicht).
+  if (shape == ${SHAPE.rallyLine}) vWorld.x = aMotion.z + aCorner.x * length(aMotion.xy) - uTime * ${RALLY_DOT_SPEED.toFixed(3)};
+  if (shape == ${SHAPE.rallyPulse}) vWorld.z = fract(uTime * ${RALLY_PULSE_RATE.toFixed(3)});
   vColor = aColor;
   vGrowth = -1.0;
   vTeam = aColor;
@@ -1363,7 +1394,7 @@ void main() {
   vCut = 1e9;
   vCapNormal = gCapNormal;
   vLocal = vec3(0.0);
-  if (shape >= 5 && shape != ${SHAPE_RING}) {
+  if (shape >= 5 && !${GROUND_MARK_TEST}) {
     // Modelle färben nach Material: Kittel bzw. Anstrich in der Instanzfarbe,
     // die Last in der Farbe der Ressource, alles andere wie in der MTL-Datei.
     int role = int(aMaterial.w + 0.5);
@@ -1395,7 +1426,7 @@ void main() {
   // höher - es schnitte Füße und Ring ab. Ihre Tiefe wird deshalb um etwa
   // einen halben Tile zur Kamera gezogen; auf dem Bildschirm bleibt alles,
   // wo es ist (siehe project: näher = kleinere Tiefe).
-  if (${FIGURE_TEST} || shape == ${SHAPE_RING} || ${BEASTS.map((n) => `shape == ${n}`).join(' || ')}) gl_Position.z -= 0.5 / uDepthRange;
+  if (${FIGURE_TEST} || ${GROUND_MARK_TEST} || ${BEASTS.map((n) => `shape == ${n}`).join(' || ')}) gl_Position.z -= 0.5 / uDepthRange;
   // Felder ebenso ein Stück: ihre Erde liegt nur wenige Zentimeter über dem
   // Gelände, das zwischen ihren Eckpunkten sonst hier und da durchsticht.
   if (${FIELD_TEST}) gl_Position.z -= 0.2 / uDepthRange;
@@ -1858,6 +1889,39 @@ void main() {
 
   if (shape == 4) {
     fragColor = vec4(vColor, alpha);
+    return;
+  }
+
+  if (shape == ${SHAPE.rallyLine}) {
+    // Weg zum Sammelpunkt: runde Punkte in der Instanzfarbe, alle
+    // RALLY_DOT_SPACING Tiles, sie wandern mit der Spieluhr zum Ende hin.
+    // vWorld.x = Strecke ab dem Anfang des Wegs (Tiles, schon um die Zeit
+    // verschoben), vWorld.y quer 0..1.
+    float along = mod(vWorld.x, ${RALLY_DOT_SPACING.toFixed(3)}) - ${(RALLY_DOT_SPACING / 2).toFixed(3)};
+    float d = length(vec2(along, (vWorld.y - 0.5) * vParams.z));
+    float aa = fwidth(d);
+    float a = 1.0 - smoothstep(${RALLY_DOT_RADIUS.toFixed(3)} - aa, ${RALLY_DOT_RADIUS.toFixed(3)}, d);
+    if (a <= 0.01) discard;
+    fragColor = vec4(vColor, a * alpha);
+    return;
+  }
+
+  if (shape == ${SHAPE.rallyPulse}) {
+    // Am Fuß der Fahne: Ringe in der Instanzfarbe mit 1,5 px Rand, die nacheinander vom Rand
+    // zum Fuß hin schrumpfen - jeder blendet sich am Anfang ein, am Ende aus.
+    float r = length(vWorld.xy - 0.5) * 2.0;
+    float px = fwidth(r);
+    float a = 0.0;
+    for (int k = 0; k < ${RALLY_PULSE_RINGS}; k++) {
+      float t = fract(vWorld.z + float(k) / ${RALLY_PULSE_RINGS}.0);
+      // Abstand zur Ringmitte in Bildschirmpixeln: 1,5 px breit, weich abgesetzt.
+      float d = abs(r - mix(0.95, 0.12, t)) / px;
+      float ring = 1.0 - smoothstep(0.75, 1.25, d);
+      a = max(a, ring * smoothstep(0.0, 0.15, t) * (1.0 - smoothstep(0.75, 1.0, t)));
+    }
+    a *= 0.85;
+    if (a <= 0.01) discard;
+    fragColor = vec4(vColor, a * alpha);
     return;
   }
 
@@ -3856,7 +3920,7 @@ export class EntityRenderer {
     puffs.length = 0;
     for (const m of this.models) m.list.length = 0;
     for (const e of instances) {
-      if (e.shape === SHAPE.flat || e.shape === SHAPE.ring) flats.push(e);
+      if (e.shape === SHAPE.flat || e.shape === SHAPE.ring || e.shape === SHAPE.rallyLine || e.shape === SHAPE.rallyPulse) flats.push(e);
       else if (e.shape === SHAPE.dust) puffs.push(e);
       else (this.modelByShape.get(e.shape)?.list ?? solids).push(e);
     }

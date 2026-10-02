@@ -3,9 +3,10 @@
 // (Ring, Fläche, Sammelpunkt), im Baumodus die Vorschau am Zeiger - und die
 // Punkte auf der Minimap.
 
-import { SHAPE, animalCenter, animationTime, type EntityInstance } from '../gl/entityRenderer';
+import { SHAPE, animalCenter, type EntityInstance } from '../gl/entityRenderer';
 import type { IsoView } from '../gl/iso';
 import type { MiniMap } from '../map';
+import type { UnitProducer } from '../world/building';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
 import { workplace } from '../world/villagers';
 import type { World } from '../world/world';
@@ -13,10 +14,28 @@ import type { Selection } from './Selection';
 
 /** Farbe der Auswahl und freier Bauplätze. */
 const SELECTED: [number, number, number] = [110, 231, 160];
-/** Punkte der Linie zum Sammelpunkt: Abstand und Größe (Tiles), Tempo zur Fahne hin (Tiles je Sekunde Spielzeit). */
-const RALLY_DOT_SPACING = 0.22;
-const RALLY_DOT_SIZE = 0.07;
-const RALLY_DOT_SPEED = 0.4;
+/** Breite des Streifens, auf den der Shader die Punkte zum Sammelpunkt malt (Tiles) - etwas mehr als ein Punkt. */
+const RALLY_LINE_WIDTH = 0.1;
+/** So lange gilt ein gesuchter Weg zum Sammelpunkt (ms) - dann neu: ein Baum fällt, ein Haus entsteht. */
+const ROUTE_REFRESH_MS = 1000;
+
+/** Gesuchte Wege zum Sammelpunkt je Gebäude und Fahne - nicht in jedem Bild neu suchen. */
+const routes = new Map<string, { at: number; points: { x: number; y: number }[] }>();
+
+/** Der Weg von der Tür eines ausbildenden Gebäudes zur Fahne (World.route), höchstens einmal je ROUTE_REFRESH_MS gesucht. */
+function rallyRoute(world: World, building: UnitProducer, flag: { x: number; y: number }) {
+  const key = `${building.anchor}|${flag.x},${flag.y}`;
+  const now = performance.now();
+  let hit = routes.get(key);
+  if (!hit || now - hit.at > ROUTE_REFRESH_MS) {
+    const door = building.spawnPoint();
+    hit = { at: now, points: world.route(door.x, door.y, flag.x, flag.y) };
+    // Alte Fahnen vergessen - es sind nur die gerade ausgewählten Gebäude.
+    if (routes.size > 16) routes.clear();
+    routes.set(key, hit);
+  }
+  return hit.points;
+}
 
 /**
  * Auswahl: grüner Ring unter jedem Dorfbewohner (nicht unter Werkstatt-
@@ -56,30 +75,34 @@ export function selectionOverlay(
       const rally = building.rallyPoint;
       // Fuß der Fahne: genau, wo geklickt wurde. Ältere Stände kennen nur das
       // Tile - dann etwas zur Kamera hin, vor einem Baum oder Fels statt dahinter.
-      // Modelle wie Flächen stehen mit ihrer Mitte bei (x + 0.5, y + 0.5).
+      // Instanzen stehen mit ihrer Mitte bei (x + 0.5, y + 0.5).
       const flag = rally.point ?? { x: rally.x + 0.8, y: rally.y + 0.8 };
       const color = player.color.toRGB();
-      // Als Ring (wie unter den Dorfbewohnern): der liegt fast am Boden. Eine
-      // Fläche (SHAPE.flat) schwebt 0,15 Tiles darüber und säße in der
-      // Schrägansicht neben dem Fuß der Fahne; ganz am Boden flackert sie.
-      const onGround = (p: { x: number; y: number }, size: number) =>
-        ({ x: p.x - 0.5, y: p.y - 0.5, size, shape: SHAPE.ring, ground: world.groundAt!(p.x, p.y) });
       out.push({ x: flag.x - 0.5, y: flag.y - 0.5, size: 0.54, color, shape: SHAPE.rallyFlag, alpha: 1 });
-      // Punktlinie von der Tür (spawnPoint) bis an den Fuß der Fahne in
-      // Spielerfarbe, die Punkte wandern zur Fahne - so sieht man, wohin die
-      // Neuen laufen. Luftlinie, nicht ihr Weg. Vor der Fläche unter der
-      // Fahne, sonst verdeckte sie (gleiche Höhe, Tiefenpuffer) die letzten Punkte.
-      const from = building.spawnPoint();
-      const dx = flag.x - from.x;
-      const dy = flag.y - from.y;
-      const length = Math.hypot(dx, dy);
-      // Mit der Spieluhr: angehalten (F3) stehen auch die Punkte.
-      const shift = (animationTime() * RALLY_DOT_SPEED) % RALLY_DOT_SPACING;
-      for (let d = shift; d < length; d += RALLY_DOT_SPACING) {
-        const t = d / length;
-        out.push({ ...onGround({ x: from.x + dx * t, y: from.y + dy * t }, RALLY_DOT_SIZE), color, alpha: 1 });
+      // Der Weg, den die Neuen gehen: von der Tür (spawnPoint) um das Gebäude
+      // herum bis an den Fuß der Fahne. Der Shader malt wandernde Punkte in
+      // Spielerfarbe darauf (SHAPE.rallyLine) - je Stück eine Instanz,
+      // motion[2] = Strecke davor, damit die Punkte an Ecken weiterlaufen.
+      const route = rallyRoute(world, building, flag);
+      let before = 0;
+      for (let i = 1; i < route.length; i++) {
+        const a = route[i - 1];
+        const dx = route[i].x - a.x;
+        const dy = route[i].y - a.y;
+        const length = Math.hypot(dx, dy);
+        if (length < 1e-3) continue;
+        out.push({
+          x: a.x - 0.5, y: a.y - 0.5, size: RALLY_LINE_WIDTH, color, shape: SHAPE.rallyLine, alpha: 1,
+          motion: [dx, dy, before, 0],
+        });
+        before += length;
       }
-      out.push({ ...onGround(flag, 0.6), color: SELECTED, alpha: 1 });
+      // Am Fuß: Ringe in Spielerfarbe, die immer wieder zum Fuß hin schrumpfen.
+      // Die grüne Markierung bleibt den Einheiten vorbehalten.
+      out.push({
+        x: flag.x - 0.5, y: flag.y - 0.5, size: 0.45, color, shape: SHAPE.rallyPulse, alpha: 1,
+        ground: world.groundAt!(flag.x, flag.y),
+      });
     }
   }
   if (selection.resource) {

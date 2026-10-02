@@ -7,7 +7,7 @@
 import { BUILDING_HEADING, CLIPS, POSE, modelEntry, modelWorkSpot } from '../gl/entityRenderer';
 import type { Clip } from '../gl/clips';
 import { RESOURCE_TYPE_LABEL } from '../map';
-import { findPath, lineOfSight } from './pathfinding';
+import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
 import { FishTrap, furrowFood, type Building, type Farm } from './building';
 import {
@@ -21,11 +21,20 @@ import { WORK_TEMPO, type World } from './world';
 const GATHER_SPREAD = 0.4;
 /** Abstand zur Gebäudekante, ab dem er abliefern kann. */
 const DELIVER_REACH = 0.6;
+/** So nah kommt er bei einem Gang (Aufgabe move) an sein Ziel - auch für route. */
+const MOVE_REACH = 0.05;
 /** So lange (Sekunden) bleibt ein Dorfbewohner beim Abladen im Gebäude. */
 const INSIDE_TIME = 1.2;
 const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
 
 const key = (x: number, y: number) => `${x},${y}`;
+
+/** Wegpunkte zum Ziel: keine, wenn die Sichtlinie frei ist, sonst die Suche - null, wenn es keinen Weg gibt. */
+function searchPath(fx: number, fy: number, tx: number, ty: number, reach: number, blocked: Blocked) {
+  return lineOfSight(fx, fy, tx, ty, (x, y) => blocked(x, y) && !(x === Math.floor(tx) && y === Math.floor(ty)))
+    ? []
+    : findPath(fx, fy, tx, ty, reach, blocked);
+}
 
 /** Fester Winkel 0..2π je Tile - gleiche Welt, gleiche Werte. */
 function tileAngle(x: number, y: number): number {
@@ -216,6 +225,16 @@ export class VillagerWork {
   }
 
   /**
+   * Der Weg, den ein Dorfbewohner von (fx, fy) zum Punkt (tx, ty) ginge -
+   * dieselbe Suche wie beim Gehen (waypoint): Start, Wegpunkte, Ziel. Ohne
+   * Weg geradeaus, wie er dann auch ginge. Für die Linie zum Sammelpunkt.
+   */
+  route(fx: number, fy: number, tx: number, ty: number): Point[] {
+    const path = searchPath(fx, fy, tx, ty, MOVE_REACH, (x, y) => this.blockedAt(x, y)) ?? [];
+    return [{ x: fx, y: fy }, ...path, { x: tx, y: ty }];
+  }
+
+  /**
    * Nächster Punkt, den er ansteuert: der erste offene Wegpunkt zum Ziel -
    * gesucht, wenn das Ziel neu ist oder der Weg inzwischen versperrt ist.
    * Gibt es keinen Weg, geht er geradeaus (wie früher), statt stehen zu bleiben.
@@ -229,9 +248,7 @@ export class VillagerWork {
           (x, y) => blocked(x, y) && !(x === Math.floor(v.x) && y === Math.floor(v.y))));
     if (stale) {
       v.pathTarget = { x: tx, y: ty };
-      v.path = lineOfSight(v.x, v.y, tx, ty, (x, y) => blocked(x, y) && !(x === Math.floor(tx) && y === Math.floor(ty)))
-        ? []
-        : findPath(v.x, v.y, tx, ty, reach, blocked) ?? [];
+      v.path = searchPath(v.x, v.y, tx, ty, reach, blocked) ?? [];
     }
     while (v.path && v.path.length > 0 && Math.hypot(v.path[0].x - v.x, v.path[0].y - v.y) < 0.12) v.path.shift();
     return v.path && v.path.length > 0 ? v.path[0] : { x: tx, y: ty };
@@ -905,7 +922,7 @@ export class VillagerWork {
         return;
 
       case 'move':
-        if (this.walk(v, task.x, task.y, 0.05, dt)) v.task = { kind: 'idle' };
+        if (this.walk(v, task.x, task.y, MOVE_REACH, dt)) v.task = { kind: 'idle' };
         return;
 
       case 'farm':

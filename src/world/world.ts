@@ -569,6 +569,11 @@ export class World {
     return null;
   }
 
+  /** Der Weg, den ein Dorfbewohner von (fx, fy) nach (tx, ty) ginge: Start, Wegpunkte, Ziel (VillagerWork.route). */
+  route(fx: number, fy: number, tx: number, ty: number): { x: number; y: number }[] {
+    return this.work.route(fx, fy, tx, ty);
+  }
+
   /** Stellt einen Dorfbewohner in die Warteschlange. Kosten werden sofort fällig. */
   train(building: Building): string | null {
     if (!building.isUnitProducer()) return 'Nur das Hauptgebäude bildet Dorfbewohner aus';
