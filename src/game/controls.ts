@@ -63,7 +63,7 @@ export const CONTROLS: readonly Control[] = [
     label: ['.'], what: 'Untätige (Umschalt: einzeln)', short: 'untätige',
     keys: ['.', ':'], run: (c, e) => c.selectIdle(e.shiftKey ? 'next' : 'all'),
   },
-  { label: [MOUSE_RIGHT], what: 'Befehl: sammeln, jagen, bauen, gehen', short: 'Befehl' },
+  { label: [MOUSE_RIGHT], what: 'Befehl: sammeln, jagen, bauen, gehen; mit einem Hauptgebäude: Sammelpunkt', short: 'Befehl' },
   {
     label: [BUILDING_KEYS[0], BUILDING_KEYS[BUILDING_KEYS.length - 1]], sep: '-', what: 'Gebäude bauen', short: 'bauen',
     keys: BUILDING_KEYS, run: (c, e) => c.build(BUILDING_ORDER[BUILDING_KEYS.indexOf(e.key)]),

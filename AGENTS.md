@@ -27,6 +27,7 @@ Das gehört zum kleinsten richtigen Code und wird nicht weggespart:
 - Nicht triviale Logik bekommt eine billige, ausführbare Prüfung ihrer wichtigsten Annahme: einen Test in `tests/*.test.mjs` oder eine Abfrage mit klarer Fehlermeldung. So hält die Annahme auch nach der nächsten Änderung.
 - Fehlerbehandlung an echten Grenzen: Eingaben, Netz, Dateien, GPU-Fähigkeiten, alte Spielstände.
 - Tests laufen mit dem eingebauten `node --test` (`make test`). Es reicht und braucht nichts Zusätzliches; kein weiteres Test-Framework einführen.
+- Vor jedem Commit `make verify` laufen lassen, mindestens `make test` und `make e2e`. `make test` allein reicht nicht. Der Rauchtest (`tools/ui/smoke.mjs`) hält Spielregeln fest. Wer Verhalten ändert, sucht dort und in `tests/` nach dem alten Verhalten, passt den Check im selben Commit an und nennt das im PR.
 
 Eine bewusste Vereinfachung bekommt einen Kommentar. Er sagt dem Nächsten, wann sie nicht mehr reicht:
 
