@@ -13,7 +13,10 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 // CAA-Eintrag lässt Amazon keine Zertifikate ausstellen. Als zweiten Namen (Zertifikat + domainNames)
 // ergänzen, sobald game kein CNAME auf Vercel mehr ist (infra/README.md, „Umzug von game.mannseicher.com“).
 const DOMAIN = 'soliva.mannseicher.com';
-const REPO = 'Mansi1/Soliva';
+// So steht das Repo im OIDC-Token: GitHub nutzt hier unveränderliche Subjects mit den IDs von Besitzer
+// und Repo (`gh api repos/Mansi1/Soliva/actions/oidc/customization/sub`). Ein gelöschtes und unter
+// gleichem Namen neu angelegtes Repo bekommt die Rolle so nicht.
+const REPO = 'Mansi1@12079044/Soliva@1224557276';
 // Der Name steht fest, damit die Workflows ihn aus vars.AWS_ACCOUNT_ID bilden können.
 const DEPLOY_ROLE = 'soliva-github-deploy';
 
