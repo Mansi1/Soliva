@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "bootstrap": "bun --env-file=.env.local run cdk bootstrap",
+    "diff": "bun --env-file=.env.local run cdk diff",
+    "deploy": "bun --env-file=.env.local run cdk deploy"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.272.0",

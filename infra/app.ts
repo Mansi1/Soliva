@@ -1,27 +1,30 @@
 // Hosting von Soliva auf AWS: S3 + CloudFront für das Spiel und für die Previews der PRs.
-// Bedienung und erster Deploy: infra/README.md.
+// Bedienung und erster Deploy: infra/README.md. Einstellungen aus infra/.env.local (Vorlage: ../.env.example).
 import { fileURLToPath } from 'node:url';
 import { App, CfnOutput, Duration, Stack } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as budgets from 'aws-cdk-lib/aws-budgets';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 
 const DOMAIN = 'game.mannseicher.com';
 const REPO = 'Mansi1/Soliva';
 // Der Name steht fest, damit die Workflows ihn aus vars.AWS_ACCOUNT_ID bilden können.
 const DEPLOY_ROLE = 'soliva-github-deploy';
 
+// Nicht im Repo, weil es öffentlich ist: Wer deployt, trägt die Adressen in infra/.env.local ein.
+const budgetEmails = (process.env.BUDGET_EMAILS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+if (budgetEmails.length === 0) throw new Error('BUDGET_EMAILS fehlt: in infra/.env.local eintragen (Vorlage: .env.example im Repo)');
+
 const app = new App();
-// Alles in us-east-1: CloudFront nimmt Zertifikate und WAF nur von dort. Ein zweiter Stack in
-// Europa nur für die Buckets brächte Referenzen über Regionen, aber kaum etwas: Die Dateien
-// kommen fast immer aus dem Cache der Edge, der Ursprung zählt nur beim ersten Abruf.
+// Alles in us-east-1: CloudFront nimmt Zertifikate nur von dort. Ein zweiter Stack in Europa nur für
+// die Buckets brächte Referenzen über Regionen, aber kaum etwas: Die Dateien kommen fast immer aus
+// dem Cache der Edge, der Ursprung zählt nur beim ersten Abruf.
 const stack = new Stack(app, 'Soliva', { env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: 'us-east-1' } });
 
-/** Privater Bucket hinter einer eigenen Distribution. Die CloudFront Function bekommt jede Distribution
- *  einzeln: Mit dem Flat-Rate-Plan darf sie nicht mit einer anderen geteilt sein. */
+/** Privater Bucket hinter einer eigenen Distribution. */
 function site(id: string, props: Partial<cloudfront.DistributionProps>, bucketProps: s3.BucketProps = {}) {
   const bucket = new s3.Bucket(stack, `${id}Files`, {
     blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -39,8 +42,6 @@ function site(id: string, props: Partial<cloudfront.DistributionProps>, bucketPr
         originAccessLevels: [cloudfront.AccessLevel.READ, cloudfront.AccessLevel.LIST],
       }),
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      // Verwaltete Policy: Eigene Cache-Policies gibt es im Flat-Rate-Plan erst ab Business.
-      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       functionAssociations: [{ function: fallback, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST }],
     },
     defaultRootObject: 'index.html',
@@ -49,36 +50,39 @@ function site(id: string, props: Partial<cloudfront.DistributionProps>, bucketPr
   return { bucket, distribution };
 }
 
-// Der Flat-Rate-Plan verlangt eine WAF und lässt sie nicht mehr lösen. Sie steht darum hier: Fehlte sie
-// in der Vorlage, würde der nächste Deploy versuchen, sie von der Distribution zu nehmen, und scheitern.
-// Ohne Regeln - Regeln nur hier ändern, nicht in der Konsole (sonst setzt der nächste Deploy sie zurück).
-const waf = new wafv2.CfnWebACL(stack, 'Waf', {
-  scope: 'CLOUDFRONT',
-  defaultAction: { allow: {} },
-  visibilityConfig: { cloudWatchMetricsEnabled: true, metricName: 'soliva', sampledRequestsEnabled: true },
-  rules: [],
-});
-
 // Das Zertifikat wartet beim ersten Deploy, bis der CNAME zur Bestätigung beim DNS-Anbieter steht.
 const certificate = new acm.Certificate(stack, 'Certificate', {
   domainName: DOMAIN,
   validation: acm.CertificateValidation.fromDns(),
 });
 
+// Abrechnung nach Verbrauch: CloudFront ist bis 1 TB und 10 Mio. Anfragen im Monat gratis.
+// ponytail: kein Kostendeckel, nur der Budget-Alarm unten; auf den Flat-Rate-Plan wechseln (verlangt
+// eine WAF an der Distribution, Plan in der Konsole buchen), wenn das Spiel kommerziell startet,
+// der Verkehr Richtung 1 TB im Monat geht oder jemand die Dateien missbraucht.
 // Alte Assets bleiben liegen: Offene Tabs laden nach einem Deploy noch Chunks des alten Stands nach.
-const prod = site('Prod', { domainNames: [DOMAIN], certificate, webAclId: waf.attrArn });
+const prod = site('Prod', { domainNames: [DOMAIN], certificate });
 
 // Previews auf eigener Domain (*.cloudfront.net): Der Code eines PRs teilt so keinen Origin und keinen
-// localStorage (Spielstände) mit dem Spiel. Bezahlt nach Verbrauch, ohne WAF.
+// localStorage (Spielstände) mit dem Spiel.
 const preview = site('Preview', {}, {
   lifecycleRules: [{ expiration: Duration.days(30) }],
 });
 
-// Den Anbieter für GitHub-OIDC gibt es je Konto nur einmal. Steht er schon, seine ARN mitgeben:
-// `bunx cdk deploy -c githubOidcProvider=arn:aws:iam::<konto>:oidc-provider/token.actions.githubusercontent.com`
-const providerArn: string | undefined = app.node.tryGetContext('githubOidcProvider');
-const provider = providerArn
-  ? iam.OidcProviderNative.fromOidcProviderArn(stack, 'GitHubOidc', providerArn)
+// Warnt per Mail, wenn die Kosten des ganzen AWS-Kontos im Monat über 5 $ liegen oder laut Prognose
+// darüber landen werden. Die Prognose meldet einen Ausreißer früher als die tatsächlichen Kosten.
+new budgets.CfnBudget(stack, 'Budget', {
+  budget: { budgetType: 'COST', timeUnit: 'MONTHLY', budgetLimit: { amount: 5, unit: 'USD' } },
+  notificationsWithSubscribers: ['ACTUAL', 'FORECASTED'].map((notificationType) => ({
+    notification: { notificationType, comparisonOperator: 'GREATER_THAN', threshold: 100, thresholdType: 'PERCENTAGE' },
+    subscribers: budgetEmails.map((address) => ({ subscriptionType: 'EMAIL', address })),
+  })),
+});
+
+// Den Anbieter für GitHub-OIDC gibt es je Konto nur einmal. Steht er schon, seine ARN in
+// GITHUB_OIDC_PROVIDER_ARN eintragen, dann wird er übernommen statt neu angelegt.
+const provider = process.env.GITHUB_OIDC_PROVIDER_ARN
+  ? iam.OidcProviderNative.fromOidcProviderArn(stack, 'GitHubOidc', process.env.GITHUB_OIDC_PROVIDER_ARN)
   : new iam.OidcProviderNative(stack, 'GitHubOidc', {
       url: 'https://token.actions.githubusercontent.com',
       clientIds: ['sts.amazonaws.com'],
