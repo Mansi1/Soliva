@@ -3,7 +3,7 @@
 // (Ring, Fläche, Sammelpunkt), im Baumodus die Vorschau am Zeiger - und die
 // Punkte auf der Minimap.
 
-import { SHAPE, animalCenter, type EntityInstance } from '../gl/entityRenderer';
+import { SHAPE, animalCenter, animationTime, type EntityInstance } from '../gl/entityRenderer';
 import type { IsoView } from '../gl/iso';
 import type { MiniMap } from '../map';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
@@ -13,8 +13,10 @@ import type { Selection } from './Selection';
 
 /** Farbe der Auswahl und freier Bauplätze. */
 const SELECTED: [number, number, number] = [110, 231, 160];
-/** Abstand der Punkte auf der Linie zum Sammelpunkt (Tiles). */
-const RALLY_DOT_SPACING = 0.45;
+/** Punkte der Linie zum Sammelpunkt: Abstand und Größe (Tiles), Tempo zur Fahne hin (Tiles je Sekunde Spielzeit). */
+const RALLY_DOT_SPACING = 0.22;
+const RALLY_DOT_SIZE = 0.07;
+const RALLY_DOT_SPEED = 0.4;
 
 /**
  * Auswahl: grüner Ring unter jedem Dorfbewohner (nicht unter Werkstatt-
@@ -61,17 +63,19 @@ export function selectionOverlay(
         x: building.rallyPoint.x, y: building.rallyPoint.y, size: 0.5,
         color: SELECTED, shape: SHAPE.flat, alpha: 0.35,
       });
-      // Gepunktete Linie vom Ausgang (spawnPoint) zum Fuß der Fahne - so sieht
-      // man, wohin die Neuen laufen. Luftlinie, nicht ihr Weg. Eine Instanz
-      // steht mit ihrer Mitte bei (x + 0.5, y + 0.5).
+      // Punktlinie vom Ausgang (spawnPoint) zum Fuß der Fahne, die Punkte
+      // wandern zur Fahne - so sieht man, wohin die Neuen laufen. Luftlinie,
+      // nicht ihr Weg. Eine Instanz steht mit ihrer Mitte bei (x + 0.5, y + 0.5).
       const from = building.spawnPoint();
-      const toX = building.rallyPoint.x + 0.8;
-      const toY = building.rallyPoint.y + 0.8;
-      const dots = Math.floor(Math.hypot(toX - from.x, toY - from.y) / RALLY_DOT_SPACING);
-      for (let i = 1; i < dots; i++) {
-        const t = i / dots;
+      const dx = building.rallyPoint.x + 0.8 - from.x;
+      const dy = building.rallyPoint.y + 0.8 - from.y;
+      const length = Math.hypot(dx, dy);
+      // Mit der Spieluhr: angehalten (F3) stehen auch die Punkte.
+      const shift = (animationTime() * RALLY_DOT_SPEED) % RALLY_DOT_SPACING;
+      for (let d = shift; d < length; d += RALLY_DOT_SPACING) {
+        const t = d / length;
         out.push({
-          x: from.x + (toX - from.x) * t - 0.5, y: from.y + (toY - from.y) * t - 0.5, size: 0.16,
+          x: from.x + dx * t - 0.5, y: from.y + dy * t - 0.5, size: RALLY_DOT_SIZE,
           color: SELECTED, shape: SHAPE.flat, alpha: 0.9,
         });
       }
