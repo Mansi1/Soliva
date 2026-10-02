@@ -280,7 +280,7 @@ Reuse a few explicit scratch arrays/vectors instead.
   - Zeilenangaben dort sind veraltet. Nach Funktionsnamen suchen, nicht nach Zeilennummern.
   - Befunde vor dem Umsetzen am Code prüfen. Behauptungen wie „bit-identisch“ oder „harmlos“ waren schon falsch. Aufrufer lesen, bevor ein Early-out das Ergebnis ändert.
   - Umgesetztes und bewusst Ausgelassenes vermerkt der Plan zu Beginn von Abschnitt 2. Das bei jeder Änderung nachführen.
-- **Pfade zur eigenen Seite:** Auf GitHub Pages liegt das Spiel unter `/<repo>/` (`.github/workflows/pages.yml` setzt `BASE_PATH`). Adressen, `fetch` und Bilder aus `public/` darum über `import.meta.env.BASE_URL` bilden, nie fest mit `/` beginnen. Lokal ist der Wert `/`. Prüfen: `BASE_PATH=/soliva/ npm run build`, `BASE_PATH=/soliva/ npx vite preview`, `node tools/ui/smoke.mjs http://localhost:4173/soliva`.
+- **Pfade zur eigenen Seite:** Die Previews der Pull Requests liegen unter `/pr-<n>/` (`.github/workflows/deploy-aws.yml` setzt `BASE_PATH`). Adressen, `fetch` und Bilder aus `public/` darum über `import.meta.env.BASE_URL` bilden, nie fest mit `/` beginnen. Lokal ist der Wert `/`. Prüfen: `BASE_PATH=/soliva/ npm run build`, `BASE_PATH=/soliva/ npx vite preview`, `node tools/ui/smoke.mjs http://localhost:4173/soliva`.
 - **`Array.find` durch eine Map ersetzen:** `find` liefert den *ersten* Treffer, `new Map(entries)` behält den *letzten*. Bei möglichen Doppelten die Map aus der umgekehrten Liste bauen.
 
 ---

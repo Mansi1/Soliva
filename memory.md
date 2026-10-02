@@ -66,7 +66,6 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Offen
 
-- 2026-10-01: `pages.yml` schlägt auf `Mansi1/Soliva` fehl, weil Pages dort nicht eingeschaltet ist (`configure-pages`: Not Found). Das kann nur ein Admin des Repos: Settings → Pages → Source „GitHub Actions“.
 - Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.
 - Kein Screenshot-Skript im Repo - das Verfahren steht in `AGENTS.md`; als `tools/perf/shots.mjs` neben dem Bench wäre es ein Aufruf.
 - 2026-09-30, M4: Leere Flächen beim Pannen messen: Löschfarbe des Geländes ist (19, 31, 56) - Anteil solcher Pixel in Screenshots während gehaltener Taste. Pannen nach Westen in die Berge ab `Testseed` lat -43 lng 12 ist der harte Fall (Zoom 4, DPR 1: ~16-18 % leer schon auf HEAD 9536faa). Mit DPR 2 schafft Playwright dabei nur 4-30 fps, auch auf HEAD - dort nur grob vergleichbar.
