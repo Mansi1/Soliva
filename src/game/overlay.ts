@@ -13,6 +13,8 @@ import type { Selection } from './Selection';
 
 /** Farbe der Auswahl und freier Bauplätze. */
 const SELECTED: [number, number, number] = [110, 231, 160];
+/** Abstand der Punkte auf der Linie zum Sammelpunkt (Tiles). */
+const RALLY_DOT_SPACING = 0.45;
 
 /**
  * Auswahl: grüner Ring unter jedem Dorfbewohner (nicht unter Werkstatt-
@@ -59,6 +61,20 @@ export function selectionOverlay(
         x: building.rallyPoint.x, y: building.rallyPoint.y, size: 0.5,
         color: SELECTED, shape: SHAPE.flat, alpha: 0.35,
       });
+      // Gepunktete Linie vom Ausgang (spawnPoint) zum Fuß der Fahne - so sieht
+      // man, wohin die Neuen laufen. Luftlinie, nicht ihr Weg. Eine Instanz
+      // steht mit ihrer Mitte bei (x + 0.5, y + 0.5).
+      const from = building.spawnPoint();
+      const toX = building.rallyPoint.x + 0.8;
+      const toY = building.rallyPoint.y + 0.8;
+      const dots = Math.floor(Math.hypot(toX - from.x, toY - from.y) / RALLY_DOT_SPACING);
+      for (let i = 1; i < dots; i++) {
+        const t = i / dots;
+        out.push({
+          x: from.x + (toX - from.x) * t - 0.5, y: from.y + (toY - from.y) * t - 0.5, size: 0.16,
+          color: SELECTED, shape: SHAPE.flat, alpha: 0.9,
+        });
+      }
     }
   }
   if (selection.resource) {

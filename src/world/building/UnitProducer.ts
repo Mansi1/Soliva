@@ -70,6 +70,12 @@ export abstract class UnitProducer extends BuildingBase {
     return this.queue.shift()!;
   }
 
+  /** Wo Ausgebildete heraustreten (Mitte, Tiles): an der Vorderkante des Gebäudes, zur Kamera hin. */
+  spawnPoint(): { x: number; y: number } {
+    const r = this.definition.footprint / 2 + 0.4;
+    return { x: this.x + 0.5 + r, y: this.y + 0.5 + r };
+  }
+
   /** Sammelpunkt setzen, oder mit null aufheben. */
   setRallyPoint(point: { x: number; y: number } | null) {
     this.rallyPoint = point;

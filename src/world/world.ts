@@ -647,11 +647,11 @@ export class World {
     const done = building.train(this.speedy ? Infinity : dt);
     if (!done) return;
 
-    // Er tritt an der Vorderkante des Gebäudes heraus - zur Kamera hin.
-    const r = building.definition.footprint / 2 + 0.4;
+    // Er tritt an der Vorderkante heraus, etwas zur Seite gestreut.
+    const spawn = building.spawnPoint();
     const spread = (this.nextId % 5) * 0.4 - 0.8;
-    const x = building.x + 0.5 + r + spread * 0.5;
-    const y = building.y + 0.5 + r - spread * 0.5;
+    const x = spawn.x + spread * 0.5;
+    const y = spawn.y - spread * 0.5;
     const villager = this.addVillager(x, y, done.female);
     this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
     if (building.rallyPoint) this.work.command(new Set([villager.id]), building.rallyPoint.x, building.rallyPoint.y);
