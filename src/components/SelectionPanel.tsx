@@ -13,7 +13,7 @@ import { formatDuration } from '../format';
 import {
   CROP_ORDER, CROPS, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
 } from '../world/catalog';
-import { animalIcon, buildingIcon, populationIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
+import { animalIcon, buildingIcon, populationIcon, rallyIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
 
 /** Werkstatt fürs Panel: wer dort arbeitet (fehlt, wenn niemand), was er tut, Fortschritt des Bogens. */
@@ -48,6 +48,8 @@ export interface TrainView {
   label: string;
   cost: string;
   affordable: boolean;
+  /** Sammelpunkt-Schalter an: der nächste Klick auf die Karte setzt ihn. */
+  rallyPicking: boolean;
 }
 
 export type SelectionView =
@@ -199,7 +201,7 @@ function Buildings({ v }: { v: Extract<SelectionView, { kind: 'buildings' }> }) 
             <>
               <div>In Ausbildung <b>{v.training.queued}/{v.training.capacity}</b></div>
               <div class="muted">
-                Neue Dorfbewohner kommen in die kürzeste Warteschlange; Rechtsklick setzt den Sammelpunkt für alle.
+                Neue Dorfbewohner kommen in die kürzeste Warteschlange; der Knopf mit der Fahne setzt den Sammelpunkt für alle.
               </div>
             </>
           ) : null}
@@ -279,8 +281,8 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
           {t ? (
             <div class="muted">
               {t.rally
-                ? 'Sammelpunkt gesetzt - Rechtsklick versetzt ihn, auf das Gebäude hebt ihn auf.'
-                : 'Rechtsklick auf die Karte setzt einen Sammelpunkt für neue Dorfbewohner.'}
+                ? 'Sammelpunkt gesetzt - Fahne unten rechts, dann Klick: versetzt ihn, auf das Gebäude hebt ihn auf.'
+                : 'Fahne unten rechts, dann Klick auf die Karte: dorthin gehen neue Dorfbewohner.'}
             </div>
           ) : null}
         </div>
@@ -416,7 +418,7 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
 
 /** Ein Befehlsknopf: Bild, Taste, Tooltip und was er in main.ts auslöst. */
 interface Command {
-  action: 'train' | 'crop' | 'demolish' | 'trap' | 'dismiss';
+  action: 'train' | 'rally' | 'crop' | 'demolish' | 'trap' | 'dismiss';
   title: string;
   /** Bild-URL - oder das Abriss-Symbol. */
   icon: string | 'demolish';
@@ -431,6 +433,14 @@ function trainCommand(train: TrainView): Command {
     action: 'train', title: `${train.label} ausbilden (V) - ${train.cost}\nMit Umschalt: 5 auf einmal`,
     // Frau und Mann wie in der Rohstoffleiste - ausgebildet wird beides.
     icon: populationIcon(rgb()), key: 'V', disabled: !train.affordable,
+  };
+}
+
+/** Sammelpunkt-Schalter: an, dann setzt der nächste Klick auf die Karte den Punkt für neue Dorfbewohner. */
+function rallyCommand(train: TrainView): Command {
+  return {
+    action: 'rally', icon: rallyIcon(rgb()), pressed: train.rallyPicking,
+    title: 'Sammelpunkt setzen - dann auf die Karte klicken: dorthin gehen neue Dorfbewohner.\nKlick auf das Gebäude hebt ihn auf, Esc bricht ab',
   };
 }
 
@@ -451,7 +461,7 @@ export function commandsFor(view: SelectionView): Command[] {
     case 'building':
       return [
         ...(view.farm ? cropCommands(view.farm.plan) : []),
-        ...(view.trainer ? [trainCommand(view.trainer.train)] : []),
+        ...(view.trainer ? [trainCommand(view.trainer.train), rallyCommand(view.trainer.train)] : []),
         ...(view.trapCost ? [{
           action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
           title: `Reuse bauen - ${view.trapCost.cost}\nIns Wasser nahe der Hütte; der Fischer leert sie mit dem Boot`,
@@ -464,7 +474,7 @@ export function commandsFor(view: SelectionView): Command[] {
       ];
     case 'buildings':
       return [
-        ...(view.training ? [trainCommand(view.training.train)] : []),
+        ...(view.training ? [trainCommand(view.training.train), rallyCommand(view.training.train)] : []),
         ...(view.farms ? cropCommands(view.farms.plan) : []),
         demolish(true),
       ];

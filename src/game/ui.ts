@@ -64,6 +64,12 @@ export class GameUi {
   private readonly scrollEl = byId('scroll');
   private readonly hintEl = byId('hint');
   private hintTimer = 0;
+  /**
+   * Sammelpunkt-Schalter (Knopf mit der Fahne): an, setzt der nächste Klick
+   * auf die Karte den Sammelpunkt der ausgewählten Hauptgebäude (actions.ts).
+   * Von selbst aus ist er nicht - ein Rechtsklick wäre sonst ein Befehl.
+   */
+  rallyPicking = false;
 
   constructor(private state: UiState, hooks: UiHooks, playerColor: RGB) {
     const { placement } = state;
@@ -97,6 +103,7 @@ export class GameUi {
       const button = (e.target as HTMLElement).closest('button');
       const action = button?.dataset.action;
       if (action === 'train') hooks.train(e.shiftKey ? 5 : 1);
+      if (action === 'rally') this.setRallyPicking(!this.rallyPicking);
       if (action === 'demolish') hooks.demolish();
       if (action === 'trap') this.setPlacing('fish_trap');
       if (action === 'dismiss') hooks.dismiss();
@@ -131,9 +138,10 @@ export class GameUi {
     if (crop && this.state.world.affordable('farm')) this.placeField(crop);
   }
 
-  /** Esc: Untermenü zu, sonst Baumodus aus, sonst Auswahl aufheben. false, wenn es nichts abzubrechen gab. */
+  /** Esc: Sammelpunkt-Schalter aus, Untermenü zu, sonst Baumodus aus, sonst Auswahl aufheben. false, wenn es nichts abzubrechen gab. */
   cancel(): boolean {
-    if (this.farmsOpen) this.closeFarms();
+    if (this.rallyPicking) this.setRallyPicking(false);
+    else if (this.farmsOpen) this.closeFarms();
     else if (this.state.placement.isActive) this.setPlacing(null);
     else if (!this.state.selection.isEmpty) this.clearSelection();
     else return false;
@@ -193,12 +201,20 @@ export class GameUi {
     placement.invalidate();
   }
 
+  /** Sammelpunkt-Schalter an oder aus - der Knopf zeigt es, der Zeiger wird zur Fahne. */
+  setRallyPicking(on: boolean) {
+    this.rallyPicking = on;
+    this.refreshSelection();
+  }
+
   /** Was ausgewählt ist und was man damit tun kann. */
   refreshSelection() {
     const { world, selection, resources } = this.state;
     selection.prune();
+    // Der Schalter gilt nur, solange ein ausbildendes Gebäude ausgewählt ist.
+    if (!selection.chosenBuildings().some((b) => b.isUnitProducer())) this.rallyPicking = false;
     // Hat die Auswahl Befehle (ein Gebäude), zeigt die Steintafel sie statt des Baumenüs.
-    const view = selectionView(world, selection, resources);
+    const view = selectionView(world, selection, resources, this.rallyPicking);
     const hasCommands = renderSelection(this.selectionEl, this.actionsEl, view);
     this.scrollEl.classList.toggle('open', hasDetails(view));
     this.actionsEl.hidden = !hasCommands;
@@ -209,8 +225,8 @@ export class GameUi {
   }
 
   /**
-   * Mauszeiger je nach Lage: im Baumodus ein Feld-Zeiger, mit ausgewähltem
-   * Hauptgebäude die Sammelpunkt-Fahne, mit ausgewählten Dorfbewohnern über
+   * Mauszeiger je nach Lage: im Baumodus ein Feld-Zeiger, mit dem
+   * Sammelpunkt-Schalter die Fahne, mit ausgewählten Dorfbewohnern über
    * einem Vorkommen das Werkzeug - Axt für Holz, Spitzhacke für Stein und
    * Gold, Beeren für Beeren. Sonst über Auswählbarem die Hand, sonst das Fadenkreuz.
    */
@@ -219,7 +235,7 @@ export class GameUi {
     let cursor = 'crosshair';
     if (placement.isActive) {
       cursor = 'copy';
-    } else if (selection.focused()?.isUnitProducer()) {
+    } else if (this.rallyPicking) {
       cursor = RALLY_CURSOR;
     } else if (selection.villagers.size > 0 && pointer.tile) {
       // Worauf ein Klick zielt (Picker.target) - Gebäude, Baumkrone, Fels.

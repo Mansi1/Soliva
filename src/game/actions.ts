@@ -37,6 +37,9 @@ export interface ActionUi {
   flyTo(x: number, y: number): void;
   /** Baumodus für diese Art ein- (oder mit null aus-)schalten. */
   setPlacing(type: BuildingType | null): void;
+  /** Ist der Sammelpunkt-Schalter an? Dann setzt der nächste Klick auf die Karte den Punkt. */
+  readonly rallyPicking: boolean;
+  setRallyPicking(on: boolean): void;
 }
 
 export interface GameState {
@@ -149,26 +152,35 @@ export class PlayerActions {
   }
 
 
+  /**
+   * Sammelpunkt-Schalter an: setzt den Punkt der ausgewählten ausbildenden
+   * Gebäude auf die Stelle p (bei mehreren für alle) - auf das Gebäude selbst
+   * hebt ihn auf. Danach ist der Schalter wieder aus.
+   */
+  setRallyAt(p: { x: number; y: number }) {
+    // Auf das Objekt gezielt (Baumkrone, Fels) zählt dessen Feld.
+    const { x, y } = this.picker.target(p.x, p.y);
+    let reason: string | null = null;
+    for (const b of this.selection.chosenBuildings()) {
+      if (b.isUnitProducer()) reason = this.world.setRally(b, x, y) ?? reason;
+    }
+    if (reason) this.ui.hint(reason);
+    else this.sound.play('click');
+    this.ui.setRallyPicking(false);
+  }
+
   /** Rechtsklick: im Baumodus abbrechen, mit Dorfbewohnern ein Befehl. */
   rightClick(p: { x: number; y: number }) {
+    if (this.ui.rallyPicking) {
+      this.setRallyAt(p);
+      return;
+    }
     if (this.placement.placingType) {
       this.ui.setPlacing(null);
       return;
     }
     // Auf das Objekt gezielt (Baumkrone, Fels) zählt dessen Feld.
     const { x, y } = this.picker.target(p.x, p.y);
-
-    // Ausbildende Gebäude ausgewählt: Rechtsklick setzt den Sammelpunkt - bei
-    // mehreren für alle.
-    const trainers = this.selection.chosenBuildings().filter((b): b is UnitProducer => b.isUnitProducer());
-    if (trainers.length > 0) {
-      let reason: string | null = null;
-      for (const t of trainers) reason = this.world.setRally(t, x, y) ?? reason;
-      if (reason) this.ui.hint(reason);
-      else this.sound.play('click');
-      this.ui.refreshSelection();
-      return;
-    }
 
     if (this.selection.villagers.size === 0) return;
     // Auf ein Tier (lebend oder erlegt): jagen bzw. zerlegen.

@@ -182,6 +182,12 @@ export function populationIcon(player: RGB): string {
   return cached('population', player, () => scene('population', player));
 }
 
+/** Sammelpunkt-Fahne in Spielerfarbe - wie sie auf der Karte steht (overlay.ts). */
+export function rallyIcon(player: RGB): string {
+  return cached('rally', player, () =>
+    [{ x: -0.5, y: -0.5, size: 0.54, color: player, shape: SHAPE.rallyFlag, alpha: 1 }]);
+}
+
 /** Tier, äsend - erlegt liegend. */
 export function animalIcon(kind: AnimalKind, dead = false): string {
   const def = ANIMALS[kind];

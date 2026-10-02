@@ -108,6 +108,16 @@ const queueIcons = await page.$$eval('#selection .sel-queue-unit img', (imgs) =>
 const queued = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;
 check('Warteschlange zeigt Frau oder Mann', queueIcons === 1 && Array.isArray(queued) && queued.length === 1,
   `${queueIcons} im Panel, gespeichert q=${JSON.stringify(queued)}`);
+// Sammelpunkt: nicht von selbst (Rechtsklick ändert nichts), sondern über den
+// Schalter mit der Fahne - dann setzt ein Klick auf die Karte den Punkt.
+const rallyAt = async () => (await saved()).buildings.find((b) => b.t === 'town_center')?.r;
+await page.mouse.click(250, 250, { button: 'right' });
+const rallyBefore = await rallyAt();
+await page.click('#actions .cmd-btn[data-action=rally]');
+await page.mouse.click(250, 250);
+const rallyAfter = await rallyAt();
+check('Sammelpunkt nur über den Schalter', rallyBefore === undefined && Array.isArray(rallyAfter),
+  `Rechtsklick: ${JSON.stringify(rallyBefore)}, mit Schalter: ${JSON.stringify(rallyAfter)}`);
 await cancel();
 
 // Feld: 6 öffnet das Untermenü, 2 wählt die zweite Frucht, Ziehen steckt ab
