@@ -12,6 +12,7 @@ import { GATHER_CURSOR, RALLY_CURSOR } from '../cursors';
 import { CROP_ORDER, RESOURCE_LABEL, VILLAGER, type BuildingType, type CropType, type ResourceKind } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import type { World } from '../world/world';
+import type { IdlePick } from './actions';
 import type { Placement } from './Placement';
 import type { Pointer } from './Pointer';
 import type { Selection } from './Selection';
@@ -30,8 +31,8 @@ export interface UiHooks {
   toggleMenu(): void;
   /** Diskette: speichern. */
   save(): void;
-  /** Knopf "Untätige": alle oder einzeln reihum. */
-  selectIdle(all: boolean): void;
+  /** Knopf "Untätige": ein zufälliger, Doppelklick alle. */
+  selectIdle(which: IdlePick): void;
   train(count: number): void;
   demolish(): void;
   /** Arbeiter der Werkstatt entlassen. */
@@ -92,7 +93,8 @@ export class GameUi {
       // Kein Fokus auf dem Knopf - sonst bleibt ein Fokusrahmen stehen.
       e.preventDefault();
       e.stopPropagation();
-      hooks.selectIdle(!e.shiftKey);
+      // e.detail zählt die Klicks kurz hintereinander - 2 ist ein Doppelklick.
+      hooks.selectIdle(e.detail >= 2 ? 'all' : 'random');
     });
     // Das Bild auf dem Pergament: zum Ausgewählten springen.
     this.selectionEl.addEventListener('mousedown', (e) => {

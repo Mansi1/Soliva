@@ -52,6 +52,11 @@ export class Picker {
     return { x: Math.floor(p.x), y: Math.floor(p.y) };
   }
 
+  /** Bildschirmposition (CSS-Pixel) des Bodens an der Stelle (x, y). */
+  groundScreen(x: number, y: number) {
+    return worldToScreen(this.camera.view(), x, y, this.ground.heightAt(x, y));
+  }
+
   /** Bildschirmposition (CSS-Pixel) der Figurmitte - die Stelle, auf die man klickt. */
   villagerScreen(v: Villager) {
     const p = v.positionAt(this.blend());

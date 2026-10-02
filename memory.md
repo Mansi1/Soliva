@@ -18,6 +18,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 - 2026-10-01: In Chrome (claude-in-chrome) steht das Spiel, solange der Tab im Hintergrund ist (`document.hidden`, kein `requestAnimationFrame`) - Figuren bewegen sich nicht, `fps` 0. Abläufe über die Zeit darum per Playwright (`tools/ui/browser.mjs`) prüfen, Lagen alle 0,5 s über `beforeunload` + `localStorage` lesen. Auswahl per Rahmen: `mouse.down/move/up` über das Bild (Minimap aussparen), dann Rechtsklick.
 - 2026-10-01: Kameralage per Playwright lesen: Taste P zeigt die Entwickler-Infos, `#cam-coords` hat die Bildmitte als Tile (`12, -43`). Bildschirmfotos taugen dafür nicht, auch angehalten (F3) ändert sich das Bild.
+- 2026-10-02: `/game/Demo` ist nur eine leere Welt mit Seed „Demo“, nicht der Demo-Stand. Zum Testen mit Gebäuden einen eigenen `save` in `Testseed` schreiben (`{ t: 'house', x, y }` usw.). Ein Ziel im Bild findet Playwright, indem es ein Raster abklickt, bis `#selection` den Namen zeigt.
 - 2026-09-27: Im Demo-Stand stehen keine Tiere im Startbild (die 125 liegen weit weg, z. B. bei 35,-104). Zum Testen vor dem Laden `animals` im Spielstand ersetzen, z. B. `{ k: 'deer', x: 92, y: 70, hp: 3, f: 140 }` neben dem Hauptgebäude (96,67). Das Spiel hat keine Test-Hooks auf `window`, außer den Render-Stats.
 
 ## Repo

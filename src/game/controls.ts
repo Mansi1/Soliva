@@ -57,11 +57,11 @@ export const CONTROLS: readonly Control[] = [
   { label: ['H'], what: 'Zum Hauptgebäude', short: 'Hauptgebäude', keys: ['h'], run: (c) => c.home() },
   { label: [MOUSE_LEFT], what: 'Auswählen (Ziehen: Rahmen)', short: 'auswählen' },
   { label: ['Umschalt', MOUSE_LEFT], sep: '+', what: 'Zur Auswahl hinzu', short: 'hinzu' },
-  { label: [MOUSE_LEFT, '~2×'], what: 'Gleiche Gebäude in der Nähe', short: 'gleiche' },
+  { label: [MOUSE_LEFT, '~2×'], what: 'Gleiche im Bild', short: 'gleiche' },
   // Punkt wie in AoE2: alle untätigen Dorfbewohner (mit Umschalt: einzeln reihum).
   {
     label: ['.'], what: 'Untätige (Umschalt: einzeln)', short: 'untätige',
-    keys: ['.', ':'], run: (c, e) => c.selectIdle(!e.shiftKey),
+    keys: ['.', ':'], run: (c, e) => c.selectIdle(e.shiftKey ? 'next' : 'all'),
   },
   { label: [MOUSE_RIGHT], what: 'Befehl: sammeln, jagen, bauen, gehen', short: 'Befehl' },
   {
