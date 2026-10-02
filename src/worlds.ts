@@ -8,8 +8,8 @@
 // Im Spiel zeigt die Adresse /game/<seed>, im Hauptmenü "/" (StartScreen).
 // Wer /game/<seed> öffnet (auch neu lädt), geht direkt in diese Welt, ohne
 // Hauptmenü und ohne sich die Welt zu merken. Ohne Seed (/game) eine Zufallswelt.
-// Alle Pfade gelten ab import.meta.env.BASE_URL: lokal "/", auf GitHub Pages
-// "/<repo>/" (BASE_PATH im Workflow .github/workflows/pages.yml). VERIFIED: Relative
+// Alle Pfade gelten ab import.meta.env.BASE_URL: lokal und im Spiel "/", in den Previews
+// "/pr-<n>/" (BASE_PATH in .github/workflows/deploy-aws.yml). VERIFIED: Relative
 // Pfade reichen nicht, unter /game/<seed> lösten sie sich gegen game/ auf.
 // Zum Teilen und Testen: /game/<seed>?lat=<y>&lng=<x>&zoom=<1-5>&rot=<0-3>&tilt=<Grad>&save=<base64>
 // setzt dazu die Kamera dorthin; mit save (Spielstand-JSON als base64url) beginnt

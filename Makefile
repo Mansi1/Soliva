@@ -59,7 +59,7 @@ coverage:
 	tail -n 40 tmp/coverage.txt; awk -F'|' '/all files/ { gsub(/ /, "", $$2); print "TOTAL " $$2 "%" }' tmp/coverage.txt; exit $$s
 # Erlaubt: Stil des vorhandenen Codes - new Array(n) belegt bewusst vor, die Kopie vor dem Löschen aus einem Set ist gewollt.
 lint:     ; bunx oxlint --deny-warnings -A unicorn/no-new-array -A unicorn/no-useless-spread -A unicorn/prefer-string-starts-ends-with -A typescript/triple-slash-reference
-# Das veröffentlichte Artefakt wie auf GitHub Pages (Basispfad /<repo>/, .github/workflows/pages.yml) ausliefern
+# Das veröffentlichte Artefakt unter einem Basispfad wie bei den Previews (/pr-<n>/, .github/workflows/deploy-aws.yml) ausliefern
 # und den Rauchtest im Browser dagegen laufen lassen. CHROME = Pfad zu Chrome, falls nicht am macOS-Standardort.
 E2E_BASE = /soliva/
 e2e:
