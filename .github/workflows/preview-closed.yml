@@ -1,0 +1,15 @@
+# Meldet nur, dass ein Pull Request zu ist (gemergt oder geschlossen). Das Löschen der Preview macht
+# preview-aws.yml per workflow_run: Ein Lauf zu einem PR bekommt keinen Zugang zu AWS, die Rolle
+# vertraut nur main.
+name: preview-closed
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  closed:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "PR ${{ github.event.number }} ist zu - preview-aws.yml löscht pr-${{ github.event.number }}/."
