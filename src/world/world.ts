@@ -11,7 +11,7 @@ import { NEAR_STEP, reliefZ } from '../noise';
 import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
 import type { BuildingType, CropType, DepositType, ResourceKind, Resources } from './catalog';
 import {
-  buildingFromSave, createBuilding, furrowPosition, maskCovers, CENTER_TILE, FishTrap,
+  buildingFromSave, createBuilding, furrowPosition, maskCovers, randomFemale, CENTER_TILE, FishTrap,
   type Building, type Farm, type UnitProducer,
 } from './building';
 import { readSave, writeSave, type LoadedSave, type SaveData } from './save';
@@ -644,22 +644,21 @@ export class World {
     const pop = this.population();
     // Bevölkerungsgrenze erreicht: die Ausbildung wartet, bis ein Haus steht.
     if (pop.used >= pop.cap) return;
-    if (!building.train(this.speedy ? Infinity : dt)) return;
+    const done = building.train(this.speedy ? Infinity : dt);
+    if (!done) return;
 
     // Er tritt an der Vorderkante des Gebäudes heraus - zur Kamera hin.
     const r = building.definition.footprint / 2 + 0.4;
     const spread = (this.nextId % 5) * 0.4 - 0.8;
     const x = building.x + 0.5 + r + spread * 0.5;
     const y = building.y + 0.5 + r - spread * 0.5;
-    const villager = this.addVillager(x, y);
+    const villager = this.addVillager(x, y, done.female);
     this.onEvent?.({ kind: 'trained', x: villager.x, y: villager.y });
     if (building.rallyPoint) this.work.command(new Set([villager.id]), building.rallyPoint.x, building.rallyPoint.y);
     this.dirty = true;
   }
 
-  private addVillager(x: number, y: number): Villager {
-    // Etwa jeder zweite ist eine Frau.
-    const female = Math.random() < 0.5;
+  private addVillager(x: number, y: number, female = randomFemale()): Villager {
     const villager = new Villager(this.nextId++, x, y, this.freeName(female), female);
     this.villagers.push(villager);
     return villager;

@@ -80,7 +80,8 @@ export type SelectionView =
       /** Reuse: Fische darin, wie viele hineinpassen, Sekunden, bis sie voll ist (0: voll). */
       trap?: { fish: number; max: number; fullIn: number };
       trainer?: {
-        queue: number;
+        /** Die Warteschlange, vorderste zuerst: true = Dorfbewohnerin. */
+        units: boolean[];
         max: number;
         full: boolean;
         /** Fortschritt des vordersten in Prozent - nur, wenn einer in Ausbildung ist. */
@@ -249,13 +250,30 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
                 : <span class="muted"> - noch {v.weapons.capacity - v.weapons.bows} frei</span>}
             </div>
           ) : null}
-          {t && t.queue > 0 ? (
+          {t && t.units.length > 0 ? (
             <>
-              <div>
-                In Ausbildung <b>{t.queue}/{t.max}</b>
-                {t.full ? <> - <span class="muted">Bevölkerung voll, baue ein Haus</span></> : null}
+              {/* Wie in AoE2: vorn, wer gerade ausgebildet wird - groß, mit Fortschritt; darunter die Wartenden mit ihrem Platz. */}
+              <div class="sel-training">
+                <span class="sel-queue-unit active"><img src={villagerIcon(t.units[0], rgb())} alt="" draggable={false} /></span>
+                <div class="sel-training-info">
+                  <div>
+                    {t.units[0] ? 'Dorfbewohnerin' : 'Dorfbewohner'} in Ausbildung - <b>{t.percent} %</b>
+                    <span class="muted"> ({t.units.length}/{t.max})</span>
+                  </div>
+                  <Bar percent={t.percent} />
+                </div>
               </div>
-              <Bar percent={t.percent} />
+              {t.full ? <div class="muted">Bevölkerung voll, baue ein Haus</div> : null}
+              {t.units.length > 1 ? (
+                <div class="sel-queue">
+                  {t.units.slice(1).map((female, i) => (
+                    <span class="sel-queue-unit" title={`${i + 2}. ${female ? 'Dorfbewohnerin' : 'Dorfbewohner'}`}>
+                      <img src={villagerIcon(female, rgb())} alt="" draggable={false} />
+                      <b>{i + 2}</b>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </>
           ) : null}
           {t ? (

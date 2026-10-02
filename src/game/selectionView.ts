@@ -129,7 +129,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
         : undefined,
       trainer: building.isUnitProducer()
         ? {
-            queue: building.queuedUnits,
+            units: building.queue.map((u) => u.female),
             max: MAX_TRAINING_QUEUE,
             full: pop.used >= pop.cap,
             percent: Math.floor(building.trainingProgress() * 100),

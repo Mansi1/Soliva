@@ -103,6 +103,11 @@ const foodBefore = await stock('food');
 await page.keyboard.press('v');
 await wait(300);
 check('Dorfbewohner in Ausbildung', (await stock('food')) < foodBefore, `Nahrung ${foodBefore} → ${await stock('food')}`);
+// Die Warteschlange zeigt jeden Eingereihten als Frau oder Mann - gespeichert wird das mit (q: 1 = Frau).
+const queueIcons = await page.$$eval('#selection .sel-queue-unit img', (imgs) => imgs.filter((i) => i.src).length);
+const queued = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;
+check('Warteschlange zeigt Frau oder Mann', queueIcons === 1 && Array.isArray(queued) && queued.length === 1,
+  `${queueIcons} im Panel, gespeichert q=${JSON.stringify(queued)}`);
 await cancel();
 
 // Feld: 6 öffnet das Untermenü, 2 wählt die zweite Frucht, Ziehen steckt ab
@@ -170,7 +175,7 @@ await page.evaluate(() => {
   localStorage.setItem('pgm.world.Altstand', JSON.stringify({
     version: 2,
     stock: { wood: 100, stone: 0, gold: 0, berries: 77 },
-    buildings: [{ t: 'town_center', x: 20, y: 20 }, { t: 'lumberjack', x: 30, y: 20 }],
+    buildings: [{ t: 'town_center', x: 20, y: 20, q: 2 }, { t: 'lumberjack', x: 30, y: 20 }],
     villagers: [{ x: 21, y: 22, c: 3, ct: 'berries', task: { kind: 'idle' } }],
     harvested: {},
   }));
@@ -185,6 +190,11 @@ check('alter Stand: berries → food', old.stock.food === 77 && !('berries' in o
   `Nahrung ${old.stock.food}, Ladung ${old.villagers[0]?.ct}`);
 check('alter Stand: lumberjack → lumber_camp, Koordinaten verdoppelt', camp?.x === 60 && camp?.y === 40,
   camp ? `bei ${camp.x}, ${camp.y}` : old.buildings.map((b) => b.t).join(', '));
+// Damals war die Warteschlange nur eine Anzahl (q: 2) - jetzt je Einheit Frau oder Mann. Wer
+// schon fertig ist, steht als Dorfbewohner da: zusammen bleiben es 1 + 2.
+const oldQueue = old.buildings.find((b) => b.t === 'town_center')?.q;
+check('alter Stand: Warteschlange als Anzahl', Array.isArray(oldQueue) && oldQueue.length + old.villagers.length === 3,
+  `q=${JSON.stringify(oldQueue)}, ${old.villagers.length} Dorfbewohner`);
 
 // Galerie
 await page.goto(BASE + '/galerie');

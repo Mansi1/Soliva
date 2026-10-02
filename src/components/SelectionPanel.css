@@ -251,3 +251,56 @@
   display: block;
   filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.6));
 }
+
+/* Warteschlange im Hauptgebäude (wie AoE2): wer ausgebildet wird, groß mit
+   goldenem Rand neben Fortschritt und Name; die Wartenden klein in Kästchen
+   wie beim Vorrat, unten rechts ihr Platz. */
+#selection .sel-training {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#selection .sel-training-info {
+  flex: 1;
+  min-width: 0;
+}
+#selection .sel-training .sel-queue-unit {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+#selection .sel-training .sel-queue-unit img {
+  width: 26px;
+  height: 26px;
+}
+#selection .sel-queue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 2px;
+}
+#selection .sel-queue-unit {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, #3b4a5c, #141b24);
+  border: 2px solid var(--wood-edge);
+}
+#selection .sel-queue-unit.active {
+  border-color: var(--button-gold);
+}
+#selection .sel-queue-unit img {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.6));
+}
+#selection .sel-queue-unit b {
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
