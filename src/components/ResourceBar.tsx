@@ -78,9 +78,9 @@ export class ResourceBar {
       <>
         {order.map((r) => <Cell name={r} src={icons[r]} refs={this.cells.get(r)!} />)}
         <Cell name="population" src={icons.population} refs={this.cells.get('population')!} pop />
-        {/* Ein Klick wählt die untätigen Dorfbewohner aus (siehe main.ts, data-action). */}
+        {/* Ein Klick wählt einen zufälligen untätigen Dorfbewohner, ein Doppelklick alle (siehe game/ui.ts, data-action). */}
         <button type="button" class="rb-idle" data-action="idle" ref={this.idleButton}
-          title="Untätige auswählen (Taste .) - mit Umschalt einzeln">
+          title="Einen Untätigen auswählen - Doppelklick: alle (Taste .)">
           <Icon src={icons.idle} iconRef={this.idleIcon} />
           <span class="rb-count" ref={this.idleCount} />
         </button>

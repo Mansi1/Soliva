@@ -8,6 +8,7 @@
 // Hauptmenü nur M; F3 hält an. Danach die Spieltasten.
 
 import type { BuildingType } from '../world/catalog';
+import type { IdlePick } from './actions';
 import { controlForKey } from './controls';
 import { altHeld } from './MouseInput';
 
@@ -36,7 +37,7 @@ export interface KeyCommands {
   toggleHelp(): void;
   toggleDebug(): void;
   /** Untätige: alle oder einzeln reihum. */
-  selectIdle(all: boolean): void;
+  selectIdle(which: IdlePick): void;
   train(count: number): void;
   /** Ist das Untermenü der Felder offen? Dann wählen Ziffern die Frucht. */
   farmsOpen(): boolean;

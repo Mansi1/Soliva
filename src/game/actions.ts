@@ -21,6 +21,9 @@ import type { Selection } from './Selection';
  */
 const sameGroup = (v: Villager) => (workplace(v.task) ? v.task.kind : 'free');
 
+/** Welche Untätigen selectIdle auswählt: alle, den nächsten reihum oder einen zufälligen. */
+export type IdlePick = 'all' | 'next' | 'random';
+
 /** Was die Aktionen von der Oberfläche brauchen. */
 export interface ActionUi {
   /** Kurzer Hinweis, warum etwas nicht geht - mit Fehlerton. */
@@ -247,11 +250,11 @@ export class PlayerActions {
   }
 
   /**
-   * Untätige Dorfbewohner auswählen und zu ihnen springen. Normal alle auf
+   * Untätige Dorfbewohner auswählen und zu ihnen springen. `all`: alle auf
    * einmal - dann genügt ein Rechtsklick, um sie an die Arbeit zu schicken.
-   * Mit `all = false` nur einen, bei wiederholtem Aufruf reihum.
+   * `next`: nur einen, bei wiederholtem Aufruf reihum. `random`: einen zufälligen.
    */
-  selectIdle(all = true) {
+  selectIdle(which: IdlePick = 'all') {
     const idle = this.world.villagers.filter((v) => v.task.kind === 'idle');
     if (idle.length === 0) {
       this.ui.hint('Kein Dorfbewohner ist untätig');
@@ -260,7 +263,7 @@ export class PlayerActions {
     this.selection.clearBuildings();
     this.selection.clearSingle();
     let target: { x: number; y: number };
-    if (all) {
+    if (which === 'all') {
       this.selection.villagers.clear();
       for (const v of idle) this.selection.villagers.add(v.id);
       // Zur Mitte der Gruppe - verteilt über die Karte zum ersten.
@@ -269,11 +272,17 @@ export class PlayerActions {
       const spread = Math.max(...idle.map((v) => Math.hypot(v.x - mx, v.y - my)));
       target = spread < 40 ? { x: mx, y: my } : idle[0];
     } else {
-      // Nach dem gerade ausgewählten weitermachen, damit wiederholtes Klicken
-      // alle der Reihe nach durchgeht.
       const current = this.selection.villagers.size === 1 ? [...this.selection.villagers][0] : -1;
-      const index = idle.findIndex((v) => v.id === current);
-      const next = idle[(index + 1) % idle.length];
+      let next: Villager;
+      if (which === 'random') {
+        // Nicht noch einmal der gerade ausgewählte - sonst täte der Klick nichts.
+        const others = idle.length > 1 ? idle.filter((v) => v.id !== current) : idle;
+        next = others[Math.floor(Math.random() * others.length)];
+      } else {
+        // Nach dem gerade ausgewählten weitermachen, damit wiederholtes Klicken
+        // alle der Reihe nach durchgeht.
+        next = idle[(idle.findIndex((v) => v.id === current) + 1) % idle.length];
+      }
       target = next;
       this.selection.villagers.clear();
       this.selection.villagers.add(next.id);
