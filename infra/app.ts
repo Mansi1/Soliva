@@ -9,7 +9,10 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 
-const DOMAIN = 'game.mannseicher.com';
+// ponytail: vorerst nur soliva.mannseicher.com. game.mannseicher.com zeigt per CNAME auf Vercel, und dessen
+// CAA-Eintrag lässt Amazon keine Zertifikate ausstellen. Als zweiten Namen (Zertifikat + domainNames)
+// ergänzen, sobald game kein CNAME auf Vercel mehr ist (infra/README.md, „Umzug von game.mannseicher.com“).
+const DOMAIN = 'soliva.mannseicher.com';
 const REPO = 'Mansi1/Soliva';
 // Der Name steht fest, damit die Workflows ihn aus vars.AWS_ACCOUNT_ID bilden können.
 const DEPLOY_ROLE = 'soliva-github-deploy';
@@ -21,7 +24,9 @@ if (budgetEmails.length === 0) throw new Error('BUDGET_EMAILS fehlt: in infra/.e
 const app = new App();
 const env = (region: string) => ({ account: process.env.CDK_DEFAULT_ACCOUNT, region });
 // Alles liegt in eu-central-1, nur das Zertifikat nicht: CloudFront nimmt Zertifikate allein aus us-east-1.
-// Die ARN reicht CDK über crossRegionReferences weiter (SSM-Parameter, deployt mit `--all`).
+// Die ARN liest der Stack Soliva als Output von SolivaCertificate (schwache Referenz, cdk.json): Das
+// Zertifikat lässt sich so ersetzen, etwa um einen Namen erweitern. Löschen verhindert ACM, solange
+// CloudFront es nutzt.
 const certificateStack = new Stack(app, 'SolivaCertificate', { env: env('us-east-1'), crossRegionReferences: true });
 const stack = new Stack(app, 'Soliva', { env: env('eu-central-1'), crossRegionReferences: true });
 

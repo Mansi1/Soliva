@@ -2,6 +2,6 @@
   "app": "bun app.ts",
   "context": {
     "@aws-cdk/aws-cloudfront:defaultFunctionRuntimeV2_0": true,
-    "@aws-cdk/core:defaultCrossStackReferences": "strong"
+    "@aws-cdk/core:defaultCrossStackReferences": "weak"
   }
 }

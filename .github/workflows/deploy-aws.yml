@@ -1,4 +1,4 @@
-# Baut das Spiel und bringt es auf AWS (infra/README.md): Push auf main → game.mannseicher.com,
+# Baut das Spiel und bringt es auf AWS (infra/README.md): Push auf main → soliva.mannseicher.com,
 # Pull Request → Build für die Preview. Hochgeladen wird die Preview von preview-aws.yml:
 # Code aus einem PR läuft hier nie mit Zugang zu AWS (die Rolle vertraut nur main).
 name: deploy-aws

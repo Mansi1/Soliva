@@ -48,7 +48,7 @@ ausführen – sonst kommen statt der Dateien nur kleine Zeiger-Dateien an
 (nachholen mit `git lfs pull`).
 
 Gehostet wird auf AWS (S3 + CloudFront, `infra/README.md`): Jeder Push auf `main` geht nach
-`game.mannseicher.com`, jeder Pull Request bekommt einen Preview-Link als Kommentar.
+`soliva.mannseicher.com`, jeder Pull Request bekommt einen Preview-Link als Kommentar.
 
 ## Adressen
 

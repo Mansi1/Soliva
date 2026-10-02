@@ -6,7 +6,7 @@ ACM-Zertifikat, weil CloudFront Zertifikate allein aus us-east-1 annimmt.
 
 | Teil | Zweck |
 |---|---|
-| S3-Bucket + CloudFront (Prod) | `game.mannseicher.com` mit ACM-Zertifikat |
+| S3-Bucket + CloudFront (Prod) | `soliva.mannseicher.com` mit ACM-Zertifikat (`game.mannseicher.com` folgt, siehe unten) |
 | S3-Bucket + CloudFront (Preview) | ein Build je Pull Request unter `https://<id>.cloudfront.net/pr-<n>/`, nach 30 Tagen ohne Push gelöscht |
 | CloudFront Function `spa-fallback.js` | `/game/<seed>`, `/galerie` → `index.html` (200), fehlende Dateien → 404 |
 | Budget | Mail, wenn das AWS-Konto im Monat über 5 $ kostet oder laut Prognose kosten wird |
@@ -56,17 +56,16 @@ Braucht: ein AWS-Profil mit Admin-Rechten im Zielkonto, bun, Zugang zum DNS von 
    bun run deploy      # beide Stacks; fragt nach Bestätigung der IAM-Änderungen
    ```
 4. Während `deploy` beim Zertifikat wartet (Stack `SolivaCertificate`): In der ACM-Konsole, Region
-   **us-east-1**, das Zertifikat für
-   `game.mannseicher.com` öffnen und den angezeigten CNAME bei GoDaddy anlegen (Name ohne
-   `.mannseicher.com` am Ende). Sobald ACM ihn sieht, läuft der Deploy weiter. Am Spiel ändert der
-   Eintrag nichts.
+   **us-east-1**, das Zertifikat für `soliva.mannseicher.com` öffnen und den angezeigten CNAME bei
+   GoDaddy anlegen (Name ohne `.mannseicher.com` am Ende). Sobald ACM ihn sieht, läuft der Deploy weiter.
+   Scheitert es sofort mit `FAILED`, verbietet meist ein CAA-Eintrag Amazon (`dig +short CAA <name>`).
 5. Am Ende stehen die Outputs da: `ProdDomain` (`dxxxx.cloudfront.net`), `PreviewDomain` und die Buckets.
+   Bei GoDaddy einen CNAME `soliva` → `ProdDomain` anlegen.
 6. Die Konto-ID für die Workflows setzen:
    `gh variable set AWS_ACCOUNT_ID --repo Mansi1/Soliva --body <konto-id>`.
-7. Den PR mergen. Der Push auf `main` startet `deploy-aws` und lädt das Spiel hoch. Dann auf der
-   CloudFront-Adresse prüfen:
+7. Den PR mergen. Der Push auf `main` startet `deploy-aws` und lädt das Spiel hoch. Dann prüfen:
    ```bash
-   d=https://<ProdDomain>
+   d=https://soliva.mannseicher.com
    curl -sI $d/ | grep -iE '^HTTP|cache-control'                      # 200, max-age=0
    curl -sI $d/game/Testseed | grep -i '^HTTP'                         # 200
    curl -sI $d/assets/gibtsnicht.js | grep -i '^HTTP'                  # 404
@@ -75,14 +74,24 @@ Braucht: ein AWS-Profil mit Admin-Rechten im Zielkonto, bun, Zugang zum DNS von 
    node tools/ui/smoke.mjs $d
    ```
 
-## Umzug der Domain von Vercel
+## Umzug von game.mannseicher.com
 
-1. Ein bis zwei Tage vorher bei GoDaddy die TTL des CNAME `game` auf den kleinsten Wert setzen.
-2. Den CNAME `game` von `…vercel-dns-017.com` auf `ProdDomain` umstellen. Vercel liefert weiter aus,
-   bis die alte TTL abgelaufen ist - kein Ausfall.
-3. Prüfen: `curl -sI https://game.mannseicher.com/ | grep -iE 'server|x-cache'` zeigt CloudFront.
-4. Ein bis zwei Wochen beobachten (CloudFront-Konsole: Anfragen, 4xx/5xx), dann das Vercel-Projekt
-   von der Domain trennen und löschen. Die TTL wieder hochsetzen.
+`game` ist ein CNAME auf Vercel. Bei einem CNAME gilt der CAA-Eintrag des Ziels, und Vercels erlaubt
+Amazon keine Zertifikate (ACM bricht sofort mit `FAILED` ab). Neben einem CNAME darf kein eigener
+CAA stehen. Ablauf ohne Ausfall:
+
+1. Bei GoDaddy den CNAME `game` ersetzen durch:
+   - A `game` → `76.76.21.21` (Vercel liefert die Seite auch darüber aus), TTL 600
+   - CAA `game`: `0 issue "amazon.com"`, dazu Vercels `letsencrypt.org`, `sectigo.com`, `pki.goog`,
+     `globalsign.com`, damit Vercel sein Zertifikat weiter erneuern kann
+2. Eine Stunde warten (alte TTL), dann prüfen: `dig +short CAA game.mannseicher.com` zeigt `amazon.com`.
+3. In `app.ts` `game.mannseicher.com` als zweiten Namen ergänzen (`subjectAlternativeNames` am
+   Zertifikat, `domainNames` der Prod-Distribution), `bun run deploy`, den Validierungs-CNAME anlegen.
+4. A und CAA `game` durch einen CNAME `game` → `ProdDomain` ersetzen. Vercel liefert weiter aus, bis
+   die alte TTL abgelaufen ist.
+5. Prüfen: `curl -sI https://game.mannseicher.com/ | grep -iE 'server|x-cache'` zeigt CloudFront.
+6. Ein bis zwei Wochen beobachten (CloudFront-Konsole: Anfragen, 4xx/5xx), dann das Vercel-Projekt
+   von der Domain trennen und löschen.
 
 ## Grenzen
 
