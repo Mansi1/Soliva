@@ -19,10 +19,11 @@ const budgetEmails = (process.env.BUDGET_EMAILS ?? '').split(',').map((s) => s.t
 if (budgetEmails.length === 0) throw new Error('BUDGET_EMAILS fehlt: in infra/.env.local eintragen (Vorlage: .env.example im Repo)');
 
 const app = new App();
-// Alles in us-east-1: CloudFront nimmt Zertifikate nur von dort. Ein zweiter Stack in Europa nur für
-// die Buckets brächte Referenzen über Regionen, aber kaum etwas: Die Dateien kommen fast immer aus
-// dem Cache der Edge, der Ursprung zählt nur beim ersten Abruf.
-const stack = new Stack(app, 'Soliva', { env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: 'us-east-1' } });
+const env = (region: string) => ({ account: process.env.CDK_DEFAULT_ACCOUNT, region });
+// Alles liegt in eu-central-1, nur das Zertifikat nicht: CloudFront nimmt Zertifikate allein aus us-east-1.
+// Die ARN reicht CDK über crossRegionReferences weiter (SSM-Parameter, deployt mit `--all`).
+const certificateStack = new Stack(app, 'SolivaCertificate', { env: env('us-east-1'), crossRegionReferences: true });
+const stack = new Stack(app, 'Soliva', { env: env('eu-central-1'), crossRegionReferences: true });
 
 /** Privater Bucket hinter einer eigenen Distribution. */
 function site(id: string, props: Partial<cloudfront.DistributionProps>, bucketProps: s3.BucketProps = {}) {
@@ -51,7 +52,7 @@ function site(id: string, props: Partial<cloudfront.DistributionProps>, bucketPr
 }
 
 // Das Zertifikat wartet beim ersten Deploy, bis der CNAME zur Bestätigung beim DNS-Anbieter steht.
-const certificate = new acm.Certificate(stack, 'Certificate', {
+const certificate = new acm.Certificate(certificateStack, 'Certificate', {
   domainName: DOMAIN,
   validation: acm.CertificateValidation.fromDns(),
 });

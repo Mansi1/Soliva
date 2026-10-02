@@ -1,6 +1,8 @@
 # Hosting auf AWS
 
-Das Spiel ist eine statische Seite. `app.ts` (CDK) legt dafür an:
+Das Spiel ist eine statische Seite. `app.ts` (CDK) legt dafür zwei Stacks an: `Soliva` in
+eu-central-1 mit allem außer dem Zertifikat, und `SolivaCertificate` in us-east-1 nur mit dem
+ACM-Zertifikat, weil CloudFront Zertifikate allein aus us-east-1 annimmt.
 
 | Teil | Zweck |
 |---|---|
@@ -49,11 +51,12 @@ Braucht: ein AWS-Profil mit Admin-Rechten im Zielkonto, bun, Zugang zum DNS von 
 3. ```bash
    cd infra
    bun install
-   bun run bootstrap   # einmal je Konto und Region (us-east-1)
+   bun run bootstrap   # einmal je Konto, für eu-central-1 und us-east-1
    bun run diff        # zeigt, was angelegt wird
-   bun run deploy      # fragt nach Bestätigung der IAM-Änderungen
+   bun run deploy      # beide Stacks; fragt nach Bestätigung der IAM-Änderungen
    ```
-4. Während `deploy` beim Zertifikat wartet: In der ACM-Konsole (Region us-east-1) das Zertifikat für
+4. Während `deploy` beim Zertifikat wartet (Stack `SolivaCertificate`): In der ACM-Konsole, Region
+   **us-east-1**, das Zertifikat für
    `game.mannseicher.com` öffnen und den angezeigten CNAME bei GoDaddy anlegen (Name ohne
    `.mannseicher.com` am Ende). Sobald ACM ihn sieht, läuft der Deploy weiter. Am Spiel ändert der
    Eintrag nichts.

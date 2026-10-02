@@ -6,7 +6,7 @@
     "cdk": "cdk",
     "bootstrap": "bun --env-file=.env.local run cdk bootstrap",
     "diff": "bun --env-file=.env.local run cdk diff",
-    "deploy": "bun --env-file=.env.local run cdk deploy"
+    "deploy": "bun --env-file=.env.local run cdk deploy --all"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.272.0",

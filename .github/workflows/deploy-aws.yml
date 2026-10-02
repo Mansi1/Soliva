@@ -56,7 +56,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/soliva-github-deploy
-          aws-region: us-east-1
+          aws-region: eu-central-1
       - if: github.event_name != 'pull_request'
         run: |
           bucket=$(aws cloudformation describe-stacks --stack-name Soliva --query "Stacks[0].Outputs[?OutputKey=='ProdBucket'].OutputValue" --output text)
