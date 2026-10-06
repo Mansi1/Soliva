@@ -83,6 +83,10 @@ function DebugPanel() {
       {/* Drahtgitter des Geländes wie in der Galerie (main.ts). */}
       <div><button type="button" id="terrain-wire" class="panel-btn"
         title="Weißes Drahtgitter des Geländes: aus, über dem Gelände, nur Gitter">Gitter</button></div>
+      {/* Zellgröße des Geländegitters, Zweierpotenzen in CSS-Pixeln (main.ts). */}
+      <div><label title="Kantenlänge einer Zelle des Geländegitters - gröber heißt weniger Eckpunkte, aber glatteres Relief">
+        Zelle <input type="range" id="terrain-cell" min="1" max="7" step="1" /> <b id="terrain-cell-px">-</b>
+      </label></div>
       {/* Welt, Ansicht und Spielstand als Link (main.ts) - wie "Link teilen" im Menü. */}
       <div><button type="button" id="share-link" class="panel-btn"
         title="Welt, Kamera (Position, Zoom, Drehung, Neigung) und Spielstand als Link in die Zwischenablage">Link kopieren: Spielstand + Kamera</button></div>

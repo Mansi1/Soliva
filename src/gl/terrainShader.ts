@@ -14,6 +14,8 @@ import { LIGHT_GLSL } from './light';
  * liegen - wie früher, als das Licht vor dem Klemmen auf 0..1 kam.
  */
 export const CACHE_HEADROOM = 1.5;
+/** Zeilenabstand des Geländegitters in Zellen: sqrt(3)/2, gleichseitige Dreiecke (ensureGrid). */
+export const GRID_ROW = Math.sqrt(3) / 2;
 import { FLATTEN_GLSL } from '../world/flatten';
 
 /**
@@ -288,7 +290,10 @@ out vec2 vGrid;             // Spalte, Zeile des Gitters - für das Drahtgitter
 void main() {
   int col = gl_VertexID % uGridColumns;
   int row = gl_VertexID / uGridColumns;
-  vec2 g = uGridOrigin + vec2(float(col), float(row)) * uGridCell;
+  // Dreiecksgitter (ensureGrid): ungerade Zeilen eine halbe Zelle versetzt,
+  // Zeilenabstand sqrt(3)/2 - gleichseitige Dreiecke.
+  vec2 grid = vec2(float(col) + 0.5 * float(row & 1), float(row));
+  vec2 g = uGridOrigin + vec2(grid.x, grid.y * ${GRID_ROW}) * uGridCell;
   vec2 world = groundToWorld(g);
 
   float z = 0.0;
@@ -300,7 +305,7 @@ void main() {
     z = flattenZ(world, z);
   }
   vWorld = world;
-  vGrid = vec2(float(col), float(row));
+  vGrid = grid;
   // Ringpuffer: Texturkoordinaten laufen ueber den Rand hinaus, REPEAT
   // faltet sie zurueck.
   // Beim Neigen liegt der Cache in seiner eigenen Stauchung: nur v streckt sich.
@@ -1184,6 +1189,7 @@ in vec2 vWorld;
 in vec2 vCache;
 in vec2 vPrevTexel;
 in vec2 vGrid;
+uniform vec2 uGridPhase;        // Lage des Gitters in der Welt, je Achse modulo 3 - für die Sechsecke im Drahtgitter
 out vec4 fragColor;
 
 uniform sampler2D uCache;
@@ -1324,14 +1330,28 @@ void main() {
     }
   }
 
-  // Kanten des Gitters: Zellränder und die Diagonale (Dreiecke wie in ensureGrid),
-  // gut ein Geräte-Pixel breit.
+  // Kanten des Dreiecksgitters (ensureGrid): die Zeilen (b) und die beiden
+  // Schrägen (a, a + b), gut ein Geräte-Pixel breit. Jeder dritte Eckpunkt
+  // ist Mitte eines Sechsecks (a - b durch 3 teilbar, uGridPhase hält das
+  // beim Verschieben an der Weltstelle) - die Kanten, die keine Mitte
+  // berühren, sind die Sechseck-Ränder und werden dicker gezeichnet.
   if (uWire > 0) {
-    vec2 q = fract(vGrid);
-    vec2 w = fwidth(vGrid);
-    float edge = min(min(q.x / w.x, q.y / w.y), abs(q.x + q.y - 1.0) / (w.x + w.y));
+    float a = vGrid.x - 0.5 * vGrid.y + uGridPhase.x;
+    float b = vGrid.y + uGridPhase.y;
+    vec3 l = vec3(b, a, a + b);
+    // Abstand in Pixeln - fwidth machte Schrägen dicker als die Zeilen.
+    vec3 lx = dFdx(l), ly = dFdy(l);
+    vec3 d = abs(fract(l + 0.5) - 0.5) / sqrt(lx * lx + ly * ly);
+    float edge = 2.0 * min(d.x, min(d.y, d.z));
+    // Auf jeder Linie: das Stück zwischen zwei Eckpunkten, deren keiner Mitte ist.
+    vec3 n = floor(l + 0.5);
+    vec3 hex = vec3(
+        abs(mod(floor(a) - n.x, 3.0) - 1.0) < 0.5 ? d.x : 1e9,
+        abs(mod(floor(b) - n.y, 3.0) - 1.0) < 0.5 ? d.y : 1e9,
+        abs(mod(floor(b) - 2.0 * n.z, 3.0) - 1.0) < 0.5 ? d.z : 1e9);
+    float hexEdge = 2.0 * min(hex.x, min(hex.y, hex.z));
     if (uWire == 2) color = vec3(0.05, 0.08, 0.14);
-    color = mix(vec3(1.0), color, smoothstep(0.5, 1.5, edge));
+    color = mix(vec3(1.0), color, smoothstep(0.5, 1.5, edge) * smoothstep(2.5, 3.5, hexEdge));
   }
 
   fragColor = vec4(color, 1.0);
