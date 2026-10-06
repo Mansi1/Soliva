@@ -283,6 +283,7 @@ ${CACHE_SCALE_GLSL}
 out vec2 vWorld;
 out vec2 vCache;            // normierte Koordinate im Farb-Cache
 out vec2 vPrevTexel;        // Texel im alten Cache ab seiner Fenster-Ecke
+out vec2 vGrid;             // Spalte, Zeile des Gitters - für das Drahtgitter
 
 void main() {
   int col = gl_VertexID % uGridColumns;
@@ -299,6 +300,7 @@ void main() {
     z = flattenZ(world, z);
   }
   vWorld = world;
+  vGrid = vec2(float(col), float(row));
   // Ringpuffer: Texturkoordinaten laufen ueber den Rand hinaus, REPEAT
   // faltet sie zurueck.
   // Beim Neigen liegt der Cache in seiner eigenen Stauchung: nur v streckt sich.
@@ -1181,6 +1183,7 @@ precision highp float;
 in vec2 vWorld;
 in vec2 vCache;
 in vec2 vPrevTexel;
+in vec2 vGrid;
 out vec4 fragColor;
 
 uniform sampler2D uCache;
@@ -1204,6 +1207,7 @@ uniform vec2  uHoverTile;      // markiertes Tile, uHoverActive < 0.5 blendet au
 uniform float uHoverActive;
 uniform vec4  uViewRect;       // Ausschnitt der Hauptansicht (x, y, Breite, Hoehe), Pixel ab links oben
 uniform float uViewRectActive;
+uniform int   uWire;           // Drahtgitter wie in der Galerie: 0 aus, 1 über dem Gelände, 2 nur Gitter
 
 // Umgepflügte Äcker (siehe World.fieldSoil): je Tile ein Texel ab uFieldOrigin,
 // rgb = wie weit die drei Furchen des Tiles entlang y gepflügt sind, a = Feld.
@@ -1318,6 +1322,16 @@ void main() {
       if (edge < 1.0) color = mix(color, vec3(1.0), 0.9);
       else if (edge < 3.0) color = mix(color, vec3(0.0), 0.35);
     }
+  }
+
+  // Kanten des Gitters: Zellränder und die Diagonale (Dreiecke wie in ensureGrid),
+  // gut ein Geräte-Pixel breit.
+  if (uWire > 0) {
+    vec2 q = fract(vGrid);
+    vec2 w = fwidth(vGrid);
+    float edge = min(min(q.x / w.x, q.y / w.y), abs(q.x + q.y - 1.0) / (w.x + w.y));
+    if (uWire == 2) color = vec3(0.05, 0.08, 0.14);
+    color = mix(vec3(1.0), color, smoothstep(0.5, 1.5, edge));
   }
 
   fragColor = vec4(color, 1.0);
