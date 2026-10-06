@@ -65,6 +65,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-30: Das Ladeschild (`#loading`) fängt Maus und Rad ab, bis der Boden samt Vorrat gefüllt ist, höchstens 6 s (`LOADING_MAX_MS` in `main.ts`). Skripte, die gleich zoomen oder klicken, erst warten: `document.getElementById('loading').hidden`.
 - Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
 
+- 2026-10-06: Geländegitter ansehen per Playwright: `#terrain-wire` zweimal (nur Gitter), `#terrain-cell` per `value` + `input`-Ereignis (6 = 64 px), Modelle/Gras über `#dev-off` aus, Leertaste für flaches Gelände. Das Panel ist dabei unsichtbar - per `$eval` klicken, nicht `page.click`. Eckpunkte je Zoom: `getRenderStats().at(-1).terrainVertices`.
+
 ## Offen
 
 - Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.

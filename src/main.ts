@@ -342,6 +342,17 @@ function applyFacing(dir: string) {
 window.addEventListener('beforeunload', () => world.save());
 
 const renderer = new MapRenderer(canvas, seed, camera.tileSize, camera.pixelRatio);
+// Zellgröße des Geländegitters: der Schieber steht für 2^n CSS-Pixel - der
+// Renderer rundet die Zelle ohnehin auf eine Zweierpotenz (cellSize).
+const cellSlider = document.getElementById('terrain-cell') as HTMLInputElement;
+const cellLabel = document.getElementById('terrain-cell-px') as HTMLElement;
+const showCell = () => { cellLabel.textContent = `${renderer.terrainCellPixels} px`; };
+cellSlider.value = String(Math.log2(renderer.terrainCellPixels));
+showCell();
+cellSlider.addEventListener('input', () => {
+  renderer.terrainCellPixels = 2 ** Number(cellSlider.value);
+  showCell();
+});
 // Abschalter (MapRenderer.off): im Entwickler-Panel "Aus" (data-off, Haken =
 // aus), im Menü unter Grafik "Teile zeichnen" (data-on, Haken = an). Alle
 // zeigen denselben Stand.

@@ -12,6 +12,7 @@ import {
   DISPLAY_FRAGMENT_SOURCE,
   FILL_FRAGMENT_SOURCE,
   FILL_VERTEX_SOURCE,
+  GRID_ROW,
   VERTEX_SOURCE,
 } from './terrainShader';
 import {
@@ -375,8 +376,12 @@ export class TerrainRenderer {
   hoverTile: { x: number; y: number } | null = null;
   /** Ausschnitt der Hauptansicht in Geräte-Pixeln dieses Canvas - nur für die Minimap. */
   viewRect: { x: number; y: number; width: number; height: number } | null = null;
-  /** Kantenlänge einer Gitterzelle in CSS-Pixeln. Flach reicht ein grobes Gitter. */
-  cellPixels = 4;
+  /**
+   * Kantenlänge einer Gitterzelle in CSS-Pixeln. Flach reicht ein grobes Gitter.
+   * Im Entwickler-Panel per Schieber (main.ts); game/Ground.ts misst die
+   * Bodenhöhe der Figuren mit demselben Wert.
+   */
+  cellPixels = 16;
   /**
    * Geräte-Pixel je CSS-Pixel. Die Grenzen des Gitters gelten in CSS-Pixeln:
    * in Geräte-Pixeln hätte Retina (2) viermal so viele Eckpunkte, jeder mit
@@ -448,8 +453,11 @@ export class TerrainRenderer {
     return this.gl;
   }
 
-  /** Zwei Dreiecke je Zelle, zeilenweise - passt zu gl_VertexID im Vertex-Shader. */
   /**
+   * Dreiecksgitter: jede ungerade Zeile liegt eine halbe Zelle nach rechts
+   * (Vertex-Shader), die Dreiecke sind gleichseitig, um jeden Eckpunkt liegt
+   * ein Sechseck. Zwei Dreiecke je Zelle, zeilenweise - passt zu gl_VertexID.
+   *
    * Sorgt für einen Index-Puffer mit mindestens `columns` x `rows` Eckpunkten
    * und gibt seine Spaltenzahl zurück - die ist der Zeilenabstand im Shader.
    * Ein größerer vorhandener wird weiterbenutzt (gezeichnet werden nur die
@@ -467,10 +475,13 @@ export class TerrainRenderer {
     for (let r = 0; r < rows - 1; r++) {
       for (let c = 0; c < columns - 1; c++) {
         const i = r * columns + c;
+        // Gerade Zeile: die untere liegt rechts versetzt, die Diagonale fällt
+        // nach links unten - ungerade umgekehrt.
+        const odd = r & 1;
         indices[o++] = i;
         indices[o++] = i + 1;
-        indices[o++] = i + columns;
-        indices[o++] = i + 1;
+        indices[o++] = i + columns + odd;
+        indices[o++] = i + 1 - odd;
         indices[o++] = i + columns + 1;
         indices[o++] = i + columns;
       }
@@ -1200,21 +1211,25 @@ export class TerrainRenderer {
     const { width, height } = gl.canvas;
 
     // Gitter in Boden-Koordinaten (u, v), einmal über den ganzen Bildschirm.
-    // Unten ragt es um den höchsten Gipfel hinaus: Gelände, dessen Fuß unter
-    // dem Bildrand liegt, kann bis ins Bild hineinragen.
+    // Unten ragt es so weit hinaus, wie Gipfel unter dem Bildrand hier ins Bild
+    // ragen können (reachZ, gemessen wie für den Cache) - mehr hat der Cache
+    // ohnehin nicht.
     const cell = this.cellSize(camera);
     this.gridCell = cell;
     const halfU = width / 2 / camera.pixelsPerTile;
     const halfV = height / 2 / camera.pixelsPerTile;
-    const reach = camera.reliefScale * viewZScreen() * MAX_RELIEF;
+    const reach = camera.reliefScale * viewZScreen() * this.reachZ;
     const { u: camU, v: camV } = worldToGround(camera.centerX, camera.centerY);
 
     // Am Weltraster ausgerichtet, damit die Eckpunkte beim Verschieben an
-    // derselben Weltstelle bleiben.
-    const u0 = Math.floor((camU - halfU) / cell) * cell;
-    const v0 = Math.floor((camV - halfV) / cell) * cell;
-    const columns = Math.ceil(2 * halfU / cell) + 2;
-    const rows = Math.ceil((2 * halfV + reach) / cell) + 2;
+    // derselben Weltstelle bleiben - v auf Zeilenpaare, damit die versetzten
+    // Zeilen versetzt bleiben. Links eine Zelle mehr: ungerade Zeilen beginnen
+    // eine halbe Zelle weiter rechts.
+    const rowStep = cell * GRID_ROW;
+    const u0 = (Math.floor((camU - halfU) / cell) - 1) * cell;
+    const v0 = Math.floor((camV - halfV) / (2 * rowStep)) * 2 * rowStep;
+    const columns = Math.ceil(2 * halfU / cell) + 3;
+    const rows = Math.ceil((2 * halfV + reach) / rowStep) + 3;
     const stride = this.ensureGrid(columns, rows);
 
     gl.useProgram(this.program);
@@ -1274,6 +1289,13 @@ export class TerrainRenderer {
     gl.uniform2f(this.location('uGridOrigin'), u0, v0);
     gl.uniform1f(this.location('uGridCell'), cell);
     gl.uniform1i(this.location('uGridColumns'), stride);
+    if (this.wire) {
+      // Erster Eckpunkt in Weltzählung (Spalte, Zeile; die Zeile ist gerade),
+      // im schiefen Gitter a = Spalte - Zeile / 2, b = Zeile - modulo 3.
+      const col = Math.round(u0 / cell);
+      const row = Math.round(v0 / rowStep);
+      gl.uniform2f(this.location('uGridPhase'), mod(col - row / 2, 3), mod(row, 3));
+    }
 
     gl.uniform1i(this.location('uWire'), this.wire);
     gl.uniform1f(this.location('uHoverActive'), this.hoverTile ? 1 : 0);
