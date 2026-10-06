@@ -981,8 +981,10 @@ vec3 biomeBase(int biome, float height, float variation) {
 // Farbe eines Land-Texels: Bodenmuster samt Feinrelief an der Musterkoordinate
 // p (von oben: Welt-(x, y), am Hang auch seitlich, siehe main). Die Anteile
 // der Böden liegen schon fest; ds ist die Detailstufe in dieser Projektion.
-vec3 landSurface(vec2 p, float ds, int biome, float height, float variation, float moisture,
+vec3 landSurface(vec2 p, float ds, int biome, float height, float moisture,
                  float wood, float desert, float beach, float rock, float snow, float shoreWet) {
+  // Farbschwankung wie beim Wasser, aber an der Musterkoordinate.
+  float variation = (snoise(L_DETAIL, p * 0.35 / ds) + 1.0) * 0.5;
   vec3 color;
   if (biome == B_SNOW) {
     color = snowTexture(biomeBase(biome, height, variation), p, ds);
@@ -1064,9 +1066,6 @@ void main() {
   float variation = (snoise(L_DETAIL, tile * 0.35 / detailStep) + 1.0) * 0.5;
 
   bool isWater = biome == B_DEEP_WATER || biome == B_WATER;
-  // Nachbarhöhen für Hangschattierung, Relief-Normale und Triplanar (unten).
-  float hRight = elevation((tile + vec2(step, 0.0)) * uMapScale, detailStep);
-  float hDown = elevation((tile + vec2(0.0, step)) * uMapScale, detailStep);
   vec3 color;
   // Flachwasser: Tiefe 0..1 über das Band vor dem Ufer - im Alpha-Kanal, die
   // Brandung im Bild läuft daran entlang. 1: Land oder tiefes Wasser.
@@ -1076,6 +1075,8 @@ void main() {
   // Anteil Sand (Strand, Wüste) - dort wird die Hangschattierung sanfter,
   // sonst zieht das Höhenrauschen dunkle Schlieren durch den Sand.
   float sandy = 0.0;
+  // Schrittweite fürs Mikrorelief in Schattierung und Licht - am Hang gröber (unten).
+  float shadeStep = detailStep;
 
   if (isWater) {
     float depth = clamp(
@@ -1141,11 +1142,20 @@ void main() {
     // ponytail: der Cache tastet in Boden-Koordinaten ab, am steilen Hang
     // liegen seine Texel darum im Bild gestreckt (Feindetail blendet dort
     // über sideStep aus); dichter abtasten, wenn Hänge trotzdem unscharf wirken.
+    // Die Neigung dafür über eine halbe Tile und ohne Mikro-Oktaven - je Pixel
+    // gemessen zöge das Rauschen sie hin und her, und auch flache Wiese käme
+    // von der falschen Seite (Steine quer zum Hang gestreckt).
     vec3 tri = vec3(0.0, 0.0, 1.0);
     vec2 grad = vec2(0.0);
     if (uReliefScale > 0.0) {
+      // Die Mitte ist height samt Mikro-Oktaven - deren Rest ist über eine
+      // halbe Tile klein gegen einen steilen Hang.
+      const float SLOPE_STEP = 0.5;
       float z0 = reliefZ(height);
-      grad = vec2(reliefZ(hRight) - z0, reliefZ(hDown) - z0) * uReliefScale / step;
+      grad = vec2(
+          reliefZ(elevation((tile + vec2(SLOPE_STEP, 0.0)) * uMapScale, SLOPE_STEP)) - z0,
+          reliefZ(elevation((tile + vec2(0.0, SLOPE_STEP)) * uMapScale, SLOPE_STEP)) - z0)
+          * uReliefScale / SLOPE_STEP;
       vec3 w = normalize(vec3(grad, 1.0));
       w *= w;
       w *= w;
@@ -1155,22 +1165,48 @@ void main() {
     float zTiles = reliefZ(height) * uReliefScale;
     // Ein Texel rückt an der Seite um so viel weiter, wie der Hang steigt.
     float sideStep = detailStep * max(1.0, length(grad));
+    // Auch das Mikrorelief der Höhe hängt an (x, y): am Hang nur so fein,
+    // wie der Cache es dort auflöst, sonst zieht es Streifen die Falllinie hinab.
+    shadeStep = sideStep;
     // Eine Aufrufstelle statt drei: landSurface ist groß, dreimal eingesetzt
     // würde der Shader auch auf flachem Boden teurer.
+    // Steine und Blätter melden Maske und Normale über gProp* - je Richtung
+    // gewichtet, sonst prägte der gestreckte Stein von oben das Licht.
     color = vec3(0.0);
+    float propMask = 0.0;
+    vec3 propNormal = vec3(0.0);
+    float propWeight = 0.0;
     for (int i = 2; i >= 0; i--) {
       if (tri[i] <= 0.0) continue;
+      gPropMask = 0.0;
+      gPropNormal = vec3(0.0, 0.0, 1.0);
+      gPropNormalWeight = 0.0;
       vec2 p = i == 2 ? tile : vec2(i == 0 ? tile.y : tile.x, zTiles);
-      color += landSurface(p, i == 2 ? detailStep : sideStep, biome, height, variation, moisture,
+      color += landSurface(p, i == 2 ? detailStep : sideStep, biome, height, moisture,
                            wood, desert, beach, rock, snow, shoreWet) * tri[i];
+      // Normale der Seiten aus ihrer Ebene zurück in die Welt: "oben" zeigt
+      // dort vom Hang weg.
+      vec3 n = gPropNormal;
+      if (i == 0) n = vec3(-sign(grad.x) * n.z, n.x, n.y);
+      if (i == 1) n = vec3(n.x, -sign(grad.y) * n.z, n.y);
+      propMask += gPropMask * tri[i];
+      propNormal += n * gPropNormalWeight * tri[i];
+      propWeight += gPropNormalWeight * tri[i];
     }
+    gPropMask = propMask;
+    gPropNormalWeight = propWeight;
+    if (propWeight > 0.0) gPropNormal = normalize(propNormal);
   }
 
   // Hillshading. Die Nachbarhoehen werden bewusst eigens ausgewertet statt
   // ueber dFdx/dFdy: Bildschirm-Ableitungen gelten je 2x2-Block, die
   // Schattierung waere dann nur halb aufgeloest. Der GPU ist der dreifache
-  // Aufwand egal, und so rechnet der Shader exakt dasselbe wie shadeFrom().
-  float shade = tanh(((height - hRight) + (height - hDown)) * uShadeGain / step);
+  // Aufwand egal, und so rechnet der Shader dasselbe wie shadeFrom() - bis auf
+  // steile Hänge, dort mit gröberem Mikrorelief (shadeStep).
+  float h0 = shadeStep > detailStep ? elevation(n, shadeStep) : height;
+  float hRight = elevation((tile + vec2(step, 0.0)) * uMapScale, shadeStep);
+  float hDown = elevation((tile + vec2(0.0, step)) * uMapScale, shadeStep);
+  float shade = tanh(((h0 - hRight) + (h0 - hDown)) * uShadeGain / step);
   // Im Flachland gedämpft, sonst zeichnet sie jede kleine Welle der Wiese nach.
   float lowland = mix(uLowlandShade, 1.0, smoothstep(uMountainFoot - 0.15, uMountainFoot, height));
   // Zur Wasserlinie hin wie auf dem Wasser - sonst springt die Helligkeit dort.
@@ -1184,7 +1220,7 @@ void main() {
   // festen Sonne (SUN_XY) eingebrannt - ins Licht nehmen, wenn die wandernde
   // Sonne daran sichtbar falsch wirkt.
   if (uReliefScale > 0.0 && !isWater) {
-    float z = reliefZ(height);
+    float z = reliefZ(h0);
     vec3 normal = normalize(vec3(
         (z - reliefZ(hRight)) / step,
         (z - reliefZ(hDown)) / step,
