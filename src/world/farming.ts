@@ -47,12 +47,15 @@ export function furrowNeeds(f: Furrow, phase: FarmPhase): boolean {
 export class Farming {
   /** Zusammenhängende Felder je Feldstück - neu berechnet, wenn sich an den Gebäuden etwas ändert. */
   private groups = new Map<string, Farm[]>();
+  /** Die Furchen je Feld (furrows) - gemerkt wie die Gruppen; jeder Bauer fragt sie in jedem Tick ab. */
+  private furrowLists = new Map<Farm[], FurrowRef[]>();
 
   constructor(private world: FarmingWorld) {}
 
   /** Nach Bau oder Abriss: die Gruppen neu berechnen. */
   invalidate() {
     this.groups.clear();
+    this.furrowLists.clear();
   }
 
   /** Das zusammenhängende Feld, zu dem `building` gehört (leer, wenn es kein Feld ist). */
@@ -81,10 +84,16 @@ export class Farming {
   }
 
   /** Alle Furchen eines Felds, die es gibt (kleinere Feldstücke haben nicht alle neun). */
-  furrows(group: Farm[]): FurrowRef[] {
-    return group.flatMap((building) => building.furrows
-      .map((f, row) => ({ building, row, f }))
-      .filter(({ row }) => building.furrowCells(row).length > 0));
+  furrows(group: Farm[]): readonly FurrowRef[] {
+    let list = this.furrowLists.get(group);
+    if (!list) {
+      // Gilt, solange die Gruppe gilt: Tiles und Furchen eines Felds ändern sich nur beim Anlegen und Laden.
+      list = group.flatMap((building) => building.furrows
+        .map((f, row) => ({ building, row, f }))
+        .filter(({ row }) => building.furrowCells(row).length > 0));
+      this.furrowLists.set(group, list);
+    }
+    return list;
   }
 
   /** Was auf dem Feld, zu dem `building` gehört, gerade dran ist. */
