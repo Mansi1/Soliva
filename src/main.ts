@@ -23,6 +23,7 @@ import {
 } from './map';
 import type { EntityInstance, StaticBatch } from './gl/entityRenderer';
 import { setAnimationSpeed, setAnimationsPaused } from './gl/entityRenderer';
+import { terrainLayer } from './gl/terrainShader';
 import {
   player,
   PLAYER_COLORS,
@@ -103,7 +104,7 @@ function resize() {
 
 applyCanvasSize();
 
-// Schalter zum Prüfen (?festesLicht, ?regen, ?ohneEffekte) - gelesen, bevor die Adresse aufgeräumt wird.
+// Schalter zum Prüfen (?festesLicht, ?regen, ?ohneEffekte, ?ohneCache, ?muster, ?tischdecke) - gelesen, bevor die Adresse aufgeräumt wird.
 const startParams = new URLSearchParams(window.location.search);
 const seed = currentSeed();
 const mapGen = new MapGenerator(seed);
@@ -358,6 +359,19 @@ const minimap = new MiniMap(minimapCanvas, seed, camera.pixelRatio);
 const lighting = startParams.has('festesLicht') ? null : new Lighting(seed);
 const alwaysRain = startParams.has('regen');
 renderer.postEnabled = !startParams.has('ohneEffekte');
+// Schichten des Geländes: Prüf-Modi aus der Adresse, im Menü unter Grafik
+// "Gelände" je ein Haken (data-layer = Bit in TERRAIN_LAYERS). Gilt bis zum Neuladen.
+for (const [param, key] of [['muster', 'PATTERN'], ['tischdecke', 'TABLECLOTH'], ['ohneCache', 'DIRECT']] as const) {
+  if (startParams.has(param)) renderer.terrainLayers |= terrainLayer(key);
+}
+const layerBoxes = document.querySelectorAll<HTMLInputElement>('input[data-layer]');
+for (const box of layerBoxes) {
+  const bit = 1 << Number(box.dataset.layer);
+  box.checked = (renderer.terrainLayers & bit) !== 0;
+  box.addEventListener('change', () => {
+    renderer.terrainLayers = box.checked ? renderer.terrainLayers | bit : renderer.terrainLayers & ~bit;
+  });
+}
 
 camera.moveTo(startX, startY);
 

@@ -385,6 +385,13 @@ export class MapRenderer {
   readonly particles = new ParticleSources();
   /** Ohne Post-Effekte zeichnet die Szene direkt ins Canvas (Prüfschalter ?ohneEffekte). */
   postEnabled = true;
+  /** Schichten des Geländes (TERRAIN_LAYERS, je ein Bit) - Einstellungen → Grafik → Gelände. */
+  get terrainLayers(): number {
+    return this.terrain.layers;
+  }
+  set terrainLayers(mask: number) {
+    this.terrain.layers = mask;
+  }
   /**
    * Stärke des Reliefs, 1 = voll, gegen 0 flach. Zum Flachlegen, um hinter
    * Berge zu sehen. Nie ganz 0: das wäre für den Cache "kein Relief" und

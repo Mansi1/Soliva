@@ -64,6 +64,9 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-30: Cache-Fehler nach dem Scrollen prüfen: vorübergehend einen Hook einbauen, der alle Cache-Fenster verwirft (`b.window = null`) und den Speicher abschaltet; Bild vorher/nachher vergleichen. So war der Fehler mit wieder hereinkommenden, schon gespeicherten Kacheln zu sehen (1,7-60 % der Pixel).
 - 2026-09-30: Das Ladeschild (`#loading`) fängt Maus und Rad ab, bis der Boden samt Vorrat gefüllt ist, höchstens 6 s (`LOADING_MAX_MS` in `main.ts`). Skripte, die gleich zoomen oder klicken, erst warten: `document.getElementById('loading').hidden`.
 - 2026-10-06: Ein offener Spiel-Tab im eigenen Browser rechnet beim Bench mit - einzelne Läufe brachen auf 36-51 fps in `stadt` ein. Vor dem Messen alle Spiel-Tabs schließen.
+- 2026-10-06, M1: Unscharfe/gestreckte Hänge prüfen mit Einstellungen → Grafik → Gelände → Testmuster (rote Quadrate auf Weiß). In Bodentexturen sieht man Streckung kaum. Testszene: `/game/Soliva?lat=-26.28&lng=169.52&zoom=5&rot=3` (Hang zur Kamera, Tiles im Bild ~3,4x so hoch).
+- 2026-10-06, M1: Gelände je Pixel ohne Cache (`?ohneCache`) ist scharf, aber 8-12 fps (GPU 160-290 ms). Cache überall doppelt so dicht: `stadt` 59 -> 31 fps. Tischdecke (Atlas, Block je Tile nach Bildgröße): scharf bei ~4 ms GPU laut Panel, nicht per Bench gemessen.
+- 2026-10-06: Rauschen mit Frequenz `p / ds` ist Moiré, sobald ds von Texel zu Texel wechselt (große Weltkoordinaten). Frequenz fest lassen, nur die Stärke mit ds ausblenden.
 - Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
 
 ## Offen

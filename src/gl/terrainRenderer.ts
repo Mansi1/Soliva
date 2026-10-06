@@ -6,10 +6,13 @@
 
 import { TILE, TileStore, hashText, type StoredTile } from './tileStore';
 import { MAX_FLAT_ZONES } from '../world/flatten';
-import { NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS } from '../noise';
+import { MapGenerator, NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS, reliefZ } from '../noise';
+import { ShelfAtlas, blockSize, type Block } from './atlasLayout';
 import {
   CACHE_HEADROOM,
   DISPLAY_FRAGMENT_SOURCE,
+  TERRAIN_LAYERS_DEFAULT,
+  terrainLayer,
   FILL_FRAGMENT_SOURCE,
   FILL_VERTEX_SOURCE,
   VERTEX_SOURCE,
@@ -18,6 +21,7 @@ import {
   MAX_RELIEF,
   Z_SCREEN_MAX,
   bindScreen,
+  groundToWorld,
   setCameraUniforms,
   setViewUniforms,
   viewGroundV,
@@ -147,6 +151,18 @@ export const CARDS_FROM = 24;
 
 /** Rand um den Bildschirm, damit beim Verschieben nichts Ungefülltes ins Bild rutscht. */
 const CACHE_MARGIN = 64;
+/**
+ * Cache-Zeilen je Bildzeile auf flachem Boden. Ein Hang, der zur Kamera
+ * zeigt, zieht jede Zeile im Bild um ein Mehrfaches in die Höhe. 2 machte
+ * Hänge schärfer, kostete aber überall doppelte Füllarbeit (stadt auf M1:
+ * 59 -> 31 fps) - scharfe Hänge bringt stattdessen die Tischdecke (Atlas).
+ */
+const V_DENSITY = 1;
+
+/** Bodenstauchung, für die der Cache rechnet - V_DENSITY-mal so viele Zeilen. */
+function cacheGroundV(camera: GpuCamera): number {
+  return (camera.cacheGroundV ?? viewGroundV()) * V_DENSITY;
+}
 
 export function link(gl: WebGL2RenderingContext, vertexSource: string, fragmentSource: string): WebGLProgram {
   const vertex = compile(gl, gl.VERTEX_SHADER, vertexSource);
@@ -267,6 +283,11 @@ export class TerrainRenderer {
     gl.uniform1i(this.location('uNormal'), 4);
     gl.uniform1i(this.location('uNormalPrev'), 8);
     gl.uniform1i(this.location('uFields'), 2);
+    // Tischdecke - auch ohne sie fest: zwei Sampler verschiedener Art auf
+    // Einheit 0 (dort liegt die Rauschtextur) ließen jedes Zeichnen scheitern.
+    gl.uniform1i(this.location('uAtlasColor'), 5);
+    gl.uniform1i(this.location('uAtlasNormal'), 6);
+    gl.uniform1i(this.location('uPage'), 7);
     gl.uniform1f(this.location('uFieldSize'), FIELD_WINDOW);
 
     gl.useProgram(this.fillProgram);
@@ -274,7 +295,221 @@ export class TerrainRenderer {
     // Zwei Geräte-Pixel: entspricht der Zellgröße, gegen die Mikro-Detail und
     // Farbtextur ursprünglich abgestimmt wurden.
     gl.uniform1f(this.fillLocation('uDetailPixels'), 2);
-    this.uploadPalette(palette);
+    this.uploadPalette(palette, (name) => this.fillLocation(name));
+    // Dasselbe für das Bild - ohne Cache rechnet es terrainAt selbst.
+    gl.useProgram(this.program);
+    gl.uniform1f(this.location('uDetailPixels'), 2);
+    this.uploadPalette(palette, (name) => this.location(name));
+  }
+
+  /** Atlas samt Seitentabelle anlegen - einmal, beim ersten Bild mit Tischdecke. */
+  private createAtlas(): Atlas {
+    const gl = this.gl;
+    const size = Math.min(4096, this.maxTextureSize);
+    const texture = (unit: number, format: number, base: number, type: number, w: number, filter: number) => {
+      const t = gl.createTexture()!;
+      gl.activeTexture(unit);
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texImage2D(gl.TEXTURE_2D, 0, format, w, w, 0, base, type, null);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    };
+    const color = texture(gl.TEXTURE5, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, size, gl.LINEAR);
+    const normal = texture(gl.TEXTURE6, gl.RG8, gl.RG, gl.UNSIGNED_BYTE, size, gl.LINEAR);
+    const page = texture(gl.TEXTURE7, gl.RGBA16UI, gl.RGBA_INTEGER, gl.UNSIGNED_SHORT, PAGE_SIZE, gl.NEAREST);
+    gl.activeTexture(gl.TEXTURE0);
+    const framebuffer = gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, color, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normal, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+      throw new Error('Gelände-Atlas: Framebuffer mit Farbe und Normale ist unvollständig');
+    }
+    bindScreen(gl);
+    return {
+      color, normal, page, framebuffer, size, shelves: new ShelfAtlas(size), key: '',
+      blocks: new Map(), queue: [], pageData: new Uint16Array(PAGE_SIZE * PAGE_SIZE * 4), pageDirty: true,
+    };
+  }
+
+  /** Höhe einer Tile-Ecke in Tiles, wie das Gelände-Gitter sie anhebt (ohne Feindetail). */
+  private cornerHeight(x: number, y: number, relief: number): number {
+    const key = `${x},${y}`;
+    let z = this.cornerZ.get(key);
+    if (z === undefined) {
+      if (this.cornerZ.size > 200_000) this.cornerZ.clear();
+      this.heights ??= new MapGenerator(this.seed);
+      z = reliefZ(this.heights.heightAt(x, y)) * relief;
+      this.cornerZ.set(key, z);
+    }
+    return z;
+  }
+
+  /**
+   * Blöcke für die Tiles im Bild (Boden-Rechteck um die Kamera, unten samt
+   * hereinragender Gipfel) anlegen, weit entfernte freigeben. Ändert sich
+   * Maßstab, Neigung, Drehung oder Inhalt, beginnt der Atlas neu.
+   */
+  private updateAtlas(camera: GpuCamera, camU: number, camV: number, halfU: number, downV: number) {
+    const atlas = (this.atlas ??= this.createAtlas());
+    const ppt = camera.pixelsPerTile;
+    const relief = camera.reliefScale > 0 ? 1 : 0;
+    const key = `${ppt}|${viewGroundV().toFixed(5)}|${viewRotation()}|${relief}|${this.viewMode}`;
+    if (key !== atlas.key) {
+      atlas.key = key;
+      atlas.shelves.clear();
+      atlas.blocks.clear();
+      atlas.queue = [];
+      atlas.pageData.fill(0);
+      atlas.pageDirty = true;
+      this.cornerZ.clear();
+    }
+    const halfV = this.gl.canvas.height / 2 / ppt;
+    const corners = [[-halfU, -halfV], [halfU, -halfV], [-halfU, downV], [halfU, downV]]
+      .map(([du, dv]) => groundToWorld(camU + du, camV + dv));
+    const x0 = Math.floor(Math.min(...corners.map((c) => c.x))) - 1;
+    const x1 = Math.ceil(Math.max(...corners.map((c) => c.x))) + 1;
+    const y0 = Math.floor(Math.min(...corners.map((c) => c.y))) - 1;
+    const y1 = Math.ceil(Math.max(...corners.map((c) => c.y))) + 1;
+    // ponytail: die Seitentabelle fasst PAGE_SIZE Tiles je Achse; weiter
+    // herausgezoomt bleibt es beim Ring-Cache - Tabelle vergrößern, wenn die
+    // Tischdecke auch dort gebraucht wird.
+    if (x1 - x0 >= PAGE_SIZE - 8 || y1 - y0 >= PAGE_SIZE - 8) return;
+
+    const project = (dx: number, dy: number, dz: number): [number, number] => {
+      const g = worldToGround(dx, dy);
+      return [g.u * ppt, (g.v - viewZScreen() * dz) * ppt];
+    };
+    // Liegt das Tile samt Höhe im Bild (Boden-Koordinaten, margin Tiles Rand)?
+    const onScreenAt = (tx: number, ty: number, z: number[], margin: number) => {
+      let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+      [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([dx, dy], i) => {
+        const g = worldToGround(tx + dx, ty + dy);
+        const v = g.v - viewZScreen() * z[i];
+        u0 = Math.min(u0, g.u); u1 = Math.max(u1, g.u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
+      });
+      return u1 >= camU - halfU - margin && u0 <= camU + halfU + margin && v1 >= camV - halfV - margin && v0 <= camV + halfV + margin;
+    };
+    // Bänder: Tiles weit außerhalb des Rechtecks zuerst freigeben.
+    for (const [k, entry] of atlas.blocks) {
+      if (entry.tx < x0 || entry.tx > x1 || entry.ty < y0 || entry.ty > y1) {
+        atlas.shelves.free(entry.block);
+        this.setPage(atlas, entry.tx, entry.ty, null);
+        atlas.blocks.delete(k);
+      }
+    }
+    const fresh: string[] = [];
+    for (let ty = y0; ty <= y1; ty++) {
+      for (let tx = x0; tx <= x1; tx++) {
+        const k = `${tx},${ty}`;
+        const z: [number, number, number, number] = [
+          this.cornerHeight(tx, ty, relief), this.cornerHeight(tx + 1, ty, relief),
+          this.cornerHeight(tx, ty + 1, relief), this.cornerHeight(tx + 1, ty + 1, relief)];
+        const present = atlas.blocks.get(k);
+        const visible = onScreenAt(tx, ty, z, 1);
+        if (present) {
+          if (!onScreenAt(tx, ty, z, 4)) {
+            atlas.shelves.free(present.block);
+            this.setPage(atlas, tx, ty, null);
+            atlas.blocks.delete(k);
+          }
+          continue;
+        }
+        if (!visible) continue;
+        const { w, h } = blockSize(z, project, 1024);
+        // Ein Texel Rand ringsum (siehe uBlockOrigin im Befüll-Shader).
+        const block = atlas.shelves.alloc(w + 2, h + 2);
+        if (!block) {
+          addRenderStats('atlasFull', 1);
+          continue;
+        }
+        atlas.blocks.set(k, { tx, ty, block, filled: false });
+        fresh.push(k);
+      }
+    }
+    if (fresh.length > 0) {
+      const center = groundToWorld(camU, camV);
+      const distance = (k: string) => {
+        const e = atlas.blocks.get(k)!;
+        return Math.hypot(e.tx + 0.5 - center.x, e.ty + 0.5 - center.y);
+      };
+      atlas.queue = [...atlas.queue.filter((k) => atlas.blocks.has(k)), ...fresh].sort((a, b) => distance(a) - distance(b));
+    }
+  }
+
+  private setPage(atlas: Atlas, tx: number, ty: number, block: Block | null) {
+    const i = (((ty & (PAGE_SIZE - 1)) * PAGE_SIZE) + (tx & (PAGE_SIZE - 1))) * 4;
+    atlas.pageData.set(block ? [block.x, block.y, block.w - 2, block.h - 2] : [0, 0, 0, 0], i);
+    atlas.pageDirty = true;
+  }
+
+  /** Blöcke aus der Warteschlange befüllen, bis das Budget (Texel) aufgebraucht ist. */
+  private fillAtlas(camera: GpuCamera, budget: number) {
+    const atlas = this.atlas;
+    const gl = this.gl;
+    if (atlas && atlas.queue.length > 0) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, atlas.framebuffer);
+      gl.viewport(0, 0, atlas.size, atlas.size);
+      gl.disable(gl.DEPTH_TEST);
+      gl.enable(gl.SCISSOR_TEST);
+      gl.useProgram(this.fillProgram);
+      gl.bindVertexArray(this.fillVao);
+      const f = (name: string) => this.fillLocation(name);
+      gl.uniform1f(f('uPixelsPerTile'), camera.pixelsPerTile);
+      gl.uniform1f(f('uStoneCardPixels'), CARDS_FROM * this.cacheRatio);
+      gl.uniform1f(f('uFlowerObjectPixels'), FLOWER_OBJECT_PIXELS * this.cacheRatio);
+      gl.uniform1f(f('uReliefScale'), camera.reliefScale > 0 ? 1 : 0);
+      setViewUniforms(gl, f);
+      gl.uniform1i(f('uDebug'), this.debugMode);
+      gl.uniform1i(f('uLayers'), this.layers);
+      // Je Texel höchstens ein Bildpixel - keine Streckung, kein Mehrfach-Abtasten.
+      gl.uniform1i(f('uDirect'), 1);
+      gl.uniform1i(f('uAtlasMode'), 1);
+      let spent = 0;
+      while (spent < budget && atlas.queue.length > 0) {
+        const entry = atlas.blocks.get(atlas.queue.shift()!);
+        if (!entry || entry.filled) continue;
+        const { block, tx, ty } = entry;
+        gl.uniform2f(f('uBlockOrigin'), block.x + 1, block.y + 1);
+        gl.uniform2f(f('uBlockSize'), block.w - 2, block.h - 2);
+        gl.uniform2f(f('uBlockTile'), tx, ty);
+        gl.scissor(block.x, block.y, block.w, block.h);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        entry.filled = true;
+        this.setPage(atlas, tx, ty, block);
+        spent += block.w * block.h;
+      }
+      gl.uniform1i(f('uAtlasMode'), 0);
+      gl.uniform1i(f('uDirect'), 0);
+      gl.disable(gl.SCISSOR_TEST);
+      gl.bindVertexArray(null);
+      bindScreen(gl);
+      addRenderStats('atlasTexels', spent);
+    }
+    if (atlas?.pageDirty) {
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, atlas.page);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PAGE_SIZE, PAGE_SIZE, gl.RGBA_INTEGER, gl.UNSIGNED_SHORT, atlas.pageData);
+      gl.activeTexture(gl.TEXTURE0);
+      atlas.pageDirty = false;
+    }
+  }
+
+  /** Was außer der Welt den Inhalt bestimmt - Debug-Modus und Schichten. */
+  private get viewMode(): string {
+    // Tischdecke und ohne Cache ändern nur, wie das Bild liest, nicht was befüllt wird.
+    const shown = this.layers & ~(terrainLayer('TABLECLOTH') | terrainLayer('DIRECT'));
+    return `${this.debugMode}l${shown}`;
+  }
+
+  /** Nur der normale Boden darf in den Kachelspeicher. */
+  private get storable(): boolean {
+    return this.viewMode === `0l${TERRAIN_LAYERS_DEFAULT}`;
   }
 
   private location(name: string): WebGLUniformLocation | null {
@@ -316,15 +551,15 @@ export class TerrainRenderer {
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
 
-  private uploadPalette(palette: TerrainPalette) {
+  private uploadPalette(palette: TerrainPalette, at: (name: string) => WebGLUniformLocation | null) {
     const gl = this.gl;
     const flat = (rgb: [number, number, number][]) =>
       new Float32Array(rgb.flatMap(([r, g, b]) => [r / 255, g / 255, b / 255]));
 
-    gl.uniform3fv(this.fillLocation('uBiomeLo[0]'), flat(palette.biomeLo.map((c) => c.toRGB())));
-    gl.uniform3fv(this.fillLocation('uBiomeHi[0]'), flat(palette.biomeHi.map((c) => c.toRGB())));
-    gl.uniform3fv(this.fillLocation('uWaterRamp[0]'), flat(palette.waterRamp));
-    gl.uniform3fv(this.fillLocation('uSurf'), flat([palette.surf]));
+    gl.uniform3fv(at('uBiomeLo[0]'), flat(palette.biomeLo.map((c) => c.toRGB())));
+    gl.uniform3fv(at('uBiomeHi[0]'), flat(palette.biomeHi.map((c) => c.toRGB())));
+    gl.uniform3fv(at('uWaterRamp[0]'), flat(palette.waterRamp));
+    gl.uniform3fv(at('uSurf'), flat([palette.surf]));
   }
 
   /**
@@ -339,6 +574,23 @@ export class TerrainRenderer {
 
   /** Nur für Tests: 0 = Bild, 1 = Höhe, 2 = Hangneigung. */
   debugMode = 0;
+  /**
+   * Schichten des Geländes (TERRAIN_LAYERS, je ein Bit), dazu die Prüf-Modi:
+   * Testmuster, Tischdecke (je Welt-Tile ein Block im Atlas, so groß wie das
+   * Tile im Bild, atlasLayout.ts - was dort fehlt, zeigt der Ring-Cache) und
+   * ohne Cache (das Bild rechnet das Gelände je Pixel).
+   */
+  layers = TERRAIN_LAYERS_DEFAULT;
+  private get tablecloth(): boolean {
+    return (this.layers & terrainLayer('TABLECLOTH')) !== 0;
+  }
+  private get direct(): boolean {
+    return (this.layers & terrainLayer('DIRECT')) !== 0;
+  }
+  private atlas: Atlas | null = null;
+  /** Höhen der Tile-Ecken in Tiles (reliefZ) - für die Blockgröße. */
+  private cornerZ = new Map<string, number>();
+  private heights: MapGenerator | null = null;
   /** Sonne und Himmel (gl/light.ts) - die Übersichtskarte bleibt bei der festen Sonne. */
   light: Light = CLASSIC_LIGHT;
   /** Uhr der Brandung in Sekunden - MapRenderer setzt sie, die Übersichtskarte steht bei 0. */
@@ -521,10 +773,10 @@ export class TerrainRenderer {
    */
   private selectCache(camera: GpuCamera) {
     const relief = camera.reliefScale > 0 ? 1 : 0;
-    const view = `${this.debugMode}|${viewRotation()}`;
+    const view = `${this.viewMode}|${viewRotation()}`;
     // Die Bodenstauchung gehört zum Inhalt: ein Texel zeigt je nach ihr eine
     // andere Weltstelle. Überblenden lässt sich trotzdem - gestreckt.
-    const groundV = camera.cacheGroundV ?? viewGroundV();
+    const groundV = cacheGroundV(camera);
     const keyOf = (scale: number) => `${scale}|${groundV.toFixed(5)}|${relief}|${view}`;
     const scale = cacheScale(camera);
     const key = keyOf(scale);
@@ -621,14 +873,14 @@ export class TerrainRenderer {
     // Die Größe der Textur richtet sich nach dem flachsten Blickwinkel - so
     // bleibt sie beim Neigen dieselbe. Was wirklich hereinragt, hängt vom
     // jetzigen ab.
-    const reachSize = Math.ceil(relief * Z_SCREEN_MAX * MAX_RELIEF * ppt);
+    const reachSize = Math.ceil(relief * Z_SCREEN_MAX * MAX_RELIEF * ppt * Math.max(1, stretch));
     const reach = Math.ceil(relief * viewZScreen() * this.reachZ * ppt * stretch);
     // Mit der Zellgröße der Cache-Stufe: beim weichen Zoomen bleibt die Textur
     // so gleich groß - eine neue müsste ganz neu befüllt werden.
     const margin = CACHE_MARGIN + Math.ceil(this.cellSize({ ...camera, pixelsPerTile: ppt }) * ppt);
     // Unten überlappen Blase und Gipfel-Reichweite - es zählt die größere.
     let cacheWidth = Math.min(width + 2 * (margin + this.bubblePixels), max);
-    let cacheHeight = Math.min(height + 2 * margin + this.bubblePixels + Math.max(this.bubblePixels, reachSize), max);
+    let cacheHeight = Math.min(Math.max(height, viewHeight) + 2 * margin + this.bubblePixels + Math.max(this.bubblePixels, reachSize), max);
     // Reicht die vorhandene Textur und ist sie nicht viel zu groß, bleibt sie:
     // Neu anlegen und leeren kostet bei solchen Größen spürbar ein Bild. Der
     // Überschuss macht nur die Blase größer.
@@ -761,7 +1013,9 @@ export class TerrainRenderer {
     setViewUniforms(gl, f);
     // Berechnet wird für die Stauchung des Caches, nicht für den jetzigen Blickwinkel.
     gl.uniform1f(f('uGroundV'), b.groundV);
+    gl.uniform1f(f('uCacheRows'), b.groundV / viewGroundV());
     gl.uniform1i(f('uDebug'), this.debugMode);
+    gl.uniform1i(f('uLayers'), this.layers);
     gl.uniform2f(f('uWindowStart'), win.u / ppt, win.v / ppt);
     gl.uniform2f(f('uWindowMod'), mod(win.u, W), mod(win.v, H));
     gl.uniform2f(f('uCacheSize'), W, H);
@@ -817,7 +1071,7 @@ export class TerrainRenderer {
       // einer anderen Stelle stehen.
       const state = b.tiles.get(tile);
       if (state === 'looking' || state === 'absent') continue;
-      if (!this.store || this.debugMode !== 0 || (this.store.loaded && !this.store.has(this.storePrefix(b) + tile))) {
+      if (!this.store || !this.storable || (this.store.loaded && !this.store.has(this.storePrefix(b) + tile))) {
         b.tiles.set(tile, 'absent');
         continue;
       }
@@ -892,7 +1146,7 @@ export class TerrainRenderer {
    * Fence - readPixels ohne hielte die GPU an. Höchstens 8 je Bild.
    */
   private saveTiles(b: CacheBuffer) {
-    if (!this.store || this.debugMode !== 0 || !b.window || b.touched.size === 0) return;
+    if (!this.store || !this.storable || !b.window || b.touched.size === 0) return;
     const gl = this.gl;
     const queued = new Set([...b.pending, ...b.background].map(tileOf));
     const win = { u: b.window.u, v: b.window.v, width: b.width, height: b.covered };
@@ -942,8 +1196,8 @@ export class TerrainRenderer {
   /** Schlüssel des Cache-Inhalts für eine Stufe beim jetzigen Blick (wie selectCache). */
   private cacheKey(scale: number, camera: GpuCamera): string {
     const relief = camera.reliefScale > 0 ? 1 : 0;
-    const groundV = camera.cacheGroundV ?? viewGroundV();
-    return `${scale}|${groundV.toFixed(5)}|${relief}|${this.debugMode}|${viewRotation()}`;
+    const groundV = cacheGroundV(camera);
+    return `${scale}|${groundV.toFixed(5)}|${relief}|${this.viewMode}|${viewRotation()}`;
   }
 
   /**
@@ -954,7 +1208,7 @@ export class TerrainRenderer {
    */
   private bake(camera: GpuCamera, count: number) {
     const store = this.store;
-    if (!store?.loaded || this.debugMode !== 0 || !store.roomToBake) return;
+    if (!store?.loaded || !this.storable || !store.roomToBake) return;
     if (this.bakeQueue.length === 0) {
       // Neu suchen höchstens jede Sekunde - ist alles da, prüft das sonst jedes Bild alle Kacheln.
       if (++this.bakeScan % 60 !== 1) return;
@@ -967,7 +1221,7 @@ export class TerrainRenderer {
       this.allocateCache(this.baker, TILE, TILE);
     }
     const b = this.baker;
-    const groundV = camera.cacheGroundV ?? viewGroundV();
+    const groundV = cacheGroundV(camera);
     for (let done = 0; done < count && this.bakeQueue.length > 0;) {
       const { scale, key, tx, ty } = this.bakeQueue.shift()!;
       // Der Blick hat sich geändert (Drehung, Neigung): diese Liste gilt nicht mehr.
@@ -979,7 +1233,7 @@ export class TerrainRenderer {
       b.key = key;
       b.scale = scale;
       b.groundV = groundV;
-      b.view = `${this.debugMode}|${viewRotation()}`;
+      b.view = `${this.viewMode}|${viewRotation()}`;
       b.window = { u: tx * TILE, v: ty * TILE };
       b.covered = TILE;
       const tile = `${tx},${ty}`;
@@ -1002,7 +1256,7 @@ export class TerrainRenderer {
     // Ein Bildschirm in Cache-Texeln - auf jeder Stufe gleich (CSS-Pixel * Texel je CSS-Pixel).
     const halfU = Math.ceil((BAKE_SCREENS + 0.5) * (width / this.pixelRatio) * this.cacheRatio / TILE);
     const halfV = Math.ceil((BAKE_SCREENS + 0.5) * (height / this.pixelRatio) * this.cacheRatio / TILE);
-    const stretch = (camera.cacheGroundV ?? viewGroundV()) / viewGroundV();
+    const stretch = cacheGroundV(camera) / viewGroundV();
     const out: { scale: number; key: string; tx: number; ty: number }[] = [];
     for (const focus of this.bakeFocus) {
       const g = worldToGround(focus.x, focus.y);
@@ -1215,6 +1469,11 @@ export class TerrainRenderer {
     const rows = Math.ceil((2 * halfV + reach) / cell) + 2;
     const stride = this.ensureGrid(columns, rows);
 
+    if (this.tablecloth) {
+      this.updateAtlas(camera, camU, camV, halfU, halfV + reach);
+      this.fillAtlas(camera, FILL_BUDGET);
+    }
+
     gl.useProgram(this.program);
     gl.bindVertexArray(this.vao);
     gl.viewport(0, 0, width, height);
@@ -1240,6 +1499,21 @@ export class TerrainRenderer {
     gl.uniform1f(this.location('uCacheGain'), this.debugMode ? 1 : CACHE_HEADROOM);
     gl.uniform1f(this.location('uTime'), this.time);
     gl.uniform1f(this.location('uFieldActive'), this.fieldActive ? 1 : 0);
+    gl.uniform1i(this.location('uDirect'), this.direct ? 1 : 0);
+    gl.uniform1i(this.location('uLayers'), this.layers);
+    gl.uniform1i(this.location('uTablecloth'), this.atlas && this.tablecloth ? 1 : 0);
+    if (this.atlas && this.tablecloth) {
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, this.atlas.color);
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, this.atlas.normal);
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, this.atlas.page);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1f(this.location('uAtlasSize'), this.atlas.size);
+    }
+    gl.uniform1f(this.location('uStoneCardPixels'), CARDS_FROM * this.cacheRatio);
+    gl.uniform1f(this.location('uFlowerObjectPixels'), FLOWER_OBJECT_PIXELS * this.cacheRatio);
     gl.uniform2f(this.location('uFieldOrigin'), this.fieldOrigin.x, this.fieldOrigin.y);
 
     const ppt = active.scale;
@@ -1437,4 +1711,24 @@ function intersect(a: TexelRect, b: TexelRect): TexelRect | null {
   const width = Math.min(a.u + a.width, b.u + b.width) - u;
   const height = Math.min(a.v + a.height, b.v + b.height) - v;
   return width > 0 && height > 0 ? { u, v, width, height } : null;
+}
+
+/** Seitentabelle der Tischdecke: so viele Tiles je Achse (Tile & (PAGE_SIZE - 1)). */
+const PAGE_SIZE = 512;
+
+/** Tischdecke: Atlas-Texturen, Platzverwaltung und welches Tile wo liegt. */
+interface Atlas {
+  color: WebGLTexture;
+  normal: WebGLTexture;
+  page: WebGLTexture;
+  framebuffer: WebGLFramebuffer;
+  size: number;
+  shelves: ShelfAtlas;
+  /** Maßstab, Neigung, Drehung, Relief, Inhalt - ändert sich das, beginnt der Atlas neu. */
+  key: string;
+  blocks: Map<string, { tx: number; ty: number; block: Block; filled: boolean }>;
+  /** Noch zu befüllende Tiles, nächstgelegene zuerst. */
+  queue: string[];
+  pageData: Uint16Array;
+  pageDirty: boolean;
 }

@@ -321,20 +321,52 @@ void main() {
  * Texel, die neu ins Fenster kommen - beim Verschieben ein schmaler Streifen,
  * beim Zoomen einmal das ganze Fenster.
  */
-export const FILL_FRAGMENT_SOURCE = `#version 300 es
-precision highp float;
-precision highp int;
-precision highp usampler2DArray;
+/**
+ * Schichten des Geländes, je ein Bit in uLayers (Einstellungen → Grafik →
+ * Gelände): Schlüssel für GLSL (LAYER_...), Name, Hinweis, ob anfangs an.
+ * Die letzten drei sind Prüf-Modi, keine Schichten des Bodens.
+ */
+export const TERRAIN_LAYERS = [
+  ['GRASS', 'Wiese', 'Muster der Wiese - aus: nur ihre Grundfarbe', true],
+  ['FOREST', 'Waldboden', 'Laub und Nadeln - aus: nur die Grundfarbe', true],
+  ['DESERT', 'Wüste', 'Sand, Risse, Büsche - aus: nur die Grundfarbe', true],
+  ['BEACH', 'Strand', 'Sand und Muscheln - aus: nur die Grundfarbe', true],
+  ['ROCK', 'Fels', 'Schichten, Risse, Flechten - aus: nur die Grundfarbe', true],
+  ['SNOW', 'Schnee', 'Verwehungen und Glitzern - aus: nur die Grundfarbe', true],
+  ['PROPS', 'Gemalte Steine, Blätter, Blumen', 'Was der Boden als kleine Dinge malt', true],
+  ['VARIATION', 'Farbschwankung', 'Feines Rauschen in der Grundfarbe', true],
+  ['BUMP', 'Feinrelief', 'Körnung im Licht der festen Sonne', true],
+  ['SHADE', 'Hangschattierung', 'Eingebrannte Schattierung aus den Höhen', true],
+  ['LIGHT', 'Relief im Licht', 'Sonnen- und Schattenseiten der Hänge', true],
+  ['TRIPLANAR', 'Muster am Hang von der Seite', 'Triplanar: aus = alles von oben aufgemalt', true],
+  ['SUPERSAMPLE', 'Mehrfach abtasten am Hang', 'Gegen Treppen, wo der Cache gestreckt ist', true],
+  ['PATTERN', 'Testmuster', 'Rote Quadrate auf Weiß statt Boden (?muster)', false],
+  ['TABLECLOTH', 'Tischdecke', 'Je Tile ein Block so groß wie im Bild (?tischdecke)', false],
+  ['DIRECT', 'Ohne Cache', 'Boden je Pixel rechnen - sehr langsam (?ohneCache)', false],
+] as const;
 
-layout(location = 0) out vec4 fragColor;
-// Normale des Reliefs (xy * 0.5 + 0.5, z oben ergibt sich) - das Licht darauf
-// rechnet erst das Bild (DISPLAY_FRAGMENT_SOURCE), so wandert die Sonne,
-// ohne dass der Cache neu befüllt wird.
-layout(location = 1) out vec2 fragNormal;
+/** Bit einer Schicht in uLayers. */
+export function terrainLayer(key: (typeof TERRAIN_LAYERS)[number][0]): number {
+  return 1 << TERRAIN_LAYERS.findIndex(([k]) => k === key);
+}
 
+/** Die anfangs eingeschalteten Schichten. */
+export const TERRAIN_LAYERS_DEFAULT = TERRAIN_LAYERS.reduce((mask, [, , , on], i) => (on ? mask | (1 << i) : mask), 0);
+
+const LAYERS_GLSL = `
+${TERRAIN_LAYERS.map(([key], i) => `const int LAYER_${key} = ${i};`).join('\n')}
+uniform int uLayers;
+bool layer(int bit) { return (uLayers & (1 << bit)) != 0; }
+`;
+
+const TERRAIN_AT_GLSL = `
 ${TERRAIN_COMMON}
 ${PROJECT_GLSL}
 ${CACHE_GLSL}
+
+// 1: je Texel höchstens ein Bildpixel (ohne Cache, Tischdecke) - nichts gestreckt.
+uniform int uDirect;
+${LAYERS_GLSL}
 
 /**
  * Bezugsgröße für Feindetail und Farbtextur, in Geräte-Pixeln. Abgetastet wird
@@ -352,6 +384,8 @@ uniform float uStoneCardPixels;
 // Nur für den Abgleich mit der CPU-Fassung: 1 = Höhe, 2 = Hangneigung,
 // jeweils als 16-Bit-Wert über R und G gepackt.
 uniform int uDebug;
+// Cache-Zeilen je Bildzeile auf flachem Boden (V_DENSITY in terrainRenderer.ts).
+uniform float uCacheRows;
 
 uniform vec3 uBiomeLo[8];
 uniform vec3 uBiomeHi[8];
@@ -437,6 +471,7 @@ const vec2 SUN_XY = vec2(-0.45, 0.35);
 
 vec4 flower(vec2 tile, float ds, float bloom, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.08, ds);
   if (fade <= 0.0) return vec4(0.0);
   // In Horsten wie world/flowers.ts: je Feld von 2x2 Tiles vielleicht eine
@@ -589,6 +624,7 @@ bool propCell(vec2 tile, float density, float chance, float rMin, float rMax,
 // ein Fliegenpilz.
 vec4 forestProp(vec2 tile, float ds, float conifer, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.06, ds);
   vec2 q; float r; vec2 id;
   if (fade <= 0.0 || !propCell(tile, 3.0, 0.1, 0.035, 0.06, q, r, id)) return vec4(0.0);
@@ -693,6 +729,7 @@ vec4 stoneShape(vec2 q, float seed, vec3 base, vec2 toSun, float sharp) {
 
 vec4 grassProp(vec2 tile, float ds, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.06, ds);
   vec2 q; float r; vec2 id;
   if (fade <= 0.0 || !propCell(tile, 3.0, 0.03, 0.035, 0.06, q, r, id)) return vec4(0.0);
@@ -735,6 +772,7 @@ vec3 sandSurface(vec3 c, vec2 tile, float ds) {
 // Wüste: Dornbüsche aus Zweigen, Steine, gelbe Grasbüschel.
 vec4 desertProp(vec2 tile, float ds, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.08, ds);
   if (fade <= 0.0) return vec4(0.0);
   vec2 cell = floor(tile * 1.5);
@@ -785,6 +823,7 @@ vec4 desertProp(vec2 tile, float ds, out float shadow) {
 // Strand: gewölbte Kiesel und gerippte Muscheln.
 vec4 beachProp(vec2 tile, float ds, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.06, ds);
   if (fade <= 0.0) return vec4(0.0);
   vec2 cell = floor(tile * 3.0);
@@ -875,6 +914,7 @@ vec3 desertTexture(vec3 c, vec2 tile, float ds) {
 // Gebirge: Geröllbrocken, kantig.
 vec4 rockProp(vec2 tile, float ds, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.07, ds);
   vec2 q; float r; vec2 id;
   if (fade <= 0.0 || uPixelsPerTile >= uStoneCardPixels || !propCell(tile, 2.5, 0.1, 0.06, 0.14, q, r, id)) return vec4(0.0);
@@ -889,6 +929,7 @@ vec4 rockProp(vec2 tile, float ds, out float shadow) {
 // Schnee: Felsbrocken, die mit einer Schneehaube herausschauen.
 vec4 snowProp(vec2 tile, float ds, out float shadow) {
   shadow = 0.0;
+  if (!layer(LAYER_PROPS)) return vec4(0.0);
   float fade = detailFade(0.07, ds);
   vec2 q; float r; vec2 id;
   if (fade <= 0.0 || !propCell(tile, 2.0, 0.05, 0.06, 0.13, q, r, id)) return vec4(0.0);
@@ -983,11 +1024,20 @@ vec3 biomeBase(int biome, float height, float variation) {
 // der Böden liegen schon fest; ds ist die Detailstufe in dieser Projektion.
 vec3 landSurface(vec2 p, float ds, int biome, float height, float moisture,
                  float wood, float desert, float beach, float rock, float snow, float shoreWet) {
-  // Farbschwankung wie beim Wasser, aber an der Musterkoordinate.
-  float variation = (snoise(L_DETAIL, p * 0.35 / ds) + 1.0) * 0.5;
+  // Farbschwankung wie beim Wasser, aber an der Musterkoordinate. Die
+  // Frequenz bleibt fest (detailStep wie in main) - mit ds, das am Hang von
+  // Texel zu Texel wechselt, gäbe p * 0.35 / ds Moiré. Gröber wird nur die Stärke.
+  float baseStep = uDetailPixels / uPixelsPerTile;
+  if (layer(LAYER_PATTERN)) {
+    // Je halbe Tile ein rotes Quadrat auf Weiß: Größe und Form zeigen Streckung.
+    vec2 q = fract(p * 2.0);
+    return q.x < 0.4 && q.y < 0.4 ? vec3(0.9, 0.05, 0.05) : vec3(1.0);
+  }
+  float variation = layer(LAYER_VARIATION) ? 0.5 + snoise(L_DETAIL, p * 0.35 / baseStep) * 0.5 * min(1.0, baseStep / ds) : 0.5;
   vec3 color;
   if (biome == B_SNOW) {
-    color = snowTexture(biomeBase(biome, height, variation), p, ds);
+    color = biomeBase(biome, height, variation);
+    if (layer(LAYER_SNOW)) color = snowTexture(color, p, ds);
   } else {
     // Pflanzendecke: Wiese, Wald, Wüste.
     vec3 cover = vec3(0.0);
@@ -995,16 +1045,27 @@ vec3 landSurface(vec2 p, float ds, int biome, float height, float moisture,
       // Blumen nur mitten in der Wiese, nicht im Saum zu anderen Böden.
       float bloom = (1.0 - smoothstep(0.0, 0.35, beach)) * (1.0 - smoothstep(0.0, 0.4, desert))
           * (1.0 - smoothstep(0.0, 0.6, wood)) * (1.0 - smoothstep(0.0, 0.4, rock));
-      if (wood < 1.0) cover = grassTexture(biomeBase(B_GRASS, height, variation), p, ds, moisture, bloom);
-      if (wood > 0.0) cover = mix(cover, forestTexture(biomeBase(B_FOREST, height, variation), p, ds, height), wood);
-      if (desert > 0.0) cover = mix(cover, desertTexture(biomeBase(B_DESERT, height, variation), p, ds), desert);
+      if (wood < 1.0) {
+        cover = biomeBase(B_GRASS, height, variation);
+        if (layer(LAYER_GRASS)) cover = grassTexture(cover, p, ds, moisture, bloom);
+      }
+      if (wood > 0.0) {
+        vec3 c = biomeBase(B_FOREST, height, variation);
+        cover = mix(cover, layer(LAYER_FOREST) ? forestTexture(c, p, ds, height) : c, wood);
+      }
+      if (desert > 0.0) {
+        vec3 c = biomeBase(B_DESERT, height, variation);
+        cover = mix(cover, layer(LAYER_DESERT) ? desertTexture(c, p, ds) : c, desert);
+      }
     }
     color = cover;
     if (beach > 0.0) {
-      color = mix(color, beachTexture(biomeBase(B_BEACH, height, variation), p, ds, height), beach);
+      vec3 c = biomeBase(B_BEACH, height, variation);
+      color = mix(color, layer(LAYER_BEACH) ? beachTexture(c, p, ds, height) : c, beach);
     }
     if (rock > 0.0) {
-      color = mix(color, rockTexture(biomeBase(B_MOUNTAIN, height, variation), p, ds, height), rock);
+      vec3 c = biomeBase(B_MOUNTAIN, height, variation);
+      color = mix(color, layer(LAYER_ROCK) ? rockTexture(c, p, ds, height) : c, rock);
     }
   }
 
@@ -1019,7 +1080,7 @@ vec3 landSurface(vec2 p, float ds, int biome, float height, float moisture,
   // Licht wie beim Gelände von links oben. So wirkt der Boden körnig und
   // plastisch statt glatt bemalt. Weit draußen blendet es aus.
   float bumpFade = detailFade(0.12, ds) * (1.0 - gPropMask) * (1.0 - shoreWet);
-  if (bumpFade > 0.0) {
+  if (bumpFade > 0.0 && layer(LAYER_BUMP)) {
     float sandShare = max(beach, desert);
     float e = max(ds * 0.75, 0.004);
     float b0 = groundBump(p, ds, wood, sandShare, rock, snow, height);
@@ -1040,21 +1101,64 @@ vec3 landSurface(vec2 p, float ds, int biome, float height, float moisture,
   return color;
 }
 
-void main() {
+// Farbe (durch CACHE_HEADROOM geteilt, Alpha = Flachwasser) und Normale an
+// der Weltstelle tile. step: Welt-Tiles je Geraete-Pixel, waagerecht gemessen.
+void terrainAt(vec2 tile, float step, out vec4 fragColor, out vec2 fragNormal) {
   fragNormal = vec2(0.5);
-  // Welt-Tiles je Geraete-Pixel, waagerecht gemessen. Auf Haengen ist es
-  // mehr, fuer Detailstufe und Schattierung reicht die Naeherung.
-  float step = 1.0 / uPixelsPerTile;
-
-  // Texel -> Boden -> Welt. Das Texel mit Index t steht fuer die absolute
-  // Position, die im aktuellen Fenster auf t faellt.
-  vec2 rel = mod(floor(gl_FragCoord.xy) - uWindowMod, uCacheSize);
-  vec2 g = uWindowStart + (rel + 0.5) * step;
-  vec2 tile = groundToWorld(g);
   vec2 n = tile * uMapScale;
 
   float detailStep = step * uDetailPixels;
   float height = elevation(n, detailStep);
+
+  // Die Muster hängen an (x, y) - von oben aufgemalt. An steilen Hängen
+  // zöge das sie in die Länge, dort kommen sie zusätzlich von der Seite
+  // (Triplanar): (y, z) für Hänge in x, (x, z) für Hänge in y, gewichtet
+  // nach der Normale. Flacher als ~25° bleibt es bei einer Abtastung.
+  // ponytail: der Cache tastet in Boden-Koordinaten ab, am steilen Hang
+  // liegen seine Texel darum im Bild gestreckt (Feindetail blendet dort
+  // über screenStep aus); dichter abtasten, wenn Hänge zu unscharf wirken.
+  // Die Neigung dafür über eine halbe Tile und ohne Mikro-Oktaven - je Pixel
+  // gemessen zöge das Rauschen sie hin und her, und auch flache Wiese käme
+  // von der falschen Seite (Steine quer zum Hang gestreckt).
+  vec3 tri = vec3(0.0, 0.0, 1.0);
+  vec2 grad = vec2(0.0);
+  if (uReliefScale > 0.0 && height > uSeaLevel) {
+    // Die Mitte ist height samt Mikro-Oktaven - deren Rest ist über eine
+    // halbe Tile klein gegen einen steilen Hang.
+    const float SLOPE_STEP = 0.5;
+    float z0 = reliefZ(height);
+    grad = vec2(
+        reliefZ(elevation((tile + vec2(SLOPE_STEP, 0.0)) * uMapScale, SLOPE_STEP)) - z0,
+        reliefZ(elevation((tile + vec2(0.0, SLOPE_STEP)) * uMapScale, SLOPE_STEP)) - z0)
+        * uReliefScale / SLOPE_STEP;
+    vec3 w = normalize(vec3(grad, 1.0));
+    // ^8: scharfer Übergang - gemischt schiene die gestreckte Draufsicht durch.
+    w *= w;
+    w *= w;
+    w *= w;
+    w.xy = max(w.xy - 0.02, 0.0);
+    if (layer(LAYER_TRIPLANAR)) tri = w / (w.x + w.y + w.z);
+  }
+  // Ein Texel rückt an der Seite um so viel weiter, wie der Hang steigt.
+  float sideStep = detailStep * max(1.0, length(grad));
+  // Der Cache hat ein Texel je Bodenpixel. Zeigt der Hang zur Kamera, zieht
+  // das Bild jedes Texel senkrecht über mehrere Pixel - Feindetail darunter
+  // stünde als senkrechte Striche da. Darum so grob, wie das Bild streckt.
+  // Auf flachem Boden ist stretch 1, dort bleibt alles wie es war.
+  float stretch = abs(step / uCacheRows - uZScreen * dot(grad, groundToWorld(vec2(0.0, step)))) / step;
+  if (uDirect == 1) stretch = 1.0;
+  float screenStep = detailStep * max(1.0, stretch);
+  sideStep = max(sideStep, screenStep);
+  // Ebenso die Höhe selbst: ihre Mikro-Oktaven färben über Felsanteil,
+  // Grundfarbe und Schichtbänder mit.
+  if (screenStep > detailStep) height = elevation(n, screenStep);
+  // z für die Seiten glatt wie das Gelände-Gitter: reliefZ verstärkt am Hang
+  // das Rauschen der Mikro-Oktaven, z spränge von Texel zu Texel und die
+  // Seitenmuster bekämen gezackte Kanten.
+  float zTiles = tri.x + tri.y > 0.0 ? reliefZ(elevation(n, 0.5)) * uReliefScale : 0.0;
+  // Auch das Mikrorelief der Höhe hängt an (x, y): am Hang nur so fein,
+  // wie der Cache es dort auflöst, sonst zieht es Streifen die Falllinie hinab.
+  float shadeStep = sideStep;
 
   // Unter dem Meeresspiegel entscheidet allein die Höhe (classify), und das
   // Wasser liest weder Feuchte noch Temperatur - 11 Noise-Aufrufe gespart.
@@ -1075,8 +1179,6 @@ void main() {
   // Anteil Sand (Strand, Wüste) - dort wird die Hangschattierung sanfter,
   // sonst zieht das Höhenrauschen dunkle Schlieren durch den Sand.
   float sandy = 0.0;
-  // Schrittweite fürs Mikrorelief in Schattierung und Licht - am Hang gröber (unten).
-  float shadeStep = detailStep;
 
   if (isWater) {
     float depth = clamp(
@@ -1135,39 +1237,6 @@ void main() {
     // An der Wasserlinie nasser, glatter Sand - gleich welcher Boden (siehe landSurface).
     shoreWet = 1.0 - smoothstep(uSeaLevel, uSeaLevel + (uShoreLevel - uSeaLevel) * 0.45, height);
 
-    // Die Muster hängen an (x, y) - von oben aufgemalt. An steilen Hängen
-    // zöge das sie in die Länge, dort kommen sie zusätzlich von der Seite
-    // (Triplanar): (y, z) für Hänge in x, (x, z) für Hänge in y, gewichtet
-    // nach der Normale. Flacher als ~25° bleibt es bei einer Abtastung.
-    // ponytail: der Cache tastet in Boden-Koordinaten ab, am steilen Hang
-    // liegen seine Texel darum im Bild gestreckt (Feindetail blendet dort
-    // über sideStep aus); dichter abtasten, wenn Hänge trotzdem unscharf wirken.
-    // Die Neigung dafür über eine halbe Tile und ohne Mikro-Oktaven - je Pixel
-    // gemessen zöge das Rauschen sie hin und her, und auch flache Wiese käme
-    // von der falschen Seite (Steine quer zum Hang gestreckt).
-    vec3 tri = vec3(0.0, 0.0, 1.0);
-    vec2 grad = vec2(0.0);
-    if (uReliefScale > 0.0) {
-      // Die Mitte ist height samt Mikro-Oktaven - deren Rest ist über eine
-      // halbe Tile klein gegen einen steilen Hang.
-      const float SLOPE_STEP = 0.5;
-      float z0 = reliefZ(height);
-      grad = vec2(
-          reliefZ(elevation((tile + vec2(SLOPE_STEP, 0.0)) * uMapScale, SLOPE_STEP)) - z0,
-          reliefZ(elevation((tile + vec2(0.0, SLOPE_STEP)) * uMapScale, SLOPE_STEP)) - z0)
-          * uReliefScale / SLOPE_STEP;
-      vec3 w = normalize(vec3(grad, 1.0));
-      w *= w;
-      w *= w;
-      w.xy = max(w.xy - 0.02, 0.0);
-      tri = w / (w.x + w.y + w.z);
-    }
-    float zTiles = reliefZ(height) * uReliefScale;
-    // Ein Texel rückt an der Seite um so viel weiter, wie der Hang steigt.
-    float sideStep = detailStep * max(1.0, length(grad));
-    // Auch das Mikrorelief der Höhe hängt an (x, y): am Hang nur so fein,
-    // wie der Cache es dort auflöst, sonst zieht es Streifen die Falllinie hinab.
-    shadeStep = sideStep;
     // Eine Aufrufstelle statt drei: landSurface ist groß, dreimal eingesetzt
     // würde der Shader auch auf flachem Boden teurer.
     // Steine und Blätter melden Maske und Normale über gProp* - je Richtung
@@ -1176,22 +1245,32 @@ void main() {
     float propMask = 0.0;
     vec3 propNormal = vec3(0.0);
     float propWeight = 0.0;
-    for (int i = 2; i >= 0; i--) {
+    // Am Hang, der zur Kamera zeigt, deckt ein Texel im Bild mehrere Zeilen
+    // ab - nur seine Mitte abgetastet, springen schräge Kanten in Stufen.
+    // Darum dort über die Texelhöhe verteilt abtasten und mitteln.
+    int samples = layer(LAYER_SUPERSAMPLE) ? int(clamp(ceil(stretch), 1.0, 6.0)) : 1;
+    vec2 dTile = groundToWorld(vec2(0.0, step));
+    float dz = dot(grad, dTile);
+    for (int k = 0; k < 3 * samples; k++) {
+      int i = 2 - k / samples;
       if (tri[i] <= 0.0) continue;
+      float weight = tri[i] / float(samples);
+      float off = (float(k % samples) + 0.5) / float(samples) - 0.5;
       gPropMask = 0.0;
       gPropNormal = vec3(0.0, 0.0, 1.0);
       gPropNormalWeight = 0.0;
-      vec2 p = i == 2 ? tile : vec2(i == 0 ? tile.y : tile.x, zTiles);
-      color += landSurface(p, i == 2 ? detailStep : sideStep, biome, height, moisture,
-                           wood, desert, beach, rock, snow, shoreWet) * tri[i];
+      vec2 at = tile + dTile * off;
+      vec2 p = i == 2 ? at : vec2(i == 0 ? at.y : at.x, zTiles + dz * off);
+      color += landSurface(p, i == 2 ? screenStep : sideStep, biome, height, moisture,
+                           wood, desert, beach, rock, snow, shoreWet) * weight;
       // Normale der Seiten aus ihrer Ebene zurück in die Welt: "oben" zeigt
       // dort vom Hang weg.
       vec3 n = gPropNormal;
       if (i == 0) n = vec3(-sign(grad.x) * n.z, n.x, n.y);
       if (i == 1) n = vec3(n.x, -sign(grad.y) * n.z, n.y);
-      propMask += gPropMask * tri[i];
-      propNormal += n * gPropNormalWeight * tri[i];
-      propWeight += gPropNormalWeight * tri[i];
+      propMask += gPropMask * weight;
+      propNormal += n * gPropNormalWeight * weight;
+      propWeight += gPropNormalWeight * weight;
     }
     gPropMask = propMask;
     gPropNormalWeight = propWeight;
@@ -1210,7 +1289,7 @@ void main() {
   // Im Flachland gedämpft, sonst zeichnet sie jede kleine Welle der Wiese nach.
   float lowland = mix(uLowlandShade, 1.0, smoothstep(uMountainFoot - 0.15, uMountainFoot, height));
   // Zur Wasserlinie hin wie auf dem Wasser - sonst springt die Helligkeit dort.
-  color *= 1.0 + shade * (isWater ? 0.08 : mix(mix(0.42, 0.18, sandy) * lowland, 0.08, shoreWet));
+  if (layer(LAYER_SHADE) && !layer(LAYER_PATTERN)) color *= 1.0 + shade * (isWater ? 0.08 : mix(mix(0.42, 0.18, sandy) * lowland, 0.08, shoreWet));
 
   // Normale des Reliefs fürs Licht. Die Hangneigung oben ist nur ein
   // Schattierungseffekt der Hoehenwerte; hier zaehlt die Neigung der
@@ -1219,7 +1298,7 @@ void main() {
   // ponytail: Feinrelief, Hangschattierung und Blumen oben bleiben mit der
   // festen Sonne (SUN_XY) eingebrannt - ins Licht nehmen, wenn die wandernde
   // Sonne daran sichtbar falsch wirkt.
-  if (uReliefScale > 0.0 && !isWater) {
+  if (uReliefScale > 0.0 && !isWater && layer(LAYER_LIGHT)) {
     float z = reliefZ(h0);
     vec3 normal = normalize(vec3(
         (z - reliefZ(hRight)) / step,
@@ -1247,13 +1326,56 @@ void main() {
     return;
   }
 
+  if (layer(LAYER_PATTERN) && !isWater) fragNormal = vec2(0.5);
   fragColor = vec4(clamp(color / ${CACHE_HEADROOM.toFixed(1)}, 0.0, 1.0), shoal);
+}
+`;
+
+export const FILL_FRAGMENT_SOURCE = `#version 300 es
+precision highp float;
+precision highp int;
+precision highp usampler2DArray;
+
+layout(location = 0) out vec4 fragColor;
+// Normale des Reliefs (xy * 0.5 + 0.5, z oben ergibt sich) - das Licht darauf
+// rechnet erst das Bild (DISPLAY_FRAGMENT_SOURCE), so wandert die Sonne,
+// ohne dass der Cache neu befüllt wird.
+layout(location = 1) out vec2 fragNormal;
+
+${TERRAIN_AT_GLSL}
+
+// Tischdecke (terrainRenderer.ts, atlasLayout.ts): 1 = ein Block im Atlas
+// für das Tile uBlockTile, Innenfläche ab uBlockOrigin, uBlockSize Texel.
+uniform int  uAtlasMode;
+uniform vec2 uBlockOrigin;
+uniform vec2 uBlockSize;
+uniform vec2 uBlockTile;
+
+void main() {
+  // Welt-Tiles je Geraete-Pixel, waagerecht gemessen. Auf Haengen ist es
+  // mehr, fuer Detailstufe und Schattierung reicht die Naeherung.
+  float step = 1.0 / uPixelsPerTile;
+  vec2 tile;
+  if (uAtlasMode == 1) {
+    // Der Rand (ein Texel ringsum) liegt knapp außerhalb des Tiles - so
+    // mischt das lineare Filtern an der Tile-Kante keine fremden Blöcke.
+    tile = uBlockTile + (gl_FragCoord.xy - uBlockOrigin) / uBlockSize;
+  } else {
+    // Texel -> Boden -> Welt. Das Texel mit Index t steht fuer die absolute
+    // Position, die im aktuellen Fenster auf t faellt.
+    vec2 rel = mod(floor(gl_FragCoord.xy) - uWindowMod, uCacheSize);
+    tile = groundToWorld(uWindowStart + (rel + 0.5) * step);
+  }
+  terrainAt(tile, step, fragColor, fragNormal);
 }
 `;
 
 /** Bild aus dem Cache plus die Overlays, die sich je Bild ändern. */
 export const DISPLAY_FRAGMENT_SOURCE = `#version 300 es
 precision highp float;
+precision highp int;
+precision highp usampler2DArray;
+precision highp usampler2D;
 
 in vec2 vWorld;
 in vec2 vCache;
@@ -1273,8 +1395,14 @@ uniform float uPrevMix;
 uniform vec2  uPrevWindowMod;
 uniform vec2  uPrevCacheSize;
 uniform vec4  uPrevReady;
-uniform vec2  uResolution;
-uniform float uPixelsPerTile;
+${TERRAIN_AT_GLSL}
+// Tischdecke: je Tile (Seitentabelle, Tile & 511) der Block im Atlas -
+// Ecke x, y und Innenfläche w, h in Texeln; w = 0: noch nicht befüllt.
+uniform int uTablecloth;
+uniform usampler2D uPage;
+uniform sampler2D uAtlasColor;
+uniform sampler2D uAtlasNormal;
+uniform float uAtlasSize;
 
 // Overlays. Das Tile in Welt-Tiles, das Rechteck in Geraete-Pixeln.
 uniform vec2  uHoverTile;      // markiertes Tile, uHoverActive < 0.5 blendet aus
@@ -1324,12 +1452,23 @@ vec3 soilColor(vec2 world, vec3 ground, float step) {
 void main() {
   float step = 1.0 / uPixelsPerTile;
   vec2 tile = vWorld;
-  vec4 cached = texture(uCache, vCache);
-  vec2 slope = texture(uNormal, vCache).rg;
-  if (uPrevMix > 0.0 && all(greaterThanEqual(vPrevTexel, uPrevReady.xy)) && all(lessThan(vPrevTexel, uPrevReady.zw))) {
-    vec2 prev = (vPrevTexel + uPrevWindowMod) / uPrevCacheSize;
-    cached = mix(cached, texture(uCachePrev, prev), uPrevMix);
-    slope = mix(slope, texture(uNormalPrev, prev).rg, uPrevMix);
+  vec4 cached;
+  vec2 slope;
+  uvec4 page = uTablecloth == 1 ? texelFetch(uPage, ivec2(floor(vWorld)) & 511, 0) : uvec4(0u);
+  if (uDirect == 1) {
+    terrainAt(vWorld, step, cached, slope);
+  } else if (page.z > 0u) {
+    vec2 at = (vec2(page.xy) + 1.0 + fract(vWorld) * vec2(page.zw)) / uAtlasSize;
+    cached = texture(uAtlasColor, at);
+    slope = texture(uAtlasNormal, at).rg;
+  } else {
+    cached = texture(uCache, vCache);
+    slope = texture(uNormal, vCache).rg;
+    if (uPrevMix > 0.0 && all(greaterThanEqual(vPrevTexel, uPrevReady.xy)) && all(lessThan(vPrevTexel, uPrevReady.zw))) {
+      vec2 prev = (vPrevTexel + uPrevWindowMod) / uPrevCacheSize;
+      cached = mix(cached, texture(uCachePrev, prev), uPrevMix);
+      slope = mix(slope, texture(uNormalPrev, prev).rg, uPrevMix);
+    }
   }
   vec3 color = cached.rgb * uCacheGain;
 

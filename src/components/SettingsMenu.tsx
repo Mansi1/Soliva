@@ -15,6 +15,7 @@ import { ZOOM_LEVELS } from '../game/Camera';
 import { ShortcutList } from './Shortcuts';
 import { confirmDialog } from './ConfirmDialog';
 import { DEV_OFF } from './Hud';
+import { TERRAIN_LAYERS } from '../gl/terrainShader';
 
 /** Was das Menü außer den Einstellungen braucht - main.ts liefert es. */
 export interface MenuHooks {
@@ -255,6 +256,20 @@ export class SettingsMenu {
             Felder; Partikel: Rauch, Staub, Insekten und Fische; Vorausrechnen: der Boden wird im Hintergrund
             für die Nachbarschaft und die nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im
             Entwickler-Panel.
+          </p>
+          <div class="menu-row">
+            <span>Gelände</span>
+          </div>
+          {/* Je Schicht ein Haken (data-layer = Bit in TERRAIN_LAYERS, main.ts) - die letzten drei sind Prüf-Modi. */}
+          <div class="menu-off menu-layers">
+            {TERRAIN_LAYERS.map(([, label, hint], i) => (
+              <label title={hint}><input type="checkbox" data-layer={String(i)} /> {label}</label>
+            ))}
+          </div>
+          <p class="menu-hint">
+            Schichten des Bodens einzeln ein- und ausschalten. Testmuster: rote Quadrate auf Weiß statt Boden -
+            zeigt, ob etwas gestreckt ist. Tischdecke: jedes Tile bekommt so viele Texel, wie es im Bild groß
+            ist. Ohne Cache: der Boden wird je Pixel gerechnet, sehr langsam. Gilt bis zum Neuladen.
           </p>
           <div class="menu-row">
             <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
