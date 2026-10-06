@@ -498,12 +498,12 @@ export class MapRenderer {
     this.terrain.wire = mode;
   }
 
-  /** Zellgröße des Geländegitters in CSS-Pixeln (Entwickler-Panel, Ground.groundAt). */
-  get terrainCellPixels(): number {
-    return this.terrain.cellPixels;
+  /** Zellgröße des Geländegitters in Tiles (Entwickler-Panel, Ground.groundAt). */
+  get terrainCellTiles(): number {
+    return this.terrain.cellTiles;
   }
-  set terrainCellPixels(pixels: number) {
-    this.terrain.cellPixels = pixels;
+  set terrainCellTiles(tiles: number) {
+    this.terrain.cellTiles = tiles;
   }
 
   /** Gelände im Bild vollständig (für das Ladeschild, main.ts). */

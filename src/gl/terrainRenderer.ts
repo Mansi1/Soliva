@@ -377,11 +377,14 @@ export class TerrainRenderer {
   /** Ausschnitt der Hauptansicht in Geräte-Pixeln dieses Canvas - nur für die Minimap. */
   viewRect: { x: number; y: number; width: number; height: number } | null = null;
   /**
-   * Kantenlänge einer Gitterzelle in CSS-Pixeln. Flach reicht ein grobes Gitter.
-   * Im Entwickler-Panel per Schieber (main.ts); game/Ground.ts misst die
-   * Bodenhöhe der Figuren mit demselben Wert.
+   * Kantenlänge einer Gitterzelle in Tiles - hängt an der Welt und ist auf
+   * jeder Zoomstufe gleich (Zoom 5: 128 px, Zoom 1: 8 px). Im Entwickler-Panel
+   * per Schieber (main.ts); game/Ground.ts misst die Bodenhöhe der Figuren
+   * mit demselben Wert.
    */
-  cellPixels = 16;
+  cellTiles = 1;
+  /** Untergrenze der Zelle in CSS-Pixeln - die Minimap zeigt Tiles kleiner als ein Pixel. */
+  cellPixels = 0;
   /**
    * Geräte-Pixel je CSS-Pixel. Die Grenzen des Gitters gelten in CSS-Pixeln:
    * in Geräte-Pixeln hätte Retina (2) viermal so viele Eckpunkte, jeder mit
@@ -433,14 +436,11 @@ export class TerrainRenderer {
   bubblePixels = 512;
 
   /**
-   * Zellgröße in u/v-Einheiten. Nie feiner als ein Achtel Tile: so kleine
-   * Formen hat das Relief nicht, und bei starkem Zoom würden aus vier Pixeln
-   * sonst fast eine Million Eckpunkte. Aber auch nie gröber als 16 CSS-Pixel -
-   * bei der stärksten Zoomstufe sähe man sonst die Kanten der Dreiecke.
+   * Zellgröße in u/v-Einheiten: cellTiles, aber nicht unter cellPixels.
    */
   private cellSize(camera: GpuCamera): number {
     const ppt = camera.pixelsPerTile / this.pixelRatio;
-    const cell = Math.min(Math.max(this.cellPixels / ppt, 1 / 4), Math.max(16, this.cellPixels) / ppt);
+    const cell = Math.max(this.cellTiles, this.cellPixels / ppt);
     // Auf eine Zweierpotenz gerundet - auf den Zoomstufen ist sie das ohnehin.
     // Beim weichen Zoomen bleiben die Eckpunkte so an derselben Weltstelle,
     // statt mit jedem Bild zu verrutschen (das Relief würde schwimmen), und
