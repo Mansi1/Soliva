@@ -218,6 +218,15 @@ function stateLink() {
 }
 const shareButton = document.getElementById('share-link') as HTMLButtonElement;
 shareButton.addEventListener('click', () => copyLink(shareButton, stateLink()));
+// Drahtgitter des Geländes, Stufen wie in der Galerie (GalleryOverlay.tsx).
+const WIRE_LABELS = ['Gitter', 'Gitter + Gelände', 'Nur Gitter'];
+let terrainWire = 0;
+const wireButton = document.getElementById('terrain-wire') as HTMLButtonElement;
+wireButton.addEventListener('click', () => {
+  terrainWire = (terrainWire + 1) % WIRE_LABELS.length;
+  renderer.terrainWire = terrainWire;
+  wireButton.textContent = WIRE_LABELS[terrainWire];
+});
 function startNewGame() {
   world.reset();
   ui.clearSelection();

@@ -80,6 +80,9 @@ function DebugPanel() {
           <label title={hint}><input type="checkbox" data-off={key} /> {label}</label>
         ))}
       </div>
+      {/* Drahtgitter des Geländes wie in der Galerie (main.ts). */}
+      <div><button type="button" id="terrain-wire" class="panel-btn"
+        title="Weißes Drahtgitter des Geländes: aus, über dem Gelände, nur Gitter">Gitter</button></div>
       {/* Welt, Ansicht und Spielstand als Link (main.ts) - wie "Link teilen" im Menü. */}
       <div><button type="button" id="share-link" class="panel-btn"
         title="Welt, Kamera (Position, Zoom, Drehung, Neigung) und Spielstand als Link in die Zwischenablage">Link kopieren: Spielstand + Kamera</button></div>

@@ -339,6 +339,8 @@ export class TerrainRenderer {
 
   /** Nur für Tests: 0 = Bild, 1 = Höhe, 2 = Hangneigung. */
   debugMode = 0;
+  /** Drahtgitter des Geländes wie in der Galerie: 0 aus, 1 über dem Gelände, 2 nur Gitter. */
+  wire = 0;
   /** Sonne und Himmel (gl/light.ts) - die Übersichtskarte bleibt bei der festen Sonne. */
   light: Light = CLASSIC_LIGHT;
   /** Uhr der Brandung in Sekunden - MapRenderer setzt sie, die Übersichtskarte steht bei 0. */
@@ -1273,6 +1275,7 @@ export class TerrainRenderer {
     gl.uniform1f(this.location('uGridCell'), cell);
     gl.uniform1i(this.location('uGridColumns'), stride);
 
+    gl.uniform1i(this.location('uWire'), this.wire);
     gl.uniform1f(this.location('uHoverActive'), this.hoverTile ? 1 : 0);
     if (this.hoverTile) {
       gl.uniform2f(this.location('uHoverTile'), this.hoverTile.x, this.hoverTile.y);

@@ -493,6 +493,11 @@ export class MapRenderer {
     return this.reachZ;
   }
 
+  /** Drahtgitter des Geländes (Entwickler-Panel): 0 aus, 1 über dem Gelände, 2 nur Gitter. */
+  set terrainWire(mode: number) {
+    this.terrain.wire = mode;
+  }
+
   /** Gelände im Bild vollständig (für das Ladeschild, main.ts). */
   get terrainComplete(): boolean {
     return this.terrain.complete;
