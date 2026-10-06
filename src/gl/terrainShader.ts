@@ -978,6 +978,66 @@ vec3 biomeBase(int biome, float height, float variation) {
   return mix(uBiomeLo[biome], uBiomeHi[biome], t);
 }
 
+// Farbe eines Land-Texels: Bodenmuster samt Feinrelief an der Musterkoordinate
+// p (von oben: Welt-(x, y), am Hang auch seitlich, siehe main). Die Anteile
+// der Böden liegen schon fest; ds ist die Detailstufe in dieser Projektion.
+vec3 landSurface(vec2 p, float ds, int biome, float height, float variation, float moisture,
+                 float wood, float desert, float beach, float rock, float snow, float shoreWet) {
+  vec3 color;
+  if (biome == B_SNOW) {
+    color = snowTexture(biomeBase(biome, height, variation), p, ds);
+  } else {
+    // Pflanzendecke: Wiese, Wald, Wüste.
+    vec3 cover = vec3(0.0);
+    if (beach < 1.0 && rock < 1.0) {
+      // Blumen nur mitten in der Wiese, nicht im Saum zu anderen Böden.
+      float bloom = (1.0 - smoothstep(0.0, 0.35, beach)) * (1.0 - smoothstep(0.0, 0.4, desert))
+          * (1.0 - smoothstep(0.0, 0.6, wood)) * (1.0 - smoothstep(0.0, 0.4, rock));
+      if (wood < 1.0) cover = grassTexture(biomeBase(B_GRASS, height, variation), p, ds, moisture, bloom);
+      if (wood > 0.0) cover = mix(cover, forestTexture(biomeBase(B_FOREST, height, variation), p, ds, height), wood);
+      if (desert > 0.0) cover = mix(cover, desertTexture(biomeBase(B_DESERT, height, variation), p, ds), desert);
+    }
+    color = cover;
+    if (beach > 0.0) {
+      color = mix(color, beachTexture(biomeBase(B_BEACH, height, variation), p, ds, height), beach);
+    }
+    if (rock > 0.0) {
+      color = mix(color, rockTexture(biomeBase(B_MOUNTAIN, height, variation), p, ds, height), rock);
+    }
+  }
+
+  // An der Wasserlinie nasser, glatter Sand. Sonst endet das Muster von
+  // Wüste oder Wiese hart am Wasser (der Sand unter Wasser ist glatt).
+  if (shoreWet > 0.0) {
+    vec3 wetSand = biomeBase(B_BEACH, height, variation) * vec3(0.86, 0.85, 0.83);
+    color = mix(color, wetSand, shoreWet * 0.85);
+  }
+
+  // Feinrelief beleuchten: Normale aus dem Anstieg des Bump-Musters,
+  // Licht wie beim Gelände von links oben. So wirkt der Boden körnig und
+  // plastisch statt glatt bemalt. Weit draußen blendet es aus.
+  float bumpFade = detailFade(0.12, ds) * (1.0 - gPropMask) * (1.0 - shoreWet);
+  if (bumpFade > 0.0) {
+    float sandShare = max(beach, desert);
+    float e = max(ds * 0.75, 0.004);
+    float b0 = groundBump(p, ds, wood, sandShare, rock, snow, height);
+    float bx = groundBump(p + vec2(e, 0.0), ds, wood, sandShare, rock, snow, height);
+    float by = groundBump(p + vec2(0.0, e), ds, wood, sandShare, rock, snow, height);
+    // Gras und Schnee zart, Sand etwas mehr, Laub und Fels kräftiger.
+    float k = mix(0.018, 0.04, wood);
+    k = mix(k, 0.05, rock);
+    k = mix(k, 0.012, sandShare * (1.0 - rock));
+    k = mix(k, 0.022, snow);
+    vec3 bn = normalize(vec3(-(bx - b0) / e * k, -(by - b0) / e * k, 1.0));
+    vec3 sun = normalize(vec3(SUN_XY, 0.82));
+    float light = dot(bn, sun) / sun.z;
+    color *= mix(1.0, clamp(light, 0.55, 1.35), 0.8 * bumpFade);
+    // Vertiefungen etwas dunkler - Umgebungsverdeckung zwischen Halmen.
+    color *= 1.0 - clamp(-b0, 0.0, 1.0) * 0.12 * bumpFade;
+  }
+  return color;
+}
+
 void main() {
   fragNormal = vec2(0.5);
   // Welt-Tiles je Geraete-Pixel, waagerecht gemessen. Auf Haengen ist es
@@ -1004,6 +1064,9 @@ void main() {
   float variation = (snoise(L_DETAIL, tile * 0.35 / detailStep) + 1.0) * 0.5;
 
   bool isWater = biome == B_DEEP_WATER || biome == B_WATER;
+  // Nachbarhöhen für Hangschattierung, Relief-Normale und Triplanar (unten).
+  float hRight = elevation((tile + vec2(step, 0.0)) * uMapScale, detailStep);
+  float hDown = elevation((tile + vec2(0.0, step)) * uMapScale, detailStep);
   vec3 color;
   // Flachwasser: Tiefe 0..1 über das Band vor dem Ufer - im Alpha-Kanal, die
   // Brandung im Bild läuft daran entlang. 1: Land oder tiefes Wasser.
@@ -1063,63 +1126,43 @@ void main() {
 
     float snow = biome == B_SNOW ? 1.0 : 0.0;
     if (biome == B_SNOW) {
-      color = snowTexture(biomeBase(biome, height, variation), tile, detailStep);
       wood = 0.0;
       rock = 0.0;
       beach = 0.0;
       desert = 0.0;
-    } else {
-      // Pflanzendecke: Wiese, Wald, Wüste.
-      vec3 cover = vec3(0.0);
-      if (beach < 1.0 && rock < 1.0) {
-        // Blumen nur mitten in der Wiese, nicht im Saum zu anderen Böden.
-        float bloom = (1.0 - smoothstep(0.0, 0.35, beach)) * (1.0 - smoothstep(0.0, 0.4, desert))
-            * (1.0 - smoothstep(0.0, 0.6, wood)) * (1.0 - smoothstep(0.0, 0.4, rock));
-        if (wood < 1.0) cover = grassTexture(biomeBase(B_GRASS, height, variation), tile, detailStep, moisture, bloom);
-        if (wood > 0.0) cover = mix(cover, forestTexture(biomeBase(B_FOREST, height, variation), tile, detailStep, height), wood);
-        if (desert > 0.0) cover = mix(cover, desertTexture(biomeBase(B_DESERT, height, variation), tile, detailStep), desert);
-      }
-      color = cover;
-      if (beach > 0.0) {
-        color = mix(color, beachTexture(biomeBase(B_BEACH, height, variation), tile, detailStep, height), beach);
-      }
-      if (rock > 0.0) {
-        color = mix(color, rockTexture(biomeBase(B_MOUNTAIN, height, variation), tile, detailStep, height), rock);
-      }
     }
-
-    // An der Wasserlinie nasser, glatter Sand - gleich welcher Boden. Sonst
-    // endet das Muster von Wüste oder Wiese hart am Wasser (der Sand unter
-    // Wasser ist glatt, siehe oben).
+    // An der Wasserlinie nasser, glatter Sand - gleich welcher Boden (siehe landSurface).
     shoreWet = 1.0 - smoothstep(uSeaLevel, uSeaLevel + (uShoreLevel - uSeaLevel) * 0.45, height);
-    if (shoreWet > 0.0) {
-      vec3 wetSand = biomeBase(B_BEACH, height, variation) * vec3(0.86, 0.85, 0.83);
-      color = mix(color, wetSand, shoreWet * 0.85);
-    }
 
-    {
-      // Feinrelief beleuchten: Normale aus dem Anstieg des Bump-Musters,
-      // Licht wie beim Gelände von links oben. So wirkt der Boden körnig und
-      // plastisch statt glatt bemalt. Weit draußen blendet es aus.
-      float bumpFade = detailFade(0.12, detailStep) * (1.0 - gPropMask) * (1.0 - shoreWet);
-      if (bumpFade > 0.0) {
-        float sandShare = max(beach, desert);
-        float e = max(detailStep * 0.75, 0.004);
-        float b0 = groundBump(tile, detailStep, wood, sandShare, rock, snow, height);
-        float bx = groundBump(tile + vec2(e, 0.0), detailStep, wood, sandShare, rock, snow, height);
-        float by = groundBump(tile + vec2(0.0, e), detailStep, wood, sandShare, rock, snow, height);
-        // Gras und Schnee zart, Sand etwas mehr, Laub und Fels kräftiger.
-        float k = mix(0.018, 0.04, wood);
-        k = mix(k, 0.05, rock);
-        k = mix(k, 0.012, sandShare * (1.0 - rock));
-        k = mix(k, 0.022, snow);
-        vec3 bn = normalize(vec3(-(bx - b0) / e * k, -(by - b0) / e * k, 1.0));
-        vec3 sun = normalize(vec3(SUN_XY, 0.82));
-        float light = dot(bn, sun) / sun.z;
-        color *= mix(1.0, clamp(light, 0.55, 1.35), 0.8 * bumpFade);
-        // Vertiefungen etwas dunkler - Umgebungsverdeckung zwischen Halmen.
-        color *= 1.0 - clamp(-b0, 0.0, 1.0) * 0.12 * bumpFade;
-      }
+    // Die Muster hängen an (x, y) - von oben aufgemalt. An steilen Hängen
+    // zöge das sie in die Länge, dort kommen sie zusätzlich von der Seite
+    // (Triplanar): (y, z) für Hänge in x, (x, z) für Hänge in y, gewichtet
+    // nach der Normale. Flacher als ~25° bleibt es bei einer Abtastung.
+    // ponytail: der Cache tastet in Boden-Koordinaten ab, am steilen Hang
+    // liegen seine Texel darum im Bild gestreckt (Feindetail blendet dort
+    // über sideStep aus); dichter abtasten, wenn Hänge trotzdem unscharf wirken.
+    vec3 tri = vec3(0.0, 0.0, 1.0);
+    vec2 grad = vec2(0.0);
+    if (uReliefScale > 0.0) {
+      float z0 = reliefZ(height);
+      grad = vec2(reliefZ(hRight) - z0, reliefZ(hDown) - z0) * uReliefScale / step;
+      vec3 w = normalize(vec3(grad, 1.0));
+      w *= w;
+      w *= w;
+      w.xy = max(w.xy - 0.02, 0.0);
+      tri = w / (w.x + w.y + w.z);
+    }
+    float zTiles = reliefZ(height) * uReliefScale;
+    // Ein Texel rückt an der Seite um so viel weiter, wie der Hang steigt.
+    float sideStep = detailStep * max(1.0, length(grad));
+    // Eine Aufrufstelle statt drei: landSurface ist groß, dreimal eingesetzt
+    // würde der Shader auch auf flachem Boden teurer.
+    color = vec3(0.0);
+    for (int i = 2; i >= 0; i--) {
+      if (tri[i] <= 0.0) continue;
+      vec2 p = i == 2 ? tile : vec2(i == 0 ? tile.y : tile.x, zTiles);
+      color += landSurface(p, i == 2 ? detailStep : sideStep, biome, height, variation, moisture,
+                           wood, desert, beach, rock, snow, shoreWet) * tri[i];
     }
   }
 
@@ -1127,8 +1170,6 @@ void main() {
   // ueber dFdx/dFdy: Bildschirm-Ableitungen gelten je 2x2-Block, die
   // Schattierung waere dann nur halb aufgeloest. Der GPU ist der dreifache
   // Aufwand egal, und so rechnet der Shader exakt dasselbe wie shadeFrom().
-  float hRight = elevation((tile + vec2(step, 0.0)) * uMapScale, detailStep);
-  float hDown = elevation((tile + vec2(0.0, step)) * uMapScale, detailStep);
   float shade = tanh(((height - hRight) + (height - hDown)) * uShadeGain / step);
   // Im Flachland gedämpft, sonst zeichnet sie jede kleine Welle der Wiese nach.
   float lowland = mix(uLowlandShade, 1.0, smoothstep(uMountainFoot - 0.15, uMountainFoot, height));
