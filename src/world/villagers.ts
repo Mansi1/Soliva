@@ -82,6 +82,13 @@ export class VillagerWork {
   private terrainBlock = new Map<string, number>();
   /** Wer im letzten Tick zu sehen war und Platz braucht - für steer() und separate(). */
   private present: Villager[] = [];
+  /**
+   * Bauern je Furche (furrowKey), einmal je Tick gebaut (beginTick) - sonst
+   * ginge jeder Bauer in jedem Tick alle Dorfbewohner durch. Wechselt einer
+   * die Furche, kommt er dazu; wer sie verlassen hat, steht noch drin und
+   * wird beim Nachsehen übergangen (farmerOn).
+   */
+  private farmRows = new Map<string, Villager[]>();
 
   constructor(private world: World) {}
 
@@ -181,6 +188,26 @@ export class VillagerWork {
     if (placed > 0) return null;
     const tile = this.world.terrain.getTile(x, y);
     return tile.tileType === 'water' || tile.tileType === 'deep_water' ? 'Dorfbewohner können nicht schwimmen' : 'Dort ist kein Platz';
+  }
+
+  /** Vor den Ticks aller Dorfbewohner: wer auf welcher Furche arbeitet. */
+  beginTick() {
+    this.farmRows.clear();
+    for (const v of this.world.villagers) {
+      if (v.task.kind === 'farm') this.addFarmer(v, `${v.task.building}#${v.task.row}`);
+    }
+  }
+
+  private addFarmer(v: Villager, furrow: string) {
+    const list = this.farmRows.get(furrow);
+    if (list) list.push(v);
+    else this.farmRows.set(furrow, [v]);
+  }
+
+  /** Arbeitet außer `self` jemand auf dieser Furche (furrowKey)? */
+  private farmerOn(furrow: string, self: Villager): boolean {
+    return this.farmRows.get(furrow)?.some((u) => u !== self && u.task.kind === 'farm'
+      && `${u.task.building}#${u.task.row}` === furrow) ?? false;
   }
 
   /**
@@ -401,10 +428,11 @@ export class VillagerWork {
    * und kein anderer Bauer arbeitet - die dem Bauern nächste.
    */
   private nextFurrow(v: Villager, group: Farm[], phase: FarmPhase): { building: Farm; row: number; distance: number } | undefined {
-    const busy = new Set(this.world.villagers.flatMap((u) => (u !== v && u.task.kind === 'farm' ? [`${u.task.building}#${u.task.row}`] : [])));
+    // Solange es wächst, hat keine Furche Arbeit (furrowNeeds).
+    if (phase === 'grow') return undefined;
     let best: { building: Farm; row: number; distance: number } | undefined;
     for (const { building, row, f } of this.world.farming.furrows(group)) {
-      if (!furrowNeeds(f, phase) || busy.has(furrowKey(building, row))) continue;
+      if (!furrowNeeds(f, phase) || this.farmerOn(furrowKey(building, row), v)) continue;
       const spot = this.farmSpot(building, row, v);
       const distance = Math.hypot(spot.x - v.x, spot.y - v.y);
       if (!best || distance < best.distance) best = { building, row, distance };
@@ -497,6 +525,7 @@ export class VillagerWork {
         building = next.building;
         task.building = next.building.anchor;
         task.row = next.row;
+        this.addFarmer(v, furrowKey(next.building, next.row));
       } else if (phase === 'harvest' && v.carrying > 0) {
         // Die Ernte ist verteilt - mit dem, was er hat, zum Lager.
         task.delivering = true;

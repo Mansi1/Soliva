@@ -634,6 +634,7 @@ export class World {
     const t0 = performance.now();
     if (this.wildlife.tick(dt, this.animalSurroundings)) this.dirty = true;
     const t1 = performance.now();
+    this.work.beginTick();
     for (const v of this.villagers) {
       v.rememberPosition();
       v.pose = POSE.stand;

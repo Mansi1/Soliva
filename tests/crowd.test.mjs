@@ -51,6 +51,29 @@ test('genau aufeinander: auseinander auf PERSONAL_SPACE, Arbeitende bleiben steh
   assert.ok(Math.hypot(walker.x - worker.x, walker.y - worker.y) >= PERSONAL_SPACE - 1e-9);
 });
 
+test('Raster übersieht keine Überlappung, auch über Zellgrenzen und bei negativen Lagen', () => {
+  // 300 Figuren dicht auf wenigen Tiles um den Ursprung (wie ein großes
+  // Dorf): nach einigen Aufrufen sind die Überlappungen fast weg.
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const units = Array.from({ length: 300 }, () => ({ x: rand() * 6 - 3, y: rand() * 6 - 3 }));
+  const overlap = () => {
+    let sum = 0;
+    for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
+      sum += Math.max(0, PERSONAL_SPACE - Math.hypot(units[i].x - units[j].x, units[i].y - units[j].y));
+    }
+    return sum;
+  };
+  const before = overlap();
+  for (let k = 0; k < 20; k++) separate(units, units.map(() => false), open);
+  assert.ok(overlap() < before * 0.05, `Überlappung ${before} → ${overlap()}`);
+
+  // Zwei knapp beiderseits einer Zellgrenze, bei negativen Lagen.
+  const a = { x: -PERSONAL_SPACE - 0.01, y: -0.5 }, b = { x: -PERSONAL_SPACE + 0.01, y: -0.5 };
+  separate([a, b], [false, false], open);
+  assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= PERSONAL_SPACE - 1e-9);
+});
+
 test('nie in ein versperrtes Tile geschoben', () => {
   const blocked = (x) => x < 0;
   const a = { x: 0.02, y: 0.5 }, b = { x: 0.1, y: 0.5 };

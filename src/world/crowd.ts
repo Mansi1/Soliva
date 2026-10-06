@@ -112,9 +112,10 @@ export function steer(self: Point, dx: number, dy: number, others: Iterable<Poin
  * bleibt erlaubt: Sammler stehen am Baum auf dessen Tile). Ändert x und y
  * der Figuren; true, wenn eine sich bewegt hat.
  *
- * ponytail: prüft jedes Paar (42 Figuren der Demo: simVillagersMs wie
- * vorher, ~0,2 ms auf M3 Pro); nach Lage in ein Raster sortieren, wenn
- * simVillagersMs mit vielen Figuren spürbar steigt.
+ * Geprüft werden nur Paare in benachbarten Zellen eines Rasters von
+ * PERSONAL_SPACE - nicht jedes Paar: mit 300 Bauern war das der größte
+ * Posten der Simulation. Das Raster gilt je Durchgang; wer in einem
+ * Durchgang erst heranrückt, kommt im nächsten dran.
  */
 export function separate(bodies: readonly Point[], fixed: readonly boolean[], blocked: Blocked): boolean {
   let moved = false;
@@ -125,10 +126,22 @@ export function separate(bodies: readonly Point[], fixed: readonly boolean[], bl
     b.y = y;
     moved = true;
   };
+  const cellOf = (b: Point) => [Math.floor(b.x / PERSONAL_SPACE), Math.floor(b.y / PERSONAL_SPACE)];
+  // Zellen als Zahl, eindeutig solange |y| unter 90 000 Tiles bleibt.
+  const cellKey = (cx: number, cy: number) => cx * 1e6 + cy;
   // Zwei Durchgänge: ein Schub kann neue Überlappungen machen.
   for (let pass = 0; pass < 2; pass++) {
+    const grid = new Map<number, number[]>();
+    const cells = bodies.map(cellOf);
+    cells.forEach(([cx, cy], i) => {
+      const list = grid.get(cellKey(cx, cy));
+      if (list) list.push(i);
+      else grid.set(cellKey(cx, cy), [i]);
+    });
     for (let i = 0; i < bodies.length; i++) {
-      for (let j = i + 1; j < bodies.length; j++) {
+      const [cx, cy] = cells[i];
+      for (let n = 0; n < 9; n++) for (const j of grid.get(cellKey(cx + (n % 3) - 1, cy + Math.floor(n / 3) - 1)) ?? []) {
+        if (j <= i) continue;
         const a = bodies[i], b = bodies[j];
         if (fixed[i] && fixed[j]) continue;
         const dx = b.x - a.x, dy = b.y - a.y;
