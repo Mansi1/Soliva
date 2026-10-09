@@ -15,6 +15,13 @@ import { ZOOM_LEVELS } from '../game/Camera';
 import { ShortcutList } from './Shortcuts';
 import { confirmDialog } from './ConfirmDialog';
 import { DEV_OFF } from './Hud';
+import type { TrackTags } from '../trackTags';
+
+/** Sekunden als m:ss (Fortschritt des Musikstücks). */
+function clock(seconds: number): string {
+  const s = Math.floor(seconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 /** Was das Menü außer den Einstellungen braucht - main.ts liefert es. */
 export interface MenuHooks {
@@ -24,8 +31,14 @@ export interface MenuHooks {
   toggleSound(): void;
   paused(): boolean;
   togglePause(): void;
-  /** Titel des Musikstücks, das gerade läuft, oder null. */
-  musicTitle(): string | null;
+  /** Das laufende Musikstück: Titel, Interpret, Album, Cover - oder null vor dem ersten Klick. */
+  musicInfo(): TrackTags | null;
+  /** Stelle und Länge des laufenden Stücks in Sekunden (Länge 0: unbekannt). */
+  musicProgress(): { time: number; duration: number };
+  seekMusic(time: number): void;
+  musicPaused(): boolean;
+  toggleMusic(): void;
+  previousTrack(): void;
   nextTrack(): void;
   /** Zurück ins Hauptmenü - dort geht es weiter, neu oder mit einem anderen Spielstand. */
   mainMenu(): void;
@@ -119,11 +132,25 @@ export class SettingsMenu {
   private scroll = sliderRefs();
   private edgeSpeed = sliderRefs();
   private speed = sliderRefs();
-  private track = createRef<HTMLSpanElement>();
+  private track = createRef<HTMLDivElement>();
+  private trackCover = createRef<HTMLImageElement>();
+  private seek = createRef<HTMLInputElement>();
+  private seekTime = createRef<HTMLSpanElement>();
+  private seekDuration = createRef<HTMLSpanElement>();
+  private playButton = createRef<HTMLButtonElement>();
+  private spotify = createRef<HTMLAnchorElement>();
+  /** Schiebt der Spieler gerade am Fortschrittsbalken? Dann setzt ihn die Uhr nicht zurück. */
+  private seeking = false;
+  /** Uhr für den Fortschrittsbalken, solange das Menü offen ist. */
+  private progressTimer = 0;
+  private trackTitle = createRef<HTMLDivElement>();
+  private trackArtist = createRef<HTMLDivElement>();
+  private trackAlbum = createRef<HTMLDivElement>();
   private showHelp = createRef<HTMLInputElement>();
   private showDebug = createRef<HTMLInputElement>();
   private edgeScroll = createRef<HTMLInputElement>();
   private idleFps = createRef<HTMLInputElement>();
+  private autoFlatten = createRef<HTMLInputElement>();
   private minimapFps = createRef<HTMLInputElement>();
   private fxaa = createRef<HTMLInputElement>();
   private colorGrading = createRef<HTMLInputElement>();
@@ -200,9 +227,62 @@ export class SettingsMenu {
             <span>Musik</span>
             <Slider refs={this.music} min={0} max={100} step={5} onInput={(v) => this.change({ music: v })} />
           </div>
-          <div class="menu-row">
-            <span class="menu-track" ref={this.track} />
-            <button type="button" class="wood-btn menu-btn" onClick={act(() => this.hooks.nextTrack())}>Nächstes Stück</button>
+          <div class="menu-player">
+            <div class="menu-track" ref={this.track}>
+              {/* Fester Rahmen: beim Wechsel springt die Zeile nicht, auch solange das Cover fehlt.
+                  VERIFIED: im Browser nach "Weiter" 10-mal in 1 s geprüft - das Cover war nie verborgen. */}
+              <div class="menu-track-art">
+                <img class="menu-track-cover" ref={this.trackCover} alt="" hidden />
+              </div>
+              <div class="menu-track-text">
+                <div class="menu-track-title" ref={this.trackTitle} />
+                <div class="menu-track-meta" ref={this.trackArtist} />
+                <div class="menu-track-meta" ref={this.trackAlbum} />
+              </div>
+            </div>
+            <div class="menu-progress">
+              <span ref={this.seekTime}>0:00</span>
+              <input type="range" class="menu-seek" ref={this.seek} min="0" max="0" step="1" value="0" aria-label="Fortschritt"
+                onInput={() => {
+                  this.seeking = true;
+                  this.seekTime.current.textContent = clock(Number(this.seek.current.value));
+                }}
+                onChange={() => {
+                  this.seeking = false;
+                  this.hooks.seekMusic(Number(this.seek.current.value));
+                }} />
+              <span ref={this.seekDuration}>0:00</span>
+            </div>
+            {/* Knöpfe wie bei einem Musikspieler: zurück, Wiedergabe/Pause, weiter */}
+            <div class="menu-player-buttons">
+              <button type="button" class="wood-btn menu-btn menu-icon" title="Voriges Stück" aria-label="Voriges Stück"
+                onClick={act(() => this.hooks.previousTrack())}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path fill="currentColor" d="M19 5.5v13a1 1 0 0 1-1.5.86l-10-6.5a1 1 0 0 1 0-1.72l10-6.5A1 1 0 0 1 19 5.5zM7 5H4.5v14H7z" />
+                </svg>
+              </button>
+              <button type="button" class="wood-btn menu-btn menu-icon menu-play" ref={this.playButton}
+                onClick={act(() => this.hooks.toggleMusic())}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path class="play" fill="currentColor" d="M7 4.8v14.4a1 1 0 0 0 1.5.86l11-7.2a1 1 0 0 0 0-1.72l-11-7.2A1 1 0 0 0 7 4.8z" />
+                  <path class="pause" fill="currentColor" d="M6 4h4v16H6zM14 4h4v16h-4z" />
+                </svg>
+              </button>
+              <button type="button" class="wood-btn menu-btn menu-icon" title="Nächstes Stück" aria-label="Nächstes Stück"
+                onClick={act(() => this.hooks.nextTrack())}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path fill="currentColor" d="M5 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 5 5.5zM17 5h2.5v14H17z" />
+                </svg>
+              </button>
+              {/* Album bei Spotify - nur, wenn das Stück einen Link hat (WXXX "Spotify", trackTags.ts). */}
+              <a class="wood-btn menu-btn menu-icon menu-spotify" ref={this.spotify} target="_blank" rel="noopener noreferrer"
+                title="Album bei Spotify" hidden>
+                Spotify
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+                </svg>
+              </a>
+            </div>
           </div>
         </section>
         <section>
@@ -220,6 +300,11 @@ export class SettingsMenu {
             <span>Tempo am Rand</span>
             <Slider refs={this.edgeSpeed} min={25} max={300} step={25} onInput={(v) => this.change({ edgeSpeed: v })} />
           </div>
+          <label class="menu-row" title="Verdeckt ein Berg die Bildmitte, legt sich das Gelände von selbst flach - wie mit gehaltener Leertaste.">
+            <span>Gelände automatisch flachlegen</span>
+            <input type="checkbox" ref={this.autoFlatten}
+              onInput={(e: Event) => this.change({ autoFlatten: (e.target as HTMLInputElement).checked })} />
+          </label>
           <details class="menu-keys-box">
             <summary>Tastenkürzel</summary>
             <ShortcutList />
@@ -366,11 +451,26 @@ export class SettingsMenu {
     this.backButton.current.hidden = !fromTitle;
     this.title.current.textContent = fromTitle ? 'Einstellungen' : 'Menü';
     this.refresh();
+    clearInterval(this.progressTimer);
+    this.progressTimer = window.setInterval(() => this.updateProgress(), 250);
   }
 
   close() {
     this.opened = false;
     this.root.hidden = true;
+    clearInterval(this.progressTimer);
+  }
+
+  /** Fortschrittsbalken nachführen - außer während der Spieler daran schiebt. */
+  private updateProgress() {
+    if (this.seeking) return;
+    const { time, duration } = this.hooks.musicProgress();
+    const seek = this.seek.current;
+    seek.max = String(Math.floor(duration));
+    seek.value = String(Math.floor(time));
+    seek.disabled = duration === 0;
+    this.seekTime.current.textContent = clock(time);
+    this.seekDuration.current.textContent = clock(duration);
   }
 
   toggle() {
@@ -396,12 +496,25 @@ export class SettingsMenu {
     slider(this.edgeSpeed, s.edgeSpeed);
     this.speed.input.current.value = String(Math.round(s.speed * 100));
     this.speed.output.current.textContent = s.speed <= 1 ? 'Langsam' : s.speed >= MAX_SPEED ? 'Extrem schnell' : `${s.speed}×`;
-    const title = this.hooks.musicTitle();
-    this.track.current.textContent = title ? `♪ ${title}` : 'Musik beginnt mit dem ersten Klick';
+    const track = this.hooks.musicInfo();
+    this.trackTitle.current.textContent = track ? track.title ?? 'Unbekanntes Stück' : 'Musik beginnt mit dem ersten Klick';
+    this.trackArtist.current.textContent = track?.artist ?? '';
+    this.trackAlbum.current.textContent = track?.album ?? '';
+    this.spotify.current.hidden = !track?.link;
+    if (track?.link) this.spotify.current.href = track.link;
+    const cover = this.trackCover.current;
+    cover.hidden = !track?.cover;
+    if (track?.cover && cover.getAttribute('src') !== track.cover) cover.src = track.cover;
+    const paused = this.hooks.musicPaused() || !track;
+    this.playButton.current.classList.toggle('paused', paused);
+    this.playButton.current.title = paused ? 'Abspielen' : 'Pause';
+    this.playButton.current.setAttribute('aria-label', this.playButton.current.title);
+    this.updateProgress();
     this.showHelp.current.checked = s.showHelp;
     this.showDebug.current.checked = s.showDebug;
     this.edgeScroll.current.checked = s.edgeScroll;
     this.idleFps.current.checked = s.idleFps;
+    this.autoFlatten.current.checked = s.autoFlatten;
     this.minimapFps.current.checked = s.minimapFps;
     this.fxaa.current.checked = s.fxaa;
     this.colorGrading.current.checked = s.colorGrading;

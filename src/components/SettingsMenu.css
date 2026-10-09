@@ -93,15 +93,105 @@
   min-height: 34px;
   font-size: 15px;
 }
-/* Das laufende Musikstück - lange Titel werden gekürzt. */
+/* Das laufende Musikstück: Cover, Titel, Interpret und Album - lange Zeilen werden gekürzt. */
 #menu .menu-track {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Musikspieler: Stück, Fortschritt, Knöpfe untereinander. */
+#menu .menu-player {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+/* Fester Platz fürs Cover, auch ohne Bild - nichts springt beim Wechsel. */
+#menu .menu-track-art {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border: 2px solid var(--wood-edge);
+  border-radius: 3px;
+  background: var(--wood-shade);
+  overflow: hidden;
+}
+#menu .menu-track-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#menu .menu-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cream-muted);
+}
+/* Feste Breite für die Zeiten - Georgia hat keine gleich breiten Ziffern, sonst ruckelt der Balken. */
+#menu .menu-progress span {
+  flex: none;
+  width: 3.2em;
+}
+#menu .menu-progress span:last-child {
+  text-align: right;
+}
+#menu .menu-seek {
+  flex: 1;
+  min-width: 0;
+}
+#menu .menu-player-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+#menu .menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+}
+/* Link zum Album - ein Knopf wie die anderen, mit Text und Pfeil nach draußen */
+#menu .menu-spotify {
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+#menu .menu-spotify[hidden] {
+  display: none;
+}
+#menu .menu-play .pause,
+#menu .menu-play.paused .play {
+  display: inline;
+}
+#menu .menu-play .play,
+#menu .menu-play.paused .pause {
+  display: none;
+}
+#menu .menu-track-text {
+  min-width: 0;
+}
+#menu .menu-track-text > div {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+#menu .menu-track-title {
   font-size: 13px;
   font-style: italic;
+  color: var(--cream-muted);
+}
+#menu .menu-track:has(.menu-track-cover:not([hidden])) .menu-track-title {
+  font-style: normal;
+  font-weight: bold;
+  color: var(--gold);
+}
+#menu .menu-track-meta {
+  font-size: 12px;
   color: var(--cream-muted);
 }
 #menu small {

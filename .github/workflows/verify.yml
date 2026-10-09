@@ -11,6 +11,15 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+      # Musik und Texturen liegen in LFS - tests/track-tags.test.mjs und der Rauchtest lesen die ID3-Tags
+      # der echten MP3s. Aus dem Cache wie in deploy-aws.yml (Freikontingent); runner.os im Schlüssel,
+      # weil macOS und Ubuntu keinen Cache teilen.
+      - run: git lfs ls-files --long | cut -d ' ' -f 1 | sort > .lfs-ids
+      - uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: lfs-${{ runner.os }}-${{ hashFiles('.lfs-ids') }}
+      - run: git lfs pull
       # Tests importieren .ts direkt (Node >= 22.6), Vite 8 braucht ebenfalls ein neues Node.
       - uses: actions/setup-node@v7
         with:

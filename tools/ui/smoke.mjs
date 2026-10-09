@@ -5,6 +5,7 @@
 //
 // Aufruf: erst `npm run dev`, dann `npm run smoke` bzw.
 // `node tools/ui/smoke.mjs [Adresse]` (Standard http://localhost:5173).
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { launch } from './browser.mjs';
 
 const BASE = (process.argv[2] ?? 'http://localhost:5173').replace(/\/+$/, '');
@@ -27,8 +28,12 @@ await page.addInitScript(() => {
 });
 
 let failed = 0;
+/** Alle Prüfzeilen - landen am Ende als Bericht in output/smoke.txt (make e2e). VERIFIED: das defuss-vae-Gate verlangt nach e2e eine frische Datei in output/ (tests.e2e.evidence). */
+const results = [];
 function check(what, ok, detail = '') {
-  console.log(`${ok ? '✓' : '✗'} ${what}${detail ? ` - ${detail}` : ''}`);
+  const line = `${ok ? '✓' : '✗'} ${what}${detail ? ` - ${detail}` : ''}`;
+  console.log(line);
+  results.push(line);
   if (!ok) failed++;
 }
 
@@ -183,6 +188,15 @@ await cancel();
 // Ist nichts mehr abzubrechen, öffnet Esc das Menü, ein weiteres Esc schließt es.
 for (let i = 0; i < 4 && !(await menuOpen()); i++) await page.keyboard.press('Escape');
 check('Esc öffnet zuletzt das Menü', await menuOpen());
+// Musikspieler im Menü: Titel, Interpret und Spotify-Link kommen aus den ID3-Tags der MP3 (trackTags.ts).
+const player = await page.waitForFunction(() => {
+  const artist = document.querySelector('#menu .menu-track-meta')?.textContent;
+  const link = document.querySelector('#menu .menu-spotify');
+  return artist && link && !link.hidden ? { title: document.querySelector('#menu .menu-track-title').textContent, artist, link: link.href } : null;
+}, null, { timeout: 10_000 }).then((h) => h.jsonValue(), () => null);
+check('Musikspieler zeigt die Tags des Stücks', player?.artist === 'Aron Homberg' && player.link.startsWith('https://open.spotify.com/album/'),
+  player ? `${player.title} - ${player.artist}` : 'keine Tags im Menü');
+check('automatisch flachlegen ist aus', !(await page.isChecked('#menu label:has-text("Gelände automatisch flachlegen") input')));
 await page.keyboard.press('Escape');
 check('Esc schließt das Menü', !(await menuOpen()));
 
@@ -265,5 +279,8 @@ check('Clips aus Blender geladen', emptyLibraries.length === 0,
 
 check('keine Fehler auf der Seite', pageErrors.length === 0, pageErrors.join(' | '));
 await browser.close();
-console.log(failed ? `${failed} fehlgeschlagen` : 'alles in Ordnung');
+const summary = failed ? `${failed} fehlgeschlagen` : 'alles in Ordnung';
+console.log(summary);
+mkdirSync(new URL('../../output/', import.meta.url), { recursive: true });
+writeFileSync(new URL('../../output/smoke.txt', import.meta.url), `${new Date().toISOString()} ${BASE}\n${results.join('\n')}\n${summary}\n`);
 process.exit(failed ? 1 : 0);
