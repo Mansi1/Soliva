@@ -49,3 +49,5 @@ CLAUDE.local.md
 
 # CDK-Ausgabe (infra/)
 infra/cdk.out
+coverage/
+.cache/

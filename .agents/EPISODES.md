@@ -5,6 +5,6 @@ Agents append `<UTC ISO> s=<session> LESSON <Signan>` only for a falsified HYPOT
 A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then delete its lines. -->
 
 2026-10-01T05:42:15Z s=328f726c FAIL layout,env.example,tests.unit=?,coverage=?
-2026-10-01T05:48:36Z s=328f726c DONE fp=0c870cf3d40e cov=97.8% paths=.github/workflows/pages.yml,.github/workflows/verify.yml,Makefile,src/components/GalleryOverlay.tsx(+6)
 2026-10-01T05:48:36Z s=328f726c FINDING tools/ui/smoke.mjs:107 learn=test: make e2e runs the smoke test against the Pages build under /soliva/, so any new root-absolute path or check fails there
 2026-10-01T05:48:36Z s=328f726c FINDING vite.config.ts:63 learn=none: one-line config fallback; no cheap mechanical rule beyond the .env.example default BASE_PATH=/
+2026-10-09T20:42:57Z s=560a6297 DONE fp=1277f86bc348 cov=79.0% paths=AGENTS.md,bun.lock,memory.md,package.json(+12)
