@@ -504,7 +504,9 @@ function keepFocus(f: NonNullable<typeof focus>) {
  * im Bild nur noch seine steile Flanke. Geprüft bei jeder Änderung der
  * Ansicht: Verschieben, Zoomen, Neigen, Drehen, Sprünge. Flachgelegt wird
  * sofort, aufgerichtet erst, wenn die Sicht eine Weile frei ist - sonst
- * flackerte es beim Verschieben durchs Gebirge.
+ * flackerte es beim Verschieben durchs Gebirge. Nur mit dem Häkchen im Menü
+ * (settings.autoFlatten), von Haus aus aus. VERIFIED: Testseed x -150, y -130,
+ * Neigung 20° - verdeckt, flachgelegt nur mit Häkchen, ausgeschaltet sofort aufgerichtet.
  */
 let autoFlat = false;
 /** Ab so viel Abstand (Tiles) zwischen Hang vorn und Gelände dahinter gilt die Mitte als verdeckt - kleine Buckel zählen nicht. */
@@ -528,7 +530,7 @@ let clearSince = 0;
  * Springt auf die Stelle (x, y): mit ihrer Geländehöhe in die Bildmitte, als
  * festgehaltener Blickpunkt (focus) - das Haupthaus, ein Untätiger, eine
  * Stelle auf der Minimap. Liegt ein Berg davor, legt die Prüfung in loop()
- * das Gelände flach.
+ * das Gelände flach, wenn das automatische Flachlegen eingeschaltet ist.
  */
 function lookAt(x: number, y: number) {
   focus = { x, y, height: ground.groundAt(x, y), cameraX: 0, cameraY: 0 };
@@ -1062,7 +1064,12 @@ function loop(now: number) {
     renderer.bakeBuildings = [...groups.values()];
   }
   if (loadingEl.hidden === loading) loadingEl.hidden = !loading;
-  if (!start.isOpen()) {
+  if (!settings.autoFlatten) {
+    // Ausgeschaltet: sofort wieder aufrichten; beim Einschalten neu prüfen.
+    autoFlat = false;
+    clearSince = 0;
+    autoFlatView = '';
+  } else if (!start.isOpen()) {
     const seen = `${camera.x},${camera.y},${camera.zoom},${viewRotation()},${viewElevation()}`;
     if ((seen !== autoFlatView || (autoFlat && clearSince > 0)) && now - lastCheck >= CHECK_MS) {
       autoFlatView = seen;

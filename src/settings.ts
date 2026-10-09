@@ -41,6 +41,8 @@ export interface Settings {
    * trotzdem. Fehlt eine Art, gilt ANIMALS_BELOW_DEFAULT.
    */
   animalsBelow: Record<string, number>;
+  /** Gelände von selbst flachlegen, wenn ein Berg die Bildmitte verdeckt (main.ts, autoFlat). VERIFIED: Vorgabe aus, auch für alte Einstellungen ohne den Wert. */
+  autoFlatten: boolean;
   /** Steht die Kamera eine Sekunde still, nur 30 Bilder je Sekunde (main.ts, IDLE_FPS). */
   idleFps: boolean;
   /** Die Minimap nur 10-mal je Sekunde zeichnen (main.ts, MINIMAP_FPS). */
@@ -64,7 +66,7 @@ const BILLBOARDS_OLD_DEFAULT = 16;
 
 const DEFAULTS: Settings = {
   volume: 1, music: 0.5, speed: 2.5, scroll: 1, edgeScroll: true, edgeSpeed: 1, showHelp: false, showDebug: false, facing: '', tilt: 30, paused: false,
-  playerColor: 'green', billboards: BILLBOARDS_ALL, animalsBelow: {}, idleFps: true, minimapFps: true,
+  playerColor: 'green', billboards: BILLBOARDS_ALL, animalsBelow: {}, autoFlatten: false, idleFps: true, minimapFps: true,
   fxaa: true, colorGrading: true, bloom: true,
 };
 const STORAGE_KEY = 'pgm.settings';

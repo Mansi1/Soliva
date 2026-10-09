@@ -150,6 +150,7 @@ export class SettingsMenu {
   private showDebug = createRef<HTMLInputElement>();
   private edgeScroll = createRef<HTMLInputElement>();
   private idleFps = createRef<HTMLInputElement>();
+  private autoFlatten = createRef<HTMLInputElement>();
   private minimapFps = createRef<HTMLInputElement>();
   private fxaa = createRef<HTMLInputElement>();
   private colorGrading = createRef<HTMLInputElement>();
@@ -299,6 +300,11 @@ export class SettingsMenu {
             <span>Tempo am Rand</span>
             <Slider refs={this.edgeSpeed} min={25} max={300} step={25} onInput={(v) => this.change({ edgeSpeed: v })} />
           </div>
+          <label class="menu-row" title="Verdeckt ein Berg die Bildmitte, legt sich das Gelände von selbst flach - wie mit gehaltener Leertaste.">
+            <span>Gelände automatisch flachlegen</span>
+            <input type="checkbox" ref={this.autoFlatten}
+              onInput={(e: Event) => this.change({ autoFlatten: (e.target as HTMLInputElement).checked })} />
+          </label>
           <details class="menu-keys-box">
             <summary>Tastenkürzel</summary>
             <ShortcutList />
@@ -508,6 +514,7 @@ export class SettingsMenu {
     this.showDebug.current.checked = s.showDebug;
     this.edgeScroll.current.checked = s.edgeScroll;
     this.idleFps.current.checked = s.idleFps;
+    this.autoFlatten.current.checked = s.autoFlatten;
     this.minimapFps.current.checked = s.minimapFps;
     this.fxaa.current.checked = s.fxaa;
     this.colorGrading.current.checked = s.colorGrading;
