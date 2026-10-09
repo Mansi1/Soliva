@@ -5,7 +5,7 @@
 // VERIFIED: Vite (dev) und vite preview antworten auf Range mit 206; im Browser
 // 4 Anfragen je Stück (512 KB am Anfang, 3 kleine am Ende) statt der ganzen Datei (4-7 MB).
 
-import { getFrame, readID3RandomAccess, type RandomAccess } from 'audio-tag';
+import { readID3RandomAccess, type RandomAccess } from 'audio-tag';
 
 export interface TrackTags {
   title?: string;
@@ -13,7 +13,10 @@ export interface TrackTags {
   album?: string;
   /** Object-URL des Covers - lebt bis zum Schließen der Seite. */
   cover?: string;
-  /** Link zum Album bei Spotify (Frame WCOM). */
+  /**
+   * Link zum Album bei Spotify: Frame WXXX mit der Beschreibung "Spotify". WCOM
+   * kennt keine Beschreibung - daran sähe man nicht, wohin der Link führt.
+   */
   link?: string;
 }
 
@@ -41,15 +44,15 @@ async function remoteFile(url: string): Promise<RandomAccess> {
 }
 
 export async function readTrackTags(url: string): Promise<TrackTags> {
-  const { metadata, id3v2 } = await readID3RandomAccess(await remoteFile(url));
-  const wcom = id3v2 && getFrame(id3v2, 'WCOM');
+  const { metadata } = await readID3RandomAccess(await remoteFile(url));
+  const spotify = metadata.userUrls?.Spotify;
   const picture = metadata.pictures?.find((p) => p.type === 3) ?? metadata.pictures?.[0];
   return {
     title: metadata.title,
     artist: metadata.artist?.join(', '),
     album: metadata.album,
     cover: picture && URL.createObjectURL(new Blob([picture.data as BlobPart], { type: picture.mimeType })),
-    // Nur https - der Link landet als href im Menü, ein javascript:-Link liefe beim Klick.
-    link: wcom?.type === 'url' && wcom.url.startsWith('https://') ? wcom.url : undefined,
+    // Nur https - der Link landet als href in Menü und Karte, ein javascript:-Link liefe beim Klick.
+    link: spotify?.startsWith('https://') ? spotify : undefined,
   };
 }

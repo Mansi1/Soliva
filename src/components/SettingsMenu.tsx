@@ -274,7 +274,7 @@ export class SettingsMenu {
                   <path fill="currentColor" d="M5 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 5 5.5zM17 5h2.5v14H17z" />
                 </svg>
               </button>
-              {/* Album bei Spotify - nur, wenn das Stück einen Link hat (WCOM). */}
+              {/* Album bei Spotify - nur, wenn das Stück einen Link hat (WXXX "Spotify", trackTags.ts). */}
               <a class="wood-btn menu-btn menu-icon menu-spotify" ref={this.spotify} target="_blank" rel="noopener noreferrer"
                 title="Album bei Spotify" hidden>
                 Spotify

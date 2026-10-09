@@ -47,6 +47,14 @@
   color: var(--cream-muted);
   font-size: 0.85em;
 }
+/* Die Karte lässt Klicks durch zum Spiel - nur der Link fängt sie. */
+.track-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--gold);
+  font-size: 0.85em;
+  pointer-events: auto;
+}
 @keyframes track-card {
   0% { opacity: 0; transform: translateX(16px); }
   10% { opacity: 1; transform: none; }

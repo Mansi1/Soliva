@@ -12,6 +12,8 @@ export interface TrackCardInfo {
   artist?: string;
   album?: string;
   cover?: string;
+  /** Album bei Spotify (trackTags.ts) - dann ein Link auf der Karte. */
+  link?: string;
 }
 
 let root: HTMLElement | null = null;
@@ -32,6 +34,7 @@ export function showTrack(info: TrackCardInfo) {
         <div class="track-title">{info.title}</div>
         {info.artist && <div class="track-artist">{info.artist}</div>}
         {info.album && <div class="track-album">{info.album}</div>}
+        {info.link && <a class="track-link" href={info.link} target="_blank" rel="noopener noreferrer">Auf Spotify anhören ↗</a>}
       </div>
     </>,
     el,
