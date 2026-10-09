@@ -1,0 +1,55 @@
+/* Musikstück oben rechts, unter Menü-Knopf und Vorrat: 10 s sichtbar,
+   davon je eine Sekunde Ein- und Ausblenden. Klicks gehen durch. */
+.track-card {
+  position: fixed;
+  top: 70px;
+  right: 12px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 460px;
+  padding: 10px 14px 10px 10px;
+  background: var(--button-wood);
+  border: 2px solid var(--wood-edge);
+  border-radius: 6px;
+  box-shadow: var(--button-shine), 0 4px 14px var(--wood-shade);
+  color: var(--cream);
+  font-family: Georgia, 'Times New Roman', serif;
+  pointer-events: none;
+  opacity: 0;
+  animation: track-card 10s ease-in-out forwards;
+}
+.track-cover {
+  width: 128px;
+  height: 128px;
+  flex: none;
+  object-fit: cover;
+  border: 2px solid var(--wood-edge);
+  border-radius: 3px;
+}
+.track-text {
+  min-width: 0;
+}
+.track-text > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track-title {
+  color: var(--gold);
+  font-weight: bold;
+}
+.track-artist {
+  color: var(--cream-soft);
+}
+.track-album {
+  color: var(--cream-muted);
+  font-size: 0.85em;
+}
+@keyframes track-card {
+  0% { opacity: 0; transform: translateX(16px); }
+  10% { opacity: 1; transform: none; }
+  90% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateX(16px); }
+}
