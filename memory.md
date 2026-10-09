@@ -24,7 +24,6 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 ## Repo
 
-- 2026-10-09, M1: `make e2e` scheitert im defuss-vae-Gate (Rauchtest wartet 30 s auf `#start`), wenn das Gate mit Homebrew-`python3` läuft (/usr/local, x86_64 unter Rosetta): der Browser rechnet darunter ~3× langsamer, die Seite braucht 55-120 s. Mit `/usr/bin/python3` (Apple) in 3-12 s durch. Widerlegt: Pipe, Hintergrund-Priorität (`taskpolicy -b` schnell), App Nap (`NSAppSleepDisabled` half nicht). Gate darum mit `/usr/bin/python3 …/vae.py gate` und Node 24 im PATH starten.
 - 2026-10-01: Ohne GPU taugt die CI nicht für den Rauchtest. Auf ubuntu-latest rendert Chrome per SwiftShader, lokal nachgestellt (`--use-angle=swiftshader --enable-unsafe-swiftshader`): 2-60 s je Bild, der Rauchtest bricht nach 7,5 min ab. `verify` läuft darum auf macos-latest (`ANGLE Metal Renderer: Apple Paravirtual device`).
 
 - Haupt-Repo ist `Mansi1/Soliva` (früher `Soliva-one-who-wanders-alone` und `procedurally-generated-map`, alte Adressen leiten um). PRs laufen gegen dessen `main`, ohne Schreibrecht dort aus einem eigenen Fork. Welcher Remote wohin zeigt, ist je Checkout anders - vor dem Push `git remote -v` ansehen.
