@@ -125,6 +125,8 @@ export type SelectionView =
       /** Erlegt: Nahrung am Kadaver. */
       food: number;
       maxFood: number;
+      /** Jungtier und Größe der Herde (B11, B12) - fehlt, wenn erlegt. */
+      herd?: string;
     }
   | { kind: 'flower'; name: string; latin: string; info: string; wiki: string; photo: string; flower: number }
   | { kind: 'empty' }
@@ -358,6 +360,7 @@ function Animal({ v }: { v: Extract<SelectionView, { kind: 'animal' }> }) {
       <div class="sel-body">
         <Portrait src={animalIcon(v.type, v.dead)} hp={v.hp} maxHp={v.maxHp} />
         <div class="sel-info">
+          {v.herd ? <div class="muted">{v.herd}</div> : null}
           <div class="sel-stock">
             <span class="sel-stock-icon"><MeatIcon /></span>
             {/* Erlegt: der Balken neben dem Fleisch unter der Zahl - eine eigene Zeile passte nicht mehr aufs Pergament. */}

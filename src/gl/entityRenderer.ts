@@ -86,6 +86,11 @@ import cowModel from '../models/animals/cow.glb?model';
 import sheepModel from '../models/animals/sheep.glb?model';
 import goatModel from '../models/animals/goat.glb?model';
 import boarModel from '../models/animals/boar.glb?model';
+import deerFemaleModel from '../models/animals/deer_female.glb?model';
+import goatFemaleModel from '../models/animals/goat_female.glb?model';
+import sheepMaleModel from '../models/animals/sheep_male.glb?model';
+import boarFemaleModel from '../models/animals/boar_female.glb?model';
+import cowMaleModel from '../models/animals/cow_male.glb?model';
 import birchLeafUrl from '../textures/birch_leaf.png';
 import rallyFlagModel from '../models/props/rally_flag.glb?model';
 import bowyerModel from '../models/buildings/bowyer.glb?model';
@@ -287,6 +292,16 @@ export const SHAPE = {
   /** Hacke zum Pflügen, wie das Beil je Körper (models/props/hoe.glb) - hinter den Stümpfen (135..144) frei. */
   propHoe: 145,
   propHoeFemale: 146,
+  /**
+   * Das andere Geschlecht der Tiere (B11), sonst wie `deer` ...: Ricke ohne
+   * Gehörn, Geiß ohne Hörner, Widder mit Schneckenhörnern, Bache ohne Hauer,
+   * Bulle größer und ohne Euter (models/animals/<art>_female|male.glb).
+   */
+  deerFemale: 154,
+  goatFemale: 155,
+  sheepMale: 156,
+  boarFemale: 157,
+  cowMale: 158,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -487,10 +502,13 @@ const CLIP_LIBRARIES: {
   { rig: HUMANOID, clips: CLIPS, shapes: [SHAPE.villager, SHAPE.villagerFemale] },
   {
     rig: QUADRUPED, clips: ANIMAL_CLIPS,
-    shapes: [SHAPE.deer, SHAPE.hare, SHAPE.cow, SHAPE.sheep, SHAPE.goat, SHAPE.boar],
+    shapes: [SHAPE.deer, SHAPE.hare, SHAPE.cow, SHAPE.sheep, SHAPE.goat, SHAPE.boar,
+      SHAPE.deerFemale, SHAPE.goatFemale, SHAPE.sheepMale, SHAPE.boarFemale, SHAPE.cowMale],
     species: {
       [SHAPE.deer]: 'deer', [SHAPE.hare]: 'hare', [SHAPE.cow]: 'cow',
       [SHAPE.sheep]: 'sheep', [SHAPE.goat]: 'goat', [SHAPE.boar]: 'boar',
+      [SHAPE.deerFemale]: 'deer', [SHAPE.goatFemale]: 'goat', [SHAPE.sheepMale]: 'sheep',
+      [SHAPE.boarFemale]: 'boar', [SHAPE.cowMale]: 'cow',
     },
   },
   // Mühlenflügel (src/models/clips/mill.glb): ein Clip "sails" für alle vier Mühlen.
@@ -573,7 +591,10 @@ const FOLIAGE_SHAPES: number[] = [
 
 /** Diese Formen sind Vorkommen, keine Gebäude oder Figuren. */
 /** Tiere - Beine und Kopf bewegt der Shader ("beast"). */
-const BEASTS: number[] = [SHAPE.deer, SHAPE.hare, SHAPE.cow, SHAPE.sheep, SHAPE.goat, SHAPE.boar];
+const BEASTS: number[] = [
+  SHAPE.deer, SHAPE.hare, SHAPE.cow, SHAPE.sheep, SHAPE.goat, SHAPE.boar,
+  SHAPE.deerFemale, SHAPE.goatFemale, SHAPE.sheepMale, SHAPE.boarFemale, SHAPE.cowMale,
+];
 
 export const NATURAL: number[] = [
   ...TREES, ...STUMPS, ...FLOWERS,
@@ -2958,6 +2979,11 @@ const MODELS: {
   { shape: SHAPE.sheep, model: loadModel(sheepModel.obj, sheepModel.mtl, 'height'), scale: 1 },
   { shape: SHAPE.goat, model: loadModel(goatModel.obj, goatModel.mtl, 'height'), scale: 1 },
   { shape: SHAPE.boar, model: loadModel(boarModel.obj, boarModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.deerFemale, model: loadModel(deerFemaleModel.obj, deerFemaleModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.goatFemale, model: loadModel(goatFemaleModel.obj, goatFemaleModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.sheepMale, model: loadModel(sheepMaleModel.obj, sheepMaleModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.boarFemale, model: loadModel(boarFemaleModel.obj, boarFemaleModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.cowMale, model: loadModel(cowMaleModel.obj, cowMaleModel.mtl, 'height'), scale: 1 },
 ];
 /** MODELS nach Art - modelSize läuft beim Zeigen je sichtbarem Vorkommen, find wäre dort teuer. */
 const MODEL_BY_SHAPE = new Map([...MODELS].reverse().map((m) => [m.shape, m]));

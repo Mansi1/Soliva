@@ -89,11 +89,12 @@ export class Picker {
     for (const a of this.world.wildlife.animals) {
       if (!this.shown.animal(a.kind)) continue;
       const at = a.positionAt(this.blend());
-      const p = animalCenter(a.definition.shape, at.x - 0.5, at.y - 0.5, a.definition.height, a.heading, a.isDead);
-      const height = a.isDead ? 0.2 * a.definition.height : 0.5 * a.definition.height;
+      // Modell und Größe dieses Tiers - Bulle, Ricke, Jungtier (B11).
+      const p = animalCenter(a.look.shape, at.x - 0.5, at.y - 0.5, a.size, a.heading, a.isDead);
+      const height = a.isDead ? 0.2 * a.size : 0.5 * a.size;
       const s = worldToScreen(v, p.x, p.y, this.ground.heightAt(p.x, p.y) + height);
       const d = Math.hypot(s.x - px, s.y - py);
-      if (d < Math.max(10, a.definition.height * this.camera.tileSize * 0.6) && d < bestDistance) {
+      if (d < Math.max(10, a.size * this.camera.tileSize * 0.6) && d < bestDistance) {
         bestDistance = d;
         best = a;
       }

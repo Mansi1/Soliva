@@ -9,13 +9,24 @@ import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { FishTrap, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
-  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
+  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type AnimalKind, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
-import type { AnimalState } from '../world/unit';
+import { GROWN, type Animal, type AnimalState } from '../world/unit';
 import type { FarmPhase, World } from '../world/world';
 import { workplace } from '../world/villagers';
 import type { Selection } from './Selection';
+
+/** Name nach Geschlecht (B11): Weibchen, Männchen - der Hase heißt für beide gleich. */
+const ANIMAL_SEX_NAME: Record<AnimalKind, [female: string, male: string]> = {
+  deer: ['Ricke', 'Rehbock'], cow: ['Kuh', 'Bulle'], sheep: ['Schaf', 'Widder'],
+  goat: ['Geiß', 'Ziegenbock'], boar: ['Bache', 'Keiler'], hare: ['Hase', 'Hase'],
+};
+
+/** "Rehbock", "Ricke" ... - fürs Panel und den Hinweis unter der Maus. */
+export function animalName(animal: Animal): string {
+  return ANIMAL_SEX_NAME[animal.kind][animal.female ? 0 : 1];
+}
 
 /** Was auf einem Feldstück gerade dran ist - fürs Panel. */
 const FARM_PHASE_TEXT: Record<FarmPhase, string> = {
@@ -172,9 +183,11 @@ export function selectionView(world: World, selection: Selection, resources: Res
       return { kind: 'empty' };
     }
     const def = animal.definition;
+    const young = animal.grown ? '' : `Jungtier, ${Math.floor((animal.age / GROWN) * 100)} % gewachsen · `;
     return {
-      kind: 'animal', type: animal.kind, label: def.label, info: def.info, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
-      hp: animal.hp, maxHp: def.hp, food: animal.food, maxFood: def.food,
+      kind: 'animal', type: animal.kind, label: animalName(animal), info: def.info, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
+      hp: animal.hp, maxHp: def.hp, food: animal.food, maxFood: animal.maxFood,
+      herd: animal.isDead ? undefined : `${young}Herde: ${animal.herd.size} Tiere`,
     };
   }
   if (selection.flower) {
