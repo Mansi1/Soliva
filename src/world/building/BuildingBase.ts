@@ -24,8 +24,8 @@ export interface BuildingSave {
   q?: number | (0 | 1)[];
   /** UnitProducer: Sammelpunkt - Tile, dahinter die genaue Stelle (fehlt in älteren Ständen). */
   r?: [number, number] | [number, number, number, number];
-  /** Farm: nächste Frucht, Tiles, je Furche [Frucht, gepflügt, gesät, Wuchs, Nahrung, bezahlt]. */
-  f?: { p: CropType; t?: number; r: [CropType, number, number, number, number, boolean][] };
+  /** Farm: nächste Frucht, Tiles, Ernten seit dem Pflügen, je Furche [Frucht, gepflügt, gesät, Wuchs, Nahrung, bezahlt]. */
+  f?: { p: CropType; t?: number; h?: number; r: [CropType, number, number, number, number, boolean][] };
   /** Reuse: wie voll sie ist, 0..1. */
   fl?: number;
 }

@@ -378,10 +378,14 @@ export class PlayerActions {
     this.ui.refreshSelection();
   }
 
-  /** Frucht fürs ganze Feld der ausgewählten Feldstücke - darauf wird gemeinsam gesät. */
+  /**
+   * Frucht wechseln: bei mehreren markierten Feldstücken nur für sie, bei
+   * einem auch für die angrenzenden, auf denen dieselbe Frucht wächst.
+   */
   setFieldCrop(crop: CropType) {
     if (!CROPS[crop]) return;
-    const fields = new Set(this.selection.chosenBuildings().flatMap((b) => this.world.farmGroup(b)));
+    const chosen = this.selection.chosenBuildings();
+    const fields = chosen.length === 1 ? this.world.farmGroup(chosen[0]) : chosen;
     for (const field of fields) this.world.setCrop(field, crop);
     this.sound.play('click');
     this.ui.refreshSelection();

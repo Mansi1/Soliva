@@ -1,16 +1,20 @@
 // farming.ts
-// Felder bestellen: Nebeneinander liegende Feldstücke (Farm) bilden ein
-// zusammenhängendes Feld, auf dem alle Bauern gemeinsam arbeiten - erst alles
-// pflügen, dann alles säen, warten, bis alles reif ist, dann gemeinsam
-// ernten; abgeerntet wird alles neu gesät. Hier stehen die Gruppen, die
-// Phase, die Suche nach einer freien Furche und wo der Bauer in seiner Furche
-// steht. Was ein Bauer Schritt für Schritt tut, steht bei den Dorfbewohnern.
+// Felder bestellen: Jedes Feldstück (Farm) arbeitet für sich - bis zu
+// FARMERS_PER_FIELD Bauern bleiben darauf, erst wird alles gepflügt, dann alles
+// gesät, gejätet, bis alles reif ist, dann geerntet; abgeerntet wird neu gesät,
+// nach REPLOUGH_AFTER Ernten vorher neu gepflügt. Hier stehen die Phase eines
+// Feldstücks, die Suche nach einer freien Furche, die angrenzenden Stücke mit
+// derselben Frucht und wo der Bauer in seiner Furche steht. Was ein Bauer
+// Schritt für Schritt tut, steht bei den Dorfbewohnern.
 
 import { furrowPosition, type Building, type Farm, type Furrow } from './building';
-import { CROPS, FIELD_ROWS, VILLAGER } from './catalog';
+import { CROPS, FARMERS_PER_FIELD, FIELD_ROWS, RESEED_COST, VILLAGER, type CropType, type Resources } from './catalog';
 
-/** Was auf einem zusammenhängenden Feld gerade dran ist. */
-export type FarmPhase = 'plough' | 'sow' | 'grow' | 'harvest' | 'done';
+/**
+ * Was auf einem Feldstück gerade dran ist. `wood`: es müsste gesät werden,
+ * aber das Holz fehlt und nichts ist reif - die Bauern jäten.
+ */
+export type FarmPhase = 'plough' | 'sow' | 'wood' | 'grow' | 'harvest' | 'done';
 
 /** Eine Furche mit ihrem Feldstück und ihrer Nummer. */
 export interface FurrowRef {
@@ -31,38 +35,46 @@ export interface FarmingWorld {
   /** Das Gebäude auf einem Tile. */
   at(x: number, y: number): Building | undefined;
   allBuildings(): Iterable<Building>;
+  /** Reicht der Vorrat? - fürs Neusäen. */
+  canPay(cost: Partial<Resources>): boolean;
 }
 
 /** Schlüssel einer Furche - "Ankerpunkt#Nummer". */
 export const furrowKey = (building: Building, row: number) => `${building.anchor}#${row}`;
 
-/** Hat diese Furche in dieser Phase etwas zu tun? */
+/** Hat diese Furche in dieser Phase etwas zu tun? Geerntet wird nur, was gesät und reif ist. */
 export function furrowNeeds(f: Furrow, phase: FarmPhase): boolean {
   return phase === 'plough' ? f.plough < 1
     : phase === 'sow' ? f.sown < 1
-    : phase === 'harvest' ? f.food > 1e-6
+    : phase === 'harvest' ? f.sown >= 1 && f.growth >= 1 && f.food > 1e-6
     : false;
 }
 
+/** Die Frucht, die auf einem Feldstück wächst - sonst die, die als Nächstes gesät wird. */
+export function fieldCrop(farm: Farm): CropType {
+  const active = farm.activeFurrows();
+  return (active.find((f) => f.sown > 0) ?? active[0] ?? farm.furrows[0]).crop;
+}
+
 export class Farming {
-  /** Zusammenhängende Felder je Feldstück - neu berechnet, wenn sich an den Gebäuden etwas ändert. */
-  private groups = new Map<string, Farm[]>();
-  /** Die Furchen je Feld (furrows) - gemerkt wie die Gruppen; jeder Bauer fragt sie in jedem Tick ab. */
-  private furrowLists = new Map<Farm[], FurrowRef[]>();
+  /** Die Furchen je Feldstück (furrows) - jeder Bauer fragt sie in jedem Tick ab. */
+  private furrowLists = new Map<Farm, FurrowRef[]>();
 
   constructor(private world: FarmingWorld) {}
 
-  /** Nach Bau oder Abriss: die Gruppen neu berechnen. */
+  /** Nach Bau, Abriss oder Laden: die gemerkten Furchen vergessen. */
   invalidate() {
-    this.groups.clear();
     this.furrowLists.clear();
   }
 
-  /** Das zusammenhängende Feld, zu dem `building` gehört (leer, wenn es kein Feld ist). */
+  /**
+   * Die angrenzenden Feldstücke, auf denen dieselbe Frucht wächst wie auf
+   * `building`, samt ihm selbst (leer, wenn es kein Feld ist) - für den
+   * Fruchtwechsel. Nicht gemerkt: die Frucht wechselt mit jeder Aussaat.
+   */
   group(building: Building): Farm[] {
     if (!building.isFarm()) return [];
-    const known = this.groups.get(building.anchor);
-    if (known) return known;
+    const crop = fieldCrop(building);
     const group: Farm[] = [];
     const seen = new Set<Building>([building]);
     const queue: Farm[] = [building];
@@ -72,61 +84,73 @@ export class Farming {
       for (const [tx, ty] of farm.footprintTiles()) {
         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const neighbour = this.world.at(tx + dx, ty + dy);
-          if (neighbour?.isFarm() && !seen.has(neighbour)) {
+          if (neighbour?.isFarm() && !seen.has(neighbour) && fieldCrop(neighbour) === crop) {
             seen.add(neighbour);
             queue.push(neighbour);
           }
         }
       }
     }
-    for (const farm of group) this.groups.set(farm.anchor, group);
     return group;
   }
 
-  /** Alle Furchen eines Felds, die es gibt (kleinere Feldstücke haben nicht alle neun). */
-  furrows(group: Farm[]): readonly FurrowRef[] {
-    let list = this.furrowLists.get(group);
+  /** Die Furchen eines Feldstücks, die es gibt (kleinere Feldstücke haben nicht alle neun). */
+  furrows(building: Farm): readonly FurrowRef[] {
+    let list = this.furrowLists.get(building);
     if (!list) {
-      // Gilt, solange die Gruppe gilt: Tiles und Furchen eines Felds ändern sich nur beim Anlegen und Laden.
-      list = group.flatMap((building) => building.furrows
+      // Gilt bis zum nächsten invalidate: die Tiles eines Feldstücks ändern sich nur beim Anlegen und Laden.
+      list = building.furrows
         .map((f, row) => ({ building, row, f }))
-        .filter(({ row }) => building.furrowCells(row).length > 0));
-      this.furrowLists.set(group, list);
+        .filter(({ row }) => building.furrowCells(row).length > 0);
+      this.furrowLists.set(building, list);
     }
     return list;
   }
 
-  /** Was auf dem Feld, zu dem `building` gehört, gerade dran ist. */
+  /**
+   * Was auf dem Feldstück gerade dran ist. Fehlt beim Säen das Holz, wird
+   * geerntet, was schon reif ist, sonst gejätet (`wood`) - die Bauern stehen
+   * nicht still.
+   * VERIFIED: tests/fields.test.mjs - Phase je Feldstück; ohne Holz erst Reifes ernten, dann `wood`.
+   */
   phase(building: Building): FarmPhase {
-    let plough = false, sow = false, ripe = true, food = false;
-    for (const { f } of this.furrows(this.group(building))) {
+    if (!building.isFarm()) return 'done';
+    let plough = false, sow = false, payable = false, ripe = true, food = false;
+    for (const { f } of this.furrows(building)) {
       if (f.plough < 1) plough = true;
-      else if (f.sown < 1) sow = true;
+      else if (f.sown < 1) {
+        sow = true;
+        if (f.paid) payable = true;
+      }
       if (f.sown < 1 || f.growth < 1) ripe = false;
-      if (f.food > 1e-6) food = true;
+      else if (f.food > 1e-6) food = true;
     }
-    return plough ? 'plough' : sow ? 'sow' : !ripe ? 'grow' : food ? 'harvest' : 'done';
+    if (plough) return 'plough';
+    if (sow) return payable || this.world.canPay(RESEED_COST) ? 'sow' : food ? 'harvest' : 'wood';
+    return !ripe ? 'grow' : food ? 'harvest' : 'done';
   }
 
   /**
-   * Eine freie Furche auf dem Feld von `near` - lieber eine mit Arbeit in
-   * der aktuellen Phase -, sonst auf dem nächsten anderen Feld.
+   * Eine freie Furche auf dem Feldstück `near` - lieber eine mit Arbeit in
+   * der aktuellen Phase -, solange dort weniger als FARMERS_PER_FIELD
+   * arbeiten; sonst auf dem nächsten anderen Feldstück.
    * @param busy Furchen, auf denen schon jemand arbeitet (furrowKey)
    */
   freeFurrow(near: Building, busy: ReadonlySet<string>): { building: string; row: number } | undefined {
-    const free = (building: Building) => {
+    const free = (building: Farm) => {
+      const rows = this.furrows(building);
+      const open = rows.filter((r) => !busy.has(furrowKey(r.building, r.row)));
+      if (rows.length - open.length >= FARMERS_PER_FIELD) return undefined;
       const phase = this.phase(building);
-      const rows = this.furrows(this.group(building)).filter((r) => !busy.has(furrowKey(r.building, r.row)));
-      const pick = rows.find(({ f }) => furrowNeeds(f, phase)) ?? rows[0];
+      const pick = open.find(({ f }) => furrowNeeds(f, phase)) ?? open[0];
       return pick && { building: pick.building.anchor, row: pick.row };
     };
-    const own = free(near);
+    const own = near.isFarm() ? free(near) : undefined;
     if (own) return own;
-    const mine = new Set(this.group(near));
     let best: { building: string; row: number } | undefined;
     let bestDistance: number = VILLAGER.searchRadius;
     for (const building of this.world.allBuildings()) {
-      if (!building.isFarm() || mine.has(building)) continue;
+      if (!building.isFarm() || building === near) continue;
       const distance = Math.hypot(building.x - near.x, building.y - near.y);
       if (distance >= bestDistance) continue;
       const spot = free(building);

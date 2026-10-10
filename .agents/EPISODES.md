@@ -78,3 +78,5 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T00:20:02Z s=560a6297 FINDING README.md, docs/ANIMATION.md, docs/OFFEN.md T02/T06 learn=verifier: Prose gate.
 2026-10-10T00:20:02Z s=560a6297 FINDING B19 rename (24 files) learn=test: Smoke checks Dorfzentrum labels.
 2026-10-10T00:20:02Z s=560a6297 FINDING scope learn=none: Scope note.
+2026-10-10T00:33:44Z s=560a6297 DONE fp=7aa3fd1afe1e cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+58)
+2026-10-10T00:33:44Z s=560a6297 FINDING src/world/farming.ts:furrowNeeds learn=test: tests/fields.test.mjs B2 harvests only the ripe furrow with wood=0, then phase wood.

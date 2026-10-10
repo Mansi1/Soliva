@@ -103,7 +103,7 @@ nichts.
 aus. Solange es an ist:
 
 - Dorfbewohner kommen ohne Ausbildungszeit aus dem Dorfzentrum.
-- Ein ganzes Feld wird auf einmal gepflügt und gesät und ist sofort reif.
+- Ein ganzes Feldstück wird auf einmal gepflügt und gesät und ist sofort reif.
 - Jedes Tier fällt mit einem Treffer.
 - Beim Ernten, Holzfällen, Beerenpflücken und Zerlegen ist die Ladung sofort
   voll; abgeliefert wird wie sonst.

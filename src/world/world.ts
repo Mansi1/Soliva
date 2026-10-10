@@ -67,8 +67,7 @@ export class World {
   readonly deposits: Deposits;
   /** Für sowable(): 0 nein, 1 ja, 2 erst wenn das Vorkommen abgebaut ist. */
   private sowableTiles = new Map<string, number>();
-  /** Zusammenhängende Felder je Feldstück (farmGroup) - leer, sobald sich Gebäude ändern. */
-  /** Felder: Gruppen, Phase, freie Furchen, Wachsen (farming.ts). */
+  /** Felder: Phase je Feldstück, freie Furchen, gleiche Frucht nebenan, Wachsen (farming.ts). */
   readonly farming: Farming;
   /** Was Dorfbewohner tun: Befehle, laufen, sammeln, abliefern, Felder, Jagd (villagers.ts). */
   private readonly work: VillagerWork;
@@ -714,19 +713,15 @@ export class World {
     return placed;
   }
 
-  /** Schritt Richtung Ziel. true, sobald er bis auf `reach` heran ist. */
-  /** Nächstes nicht leeres Feld derselben Art um (x, y) - wenn eins leer ist, macht er dort weiter. */
   /**
-   * Die Feldstücke, die mit `building` ein zusammenhängendes Feld bilden
-   * (über Tile-Kanten benachbart), es selbst eingeschlossen. Gemerkt, bis
-   * sich an den Gebäuden etwas ändert.
+   * Die angrenzenden Feldstücke mit derselben wachsenden Frucht wie
+   * `building`, es selbst eingeschlossen (farming.ts) - für den Fruchtwechsel.
    */
-  /** Das zusammenhängende Feld, zu dem `building` gehört (farming.ts). */
   farmGroup(building: Building): Farm[] {
     return this.farming.group(building);
   }
 
-  /** Was auf dem Feld, zu dem `building` gehört, gerade dran ist. */
+  /** Was auf dem Feldstück gerade dran ist (farming.ts). */
   farmPhase(building: Building): FarmPhase {
     return this.farming.phase(building);
   }

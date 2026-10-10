@@ -76,8 +76,8 @@ export const CROPS: Record<CropType, CropDef> = {
 
 /**
  * Furchen je Feld, bei jeder Frucht gleich (ROWS in tools/models/farms.mjs).
- * Drei je Tile-Reihe; in jeder arbeitet höchstens ein Bauer - ein ganzes Feld
- * beschäftigt bis zu neun.
+ * Drei je Tile-Reihe; in jeder arbeitet höchstens ein Bauer, auf einem
+ * Feldstück höchstens FARMERS_PER_FIELD.
  */
 export const FIELD_ROWS = 9;
 /** Sekunden, bis ein Bauer eine Furche über drei Tiles umgepflügt bzw. eingesät hat. */
@@ -94,6 +94,10 @@ export const FARM_RATE = 0.7;
  * Preis des Felds enthalten.
  */
 export const RESEED_COST: Partial<Resources> = { wood: 2 };
+/** Bauern je Feldstück - sie bleiben auf ihrem Stück (farming.ts). */
+export const FARMERS_PER_FIELD = 3;
+/** Nach so vielen Ernten ist der Boden fest - das Feldstück wird neu gepflügt. */
+export const REPLOUGH_AFTER = 3;
 
 /**
  * Startvorrat. Reicht für ein Dorfzentrum, eine Handvoll Dorfbewohner und
