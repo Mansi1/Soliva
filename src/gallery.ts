@@ -1,6 +1,6 @@
 // gallery.ts
 // Route /galerie: ein Schaufenster für die Modelle - links wählt man eines
-// (Mann, Frau, Reh, Hauptgebäude, Eiche, ...), es steht groß in der Mitte,
+// (Mann, Frau, Reh, Dorfzentrum, Eiche, ...), es steht groß in der Mitte,
 // unten wählt man seine Animation oder Variante (steht, geht, hackt, ...)
 // und dreht die Ansicht. "Alle auf einmal" zeigt alle Modelle und
 // Animationen nebeneinander. Ohne Gelände, auf ruhigem Hintergrund,
@@ -301,7 +301,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
   {
     title: 'Gebäude', gap: 2.9, depth: 4.4,
     items: [
-      model('Hauptgebäude', SHAPE.townCenter, BUILDINGS.town_center.size),
+      model('Dorfzentrum', SHAPE.townCenter, BUILDINGS.town_center.size),
       ...[SHAPE.house, SHAPE.house2, SHAPE.house3, SHAPE.house4].map((s, i) => model(`Haus ${i + 1}`, s, BUILDINGS.house.size)),
       model('Minenlager', SHAPE.miningCamp, BUILDINGS.mining_camp.size),
       model('Fischerhütte', SHAPE.fisherHut, BUILDINGS.fisher_hut.size),
@@ -497,7 +497,7 @@ const SHOWCASE: Showcase[] = [
     animal(kind, 'flieht', ANIMAL_POSE.flee),
     animal(kind, 'erlegt', ANIMAL_POSE.dead),
   ], kind === 'hare' ? 420 : 240, kind === 'hare' ? 0.3 : 0.6)),
-  building('Hauptgebäude', [SHAPE.townCenter], BUILDINGS.town_center.size, 150, 1.1),
+  building('Dorfzentrum', [SHAPE.townCenter], BUILDINGS.town_center.size, 150, 1.1),
   // Die Varianten, wie sie die Gebäude im Spiel zeigen (BuildingDef.variants).
   building('Haus', BUILDINGS.house.models!, BUILDINGS.house.size, 220, 0.7),
   building('Holzlager', BUILDINGS.lumber_camp.models!, BUILDINGS.lumber_camp.size, 220, 0.6),

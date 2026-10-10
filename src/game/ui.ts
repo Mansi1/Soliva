@@ -34,6 +34,8 @@ export interface UiHooks {
   /** Knopf "Untätige": ein zufälliger, Doppelklick alle. */
   selectIdle(which: IdlePick): void;
   train(count: number): void;
+  /** Klick in die Warteschlange: die Einheit an Platz `index` abbrechen. */
+  cancelTraining(index: number): void;
   demolish(): void;
   /** Arbeiter der Werkstatt entlassen. */
   dismiss(): void;
@@ -67,12 +69,14 @@ export class GameUi {
   private hintTimer = 0;
   /**
    * Sammelpunkt-Schalter (Knopf mit der Fahne): an, setzt der nächste Klick
-   * auf die Karte den Sammelpunkt der ausgewählten Hauptgebäude (actions.ts).
+   * auf die Karte den Sammelpunkt der ausgewählten Dorfzentren (actions.ts).
    * Von selbst aus ist er nicht - ein Rechtsklick wäre sonst ein Befehl.
    * Bei einem einzelnen ausbildenden Gebäude setzt der Rechtsklick den Punkt
    * auch ohne ihn (PlayerActions.rightClick).
    */
   rallyPicking = false;
+  /** So viele bildet der Ausbilden-Knopf aus: 1, mit gehaltener Umschalttaste 5 - die Zahl im Knopf zeigt es. */
+  private trainBatch = 1;
 
   constructor(private state: UiState, hooks: UiHooks, playerColor: RGB) {
     const { placement } = state;
@@ -98,10 +102,27 @@ export class GameUi {
       // e.detail zählt die Klicks kurz hintereinander - 2 ist ein Doppelklick.
       hooks.selectIdle(e.detail >= 2 ? 'all' : 'random');
     });
-    // Das Bild auf dem Pergament: zum Ausgewählten springen.
+    // Das Bild auf dem Pergament: zum Ausgewählten springen. Eine Einheit in
+    // der Warteschlange: ihre Ausbildung abbrechen.
     this.selectionEl.addEventListener('mousedown', (e) => {
-      if (e.button === 0 && (e.target as HTMLElement).closest('.sel-frame')) hooks.focusSelection();
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      const queued = target.closest<HTMLElement>('[data-action=cancel-train]');
+      if (queued) hooks.cancelTraining(Number(queued.dataset.index));
+      else if (target.closest('.sel-frame')) hooks.focusSelection();
     });
+    // Umschalttaste gehalten: der Ausbilden-Knopf zeigt 5 statt 1. Capture,
+    // damit kein anderer Tasten-Handler das Ereignis vorher schluckt.
+    const holdShift = (held: boolean) => {
+      const batch = held ? 5 : 1;
+      if (batch === this.trainBatch) return;
+      this.trainBatch = batch;
+      this.refreshSelection();
+    };
+    window.addEventListener('keydown', (e) => { if (e.key === 'Shift') holdShift(true); }, true);
+    window.addEventListener('keyup', (e) => { if (e.key === 'Shift') holdShift(false); }, true);
+    // Losgelassen außerhalb des Fensters kommt kein keyup an.
+    window.addEventListener('blur', () => holdShift(false));
     this.actionsEl.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
       const button = (e.target as HTMLElement).closest('button');
@@ -218,7 +239,7 @@ export class GameUi {
     // Der Schalter gilt nur, solange ein ausbildendes Gebäude ausgewählt ist.
     if (!selection.chosenBuildings().some((b) => b.isUnitProducer())) this.rallyPicking = false;
     // Hat die Auswahl Befehle (ein Gebäude), zeigt die Steintafel sie statt des Baumenüs.
-    const view = selectionView(world, selection, resources, this.rallyPicking);
+    const view = selectionView(world, selection, resources, this.rallyPicking, this.trainBatch);
     const hasCommands = renderSelection(this.selectionEl, this.actionsEl, view);
     this.scrollEl.classList.toggle('open', hasDetails(view));
     this.actionsEl.hidden = !hasCommands;

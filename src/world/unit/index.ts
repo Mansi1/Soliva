@@ -21,9 +21,9 @@ import { Goat } from './Goat';
 import { Hare } from './Hare';
 import { Sheep } from './Sheep';
 import { UnitBase } from './UnitBase';
-import { Villager, type Task } from './Villager';
+import { Villager, type Task, type WorkNeed } from './Villager';
 
-export { UnitBase, Villager, type Task, AnimalBase, Deer, Hare, Cow, Sheep, Goat, Boar, type AnimalDefinition, type AnimalOptions, type AnimalState, type AnimalSurroundings };
+export { UnitBase, Villager, type Task, type WorkNeed, AnimalBase, Deer, Hare, Cow, Sheep, Goat, Boar, type AnimalDefinition, type AnimalOptions, type AnimalState, type AnimalSurroundings };
 
 /** Alle Tierklassen. */
 export const ANIMAL_CLASSES = [Deer, Hare, Cow, Sheep, Goat, Boar] as const;

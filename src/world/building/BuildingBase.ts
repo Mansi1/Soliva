@@ -44,6 +44,22 @@ export interface BuildingClass {
   readonly definition: BuildingDefinition;
 }
 
+/** Alle Modelle einer Art - eines, oder die Varianten. */
+export function modelsOf(definition: BuildingDefinition): number[] {
+  return definition.models ?? [definition.model];
+}
+
+/**
+ * Welche Variante ein Gebäude ohne gespeicherte Wahl am Bauplatz (Ankerpunkt
+ * x, y) zeigt. Fest nach dem Bauplatz: nicht jedes Haus sieht gleich aus, jedes
+ * bleibt aber, wie es ist - und die Bauvorschau zeigt dasselbe.
+ * VERIFIED: tests/build-preview.test.mjs (echte Vorschau gegen World.place).
+ */
+export function siteVariant(definition: BuildingDefinition, x: number, y: number): number {
+  const hash = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+  return hash % modelsOf(definition).length;
+}
+
 export abstract class BuildingBase {
   /** Verbleibende Trefferpunkte - höchstens maxHp. */
   hp: number;
@@ -53,11 +69,9 @@ export abstract class BuildingBase {
   /** @param x, y Ankerpunkt: die Mitte des Grundrisses */
   constructor(readonly x: number, readonly y: number, options: BuildingOptions = {}) {
     this.hp = this.definition.hp;
-    // Fest nach dem Bauplatz: nicht jedes Haus sieht gleich aus, jedes bleibt aber, wie es ist.
     const count = this.models.length;
-    const hash = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
     const { variant } = options;
-    this.variant = variant !== undefined && variant >= 0 && variant < count ? variant : hash % count;
+    this.variant = variant !== undefined && variant >= 0 && variant < count ? variant : siteVariant(this.definition, x, y);
   }
 
   /** Was für alle Gebäude dieser Art gilt: Name, Kosten, Größe, ... */
@@ -90,7 +104,7 @@ export abstract class BuildingBase {
 
   /** Alle Modelle dieser Art - eines, oder die Varianten. */
   get models(): number[] {
-    return this.definition.models ?? [this.definition.model];
+    return modelsOf(this.definition);
   }
 
   /** Das Modell, das es zeigt. */

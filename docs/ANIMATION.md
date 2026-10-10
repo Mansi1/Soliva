@@ -52,10 +52,10 @@ die Figur gerade spielt. Das Bild ist Pixel für Pixel wie vorher (alle Posen
 von Mann und Frau). Die eine Ausnahme ist das Zugmesser der Frau: Es war
 bisher für ihren Handabstand eigens gebaut und wird jetzt aus dem des Mannes
 auf ihren gestreckt, die Griffe sitzen dabei weiter in beiden Händen.
-Siehe „Werkzeuge anhängen“ unten.
+Siehe „Werkzeuge anhängen" unten.
 
 **Die Formeln sind weg.** Im Shader bewegt nur noch der Clip-Weg Figuren,
-Tiere, Mühlenflügel und Fahnen. Gelöscht sind die Posen 0–5 der Figuren, der
+Tiere, Mühlenflügel und Fahnen. Gelöscht sind die Posen 0-5 der Figuren, der
 Tier-Zweig, die Flügel- und die Tuch-Formel samt ihren Uniforms (`uShoulder`,
 `uElbow`, `uStride`, `uLegs`, `uNeck`, `uGraze`, `uSide`, `uHub`) und die
 Hilfen `swingAround`, `swingSideways`, `swingAt`. Der Vertex-Shader hat 648
@@ -66,8 +66,8 @@ bleiben - mit ihnen werden die Clips gebacken. `poses/mow.json` und
 
 - **Ohne Clip:** Fehlt eine Bibliothek, stehen ihre Figuren in Ruhelage still,
   Werkzeuge weggesteckt - es stürzt nichts ab. Der Rauchtest schlägt dann an
-  (`window.__clipLibraries`, „Clips aus Blender geladen“).
-- **Fahne auf dem Hauptgebäude:** spielt jetzt auch den Clip `wave`. Er ist
+  (`window.__clipLibraries`, „Clips aus Blender geladen").
+- **Fahne auf dem Dorfzentrum:** spielt jetzt auch den Clip `wave`. Er ist
   für das Tuch am Sammelpunkt gemacht; ein längeres Tuch (in Modell-Einheiten)
   schlägt entsprechend weiter aus (`FlagJoints.stretch`, `Rig.moveScale`).
 
@@ -100,7 +100,7 @@ Wildschwein).
 - **Ruinen:** Eine eingestürzte Mühle hält die Flügel an. Der Zeitpunkt
   kommt jetzt aus der Spieluhr (`animationTime()`). Vorher lag der Winkel nach
   Pause oder Tempowechsel daneben.
-- Die Fahne auf dem Hauptgebäude spielt denselben Clip, auf ihr Tuch gestreckt.
+- Die Fahne auf dem Dorfzentrum spielt denselben Clip, auf ihr Tuch gestreckt.
 
 **Alle Clips zusammen:** rund 16 000 Bilder (Dorfbewohner 4118, Tiere 6756,
 Mühlen 5032, Fahne 39). Das sind 16 Spalten in einer Textur von 768 × 1024
@@ -112,7 +112,7 @@ Aus Phase 1:
 - **Gleichstand:** Der Clip entspricht der alten Formel exakt. Die rechte
   Hand weicht über alle 786 Bilder um 0,00 cm ab.
 - **Leistung:** 500 schnitzende Figuren brauchen 38 ms je Bild. Mit den
-  Formel-Posen sind es 54–60 ms (Messung ohne Spiel-Logik, Software-GL im
+  Formel-Posen sind es 54-60 ms (Messung ohne Spiel-Logik, Software-GL im
   Test-Browser). Der Clip-Weg ist also schneller: einige Texturzugriffe statt
   viel Trigonometrie je Eckpunkt.
 - **Hin und zurück:** Eine Änderung in Blender kam damals (Export aus der
@@ -154,11 +154,11 @@ Die Clip-Bibliotheken sind selbst die Quelle.
 | Angaben je Clip | `src/models/clips/*.json` | von Hand |
 | Körperform | `src/models/villagers/*.glb` | in Blender (Import/Export glTF) |
 | Spiel-Logik | `src/gl/clips.ts`, `src/gl/entityRenderer.ts` | als Code |
-| Prüfen | `tools/blender/parity*.mjs` (`npm run check:anim`), `tools/export/*` (glTF-Vorschau) | – |
+| Prüfen | `tools/blender/parity*.mjs` (`npm run check:anim`), `tools/export/*` (glTF-Vorschau) | - |
 
 **Was wo geändert wird:**
 
-| Ich will … | Wo |
+| Ich will ... | Wo |
 |---|---|
 | eine Bewegung ändern | `clips/humanoid.glb` bzw. `clips/quadruped.glb` (Tiere) → die Animation gleichen Namens |
 | Mühlenflügel oder Fahne ändern | `clips/mill.glb` → `sails`, `clips/flag.glb` → `wave` |
@@ -166,8 +166,8 @@ Die Clip-Bibliotheken sind selbst die Quelle.
 | festlegen, welche Pose ein Clip ersetzt | `pose` des Clips in der `.json` |
 | einen Clip nur für bestimmte Tiere | `species` des Clips in `clips/quadruped.json` (z. B. `["hare"]`) |
 | die Form eines Körpers ändern | `src/models/villagers/*.glb` in Blender |
-| ein Werkzeug ändern oder neu anhängen | `src/models/props/*.glb` in Blender, `FIGURE_PROPS` in `entityRenderer.ts`, siehe „Werkzeuge anhängen“ |
-| einen Clip ansehen | Galerie → „Clips aus Blender“ |
+| ein Werkzeug ändern oder neu anhängen | `src/models/props/*.glb` in Blender, `FIGURE_PROPS` in `entityRenderer.ts`, siehe „Werkzeuge anhängen" |
+| einen Clip ansehen | Galerie → „Clips aus Blender" |
 
 **Drei Regeln halten es zusammen:**
 
@@ -185,7 +185,7 @@ Ein Werkzeug ist ein eigenes kleines Modell (`src/models/props/<name>.glb`),
 in Metern, mit dem Ursprung in der Mitte der rechten Hand in Ruhelage (Arm
 hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
 
-- **Je Werkzeug und Körper eine Form** (`SHAPE.propAxe`, `propAxeFemale` …).
+- **Je Werkzeug und Körper eine Form** (`SHAPE.propAxe`, `propAxeFemale` ...).
   Beim Zeichnen leiht sie sich Gelenke, Clip-Uniforms und Handlage ihres
   Körpers (`body` in `MODELS`, `uSocket`). Sie bewegt sich darum genau mit
   dessen Unterarm. Das Modell ist nur einmal geladen, auch wenn zwei Körper
@@ -250,7 +250,7 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
    Figur (`MAX_CLIPS`).
 5. `npm run check:anim` zeigt, wie weit ein Clip von der alten Formel
    abweicht; `npm test`, dass kein Knochen, Clip oder keine Pose verloren
-   ging. In der Galerie zeigen „Clips aus Blender“ jeden Clip.
+   ging. In der Galerie zeigen „Clips aus Blender" jeden Clip.
 
 Die IK-Ziele der Hände (`ik.hand.*`, `hand.*`) lebten in der früheren
 `humanoid.blend`; in den gebackenen Clips stecken nur noch ihre Ergebnisse.
@@ -266,7 +266,7 @@ Alles, was sich bewegt, rechnet der Vertex-Shader in
   aus dem Objektnamen im OBJ stammt, zum Beispiel `Arm.L.Lower`. Das ist
   starres Skinning mit einem Knochen je Eckpunkt.
 - **Formeln statt Keyframes.** Die Gelenkwinkel folgen je Pose aus der Phase
-  (`pose == 1` … `pose == 5`). Zwei Posen haben ihre Werte in JSON
+  (`pose == 1` ... `pose == 5`). Zwei Posen haben ihre Werte in JSON
   ausgelagert: `poses/mow.json` und `poses/carve.json`.
 - **Vier Zahlen je Instanz.** `motion = [Blickrichtung, Phase, Pose, Ladung]`.
   Gebäude, Bäume und Felder deuten dieselben vier Zahlen je nach Art anders.
@@ -299,7 +299,7 @@ Ein Modell besteht heute aus drei Dingen, und nur eines davon zieht um:
 | Was | Heute | Künftig |
 |---|---|---|
 | **Form** | OBJ aus einem Skript (`tools/models/*.mjs`), Objektnamen als Teile | Form bleibt OBJ bzw. `.glb`, dazu Skelett und Gewichte |
-| **Aussehen** | Materialname je Fläche (`Wood`, `Wool`, `Marble` …). Der Shader macht daraus Farbe und Muster (`MATERIAL_ROLE`, `treeTexture`, `figureTexture`), `Paint` und `Tunic` werden zur Spielerfarbe | **bleibt so**: Shader-Materialien nach Namen |
+| **Aussehen** | Materialname je Fläche (`Wood`, `Wool`, `Marble` ...). Der Shader macht daraus Farbe und Muster (`MATERIAL_ROLE`, `treeTexture`, `figureTexture`), `Paint` und `Tunic` werden zur Spielerfarbe | **bleibt so**: Shader-Materialien nach Namen |
 | **Bewegung** | Formeln im Shader je Pose | Clips aus Blender |
 
 Die Shader-Materialien sind schon eine gemeinsame Bibliothek. Ein Fass sieht
@@ -323,7 +323,7 @@ Bewegungen. Künftig gilt:
    nur einmal.
 2. **Eine Clip-Bibliothek je Skelett.** Die Clips liegen in eigenen Dateien
    (`clips/humanoid.glb`, `clips/quadruped.glb`), getrennt von den Körpern
-   (`villager_male.glb` …). Ein neuer Körper bekommt alle Clips sofort. Ein
+   (`villager_male.glb` ...). Ein neuer Körper bekommt alle Clips sofort. Ein
    verbesserter Clip wirkt auf alle Körper.
 3. **Werkzeuge und Waffen als Anhänge.** Die Hände bekommen Sockel-Knochen
    (`hand.R`, `hand.L`). Beil, Spitzhacke, Hacke, Sense, Zugmesser, Speer und
@@ -340,7 +340,7 @@ Bewegungen. Künftig gilt:
 4. **Teil-Clips in Schichten.** Ein Clip darf nur einen Teil des Skeletts
    bewegen, per Knochenmaske Unterkörper oder Oberkörper. Das Spiel legt zwei
    übereinander: `walk` (Beine) + `carry` (Arme halten die Last) oder später
-   `walk` + `aim` für Bogenschützen. Kombinationen wie „gehen und tragen“
+   `walk` + `aim` für Bogenschützen. Kombinationen wie „gehen und tragen"
    müssen dann nicht als eigener Clip entstehen.
 5. **Eine Vierbeiner-Vorlage für alle Tiere.** Reh, Hase, Kuh, Schaf, Ziege
    und Wildschwein teilen Skelett und Clips (`graze`, `walk`, `flee`, `dead`).
@@ -376,7 +376,7 @@ prozedural, weil Richtung, Zufall oder Physik erst zur Laufzeit feststehen.
 | Mähen | Pose 4, `poses/mow.json`, Sense in Ruhelage zurückgerechnet | Clip `mow`, Sense an beiden Händen per IK | 2 |
 | Schnitzen | Pose 5, `poses/carve.json`, Zugmesser an beiden Unterarmen überblendet | Clip `carve`, Hände per IK auf dem Stab | 2 (Pilot in 1) |
 | Werkzeug je Tätigkeit (Beil, Sense, Messer) | Teile im Shader auf einen Punkt gedrückt | Werkzeugknochen je Clip auf 0 skaliert | 2 |
-| Blickrichtung, Versatz je Figur | `motion[0]`, Phase + id | bleibt, Zeitversatz je Figur | – |
+| Blickrichtung, Versatz je Figur | `motion[0]`, Phase + id | bleibt, Zeitversatz je Figur | - |
 
 ### Tiere (Reh, Hase, Kuh, Schaf, Ziege, Wildschwein)
 
@@ -393,7 +393,7 @@ prozedural, weil Richtung, Zufall oder Physik erst zur Laufzeit feststehen.
 |---|---|---|---|
 | Mühlenflügel: drehen, Böen, eigener Takt, steht bei Einsturz still | `P_SAILS`, `millMotion()` | Clip `sails` (Knochen an der Nabe, Böen gebacken), Tempo und Versatz je Mühle | 4 |
 | Fahne am Sammelpunkt weht | `P_CLOTH`, Sinuswelle | Clip `wave` (Knochenkette im Tuch) | 4 |
-| Hinweispfeil wippt und dreht | Shader, `uTime` | bleibt, zu einfach für einen Clip | – |
+| Hinweispfeil wippt und dreht | Shader, `uTime` | bleibt, zu einfach für einen Clip | - |
 | Waffenkammer: Dach weg, Wände gekappt | `P_CUT_ROOF` / `P_CUT_WALL` | **Zustand**: Namensregel `Cut.Roof`, `Cut.Wall` | 5 |
 | Waffenkammer: Bögen je Vorrat | `P_STOCK` + `Stock.<n>` | **Zustand**: Namensregel `Stock.<n>` | 5 |
 | Bognerei: Werkstück in Stufen | `P_CRAFT` + `Craft.<n>` | **Zustand**: Namensregel `Craft.<n>` | 5 |
@@ -403,10 +403,10 @@ prozedural, weil Richtung, Zufall oder Physik erst zur Laufzeit feststehen.
 
 | Bewegung | Heute | Ziel | Phase |
 |---|---|---|---|
-| Baum fällt (Richtung, Aufprall, Rutschen) | `world.fall()` und Shader „falling“ | **Ereignis**, bleibt (Richtung erst zur Laufzeit) | 6 |
+| Baum fällt (Richtung, Aufprall, Rutschen) | `world.fall()` und Shader „falling" | **Ereignis**, bleibt (Richtung erst zur Laufzeit) | 6 |
 | Baum wird von der Spitze her abgesägt, Stumpf bleibt | `P_CROWN` / `P_TRUNK` / `P_STUMP` | **Zustand**: Namensregeln `Trunk`, `Trunk.Stump` | 5 |
 | Beeren verschwinden einzeln | `P_BERRY` + `Berry.<n>` | **Zustand**: Namensregel `Berry.<n>` | 5 |
-| Stein und Gold schrumpfen | Instanzgröße (`resources.ts`) | **Zustand**, bleibt | – |
+| Stein und Gold schrumpfen | Instanzgröße (`resources.ts`) | **Zustand**, bleibt | - |
 | Felder: pflügen, säen, wachsen, reifen, ernten je Furche; Schnur | `P_CROP` / `P_SOIL` / `P_EDGE`, `farmsGen.mjs` | **Zustand**, bleibt (vom Skript erzeugt) | 5 |
 
 Nicht betroffen sind Lebensbalken, Auswahl und Bauvorschau. Das sind
@@ -435,7 +435,7 @@ Anzeigen, keine Animationen.
   (`blender -b datei.blend --python tools/blender/export.py`) und schreibt
   `src/models/<name>.glb`. Aufruf: `npm run gen:anim`.
 
-### Phase 1: Abspielen im Spiel, Pilot „Schnitzen“ (groß) - erledigt
+### Phase 1: Abspielen im Spiel, Pilot „Schnitzen" (groß) - erledigt
 
 Umgesetzt wie unten beschrieben, mit diesen Abweichungen:
 
@@ -494,14 +494,14 @@ Bildrate mit 500 Dorfbewohnern gleich bleibt.
    Clips. Das ist der Gleichstand, wie heute aus den Formeln gerechnet.
 2. **In Blender:**
    - IK für die Hände bei `mow` und `carve`, damit Sense und Stab gegriffen
-     werden - **erledigt** (`humanoid_ik.py`, siehe „Hände mit IK“).
+     werden - **erledigt** (`humanoid_ik.py`, siehe „Hände mit IK").
    - Weiche Gewichte an Ellbogen, Knien und Schultern.
    - Der Rock folgt beim Knien über Gewichte, statt über eine eigene Formel.
 3. Das Spiel lädt `villager_male.glb` und `villager_female.glb`. `POSE.*`
    wird zu Clip-Namen, die Phase zur Clip-Zeit. Beim Gehen bestimmt die
    Strecke die Zeit.
 4. **Werkzeuge als Anhänge - erledigt** für Beil, Sense und Zugmesser (siehe
-   „Werkzeuge anhängen“). Statt eigener Sockel-Knochen hängen sie an der
+   „Werkzeuge anhängen"). Statt eigener Sockel-Knochen hängen sie an der
    Hand des Unterarms (`uSocket`). Offen: Spitzhacke, Hacke und Speer als
    eigene Modelle, damit `chop` für Holz, Stein, Gold und Pflügen je mit
    anderem Werkzeug genutzt wird.
@@ -510,7 +510,7 @@ Bildrate mit 500 Dorfbewohnern gleich bleibt.
 6. **Ton:** `swing()` liest `strike` aus dem Clip statt aus der Formel -
    **erledigt**. Ohne Clip für die Pose gilt weiter die Formel.
 7. **Bildvergleich:** alle Posen in der Galerie, alt und neu nebeneinander.
-8. **Weg damit - erledigt:** die Posen 0–5 im Shader und die Uniforms, die
+8. **Weg damit - erledigt:** die Posen 0-5 im Shader und die Uniforms, die
    nur sie brauchten (`uShoulder`, `uElbow`, `uStride`). `uHip`, `uKnee`,
    `uArm` und `uLoadAnchor` bleiben (Rock, Knien, Zugmesser, Last).
    `poses/mow.json` und `poses/carve.json` bleiben für den Export und
@@ -548,7 +548,7 @@ Mühlenflügel und die Fahne am Sammelpunkt kommen als Clips aus Blender
 
 - **Mühle:** Skelett `mill` (`root`, `sails` an der Nabe), Clip `sails`:
   125,7 s bei 10 Bildern je Sekunde, das sind 7 Böen-Takte und genau
-  16 Umdrehungen. Die Zeit ist „Mühlenzeit“ (Spielzeit × Drehzahl der
+  16 Umdrehungen. Die Zeit ist „Mühlenzeit" (Spielzeit × Drehzahl der
   Mühle), versetzt je Mühle (`millClipOffset`). Eine eingestürzte Mühle
   bleibt mit der Mühlenzeit beim Abriss stehen (`frozenMillMotion`,
   gemessen an der Animations-Uhr wie `uTime`). Die Böen treffen genau wie
@@ -567,7 +567,7 @@ Mühlenflügel und die Fahne am Sammelpunkt kommen als Clips aus Blender
 - **Formeln weg:** `P_SAILS` und `P_CLOTH` gibt es nur noch als Clip, `uHub`
   und `GUST_AMOUNT` sind gelöscht. `SAIL_SPEED` und `GUST_RATE` bleiben in
   `entityRenderer.ts`: `millClipOffset` setzt damit jede Mühle an ihre Stelle
-  der Schleife. Die Fahne auf dem Hauptgebäude spielt denselben Clip.
+  der Schleife. Die Fahne auf dem Dorfzentrum spielt denselben Clip.
 - **Galerie:** Beim Abriss bleiben die Flügel jetzt auch dort stehen.
 
 ### Phase 5: Zustands-Teile Blender-fest machen (klein bis mittel)
@@ -619,14 +619,14 @@ wenn gewünscht.
 
 | Phase | Inhalt | Umfang | Voraussetzung |
 |---|---|---|---|
-| 0 | Regeln, Ordner, Export-Aufruf | klein | – |
+| 0 | Regeln, Ordner, Export-Aufruf | klein | - |
 | 1 | Lader, Clip-Textur, Skinning im Shader, Clip-Bibliothek, Pilot Schnitzen | groß | 0 |
 | 2 | Dorfbewohner (6 Clips, IK, Werkzeuge als Anhänge, Formeln gelöscht) - erledigt bis auf Schichten | groß | 1 |
 | 3 | Tiere (eine Vorlage, gemeinsame Clips, 3 eigene) - erledigt | mittel | 1 |
 | 4 | Mühle, Fahne - erledigt | klein | 1 |
-| 5 | Namensregeln absichern, später `extras` | klein bis mittel | – |
-| 6 | Ereignisse (bleiben) | – | – |
-| 7 | Tests, Messung, Aufräumen | klein | 2–4 |
+| 5 | Namensregeln absichern, später `extras` | klein bis mittel | - |
+| 6 | Ereignisse (bleiben) | - | - |
+| 7 | Tests, Messung, Aufräumen | klein | 2-4 |
 
 Die Phasen 2, 3 und 4 sind voneinander unabhängig und können in beliebiger
 Reihenfolge laufen, sobald Phase 1 steht.

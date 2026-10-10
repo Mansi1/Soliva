@@ -157,7 +157,7 @@ export class World {
     return building.anchor;
   }
 
-  /** Alle Hauptgebäude, in der Reihenfolge, in der sie gebaut wurden. */
+  /** Alle Dorfzentren, in der Reihenfolge, in der sie gebaut wurden. */
   townCenters(): Building[] {
     return [...this.buildings.values()].filter((b) => b.type === 'town_center');
   }
@@ -167,7 +167,7 @@ export class World {
     return false;
   }
 
-  /** Das Hauptgebäude, das einem Welt-Punkt am nächsten liegt. */
+  /** Das Dorfzentrum, das einem Welt-Punkt am nächsten liegt. */
   nearestTownCenter(x: number, y: number): UnitProducer | undefined {
     let best: UnitProducer | undefined;
     let bestDistance = Infinity;
@@ -182,7 +182,7 @@ export class World {
     return best;
   }
 
-  /** Lebende Dorfbewohner und Bevölkerungsgrenze aus Hauptgebäuden und Häusern. */
+  /** Lebende Dorfbewohner und Bevölkerungsgrenze aus Dorfzentren und Häusern. */
   population(): { used: number; cap: number; training: number } {
     let cap = this.bonusHousing;
     let training = 0;
@@ -408,10 +408,10 @@ export class World {
   canPlace(x: number, y: number, type: BuildingType): string | null {
     const def = BUILDINGS[type];
 
-    // Wie in AoE2 fängt alles beim Hauptgebäude an: dort entstehen die
+    // Wie in AoE2 fängt alles beim Dorfzentrum an: dort entstehen die
     // Dorfbewohner, und die erste Ernte wird dort abgeliefert.
     if (type !== 'town_center' && !this.hasTownCenter()) {
-      return 'Baue zuerst ein Hauptgebäude';
+      return 'Baue zuerst ein Dorfzentrum';
     }
 
     // Felder: ein Tile, auf dem gesät werden kann.
@@ -576,11 +576,24 @@ export class World {
 
   /** Stellt einen Dorfbewohner in die Warteschlange. Kosten werden sofort fällig. */
   train(building: Building): string | null {
-    if (!building.isUnitProducer()) return 'Nur das Hauptgebäude bildet Dorfbewohner aus';
+    if (!building.isUnitProducer()) return 'Nur das Dorfzentrum bildet Dorfbewohner aus';
     if (building.isQueueFull) return 'Die Warteschlange ist voll';
     if (!this.canAffordVillager()) return 'Zu wenig Nahrung';
     this.pay(building.unit.cost);
     building.enqueueUnit();
+    this.dirty = true;
+    return null;
+  }
+
+  /**
+   * Bricht die Ausbildung der Einheit an Platz `index` ab (0 = die gerade
+   * ausgebildete) - ihre Kosten kommen voll zurück, wie beim Abriss.
+   * VERIFIED: tests/training-queue.test.mjs - volle Kosten zurück, ungültiger Platz ändert nichts.
+   */
+  cancelTraining(building: Building, index: number): string | null {
+    if (!building.isUnitProducer()) return 'Nur das Dorfzentrum bildet Dorfbewohner aus';
+    if (!building.cancelUnit(index)) return 'Diese Einheit steht nicht mehr in der Warteschlange';
+    this.pay(building.unit.cost, -1);
     this.dirty = true;
     return null;
   }

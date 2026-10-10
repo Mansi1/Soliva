@@ -46,7 +46,7 @@ export function worldSounds(sound: Sound, camera: Camera, heightAt: (x: number, 
         if (!offscreen) sound.play('collapse', volume, pan);
         break;
       case 'trained':
-        // Wichtige Rückmeldung - auch wenn das Hauptgebäude nicht im Bild ist.
+        // Wichtige Rückmeldung - auch wenn das Dorfzentrum nicht im Bild ist.
         sound.play('trained', 0.7);
         break;
     }

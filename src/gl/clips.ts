@@ -444,7 +444,7 @@ export const FLAG_SEGMENTS = 6;
  * Maße einer Fahne für ihr Skelett: das Tuch vom Mast (y0) bis zum Ende (y1),
  * seine Höhe z. `stretch`: wie viel länger dieses Tuch ist als das am
  * Sammelpunkt, für das der Clip gemacht ist (in Modell-Einheiten) - so weit
- * schlägt es auch aus (die Fahne auf dem Hauptgebäude).
+ * schlägt es auch aus (die Fahne auf dem Dorfzentrum).
  */
 export interface FlagJoints {
   cloth: [number, number, number];

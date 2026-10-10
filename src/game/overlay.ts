@@ -7,6 +7,7 @@ import { SHAPE, animalCenter, type EntityInstance } from '../gl/entityRenderer';
 import type { IsoView } from '../gl/iso';
 import type { MiniMap } from '../map';
 import type { UnitProducer } from '../world/building';
+import { modelsOf, siteVariant } from '../world/building/BuildingBase';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
 import { workplace } from '../world/villagers';
 import type { World } from '../world/world';
@@ -14,6 +15,8 @@ import type { Selection } from './Selection';
 
 /** Farbe der Auswahl und freier Bauplätze. */
 const SELECTED: [number, number, number] = [110, 231, 160];
+/** Farbe der Bauvorschau, wo nicht gebaut werden kann. */
+const BLOCKED: [number, number, number] = [220, 70, 80];
 /** Breite des Streifens, auf den der Shader die Punkte zum Sammelpunkt malt (Tiles) - etwas mehr als ein Punkt. */
 const RALLY_LINE_WIDTH = 0.1;
 /** So lange gilt ein gesuchter Weg zum Sammelpunkt (ms) - dann neu: ein Baum fällt, ein Haus entsteht. */
@@ -133,12 +136,16 @@ export function selectionOverlay(
 }
 
 /**
- * Bauvorschau am Zeiger: die belegte Fläche (rot, wenn es hier nicht geht)
- * und das Modell. Felder zeigen rundum, wo gesät werden kann, und die Frucht
- * Furche für Furche auf den Tiles, die sie bekämen.
+ * Bauvorschau am Zeiger: die belegte Fläche und das Modell - hellgrün, rot,
+ * wenn es hier nicht geht (nicht in der Spielerfarbe: die kann selbst rot
+ * sein). Das Modell ist die Variante, die hier gebaut würde. Felder zeigen
+ * rundum, wo gesät werden kann, und die Frucht Furche für Furche auf den
+ * Tiles, die sie bekämen.
  */
+// VERIFIED: tests/build-preview.test.mjs - Vorschau und gebautes Haus haben an 9 Bauplätzen dasselbe Modell.
 export function placementOverlay(world: World, type: BuildingType, tileX: number, tileY: number, blocked: boolean, out: EntityInstance[]) {
   const def = BUILDINGS[type];
+  const color = blocked ? BLOCKED : SELECTED;
 
   // Felder: rund um den Zeiger zeigen, wo gesät werden kann.
   if (type === 'farm') {
@@ -159,7 +166,7 @@ export function placementOverlay(world: World, type: BuildingType, tileX: number
     x: tileX,
     y: tileY,
     size: def.footprint,
-    color: blocked ? [220, 70, 80] : SELECTED,
+    color,
     shape: SHAPE.flat,
     alpha: 0.22,
   });
@@ -169,7 +176,7 @@ export function placementOverlay(world: World, type: BuildingType, tileX: number
     const outline = world.fieldOutline(tileX, tileY, world.farmTiles(tileX, tileY) || 16);
     for (let row = 0; row < FIELD_ROWS; row++) {
       out.push({
-        x: tileX, y: tileY, size: def.size, color: player.color.toRGB(),
+        x: tileX, y: tileY, size: def.size, color,
         shape: CROPS[world.nextFarmCrop].shape + row, alpha: 0.7, motion: [row, 3, 1, outline.mask],
         accent: [outline.others, 0, 0],
       });
@@ -180,8 +187,8 @@ export function placementOverlay(world: World, type: BuildingType, tileX: number
     x: tileX,
     y: tileY,
     size: def.size,
-    color: blocked ? [220, 70, 80] : player.color.toRGB(),
-    shape: def.model,
+    color,
+    shape: modelsOf(def)[siteVariant(def, tileX, tileY)],
     alpha: 0.7,
   });
 }

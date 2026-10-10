@@ -30,9 +30,9 @@ Was danach noch zu tun bleibt, grob nach Wichtigkeit.
 ## Prüfen
 
 - **Bildrate mit vielen Figuren ohne die Formeln.** Mit Formeln brauchten 500
-  Figuren 54–60 ms je Bild, mit Clips 38 ms (Software-GL im Test-Browser).
+  Figuren 54-60 ms je Bild, mit Clips 38 ms (Software-GL im Test-Browser).
   Nach dem Löschen der Formeln nicht neu gemessen; die Demo-Welt läuft mit
-  56–60 Bildern je Sekunde.
+  56-60 Bildern je Sekunde.
 - **Erlegter Hase:** Im Vergleich vorher/nachher 2,28 % andere Pixel, Ursache
   nicht gefunden. Nebeneinander sieht er gleich aus.
 - **Symbole neu zeichnen:** Nach Änderungen an Modellen `npm run gen:ui`
@@ -41,7 +41,7 @@ Was danach noch zu tun bleibt, grob nach Wichtigkeit.
 ## Vorhaben: Animationen und Modelle verbessern (ab 26.09.2026)
 
 Beschlossen, in dieser Reihenfolge. Erledigte Schritte hier streichen und
-in docs/ANIMATION.md unter „Stand“ festhalten.
+in docs/ANIMATION.md unter „Stand" festhalten.
 
 0. **Blender anbinden (`blender-mcp`).** Mit dem Add-on kann ein Agent Blender
    live steuern, also Modelle ansehen und ändern. Das Add-on und der Server
@@ -49,10 +49,10 @@ in docs/ANIMATION.md unter „Stand“ festhalten.
    bleibt kein Python. Seit 26.09.2026 eingerichtet, aus dem lokalen
    Checkout `~/Projects/py/mcp-for-blender`: Das Add-on liegt in Blender 4.3,
    der Server ist in Claude Code als `blender` eingetragen (Telemetrie aus).
-   In Blender das Add-on „MCP for Blender“ einschalten, dann N → „MCP for
-   Blender“ → Start MCP Server. Clips *nicht* über
+   In Blender das Add-on „MCP for Blender" einschalten, dann N → „MCP for
+   Blender" → Start MCP Server. Clips *nicht* über
    Blender speichern, solange die Export-Einstellungen fehlen (siehe oben,
-   „Zuerst“).
+   „Zuerst").
 1. **Übergänge überblenden:** Posen springen heute sofort um. Geplant ist,
    etwa 0,2 s zu überblenden, z. B. von Gehen zu Hacken. Dazu braucht jede
    Figur einen zweiten Clip (den vorigen) und ein Gewicht. Gemischt wird im
@@ -77,7 +77,7 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
 ## Bewegungen (docs/ANIMATION.md)
 
 - **Weiche Haut:** Beim Mann erledigt. Er ist eine Hülle mit Knochen aus
-  Blender (docs/BLENDER.md, „Knochen“). Die Frau ist noch starr in Teile
+  Blender (docs/BLENDER.md, „Knochen"). Die Frau ist noch starr in Teile
   geschnitten.
 - **Körper in `humanoid.blend`:** Die Figur in der Clip-Bibliothek ist nur
   Vorschau. Wird ein Körper in `models/villagers/` geändert, passt die
@@ -105,4 +105,4 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
   - Felder: Ähren setzen den Halm fort (im Mittel 1,5 cm anders), Maiskolben
     haben eine feste Höhe statt einer zufälligen.
   - Fahne am Sammelpunkt: 4 statt 5 Nachkommastellen (unter 0,1 mm).
-  - Fahne am Hauptgebäude weht etwas ruhiger (Clip statt Formel).
+  - Fahne am Dorfzentrum weht etwas ruhiger (Clip statt Formel).

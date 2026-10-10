@@ -18,14 +18,32 @@ import { BUILDINGS, CROPS, FISHING, VILLAGER, player, type DepositType, type Res
 import {
   RUIN_COLLAPSE, RUIN_COLLAPSE_START, RUIN_DURATION, RUIN_FADE_START, RUIN_FLIGHT, RUIN_SHAKE,
 } from './ruin';
+import type { WorkNeed } from './unit';
 import { AFLOAT, DRAGGING, workplace } from './villagers';
 import { STRIDE_LENGTH, WORK_TEMPO, type ViewRect, type World } from './world';
 
-/** Farbe des Hinweispfeils über einem Gebäude ohne Arbeiter. */
-const MARKER_COLOR: [number, number, number] = [255, 205, 40];
 /** Höhe des Hinweispfeils in Tiles (1.5 m) und sein Abstand über dem Dach. */
 const MARKER_SIZE = 0.3;
 const MARKER_GAP = 0.12;
+
+/**
+ * Was dem Arbeiter fehlt, über dem Dach statt des Pfeils: Symbol (Höhe in
+ * Tiles, Farbe für Paint) und darüber der rote Balken (gl/entityRenderer.ts,
+ * SHAPE.needWood ...). Holz wie im Vorrat als Eiche (components/modelIcons.ts).
+ * VERIFIED: im Browser bei Zoom 4 lesbar, auch nach einer Drehung der Ansicht.
+ */
+const NEED_LOOK: Record<WorkNeed, { shape: number; size: number; color: [number, number, number] }> = {
+  wood: { shape: SHAPE.needWood, size: 0.65, color: [42, 97, 52] },
+  armory: { shape: SHAPE.needBow, size: 0.6, color: [0, 0, 0] },
+  water: { shape: SHAPE.needFish, size: 0.18, color: [0, 0, 0] },
+};
+/** Höhe des Balkens: doppelt so hoch wie der Pfeil - bei Zoom 4 noch lesbar. */
+const STRIKE_SIZE = 2 * MARKER_SIZE;
+/** Etwas höher als der Pfeil: der schräge Balken ragt vorn sonst ins Dach. */
+const NEED_LIFT = 0.15;
+const STRIKE_COLOR: [number, number, number] = [220, 30, 30];
+/** Zur Kamera gewandt (die steht bei +x +y), solange die Ansicht nicht gedreht ist. */
+const FACING_CAMERA = Math.PI / 4;
 
 /**
  * Boot des Fischers (props/fisher_boat.glb): Breite und Länge in Tiles (1
@@ -91,13 +109,16 @@ export function worldInstances(
   // Bognereien: wie weit der Bogen auf der Werkbank ist - nur solange der
   // Bogner daran arbeitet (sein Holz liegt auf der Bank), sonst ist sie leer.
   const crafting = new Map<string, number>();
-  // Werkstätten mit Arbeiter - über den anderen steht ein Hinweispfeil.
+  // Werkstätten mit Arbeiter - über den anderen steht ein Hinweispfeil. Wartet
+  // der Arbeiter, steht dort, worauf (need), durchgestrichen.
   const staffed = new Set<string>();
+  const waiting = new Map<string, WorkNeed>();
   // Fischerhütten, deren Boot gerade unterwegs ist - sonst liegt es an der Hütte.
   const boatOut = new Set<string>();
   for (const v of world.villagers) {
     const at = workplace(v.task);
     if (at) staffed.add(at);
+    if (at && v.need) waiting.set(at, v.need);
     if (v.task.kind === 'fish' && (AFLOAT.has(v.task.step) || DRAGGING.has(v.task.step))) boatOut.add(v.task.building);
     if (v.task.kind === 'craft' && v.task.step === 'carve' && v.carryType !== 'wood') crafting.set(v.task.building, v.task.progress);
   }
@@ -159,13 +180,27 @@ export function worldInstances(
       const at = modelWorkSpot(building.model, building.x, building.y, def.size, BUILDING_HEADING)?.boat;
       if (at) out.push(boatAt(at.x, at.y, BUILDING_HEADING + Math.PI / 2, world.groundAt?.(at.x, at.y)));
     }
-    // Arbeiter fehlt: ein Pfeil nach unten über dem Dach, der sich langsam dreht.
-    if (building.isWorkshop() && !staffed.has(building.anchor)) {
-      const top = (modelSize(building.model)?.height ?? 1) * def.size;
-      out.push({
-        x: building.x, y: building.y, size: MARKER_SIZE, color: MARKER_COLOR, shape: SHAPE.markerArrow, alpha: 1,
-        motion: [now * 1.5, top + MARKER_GAP, 0, 0],
-      });
+    // Arbeiter fehlt: ein Pfeil nach unten über dem Dach, der sich langsam
+    // dreht, in der Spielerfarbe. Wartet er: was fehlt, durchgestrichen.
+    const need = waiting.get(building.anchor);
+    if (building.isWorkshop() && (!staffed.has(building.anchor) || need)) {
+      const top = (modelSize(building.model)?.height ?? 1) * def.size + MARKER_GAP;
+      if (!need) {
+        out.push({
+          x: building.x, y: building.y, size: MARKER_SIZE, color: player.color.toRGB(), shape: SHAPE.markerArrow, alpha: 1,
+          motion: [now * 1.5, top, 0, 0],
+        });
+      } else {
+        const look = NEED_LOOK[need];
+        // Das Symbol mittig zum Balken.
+        out.push({
+          x: building.x, y: building.y, size: look.size, color: look.color, shape: look.shape, alpha: 1,
+          motion: [FACING_CAMERA, top + NEED_LIFT + (STRIKE_SIZE - look.size) / 2, 0, 0],
+        }, {
+          x: building.x, y: building.y, size: STRIKE_SIZE, color: STRIKE_COLOR, shape: SHAPE.needStrike, alpha: 1,
+          motion: [FACING_CAMERA, top + NEED_LIFT, 0, 0],
+        });
+      }
     }
   }
 

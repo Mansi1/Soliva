@@ -14,7 +14,7 @@ import {
   BOWYER, CROPS, FARM_RATE, FISHING, HUNT, MAX_GATHERERS, PLOUGH_TIME, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
-import type { Animal, Task, Villager } from './unit';
+import type { Animal, Task, Villager, WorkNeed } from './unit';
 import { WORK_TEMPO, type World } from './world';
 
 /** Abstand der Sammelplätze von der Feldmitte, in Tiles. */
@@ -26,6 +26,8 @@ const MOVE_REACH = 0.05;
 /** So lange (Sekunden) bleibt ein Dorfbewohner beim Abladen im Gebäude. */
 const INSIDE_TIME = 1.2;
 const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
+/** Grund, wenn es zu Fuß keinen Weg zum Ziel gibt (walk). */
+const UNREACHABLE = 'Dort kommt er nicht hin';
 
 const key = (x: number, y: number) => `${x},${y}`;
 
@@ -100,8 +102,12 @@ export class VillagerWork {
   command(ids: ReadonlySet<number>, x: number, y: number, point?: Point): string | null {
     const selected = this.controllable(ids);
     if (selected.length === 0) return ids.size > 0 ? WORKER_BUSY : null;
-    // Wer gerade im Gebäude ablädt, kommt für den neuen Befehl sofort heraus.
-    for (const v of selected) v.inside = 0;
+    // Wer gerade im Gebäude ablädt, kommt für den neuen Befehl sofort heraus;
+    // Lager ohne Weg (unreachable) prüft er neu.
+    for (const v of selected) {
+      v.inside = 0;
+      v.unreachable.clear();
+    }
 
     const target = this.world.at(x, y);
     if (target?.isWorkshop()) {
@@ -254,19 +260,25 @@ export class VillagerWork {
   /**
    * Der Weg, den ein Dorfbewohner von (fx, fy) zum Punkt (tx, ty) ginge -
    * dieselbe Suche wie beim Gehen (waypoint): Start, Wegpunkte, Ziel. Ohne
-   * Weg geradeaus, wie er dann auch ginge. Für die Linie zum Sammelpunkt.
+   * Weg nur der Start - dorthin geht er nicht (walk). Für die Linie zum Sammelpunkt.
    */
   route(fx: number, fy: number, tx: number, ty: number): Point[] {
-    const path = searchPath(fx, fy, tx, ty, MOVE_REACH, (x, y) => this.blockedAt(x, y)) ?? [];
-    return [{ x: fx, y: fy }, ...path, { x: tx, y: ty }];
+    const path = searchPath(fx, fy, tx, ty, MOVE_REACH, (x, y) => this.blockedAt(x, y));
+    return path ? [{ x: fx, y: fy }, ...path, { x: tx, y: ty }] : [{ x: fx, y: fy }];
   }
 
   /**
    * Nächster Punkt, den er ansteuert: der erste offene Wegpunkt zum Ziel -
    * gesucht, wenn das Ziel neu ist oder der Weg inzwischen versperrt ist.
-   * Gibt es keinen Weg, geht er geradeaus (wie früher), statt stehen zu bleiben.
+   * Gibt es zu Fuß keinen Weg, null: geradeaus ginge er durchs Wasser.
+   * VERIFIED: tests/water-path.test.mjs - mit dem alten Geradeaus-Weg stand ein
+   * Holzfäller 75 Ticks im Fluss, jetzt keinen.
+   * Das Boot fährt dann geradeaus (siehe shore).
+   * ponytail: "kein Weg" gilt, bis sich das Ziel ändert; neu suchen (etwa
+   * nach Zeit), wenn ein gefällter Baum oder abgerissenes Gebäude den Weg
+   * öffnen soll, ohne dass der Spieler neu befiehlt.
    */
-  private waypoint(v: Villager, tx: number, ty: number, reach: number, afloat: boolean): { x: number; y: number } {
+  private waypoint(v: Villager, tx: number, ty: number, reach: number, afloat: boolean): { x: number; y: number } | null {
     const blocked = afloat ? (x: number, y: number) => this.dryAt(x, y) : (x: number, y: number) => this.blockedAt(x, y);
     // Neu suchen: neues Ziel, oder die Strecke zum nächsten Wegpunkt ist
     // inzwischen versperrt (z. B. ein neues Gebäude).
@@ -275,10 +287,12 @@ export class VillagerWork {
           (x, y) => blocked(x, y) && !(x === Math.floor(v.x) && y === Math.floor(v.y))));
     if (stale) {
       v.pathTarget = { x: tx, y: ty };
-      v.path = searchPath(v.x, v.y, tx, ty, reach, blocked) ?? [];
+      // Kein Weg: path bleibt null - so wird bis zum nächsten Ziel nicht neu gesucht.
+      v.path = searchPath(v.x, v.y, tx, ty, reach, blocked) ?? (afloat ? [] : null);
     }
-    while (v.path && v.path.length > 0 && Math.hypot(v.path[0].x - v.x, v.path[0].y - v.y) < 0.12) v.path.shift();
-    return v.path && v.path.length > 0 ? v.path[0] : { x: tx, y: ty };
+    if (!v.path) return null;
+    while (v.path.length > 0 && Math.hypot(v.path[0].x - v.x, v.path[0].y - v.y) < 0.12) v.path.shift();
+    return v.path.length > 0 ? v.path[0] : { x: tx, y: ty };
   }
 
   /** Schritt zum Ziel; `afloat`: im Boot, nur über Wasser - er steht dabei im Boot. */
@@ -294,6 +308,11 @@ export class VillagerWork {
     }
     // Um Hindernisse herum: zum nächsten Wegpunkt, zuletzt aufs Ziel zu.
     const next = this.waypoint(v, tx, ty, reach, afloat);
+    if (!next) {
+      v.problem = UNREACHABLE;
+      return false;
+    }
+    if (v.problem === UNREACHABLE) v.problem = null;
     const final = next.x === tx && next.y === ty;
     const dx = next.x - v.x;
     const dy = next.y - v.y;
@@ -316,19 +335,31 @@ export class VillagerWork {
     return false;
   }
 
-  /** Nächstes Lager, das `type` annimmt. */
+  /**
+   * Nächstes Lager, das `type` annimmt - nach Luftlinie, übersprungen, wohin
+   * er schon keinen Weg fand (v.unreachable, siehe enter). Ist keins
+   * erreichbar, das nächste: dort bleibt er stehen und sagt warum.
+   * VERIFIED: tests/water-path.test.mjs - liegt das nächste Lager jenseits des
+   * Flusses, bringt er das Holz ins weitere auf seiner Seite.
+   */
   private nearestDropSite(v: Villager, type: ResourceKind): Building | undefined {
     let best: Building | undefined;
     let bestDistance = Infinity;
+    let any: Building | undefined;
+    let anyDistance = Infinity;
     for (const b of this.world.allBuildings()) {
       if (!b.definition.storedResources.includes(type)) continue;
       const d = Math.hypot(b.x + 0.5 - v.x, b.y + 0.5 - v.y);
-      if (d < bestDistance) {
+      if (d < anyDistance) {
+        anyDistance = d;
+        any = b;
+      }
+      if (d < bestDistance && !v.unreachable.has(b.anchor)) {
         bestDistance = d;
         best = b;
       }
     }
-    return best;
+    return best ?? any;
   }
 
   /** Läuft zum Lager; true, sobald die Ladung abgegeben ist. */
@@ -363,7 +394,11 @@ export class VillagerWork {
         building.x, building.y, def.size, BUILDING_HEADING);
     const reach = entry ? 0.08 : Math.max(def.footprint, def.size) / 2 + DELIVER_REACH;
     const [tx, ty] = entry ? [entry.x, entry.y] : [building.x + 0.5, building.y + 0.5];
-    if (!this.walk(v, tx, ty, reach, dt)) return false;
+    if (!this.walk(v, tx, ty, reach, dt)) {
+      // Kein Weg dorthin: beim nächsten Tick nimmt nearestDropSite ein anderes Lager.
+      if (v.problem === UNREACHABLE) v.unreachable.add(building.anchor);
+      return false;
+    }
     arrive?.();
     // Durch die Tür hinein - einen Moment lang ist er weg.
     if (entry) {
@@ -604,6 +639,7 @@ export class VillagerWork {
    * immer wieder, solange Holz im Vorrat ist.
    */
   private tickCrafter(v: Villager, task: Extract<Task, { kind: 'craft' }>, dt: number) {
+    v.need = null;
     const shop = this.world.building(task.building);
     if (!shop?.isWorkshop()) {
       // Die Werkstatt ist weg - einen Bogen bringt er trotzdem zur Waffenkammer.
@@ -626,13 +662,13 @@ export class VillagerWork {
       const armory = this.nearestDropSite(v, 'bows');
       if (!armory) {
         v.problem = 'Keine Waffenkammer für den Bogen - baue eine';
-        this.sitDown(v, shop, dt);
+        this.sitDown(v, shop, dt, 'armory');
         return;
       }
       // Alle voll: er wartet mit dem Bogen, bis Platz ist - erst dann geht er los.
       if (v.inside <= 0 && this.world.stock.bows >= this.world.weaponCapacity()) {
         v.problem = 'Alle Waffenkammern sind voll - baue noch eine';
-        this.sitDown(v, shop, dt);
+        this.sitDown(v, shop, dt, 'armory');
         return;
       }
       v.problem = null;
@@ -643,13 +679,13 @@ export class VillagerWork {
       const store = this.nearestDropSite(v, 'wood');
       if (!store) {
         v.problem = 'Kein Lager für Holz - baue ein Holzlager';
-        this.sitDown(v, shop, dt);
+        this.sitDown(v, shop, dt, 'wood');
         return;
       }
       // Erst losgehen, wenn es genug gibt - sonst wartet er an der Werkbank.
       if (v.inside <= 0 && !this.world.canPay({ wood: BOWYER.wood })) {
         v.problem = `Zu wenig Holz im Vorrat (${BOWYER.wood} je Bogen)`;
-        this.sitDown(v, shop, dt);
+        this.sitDown(v, shop, dt, 'wood');
         return;
       }
       v.problem = null;
@@ -696,6 +732,7 @@ export class VillagerWork {
     const trap = task.trap ? this.world.building(task.trap) : undefined;
     const shore = task.shore;
     v.problem = null;
+    v.need = null;
     if (task.leave && !AFLOAT.has(task.step) && !DRAGGING.has(task.step)) {
       // Den Fang legt er noch ins Netz.
       this.world.stock.food += task.fish;
@@ -712,6 +749,7 @@ export class VillagerWork {
       const place = this.shore(hut, full);
       if (!place) {
         v.problem = 'Kein Ufer in der Nähe der Fischerhütte';
+        v.need = 'water';
         return;
       }
       Object.assign(task, { step: full ? 'boat' : 'shore', trap: full?.anchor, shore: place, progress: 0 });
@@ -820,8 +858,9 @@ export class VillagerWork {
     return best;
   }
 
-  /** Keine Arbeit in der Werkstatt: er setzt sich auf den Hocker und wartet. */
-  private sitDown(v: Villager, shop: Building, dt: number) {
+  /** Keine Arbeit in der Werkstatt: er setzt sich auf den Hocker und wartet - auf `need`. */
+  private sitDown(v: Villager, shop: Building, dt: number, need: WorkNeed) {
+    v.need = need;
     const seat = modelWorkSpot(shop.model, shop.x, shop.y, shop.definition.size, BUILDING_HEADING, 'seat');
     if (!seat || !this.walk(v, seat.x, seat.y, 0.05, dt)) return;
     v.heading = Math.atan2(seat.aimY - v.y, seat.aimX - v.x);
@@ -951,7 +990,8 @@ export class VillagerWork {
         return;
 
       case 'move':
-        if (this.walk(v, task.x, task.y, MOVE_REACH, dt)) v.task = { kind: 'idle' };
+        // Angekommen - oder es gibt keinen Weg: dann bleibt er mit dem Grund stehen.
+        if (this.walk(v, task.x, task.y, MOVE_REACH, dt) || v.problem === UNREACHABLE) v.task = { kind: 'idle' };
         return;
 
       case 'farm':

@@ -50,6 +50,8 @@ export interface TrainView {
   affordable: boolean;
   /** Sammelpunkt-Schalter an: der nächste Klick auf die Karte setzt ihn. */
   rallyPicking: boolean;
+  /** So viele bildet ein Klick aus: 1, mit gehaltener Umschalttaste 5 - steht als Zahl im Knopf. */
+  batch: number;
 }
 
 export type SelectionView =
@@ -141,6 +143,9 @@ export type SelectionView =
   | { kind: 'none' };
 
 const rgb = () => player.color.toRGB();
+
+/** So weit (px) liegen die Wartenden im Stapel versetzt übereinander. */
+const STACK_STEP = 4;
 
 // --- Pergament --------------------------------------------------------------
 
@@ -254,9 +259,13 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
           ) : null}
           {t && t.units.length > 0 ? (
             <>
-              {/* Wie in AoE2: vorn, wer gerade ausgebildet wird - groß, mit Fortschritt; darunter die Wartenden mit ihrem Platz. */}
+              {/* Wie in AoE2: vorn, wer gerade ausgebildet wird - groß, mit Fortschritt; darunter die Wartenden als Stapel.
+                  Ein Klick auf eine Einheit bricht genau sie ab (ui.ts, data-action=cancel-train), die Kosten kommen voll zurück. */}
               <div class="sel-training">
-                <span class="sel-queue-unit active"><img src={villagerIcon(t.units[0], rgb())} alt="" draggable={false} /></span>
+                <span class="sel-queue-unit active" data-action="cancel-train" data-index="0"
+                  title={`${t.units[0] ? 'Dorfbewohnerin' : 'Dorfbewohner'} - Klick: abbrechen, ${t.train.cost} zurück`}>
+                  <img src={villagerIcon(t.units[0], rgb())} alt="" draggable={false} />
+                </span>
                 <div class="sel-training-info">
                   <div>
                     {t.units[0] ? 'Dorfbewohnerin' : 'Dorfbewohner'} in Ausbildung - <b>{t.percent} %</b>
@@ -267,11 +276,14 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
               </div>
               {t.full ? <div class="muted">Bevölkerung voll, baue ein Haus</div> : null}
               {t.units.length > 1 ? (
-                <div class="sel-queue">
-                  {t.units.slice(1).map((female, i) => (
-                    <span class="sel-queue-unit" title={`${i + 2}. ${female ? 'Dorfbewohnerin' : 'Dorfbewohner'}`}>
+                <div class="sel-queue" style={`width:${24 + (t.units.length - 2) * STACK_STEP}px`}>
+                  {/* Die zuletzt eingereihte liegt oben und trägt die Anzahl der Wartenden. */}
+                  {t.units.slice(1).map((female, i, waiting) => (
+                    <span class="sel-queue-unit" data-action="cancel-train" data-index={String(i + 1)}
+                      style={`left:${i * STACK_STEP}px`}
+                      title={`${i + 2}. ${female ? 'Dorfbewohnerin' : 'Dorfbewohner'} - Klick: abbrechen, ${t.train.cost} zurück`}>
                       <img src={villagerIcon(female, rgb())} alt="" draggable={false} />
-                      <b>{i + 2}</b>
+                      {i === waiting.length - 1 ? <b>{waiting.length}</b> : null}
                     </span>
                   ))}
                 </div>
@@ -424,6 +436,8 @@ interface Command {
   icon: string | 'demolish';
   key?: string;
   crop?: CropType;
+  /** Zahl unten rechts: so viele löst ein Klick aus (Ausbilden: 1, mit Umschalt 5). */
+  count?: number;
   disabled?: boolean;
   pressed?: boolean;
 }
@@ -432,7 +446,7 @@ function trainCommand(train: TrainView): Command {
   return {
     action: 'train', title: `${train.label} ausbilden (V) - ${train.cost}\nMit Umschalt: 5 auf einmal`,
     // Frau und Mann wie in der Rohstoffleiste - ausgebildet wird beides.
-    icon: populationIcon(rgb()), key: 'V', disabled: !train.affordable,
+    icon: populationIcon(rgb()), key: 'V', count: train.batch, disabled: !train.affordable,
   };
 }
 
@@ -500,6 +514,7 @@ function CommandButton({ c }: { c: Command }) {
       disabled={c.disabled} aria-pressed={c.pressed === undefined ? undefined : String(c.pressed)}>
       {c.icon === 'demolish' ? <DemolishIcon /> : <img src={c.icon} alt="" draggable={false} />}
       {c.key ? <span class="cmd-key">{c.key}</span> : null}
+      {c.count ? <span class="cmd-count">{c.count}</span> : null}
     </button>
   );
 }
@@ -520,7 +535,7 @@ let lastCommands = '';
 export function renderSelection(details: HTMLElement, commands: HTMLElement, view: SelectionView): boolean {
   render(<SelectionPanel view={view} />, details);
   const list = commandsFor(view);
-  const key = JSON.stringify(list.map((c) => [c.action, c.crop, c.disabled, c.pressed, c.icon.length]));
+  const key = JSON.stringify(list.map((c) => [c.action, c.crop, c.count, c.disabled, c.pressed, c.icon.length]));
   // Neu aufbauen statt abgleichen: sonst blieben disabled und aria-pressed an
   // Knöpfen hängen, die an dieser Stelle vorher etwas anderes waren.
   if (key !== lastCommands) {

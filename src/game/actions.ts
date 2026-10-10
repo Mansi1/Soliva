@@ -1,6 +1,6 @@
 // actions.ts
 // Was der Spieler tut: auswählen (Klick, Doppelklick, Rahmen), Befehle
-// (Rechtsklick), bauen, ausbilden, untätige Dorfbewohner und Hauptgebäude
+// (Rechtsklick), bauen, ausbilden, untätige Dorfbewohner und Dorfzentren
 // anspringen, abreißen, Frucht wählen. Die Aktionen kennen die Welt und den
 // Spielzustand (Kamera, Auswahl, Baumodus); die Oberfläche erreichen sie nur
 // über die Rückrufe in ActionUi.
@@ -235,13 +235,13 @@ export class PlayerActions {
 
   /** Dorfbewohner einreihen - `count` auf einmal (Umschalt: 5, wie in AoE2). */
   trainVillagers(count = 1) {
-    // Ausgewählte Hauptgebäude, sonst das nächstgelegene. Bei mehreren kommt
+    // Ausgewählte Dorfzentren, sonst das nächstgelegene. Bei mehreren kommt
     // jeder Dorfbewohner in die kürzeste Warteschlange.
     const selectedTrainers = this.selection.chosenBuildings().filter((b): b is UnitProducer => b.isUnitProducer());
     const nearest = this.world.nearestTownCenter(this.camera.x, this.camera.y);
     const trainers = selectedTrainers.length > 0 ? selectedTrainers : nearest ? [nearest] : [];
     if (trainers.length === 0) {
-      this.ui.hint('Baue zuerst ein Hauptgebäude');
+      this.ui.hint('Baue zuerst ein Dorfzentrum');
       return;
     }
     let reason: string | null = null;
@@ -255,6 +255,16 @@ export class PlayerActions {
     }
     // Ein Teil ging: kein Fehler, nur wenn gar keiner in die Schlange kam.
     if (queued === 0 && reason) this.ui.hint(reason);
+    else this.sound.play('click', 0.5);
+    this.ui.refreshResources();
+  }
+
+  /** Klick in die Warteschlange des ausgewählten Gebäudes: die Einheit an Platz `index` abbrechen, Kosten zurück. */
+  cancelTraining(index: number) {
+    const building = this.selection.focused();
+    if (!building) return;
+    const reason = this.world.cancelTraining(building, index);
+    if (reason) this.ui.hint(reason);
     else this.sound.play('click', 0.5);
     this.ui.refreshResources();
   }
@@ -304,13 +314,13 @@ export class PlayerActions {
 
 
   /**
-   * Taste H: zum Hauptgebäude springen und es auswählen - bei mehreren reihum,
+   * Taste H: zum Dorfzentrum springen und es auswählen - bei mehreren reihum,
    * beginnend nach dem gerade ausgewählten.
    */
   cycleTownCenter() {
     const centers = this.world.townCenters();
     if (centers.length === 0) {
-      this.ui.hint('Baue zuerst ein Hauptgebäude');
+      this.ui.hint('Baue zuerst ein Dorfzentrum');
       return;
     }
     const current = centers.findIndex((b) => this.world.anchorOf(b) === this.selection.focusedBuilding);

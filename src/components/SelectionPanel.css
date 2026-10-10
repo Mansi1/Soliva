@@ -252,7 +252,7 @@
   filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.6));
 }
 
-/* Warteschlange im Hauptgebäude (wie AoE2): wer ausgebildet wird, groß mit
+/* Warteschlange im Dorfzentrum (wie AoE2): wer ausgebildet wird, groß mit
    goldenem Rand neben Fortschritt und Name; die Wartenden klein in Kästchen
    wie beim Vorrat, unten rechts ihr Platz. */
 #selection .sel-training {
@@ -273,11 +273,24 @@
   width: 26px;
   height: 26px;
 }
+/* Die Wartenden als Stapel: jede Karte etwas versetzt (left aus SelectionPanel.tsx), die letzte oben. */
 #selection .sel-queue {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  position: relative;
+  height: 28px;
   margin: 4px 0 2px;
+}
+#selection .sel-queue .sel-queue-unit {
+  position: absolute;
+  top: 0;
+  box-shadow: -2px 0 3px rgba(0, 0, 0, 0.45);
+}
+/* Klick bricht die Ausbildung dieser Einheit ab. */
+#selection [data-action='cancel-train'] {
+  cursor: pointer;
+}
+#selection [data-action='cancel-train']:hover {
+  border-color: #d8322a;
+  z-index: 1;
 }
 #selection .sel-queue-unit {
   position: relative;
@@ -303,6 +316,17 @@
   font-size: 10px;
   color: #fff;
   text-shadow: 1px 1px 0 #000;
+}
+
+/* Ausbilden: wie viele ein Klick einreiht - 1, mit gehaltener Umschalttaste 5. */
+#command-bar .cmd-btn .cmd-count {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font: bold 13px Georgia, 'Times New Roman', serif;
+  color: var(--cream);
+  text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
+  pointer-events: none;
 }
 
 /* Sammelpunkt-Schalter: immer unten rechts in der Steintafel, wie in AoE2. */

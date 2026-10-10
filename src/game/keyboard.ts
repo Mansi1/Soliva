@@ -32,7 +32,7 @@ export interface KeyCommands {
   /** Esc im Spiel: Untermenü zu, Baumodus aus, Auswahl aufheben - ist nichts davon da, das Menü. */
   cancel(): void;
   demolish(): void;
-  /** Zum (nächsten) Hauptgebäude springen. */
+  /** Zum (nächsten) Dorfzentrum springen. */
   home(): void;
   toggleHelp(): void;
   toggleDebug(): void;
