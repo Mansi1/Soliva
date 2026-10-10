@@ -20,6 +20,7 @@ import {
 import { AXIS_COLORS, GIZMO_RADIUS, TIMELINE_SECONDS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
 import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
 import { FLOWER_SIZE } from './world/flowers';
+import { FLEE_STRIDE } from './world/render';
 import { STRIDE_LENGTH } from './world/world';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
@@ -102,7 +103,7 @@ function animalClip(kind: AnimalKind, label: string, clip: number): Exhibit {
 function animal(kind: AnimalKind, label: string, pose: number): Exhibit {
   const def = ANIMALS[kind];
   const speed = pose === ANIMAL_POSE.flee ? def.flee : def.walk;
-  const stride = def.stride * (pose === ANIMAL_POSE.flee ? 2 : 1);
+  const stride = def.stride * (pose === ANIMAL_POSE.flee ? FLEE_STRIDE : 1);
   return {
     label,
     draw: (t, x, y, out) => out.push({

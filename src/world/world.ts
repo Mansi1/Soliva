@@ -770,6 +770,8 @@ export class World {
   /** Was Tiere von der Welt wissen: wohin sie dürfen, wo der nächste Dorfbewohner ist. */
   private readonly animalSurroundings: AnimalSurroundings = {
     isBlocked: (x, y) => this.animalBlocked(x, y),
+    // Wie man das Ufer sieht: feine Höhe, auf Meereshöhe (0) ist Wasser.
+    isWater: (x, y) => (this.groundAt?.(x, y, NEAR_STEP) ?? 1) <= 0,
     nearestThreat: (x, y) => {
       let nearest: { x: number; y: number; distance: number } | undefined;
       for (const v of this.villagers) {

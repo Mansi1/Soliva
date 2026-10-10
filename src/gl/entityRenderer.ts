@@ -23,7 +23,7 @@ import millClips from '../models/clips/mill.glb?clips';
 import flagClips from '../models/clips/flag.glb?clips';
 import {
   BONE, FLAG, FLAG_SEGMENTS, HUMANOID, MAX_BONES, MILL, PROP_BITS, QUADRUPED, QUADRUPED_BONE, TEXELS_PER_BONE, bakeClip, qRotate, unpackClips,
-  type Clip, type Rig,
+  type Clip, type QuadrupedJoints, type Rig,
 } from './clips';
 import { TERRAIN_COMMON } from './terrainShader';
 import { CLASSIC_LIGHT, LIGHT_GLSL, setLightUniforms, type Light } from './light';
@@ -199,7 +199,7 @@ export const SHAPE = {
   farmPotato: 77,
   /**
    * Wild zum Jagen (models/animals/deer.glb, hare.obj, cow.obj, sheep.obj, goat.obj, boar.obj): motion = [Blickrichtung,
-   * Phase, Pose (ANIMAL_POSE), 0] - siehe "beast" im Shader.
+   * Phase, Pose (ANIMAL_POSE), Gefälle längs (world/render.ts animalGround)] - siehe "beast" im Shader.
    */
   deer: 90,
   hare: 91,
@@ -1239,7 +1239,7 @@ void main() {
     // unten etwas breiter läuft. Erst nach dem Drehen der Mühlenflügel: sonst
     // würden die zusammengedrückten Flügel um die Nabe gedreht und schnellten
     // verzerrt nach oben.
-    if (!figure && !natural && !field && aMotion.w > 0.0) {
+    if (!figure && !natural && !field && !beast && aMotion.w > 0.0) {
       float c = aMotion.w;
       float h = fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
       p.z *= mix(1.0, 0.12 + 0.4 * h, c);
@@ -1316,6 +1316,17 @@ void main() {
       float logRadius = uStumpRadius * scale;
       offset += dir * (logRadius * 2.2) * slide;
       up -= (hinge - logRadius * 0.9) * slide;
+    }
+    // Tiere am Hang: um die Mitte geneigt, so stehen Vorder- und Hinterhufe
+    // auf dem Gelände (aMotion.w = Gefälle in Blickrichtung, world/render.ts
+    // animalGround). Gedreht statt geschert: an steilen Hängen würde das
+    // Tier sonst lang gezogen.
+    if (beast && aMotion.w != 0.0) {
+      float s = aMotion.w * uReliefScale;
+      float c = inversesqrt(1.0 + s * s);
+      float along = dot(offset, forward);
+      offset += forward * (along * (c - 1.0) - up * s * c);
+      up = (along * s + up) * c;
     }
 
     vec2 xy = center + offset;
@@ -3121,6 +3132,12 @@ export function animalCenter(shape: number, x: number, y: number, size: number, 
   const r = clip.rotations;
   const [f, l] = qRotate([r[0], r[1], r[2], r[3]], modelCenter(m, shape));
   return modelToWorld(m, [f + clip.root[0], l + clip.root[1]], x, y, size, heading);
+}
+
+/** Maße eines Tiers für sein Skelett (Modell-Einheiten, Höhe 1) - wie die Clips es backen. */
+export function animalJoints(shape: number): QuadrupedJoints | undefined {
+  const m = MODEL_BY_SHAPE.get(shape)?.model;
+  return m && { hip: m.hip, legs: m.legs, neck: m.neck, graze: m.graze, side: m.side };
 }
 
 /**

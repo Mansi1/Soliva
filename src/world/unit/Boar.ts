@@ -11,6 +11,6 @@ export class Boar extends AnimalBase {
     type: 'boar', label: 'Wildschwein',
     info: 'Wildschweine wühlen den Boden nach Wurzeln und Larven um. So lockern sie die Erde, und Samen finden offenen Boden zum Keimen.',
     shape: SHAPE.boar, height: 0.18, hp: 6, food: 220, walk: 0.08, flee: 0.38,
-    fear: 3.5, herd: [1, 3], stride: 0.35,
+    fear: 3.5, herd: [1, 3], stride: 0.28,
   };
 }

@@ -84,3 +84,5 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T11:31:17Z s=560a6297 DONE fp=1bb36e527682 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+65)
 2026-10-10T11:31:17Z s=560a6297 FINDING src/world/villagers.ts:throwRelease learn=none: Visual one-frame glitch; no cheap mechanical check without a rendering harness.
 2026-10-10T11:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:away (P_TOOL) learn=none: Covered by gallery screenshot; smoke checks clip libraries load, not prop visibility.
+2026-10-10T11:42:03Z s=560a6297 DONE fp=b7347b860d62 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+74)
+2026-10-10T11:42:03Z s=560a6297 FINDING src/world/unit/*.ts walk/flee learn=none: Requirement interpretation, not a code defect.
