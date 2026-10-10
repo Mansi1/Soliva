@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { FLAG, HUMANOID, MILL, QUADRUPED, loadClips, packClips, unpackClips } from '../src/gl/clips.ts';
 
-const LIBRARIES = { humanoid: HUMANOID, humanoid_sit: HUMANOID, quadruped: QUADRUPED, mill: MILL, flag: FLAG };
+const LIBRARIES = { humanoid: HUMANOID, humanoid_sit: HUMANOID, humanoid_tools: HUMANOID, quadruped: QUADRUPED, mill: MILL, flag: FLAG };
 
 test('gepackte Clips sind dieselben wie direkt gelesene', () => {
   for (const [name, rig] of Object.entries(LIBRARIES)) {

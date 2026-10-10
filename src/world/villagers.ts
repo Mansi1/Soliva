@@ -15,7 +15,7 @@ import {
 } from './catalog';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
 import type { Animal, Task, Villager, WorkNeed } from './unit';
-import { WORK_TEMPO, type World } from './world';
+import { WORK_TEMPO, type StrikeKind, type World } from './world';
 
 /** Abstand der Sammelplätze von der Feldmitte, in Tiles. */
 const GATHER_SPREAD = 0.4;
@@ -32,6 +32,21 @@ const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
 const UNREACHABLE = 'Dort kommt er nicht hin';
 /** Grund, wenn ein Bauer säen müsste und das Holz fehlt - er jätet derweil (tickFarmer). */
 const NO_SEED_WOOD = 'Zu wenig Holz, um neu zu säen';
+/**
+ * Arbeitszeit, zu der die Hand im Clip throw den Wurf loslässt (seine
+ * Takt-Marke): Clip-Zeit = (Arbeitszeit * WORK_TEMPO - Verschiebung) * Rate.
+ */
+// VERIFIED: Galerie 2026-10-10 - im Clip throw ist der Arm bei 0,5 s vorn (Loslassen).
+// Vorwärts auf die nächste solche Stelle gerückt, nicht zurückgesetzt:
+// sonst spielte das Bild zwischen zwei Ticks (prevWorkTime) den Clip rückwärts.
+function throwRelease(workTime: number): number {
+  // Erst beim Aufruf: world.ts (WORK_TEMPO) lädt dieses Modul selbst.
+  const clip = CLIPS.find((c) => c.pose === POSE.throw);
+  if (!clip) return workTime;
+  const at = ((clip.strike[0] ?? 0) / clip.phaseRate + clip.phaseShift) / WORK_TEMPO;
+  const loop = clip.duration / clip.phaseRate / WORK_TEMPO;
+  return at + Math.ceil((workTime - at) / loop - 1e-6) * loop;
+}
 
 const key = (x: number, y: number) => `${x},${y}`;
 
@@ -488,7 +503,7 @@ export class VillagerWork {
    * Arbeitstakt am Platz: Zeit weiterzählen und bei jedem Schlag bzw. Griff
    * ein Ereignis melden - im Takt der Animation (siehe Shader).
    */
-  private swing(v: Villager, dt: number, resource: DepositType, picking: boolean) {
+  private swing(v: Villager, dt: number, resource: StrikeKind, picking: boolean) {
     const before = v.workTime;
     v.workTime += dt;
     // Der Ton kommt im Takt des Clips, der die Pose spielt: zu seinen
@@ -603,9 +618,9 @@ export class VillagerWork {
     // Eine kürzere Furche (über weniger Tiles) ist schneller gepflügt und gesät.
     const length = building.furrowCells(task.row).length / 3;
     if (working && phase === 'plough') {
-      // Pflügen: mit der Hacke, stehend.
-      v.pose = POSE.work;
-      this.swing(v, dt, 'wood', false);
+      // Pflügen: mit der Hacke, stehend - eigener Clip und dumpfer Schlag in die Erde.
+      v.pose = POSE.hoe;
+      this.swing(v, dt, 'soil', false);
       f.plough = Math.min(1, f.plough + dt / (PLOUGH_TIME * length));
       return;
     }
@@ -961,13 +976,17 @@ export class VillagerWork {
         return;
       }
       v.heading = Math.atan2(a.y - v.y, a.x - v.x);
-      v.pose = POSE.work;
+      // Werfen ohne Beil: der Clip throw dauert eine Nachladezeit (HUNT.reload),
+      // seine Clip-Zeit ist die Arbeitszeit.
+      v.pose = POSE.throw;
       v.workTime += dt;
       if (task.cooldown > 0) return;
       task.cooldown = HUNT.reload;
+      // Beim Treffer steht der Arm im Clip gerade beim Loslassen.
+      v.workTime = throwRelease(v.workTime);
       // Cheat "speedy gonzales": ein Treffer erlegt es.
       a.hp -= this.world.speedy ? a.hp : 1;
-      this.world.onEvent?.({ kind: 'strike', resource: 'wood', x: v.x, y: v.y });
+      this.world.onEvent?.({ kind: 'strike', resource: 'throw', x: v.x, y: v.y });
       if (a.hp <= 0) {
         a.state = 'dead';
         a.target = null;

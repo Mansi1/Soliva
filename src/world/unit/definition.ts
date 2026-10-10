@@ -16,7 +16,12 @@ export interface AnimalDefinition<T extends string = string> {
   hp: number;
   /** Nahrung, die der Kadaver hergibt. */
   food: number;
-  /** Tiles je Sekunde beim Umherziehen und auf der Flucht. */
+  /**
+   * Tiles je Sekunde Spielzeit beim Umherziehen und auf der Flucht (1 Tile =
+   * 5 m). Die Beine passen sich über `stride` an jede Geschwindigkeit an. Ein
+   * Jäger geht 0.8 Tiles/s (VILLAGER.speed) und muss auf Wurfweite (HUNT.range)
+   * heran - ohne `sprint` bleibt die Flucht darunter, sonst entkäme jedes Tier.
+   */
   walk: number;
   flee: number;
   /**
@@ -28,6 +33,13 @@ export interface AnimalDefinition<T extends string = string> {
   fear: number;
   /** So viele leben zusammen (von, bis). */
   herd: [number, number];
-  /** Tiles zwischen zwei Schritten - die Beine schwingen danach. */
+  /**
+   * Tiles je Durchlauf des Geh-Clips (jedes Bein ein Schritt) - die Beine
+   * schwingen nach der Strecke. So weit, dass die Hufe nicht rutschen: der
+   * Fuß im tiefsten Punkt seines Schwungs läuft so schnell nach hinten, wie
+   * das Tier vorankommt (Clip und Beinhöhe des Modells mal `height`). Auf der
+   * Flucht FLEE_STRIDE-mal so weit (world/render.ts).
+   * VERIFIED: tests/animal-ground.test.mjs - je Art auf 5 % an Clip und Modell.
+   */
   stride: number;
 }

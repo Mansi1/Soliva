@@ -5,7 +5,7 @@
 // gelesen.
 
 import {
-  ANIMAL_POSE, BUILDING_HEADING, POSE, SHAPE, buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelSize, modelStockSlots,
+  ANIMAL_POSE, BUILDING_HEADING, POSE, SHAPE, animalJoints, buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelSize, modelStockSlots,
   animationTime, modelWorkSpot,
   type EntityInstance,
 } from '../gl/entityRenderer';
@@ -263,12 +263,13 @@ export function worldInstances(
       : a.state === 'walk' ? ANIMAL_POSE.walk : ANIMAL_POSE.graze;
     // Gehen und Fliehen: Beine nach der Strecke; äsen: nach der Uhr, je Tier versetzt.
     const phase = pose === ANIMAL_POSE.walk || pose === ANIMAL_POSE.flee
-      ? lerp(a.prevStride, a.stride, blend) * (Math.PI * 2 / (def.stride * (pose === ANIMAL_POSE.flee ? 2 : 1)))
+      ? lerp(a.prevStride, a.stride, blend) * (Math.PI * 2 / (def.stride * (pose === ANIMAL_POSE.flee ? FLEE_STRIDE : 1)))
       : world.timeAt(blend) + a.id * 3.1;
+    const [ground, slope] = world.groundAt ? animalGround(world.groundAt, def.shape, x, y, def.height, a.heading) : [undefined, 0];
     out.push({
       x: x - 0.5, y: y - 0.5, size: def.height, color: [255, 255, 255], shape: def.shape, alpha: 1,
-      motion: [a.heading, phase, pose, 0],
-      ground: world.groundAt?.(x, y),
+      motion: [a.heading, phase, pose, slope],
+      ground,
       health: selection?.animal === a.id ? a.hp / def.hp : undefined,
       food: selection?.animal === a.id ? a.food / def.food : undefined,
     });
@@ -283,6 +284,45 @@ export function worldInstances(
     }
   }
   return out;
+}
+
+/**
+ * Wie viel weiter ein Tier je Durchlauf des Flucht-Clips kommt als je
+ * Durchlauf des Geh-Clips (src/models/clips/quadruped.glb): Beim Fliehen
+ * schwingen die Beine weiter und schneller - gemessen am Fuß im tiefsten
+ * Punkt seines Schwungs, für alle Arten gleich (flee/hop_flee/trot gegen
+ * walk/hop). tests/animal-ground.test.mjs prüft das gegen die Clips.
+ */
+export const FLEE_STRIDE = 1.77;
+
+/**
+ * So steil (Tiles je Tile, ~31°) neigt sich ein Tier höchstens. An Klippen
+ * stünde es sonst fast senkrecht an der Wand, die Beine waagerecht im Hang.
+ */
+const MAX_PITCH = 0.6;
+
+/**
+ * Boden unter einem Tier: Höhe unter seiner Mitte und Gefälle in
+ * Blickrichtung (Tiles je Tile, ohne Reliefstärke), gemessen unter Vorder-
+ * und Hinterbeinen. Der Shader neigt das Tier danach um seine Mitte
+ * ("beast"), so stehen beide Beinpaare auf dem Gelände. Mit nur der Höhe der
+ * Mitte hingen am Hang die Beine auf der Talseite in der Luft - bei
+ * Steigung 1 eine Kuh hinten ~0.13 Tiles (65 cm).
+ * VERIFIED: tests/animal-ground.test.mjs (Hufe am Hang auf dem Boden) und Bildvergleich vorher/nachher 2026-10-10.
+ * @param groundAt Geländehöhe wie World.groundAt
+ * @param size Höhe des Tiers in Tiles (AnimalDefinition.height)
+ */
+export function animalGround(groundAt: (x: number, y: number) => number, shape: number, x: number, y: number, size: number, heading: number): [number, number] {
+  const legs = animalJoints(shape)?.legs;
+  if (!legs || legs[0] - legs[1] < 1e-6) return [groundAt(x, y), 0];
+  const [fx, fy] = [Math.cos(heading), Math.sin(heading)];
+  const [front, back] = [legs[0] * size, legs[1] * size];
+  const zFront = groundAt(x + fx * front, y + fy * front);
+  const zBack = groundAt(x + fx * back, y + fy * back);
+  const slope = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, (zFront - zBack) / (front - back)));
+  // Die Gerade durch beide Hufe, an der Mitte (0 Tiles vorn). Steiler als
+  // MAX_PITCH: die Hufe hangab auf dem Boden, die hangauf stehen im Gras.
+  return [Math.min(zFront - slope * front, zBack - slope * back), slope];
 }
 
 /** Wie weit vor dem Angler die Schnur ins Wasser taucht, in Tiles (Angel 2.5 m, schräg gehalten). */

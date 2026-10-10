@@ -35,6 +35,7 @@ const RULES = [
     why: 'Körperteile oder Knochen, Hand für die Werkzeuge; Werkzeuge sind eigene Modelle',
   },
   { match: /^props\/axe$/, needs: ['Arm.R.Lower.Tool'], why: 'Beil an der Hand' },
+  { match: /^props\/hoe$/, needs: ['Arm.R.Lower.Tool'], why: 'Hacke an der Hand (Pflügen)' },
   { match: /^props\/scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
   { match: /^props\/knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
 ];

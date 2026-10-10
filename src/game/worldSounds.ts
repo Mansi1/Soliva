@@ -6,15 +6,16 @@
 
 import type { Sound, SoundName } from '../audio';
 import { worldToScreen } from '../gl/iso';
-import type { DepositType } from '../world/catalog';
-import type { WorldEvent } from '../world/world';
+import type { StrikeKind, WorldEvent } from '../world/world';
 import type { Camera } from './Camera';
 
-const GATHER_SOUND: Record<DepositType, SoundName> = {
+const GATHER_SOUND: Record<StrikeKind, SoundName> = {
   wood: 'chop',
   stone: 'pick',
   gold: 'pick',
   berries: 'rustle',
+  soil: 'hoe',
+  throw: 'swish',
 };
 
 /**

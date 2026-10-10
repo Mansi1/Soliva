@@ -11,6 +11,6 @@ export class Sheep extends AnimalBase {
     type: 'sheep', label: 'Schaf',
     info: 'Schafe weiden kurz und tragen in ihrer Wolle Samen von Wiese zu Wiese. Heiden und Trockenrasen bleiben nur durch sie erhalten.',
     shape: SHAPE.sheep, height: 0.19, hp: 2, food: 100, walk: 0.07, flee: 0.3,
-    fear: 2.5, herd: [3, 6], stride: 0.35,
+    fear: 2.5, herd: [3, 6], stride: 0.28,
   };
 }

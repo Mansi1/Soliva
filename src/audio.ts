@@ -12,6 +12,8 @@ export type SoundName =
   | 'chop' // Axthieb
   | 'pick' // Spitzhacke auf Stein oder Gold
   | 'rustle' // Beeren pflücken
+  | 'hoe' // Hacke in die Erde
+  | 'swish' // Wurf des Jägers
   | 'treeFall' // Baum knarrt und schlägt auf
   | 'deliver' // Ladung abgeliefert
   | 'place' // Gebäude gesetzt
@@ -194,6 +196,16 @@ const SOUNDS: Record<SoundName, Synth> = {
     noiseBurst(ctx, out, noise, t, 'highpass', 3000, 0.7, 0.5, 0.001, 0.04);
     tone(ctx, out, t, 'sine', 2600 * v, 2500 * v, 0.25, 0.001, 0.18);
     tone(ctx, out, t, 'sine', 3900 * v, 3800 * v, 0.12, 0.001, 0.12);
+  },
+  hoe: (ctx, out, t, v, noise) => {
+    // Dumpf in die Erde: tiefes, kurzes Rauschen und ein weicher Stoß - ohne den hellen Knack des Beils.
+    // UNKNOWN: Klang nicht abgehört (kein Ton beim Prüfen) - zum Abstimmen im Spiel anhören.
+    noiseBurst(ctx, out, noise, t, 'lowpass', 500 * v, 0.8, 0.7, 0.004, 0.12);
+    tone(ctx, out, t, 'sine', 95 * v, 55, 0.55, 0.004, 0.14);
+  },
+  swish: (ctx, out, t, v, noise) => {
+    // Luftzug beim Werfen: kurzes, aufsteigendes Rauschen.
+    noiseBurst(ctx, out, noise, t, 'bandpass', 1800 * v, 1.2, 0.3, 0.02, 0.16);
   },
   rustle: (ctx, out, t, v, noise) => {
     // Blätterrascheln: weiches, hohes Rauschen.

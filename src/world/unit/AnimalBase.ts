@@ -14,6 +14,12 @@ export type AnimalState = 'graze' | 'walk' | 'flee' | 'dead';
 export interface AnimalSurroundings {
   /** Darf es dieses Tile betreten? */
   isBlocked(tileX: number, tileY: number): boolean;
+  /**
+   * Ist dort Wasser, wie man es sieht? Das Ufer verläuft quer durch die
+   * Tiles - ein Tile am Ufer ist oft zum Teil Wasser, und dort stand ein Tier
+   * auf dem Wasser.
+   */
+  isWater(x: number, y: number): boolean;
   /** Der nächste Dorfbewohner (Lage und Abstand), oder undefined. */
   nearestThreat(x: number, y: number): { x: number; y: number; distance: number } | undefined;
 }
@@ -139,11 +145,14 @@ export abstract class AnimalBase extends UnitBase {
   /** Ein Schritt: `speed` in Richtung `heading`, um Hindernisse herum. false, wenn es nicht weiterkommt. */
   private step(heading: number, speed: number, dt: number, surroundings: AnimalSurroundings): boolean {
     const distance = speed * dt;
+    // Schon im Wasser (so entstanden): darf heraus, sonst säße es fest.
+    // VERIFIED: tests/animal-ground.test.mjs - ein fliehendes Reh läuft nicht ins sichtbare Wasser.
+    const wet = surroundings.isWater(this.x, this.y);
     for (const turn of [0, 0.5, -0.5, 1.1, -1.1, 1.7, -1.7]) {
       const h = heading + turn;
       const nx = this.x + Math.cos(h) * distance;
       const ny = this.y + Math.sin(h) * distance;
-      if (surroundings.isBlocked(Math.floor(nx), Math.floor(ny))) continue;
+      if (surroundings.isBlocked(Math.floor(nx), Math.floor(ny)) || (!wet && surroundings.isWater(nx, ny))) continue;
       this.x = nx;
       this.y = ny;
       this.heading = h;

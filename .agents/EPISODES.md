@@ -80,5 +80,11 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T00:20:02Z s=560a6297 FINDING scope learn=none: Scope note.
 2026-10-10T00:33:44Z s=560a6297 DONE fp=7aa3fd1afe1e cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+58)
 2026-10-10T00:33:44Z s=560a6297 FINDING src/world/farming.ts:furrowNeeds learn=test: tests/fields.test.mjs B2 harvests only the ripe furrow with wood=0, then phase wood.
+2026-10-10T11:26:52Z s=560a6297 FAIL prose
+2026-10-10T11:31:17Z s=560a6297 DONE fp=1bb36e527682 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+65)
+2026-10-10T11:31:17Z s=560a6297 FINDING src/world/villagers.ts:throwRelease learn=none: Visual one-frame glitch; no cheap mechanical check without a rendering harness.
+2026-10-10T11:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:away (P_TOOL) learn=none: Covered by gallery screenshot; smoke checks clip libraries load, not prop visibility.
+2026-10-10T11:42:03Z s=560a6297 DONE fp=b7347b860d62 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+74)
+2026-10-10T11:42:03Z s=560a6297 FINDING src/world/unit/*.ts walk/flee learn=none: Requirement interpretation, not a code defect.
 2026-10-10T07:46:55Z s=560a6297 DONE fp=8e3cb678f581 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+59)
 2026-10-10T08:01:28Z s=560a6297 DONE fp=9ba99f4436fd cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+62)
