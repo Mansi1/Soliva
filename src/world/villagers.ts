@@ -11,8 +11,10 @@ import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
 import { FishTrap, furrowFood, type Building, type Farm } from './building';
 import {
-  BOWYER, CROPS, FARM_RATE, FISHING, HUNT, MAX_GATHERERS, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
+  BOWYER, CROPS, FARM_RATE, FISH_KIND, FISHING, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL, SOW_TIME, VILLAGER, YIELD,
+  type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
+import { depositKind } from './resources';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
 import type { Animal, Task, Villager, WorkNeed } from './unit';
 import { WORK_TEMPO, type StrikeKind, type World } from './world';
@@ -110,8 +112,37 @@ export class VillagerWork {
    * wird beim Nachsehen übergangen (farmerOn).
    */
   private farmRows = new Map<string, Villager[]>();
+  /**
+   * Sorte der Ladung je Dorfbewohner, z. B. "Eiche" oder "Weizen" (wie
+   * BuildingBase.goods) - beim Abliefern kommt sie so ins Lager. Mischt er in
+   * einer Ladung Sorten (Baum leer, der nächste eine andere Art), zählt die erste.
+   * ponytail: hier statt als Feld am Villager, weil unit/ gerade anderswo umgebaut
+   * wird; nach Villager.carryKind ziehen, wenn unit/Villager.ts ohnehin angefasst wird.
+   */
+  private carryKinds = new WeakMap<Villager, string>();
 
   constructor(private world: World) {}
+
+  /** Sorte seiner Ladung - undefined ohne Ladung. */
+  carryKind(v: Villager): string | undefined {
+    return v.carrying > 0 ? this.carryKinds.get(v) : undefined;
+  }
+
+  /** Setzt die Sorte seiner Ladung - beim Laden eines Spielstands. */
+  setCarryKind(v: Villager, kind: string) {
+    this.carryKinds.set(v, kind);
+  }
+
+  /**
+   * Beginnt eine Ladung `resource` der Sorte `kind()`, wenn er nichts davon
+   * trägt. Trägt er anderes, lässt er es fallen - wie in AoE2.
+   */
+  private startLoad(v: Villager, resource: ResourceKind, kind: () => string) {
+    if (v.carryType === resource && v.carrying > 0) return;
+    v.carrying = 0;
+    v.carryType = resource;
+    this.carryKinds.set(v, kind());
+  }
 
   /**
    * Befehl an ausgewählte Dorfbewohner für das Feld (x, y), wie ein Rechtsklick
@@ -355,7 +386,9 @@ export class VillagerWork {
   }
 
   /**
-   * Nächstes Lager, das `type` annimmt - nach Luftlinie, übersprungen, wohin
+   * Nächstes Lager, das `type` annimmt und seine Ladung noch fasst (eine volle
+   * Waffenkammer nicht, siehe BuildingBase.room; VERIFIED: tests/storage-stock.test.mjs,
+   * B14: die Kammern füllen sich eine nach der anderen) - nach Luftlinie, übersprungen, wohin
    * er schon keinen Weg fand (v.unreachable, siehe enter). Ist keins
    * erreichbar, das nächste: dort bleibt er stehen und sagt warum.
    * VERIFIED: tests/water-path.test.mjs - liegt das nächste Lager jenseits des
@@ -367,7 +400,7 @@ export class VillagerWork {
     let any: Building | undefined;
     let anyDistance = Infinity;
     for (const b of this.world.allBuildings()) {
-      if (!b.definition.storedResources.includes(type)) continue;
+      if (!b.stores(type) || b.room(type) < v.carrying) continue;
       const d = Math.hypot(b.x + 0.5 - v.x, b.y + 0.5 - v.y);
       if (d < anyDistance) {
         anyDistance = d;
@@ -385,7 +418,8 @@ export class VillagerWork {
   private deliverTo(v: Villager, building: Building, dt: number): boolean {
     return this.enter(v, building, dt, () => {
       if (v.carryType && v.carrying > 0) {
-        this.world.stock[v.carryType] += v.carrying;
+        // Es bleibt in diesem Lager (passt es nicht, im nächsten - World.addStock).
+        this.world.addStock(v.carryType, v.carrying, this.carryKinds.get(v), building);
         this.world.onEvent?.({ kind: 'deliver', x: v.x, y: v.y });
       }
       v.carrying = 0;
@@ -634,10 +668,7 @@ export class VillagerWork {
     // Ernten: Weizen mit der Sense, andere Früchte von Hand.
     v.pose = crop.scythe ? POSE.scythe : POSE.pick;
     this.swing(v, dt, 'berries', true);
-    if (v.carryType !== 'food') {
-      v.carrying = 0;
-      v.carryType = 'food';
-    }
+    this.startLoad(v, 'food', () => crop.label);
     // Cheat "speedy gonzales": der Korb sofort voll.
     const take = Math.min(this.world.speedy ? Infinity : FARM_RATE * crop.rate * dt, f.food, VILLAGER.capacity - v.carrying);
     f.food -= take;
@@ -674,7 +705,7 @@ export class VillagerWork {
     }
     if (task.leave && task.step !== 'deliver') {
       // Das Holz auf der Werkbank kommt zurück in den Vorrat.
-      if (task.step === 'carve' && v.carryType !== 'wood') this.world.stock.wood += BOWYER.wood;
+      if (task.step === 'carve' && v.carryType !== 'wood') this.world.addStock('wood', BOWYER.wood);
       task.step = 'fetch';
       if (this.deliverTo(v, shop, dt)) v.assign({ kind: 'idle' });
       return;
@@ -684,15 +715,13 @@ export class VillagerWork {
       return;
     }
     if (task.step === 'deliver') {
+      // Zur nächsten Waffenkammer, die noch Platz hat - so füllen sie sich eine
+      // nach der anderen. Alle voll: er wartet mit dem Bogen, bis Platz ist.
       const armory = this.nearestDropSite(v, 'bows');
       if (!armory) {
-        v.problem = 'Keine Waffenkammer für den Bogen - baue eine';
-        this.sitDown(v, shop, dt, 'armory');
-        return;
-      }
-      // Alle voll: er wartet mit dem Bogen, bis Platz ist - erst dann geht er los.
-      if (v.inside <= 0 && this.world.stock.bows >= this.world.weaponCapacity()) {
-        v.problem = 'Alle Waffenkammern sind voll - baue noch eine';
+        v.problem = this.world.weaponCapacity() > 0
+          ? 'Alle Waffenkammern sind voll - baue noch eine'
+          : 'Keine Waffenkammer für den Bogen - baue eine';
         this.sitDown(v, shop, dt, 'armory');
         return;
       }
@@ -717,8 +746,10 @@ export class VillagerWork {
       // Am Lager: was er noch trug, liefert er ab, und nimmt das Holz mit.
       if (!this.deliverTo(v, store, dt)) return;
       if (!this.world.canPay({ wood: BOWYER.wood })) return;
-      this.world.pay({ wood: BOWYER.wood });
+      this.world.pay({ wood: BOWYER.wood }, 1, store);
+      // ponytail: das Holz aus dem Lager kommt ohne Sorte; Sorte mitnehmen, wenn Bögen nach Holzart verschieden werden.
       v.pickUp('wood', BOWYER.wood);
+      this.carryKinds.set(v, RESOURCE_LABEL.wood);
       task.step = 'carve';
       return;
     }
@@ -735,6 +766,7 @@ export class VillagerWork {
     if (task.progress >= 1) {
       task.progress = 0;
       v.pickUp('bows', 1);
+      this.carryKinds.set(v, RESOURCE_LABEL.bows);
       task.step = 'deliver';
     }
     this.world.markDirty();
@@ -760,7 +792,7 @@ export class VillagerWork {
     v.need = null;
     if (task.leave && !AFLOAT.has(task.step) && !DRAGGING.has(task.step)) {
       // Den Fang legt er noch ins Netz.
-      this.world.stock.food += task.fish;
+      this.world.addStock('food', task.fish, FISH_KIND, hut);
       task.fish = 0;
       if (this.deliverTo(v, hut, dt)) v.assign({ kind: 'idle' });
       return;
@@ -831,7 +863,7 @@ export class VillagerWork {
         // Den Fisch ins Netz an der Hütte - das ist die Nahrung.
         if (!this.walk(v, spot.x, spot.y, 0.05, dt)) return;
         v.heading = Math.atan2(spot.aimY - v.y, spot.aimX - v.x);
-        this.world.stock.food += task.fish;
+        this.world.addStock('food', task.fish, FISH_KIND, hut);
         this.world.onEvent?.({ kind: 'deliver', x: v.x, y: v.y });
         Object.assign(task, { step: 'choose', fish: 0, trap: undefined });
         this.world.markDirty();
@@ -999,10 +1031,7 @@ export class VillagerWork {
     v.heading = Math.atan2(a.y - v.y, a.x - v.x);
     v.pose = POSE.pick;
     this.swing(v, dt, 'berries', true);
-    if (v.carryType !== 'food') {
-      v.carrying = 0;
-      v.carryType = 'food';
-    }
+    this.startLoad(v, 'food', () => MEAT_KIND);
     // Cheat "speedy gonzales": sofort voll beladen.
     const take = Math.min(this.world.speedy ? Infinity : HUNT.butcherRate * dt, a.food, VILLAGER.capacity - v.carrying);
     a.food -= take;
@@ -1125,10 +1154,8 @@ export class VillagerWork {
         this.swing(v, dt, task.type, task.type === 'berries');
 
         // Wechselt er die Ressource, lässt er die alte Ladung fallen - wie in AoE2.
-        if (v.carryType !== YIELD[task.type]) {
-          v.carrying = 0;
-          v.carryType = YIELD[task.type];
-        }
+        // Die Sorte: Baum- oder Beerenart, bei Fels und Gold der Rohstoff.
+        this.startLoad(v, YIELD[task.type], () => depositKind(this.world.terrain, task.x, task.y) ?? RESOURCE_LABEL[YIELD[task.type]]);
         // Der erste Hieb fällt den Baum - grob weg vom Holzfäller, aber nie
         // ganz genau: bis zu 35° daneben.
         if (task.type === 'wood') {

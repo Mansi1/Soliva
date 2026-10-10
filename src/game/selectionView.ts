@@ -9,13 +9,27 @@ import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { FishTrap, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
-  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
+  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, VILLAGER, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import type { AnimalState } from '../world/unit';
 import type { FarmPhase, World } from '../world/world';
 import { workplace } from '../world/villagers';
 import type { Selection } from './Selection';
+
+/**
+ * Was in einem Lager liegt, Sorte für Sorte: "Eiche 40, Weizen 120" - nach
+ * Rohstoff geordnet, darin wie abgeliefert. Angebrochenes zählt abgerundet.
+ */
+function goodsText(building: Building): string {
+  const parts: string[] = [];
+  for (const r of RESOURCE_KINDS) {
+    for (const [kind, amount] of Object.entries(building.goods[r] ?? {})) {
+      if (amount >= 1) parts.push(`${kind} ${Math.floor(amount)}`);
+    }
+  }
+  return parts.length > 0 ? parts.join(', ') : 'leer';
+}
 
 /** Was auf einem Feldstück gerade dran ist - fürs Panel. */
 const FARM_PHASE_TEXT: Record<FarmPhase, string> = {
@@ -116,6 +130,8 @@ export function selectionView(world: World, selection: Selection, resources: Res
       hp: building.hp,
       maxHp: def.hp,
       storedResources: def.storedResources.length > 0 ? def.storedResources.map((r) => RESOURCE_LABEL[r]).join(', ') : undefined,
+      // Die Waffenkammer zeigt ihre Bögen eigens (weapons).
+      goods: def.storedResources.length > 0 && def.weaponCapacity === 0 ? goodsText(building) : undefined,
       housing: def.housing > 0 ? def.housing : undefined,
       farm: building.isFarm() ? { ...farmView(world, [building]), plan: building.plan } : undefined,
       workshop: building.isWorkshop() ? workshopView(world, building) : undefined,

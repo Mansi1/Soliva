@@ -8,7 +8,7 @@ import { uniqueName } from './names';
 import { POSE, animationTime } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ } from '../noise';
-import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
+import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, RESOURCE_LABEL, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
 import type { BuildingType, CropType, DepositType, ResourceKind, Resources } from './catalog';
 import {
   buildingFromSave, createBuilding, furrowPosition, maskCovers, randomFemale, CENTER_TILE, FishTrap,
@@ -88,7 +88,13 @@ export class World {
   /** Zählt, wenn Gebäude hinzukommen oder wegfallen - wer daraus etwas baut (Blumen-Puffer), baut dann neu. */
   buildingsRevision = 0;
 
-  stock: Resources = initialResources();
+  /**
+   * Vorrat, der in keinem Lager liegt: der Startvorrat, bevor das erste
+   * Dorfzentrum steht, und Erstattungen, für die es kein Lager gibt. Er wandert
+   * ins nächste Lager, das ihn annimmt (absorbReserve). Alles andere liegt in
+   * den Lagern selbst (BuildingBase.goods).
+   */
+  private reserve: Resources = initialResources();
   /**
    * Cheat "speedy gonzales": Dorfbewohner ohne Ausbildungszeit, ein ganzes Feld
    * auf einmal gepflügt oder gesät und gleich reif, Tiere mit einem Treffer erlegt; beim Ernten, Holzfällen,
@@ -196,16 +202,26 @@ export class World {
   }
 
   /**
-   * Wie viele Bögen in jeder Waffenkammer liegen: der Vorrat, gleich verteilt -
-   * die ersten bekommen den Rest. Schlüssel: Ankerpunkt.
+   * Der ganze Vorrat: was in allen Lagern liegt, dazu der Rest ohne Lager.
+   * Bauen und Ausbilden zahlen daraus (pay). Nur zum Lesen - jedes Mal neu
+   * gezählt und eingefroren, Schreiben wirft; hinein kommt etwas über addStock.
    */
+  get stock(): Readonly<Resources> {
+    return Object.freeze(Object.fromEntries(RESOURCE_KINDS.map((r) => [r, this.total(r)])) as Resources);
+  }
+
+  /** So viel `resource` gibt es insgesamt - ohne ein Objekt anzulegen (canPay läuft je Bauer und Tick). */
+  private total(resource: ResourceKind): number {
+    let sum = this.reserve[resource];
+    for (const b of this.buildings.values()) if (b.goods[resource]) sum += b.stored(resource);
+    return sum;
+  }
+
+  /** Wie viele Bögen in jeder Waffenkammer liegen. Schlüssel: Ankerpunkt. */
   armoryStock(): Map<string, number> {
-    const anchors: string[] = [];
-    for (const b of this.allBuildings()) if (b.definition.weaponCapacity > 0) anchors.push(b.anchor);
-    const bows = Math.floor(this.stock.bows);
-    const each = Math.floor(bows / Math.max(1, anchors.length));
-    const rest = bows - each * anchors.length;
-    return new Map(anchors.map((a, i) => [a, each + (i < rest ? 1 : 0)]));
+    const stock = new Map<string, number>();
+    for (const b of this.allBuildings()) if (b.definition.weaponCapacity > 0) stock.set(b.anchor, Math.floor(b.stored('bows')));
+    return stock;
   }
 
   /** So viele Waffen passen in alle Waffenkammern zusammen. */
@@ -270,14 +286,82 @@ export class World {
   }
 
   canPay(cost: Partial<Resources>): boolean {
-    return (Object.keys(cost) as ResourceKind[]).every(
-        (r) => this.stock[r] >= (cost[r] ?? 0));
+    return (Object.keys(cost) as ResourceKind[]).every((r) => this.total(r) >= (cost[r] ?? 0));
   }
 
-  /** Zieht `cost` vom Vorrat ab (`factor` < 0 erstattet). */
-  pay(cost: Partial<Resources>, factor = 1) {
+  /**
+   * Zieht `cost` vom Vorrat ab (`factor` < 0 erstattet, siehe addStock).
+   * Bezahlt wird aus dem ganzen Vorrat, in fester Reihenfolge: erst der Rest
+   * ohne Lager, dann `at` (wer an einem Lager steht oder dort ausbildet, nimmt
+   * dort), dann die Lager wie in storages - Dorfzentren zuerst. Ein Vorrat
+   * je Lager statt eines Dorfvorrats: so zeigt jedes Lager, was darin liegt,
+   * und ein Abriss verliert genau das (Entscheidung B7).
+   * VERIFIED: tests/storage-stock.test.mjs - Haus aus zwei Lagern bezahlt, Abriss verliert den Bestand.
+   */
+  pay(cost: Partial<Resources>, factor = 1, at?: Building) {
     for (const [r, amount] of Object.entries(cost) as [ResourceKind, number][]) {
-      this.stock[r] -= Math.floor(amount * factor);
+      const due = Math.floor(amount * factor);
+      if (due < 0) this.addStock(r, -due, RESOURCE_LABEL[r], at);
+      if (due <= 0) continue;
+      let left = due;
+      const loose = Math.min(Math.max(0, this.reserve[r]), left);
+      this.reserve[r] -= loose;
+      left -= loose;
+      for (const b of at && this.owns(at) ? [at, ...this.storages(r)] : this.storages(r)) {
+        if (left <= 1e-9) break;
+        left -= b.takeGoods(r, left);
+      }
+      // Ohne canPay vorher: was fehlt, geht ins Minus - wie früher beim einen Vorrat.
+      if (left > 1e-9) this.reserve[r] -= left;
+    }
+  }
+
+  /**
+   * Legt `amount` der Sorte `kind` in den Vorrat: nach `at`, wenn es dort
+   * hineinpasst, sonst ins erste Lager mit Platz (storages). Gibt es keins,
+   * liegt es ohne Lager (reserve), bis eins gebaut wird.
+   */
+  addStock(resource: ResourceKind, amount: number, kind = RESOURCE_LABEL[resource], at?: Building) {
+    if (!(amount > 0)) return;
+    const target = at && this.owns(at) && at.room(resource) >= amount
+      ? at
+      : this.storages(resource).find((b) => b.room(resource) >= amount);
+    if (target) target.addGoods(resource, kind, amount);
+    else this.reserve[resource] += amount;
+    this.dirty = true;
+  }
+
+  /** Steht dieses Gebäude (noch) in der Welt? */
+  private owns(building: Building): boolean {
+    return this.buildings.get(building.anchor) === building;
+  }
+
+  /**
+   * Die Lager für `resource` in der Reihenfolge, in der aus ihnen bezahlt und
+   * in sie eingelagert wird, wenn kein bestimmtes gemeint ist: Dorfzentren
+   * zuerst, dann die übrigen, wie sie gebaut wurden.
+   */
+  private storages(resource: ResourceKind): Building[] {
+    const all = [...this.buildings.values()].filter((b) => b.stores(resource));
+    return [...all.filter((b) => b.type === 'town_center'), ...all.filter((b) => b.type !== 'town_center')];
+  }
+
+  /**
+   * Was ohne Lager liegt, kommt ins erste Lager, das es annimmt (storages) -
+   * so viel hineinpasst, unbenannt ("Holz", "Nahrung"). So landet der
+   * Startvorrat im ersten Dorfzentrum und der eine Vorrat älterer Spielstände
+   * (save.ts) in ihren Lagern.
+   */
+  private absorbReserve() {
+    for (const r of RESOURCE_KINDS) {
+      for (const b of this.storages(r)) {
+        if (this.reserve[r] <= 0) break;
+        // Volle Waffenkammern überspringen (room 0).
+        const move = Math.min(this.reserve[r], b.room(r));
+        if (move <= 0) continue;
+        b.addGoods(r, RESOURCE_LABEL[r], move);
+        this.reserve[r] -= move;
+      }
     }
   }
 
@@ -506,6 +590,7 @@ export class World {
     this.buildings.set(building.anchor, building);
     this.buildingsRevision++;
     for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
+    this.absorbReserve();
     if (type !== 'farm' && type !== 'fish_trap') {
       this.digs.push({ x: x + 0.5, y: y + 0.5, size: Math.max(building.definition.footprint, building.definition.size), at: this.time });
     }
@@ -515,19 +600,19 @@ export class World {
     return null;
   }
 
-  /** Abriss. Die Hälfte der Kosten kommt zurück - sonst bestraft ein Fehlklick zu hart. */
+  /**
+   * Abriss. Die Hälfte der Kosten kommt zurück - sonst bestraft ein Fehlklick
+   * zu hart. Was im Lager lag (BuildingBase.goods), ist mit ihm verloren.
+   */
   remove(building: Building) {
     const def = building.definition;
-    this.pay(def.cost, -0.5);
-    // Eine Waffenkammer nimmt ihre Waffen mit: ihr Anteil am Vorrat ist weg.
-    if (def.weaponCapacity > 0) {
-      this.stock.bows = Math.max(0, this.stock.bows - (this.armoryStock().get(building.anchor) ?? 0));
-    }
-    // Wer noch in Ausbildung war, wird voll erstattet - er hat ja nie gearbeitet.
-    if (building.isUnitProducer()) this.pay(VILLAGER.cost, -building.queuedUnits);
     for (const [tx, ty] of building.footprintTiles()) this.occupied.delete(key(tx, ty));
     const anchor = building.anchor;
+    // Erst weg, dann erstatten - sonst landete die Erstattung im abgerissenen Lager.
     this.buildings.delete(anchor);
+    this.pay(def.cost, -0.5);
+    // Wer noch in Ausbildung war, wird voll erstattet - er hat ja nie gearbeitet.
+    if (building.isUnitProducer()) this.pay(VILLAGER.cost, -building.queuedUnits);
     this.buildingsRevision++;
     this.farming.invalidate();
     this.fieldLooks.clear();
@@ -581,7 +666,7 @@ export class World {
     if (!building.isUnitProducer()) return 'Nur das Dorfzentrum bildet Dorfbewohner aus';
     if (building.isQueueFull) return 'Die Warteschlange ist voll';
     if (!this.canAffordVillager()) return 'Zu wenig Nahrung';
-    this.pay(building.unit.cost);
+    this.pay(building.unit.cost, 1, building);
     building.enqueueUnit();
     this.dirty = true;
     return null;
@@ -595,7 +680,7 @@ export class World {
   cancelTraining(building: Building, index: number): string | null {
     if (!building.isUnitProducer()) return 'Nur das Dorfzentrum bildet Dorfbewohner aus';
     if (!building.cancelUnit(index)) return 'Diese Einheit steht nicht mehr in der Warteschlange';
-    this.pay(building.unit.cost, -1);
+    this.pay(building.unit.cost, -1, building);
     this.dirty = true;
     return null;
   }
@@ -618,6 +703,11 @@ export class World {
   /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
   hunt(ids: ReadonlySet<number>, animal: Animal): string | null {
     return this.work.hunt(ids, animal);
+  }
+
+  /** Sorte seiner Ladung, z. B. "Eiche" oder "Weizen" - undefined ohne Ladung. */
+  carryKind(v: Villager): string | undefined {
+    return this.work.carryKind(v);
   }
 
   /** Was ein Dorfbewohner gerade tut, als kurzer Text. */
@@ -814,10 +904,11 @@ export class World {
     return {
       version: 3,
       savedAt: Date.now(),
-      stock: this.stock,
+      stock: { ...this.reserve },
       buildings: [...this.buildings.values()].map((b) => b.toSave()),
       villagers: this.villagers.map((v) => ({
         x: v.x, y: v.y, c: v.carrying, ct: v.carryType, task: v.task, hp: v.hp, n: v.name, f: v.female,
+        ...(v.carrying > 0 && this.work.carryKind(v) ? { ck: this.work.carryKind(v) } : {}),
       })),
       harvested: Object.fromEntries(this.deposits.harvested),
       animals: this.wildlife.animals.map((a) => ({
@@ -830,7 +921,7 @@ export class World {
 
   /** Übernimmt einen geladenen Stand - schon auf das heutige Format gebracht (save.ts). */
   private applySave({ data, scale }: LoadedSave) {
-    this.stock = data.stock;
+    this.reserve = data.stock;
     this.deposits.restore(data.harvested);
 
     for (const saved of data.buildings) {
@@ -841,6 +932,8 @@ export class World {
       for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
     }
     this.buildingsRevision++;
+    // Ältere Spielstände hatten nur den einen Vorrat - er kommt in ihre Lager.
+    this.absorbReserve();
 
     for (const k of data.spawned ?? []) this.wildlife.spawnedChunks.add(k);
     for (const a of data.animals ?? []) {
@@ -853,6 +946,7 @@ export class World {
       const v = new Villager(this.nextId++, s.x * scale, s.y * scale, s.n ?? this.freeName(female), female);
       v.carrying = s.c;
       v.carryType = s.ct;
+      if (s.ck) this.work.setCarryKind(v, s.ck);
       v.task = s.task;
       v.hp = Math.min(s.hp ?? VILLAGER.hp, VILLAGER.hp);
       this.villagers.push(v);
@@ -874,7 +968,7 @@ export class World {
     this.deposits.clear();
     this.villagers = [];
     this.wildlife.clear();
-    this.stock = initialResources();
+    this.reserve = initialResources();
     this.dirty = true;
     this.save();
   }

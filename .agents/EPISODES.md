@@ -92,3 +92,5 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T15:47:58Z s=560a6297 FINDING src/models/animals/boar.glb:Head.Neck learn=memory: Documented as model rule in docs/BLENDER.md (Tiere); no cheap mechanical check for intended pivot location beyond gallery.
 2026-10-10T15:47:58Z s=560a6297 FINDING src/world/unit/Boar.ts:height learn=test: Size test checks every species against its model height.
 2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
+2026-10-10T16:19:50Z s=560a6297 DONE fp=62a0de175c8b cov=80.4% paths=src/components/SelectionPanel.tsx,src/game/selectionView.ts,src/main.ts,src/world/building/Armory.ts(+13)
+2026-10-10T16:19:50Z s=560a6297 FINDING src/main.ts:imtheking cheat learn=none: Frozen getter makes any leftover write fail loudly; no further check needed.

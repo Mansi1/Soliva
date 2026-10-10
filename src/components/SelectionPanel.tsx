@@ -77,6 +77,8 @@ export type SelectionView =
       hp: number;
       maxHp: number;
       storedResources?: string;
+      /** Lager: was darin liegt, Sorte für Sorte - "Eiche 40, Weizen 120" oder "leer". */
+      goods?: string;
       housing?: number;
       farm?: FarmView & { plan: CropType };
       workshop?: WorkshopView;
@@ -242,6 +244,7 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
         <Portrait src={buildingIcon(v.type, rgb())} hp={v.hp} maxHp={v.maxHp} />
         <div class="sel-info">
           {v.storedResources ? <div class="muted">Lager für {v.storedResources}</div> : null}
+          {v.goods ? <div class="sel-goods">Vorrat: <b>{v.goods}</b></div> : null}
           {v.housing ? <div class="muted">+{v.housing} Bevölkerung</div> : null}
           {v.farm ? <FarmDetails farm={v.farm} /> : null}
           {v.workshop ? <WorkshopDetails workshop={v.workshop} label={v.label} /> : null}
