@@ -10,7 +10,8 @@ export interface AnimalDefinition<T extends string = string> {
   info: string;
   /** Modell (SHAPE) */
   shape: number;
-  /** Höhe in Tiles (1 Tile = 5 m) - der Hase etwas größer als echt, sonst sähe man ihn kaum. */
+  /** Höhe in Tiles (1 Tile = 5 m, wie das Modell in Metern) - der Hase 1.25-mal so groß, sonst sähe man ihn kaum.
+   * VERIFIED: tests/animal-ground.test.mjs prüft das gegen die Modelle auf 3 %. */
   height: number;
   /** So viele Speerwürfe hält es aus. */
   hp: number;

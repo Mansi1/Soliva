@@ -86,3 +86,18 @@ test('am Ufer: ein fliehendes Tier läuft nicht ins Wasser, wie man es sieht', (
   });
   assert.ok(fled, 'das Reh ist vor dem Dorfbewohner geflohen');
 });
+
+test('Größe: Tiere im Maßstab der Dorfbewohner (1 Tile = 5 m), nur der Hase etwas größer', async () => {
+  const { readModel } = await import('../tools/models/glb.mjs');
+  // Höhe des Modells in Metern (Datei: Y oben).
+  const meters = (name) => {
+    const ys = readModel(name).obj.split('\n').filter((l) => l.startsWith('v ')).map((l) => Number(l.split(/\s+/)[2]));
+    return Math.max(...ys) - Math.min(...ys);
+  };
+  const TILE = 5;
+  for (const def of kinds) {
+    const real = meters(`animals/${def.type}`) / TILE;
+    const boost = def.type === 'hare' ? 1.25 : 1;
+    assert.ok(Math.abs(def.height / (real * boost) - 1) < 0.03, `${def.type}: height ${def.height}, Modell ${(real * boost).toFixed(3)}`);
+  }
+});

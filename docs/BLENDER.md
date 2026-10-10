@@ -120,6 +120,36 @@ Dorfbewohners -, wenn eine Fläche kein Material hat oder wenn ein Name von
 früher verloren geht (`tests/ids.snapshot.json`). Die Regeln stehen in
 `tools/models/check-models.mjs`, einzeln: `npm run check:models`.
 
+## Tiere
+
+Die sechs Tiere (`src/models/animals/`) sind seit 2026-10-10 aus Querschnitten
+gebaut: der Rumpf aus Ellipsen längs des Körpers, Hals, Kopf, Beine, Ohren
+und Hörner als Röhren entlang einer Linie. Die Fellfarbe wechselt je Fläche
+zwischen zwei Tönen nach einem Rauschen, Bauch, Spiegel oder Flecken nach
+Lage und Richtung der Fläche. Das Python-Skript dazu liegt nicht im Repo
+(keine Python-Dateien hier); wer ein Tier ändert, bearbeitet die `.glb` wie
+jedes andere Modell. Diese Regeln muss ein Tier einhalten, sonst geht im
+Spiel etwas schief:
+
+- **Echte Größe in Metern.** `height` der Art (`src/world/unit/*.ts`) ist die
+  Modellhöhe durch 5 (1 Tile = 5 m), der Hase 1,25-mal so groß.
+  VERIFIED: `tests/animal-ground.test.mjs` prüft das auf 3 %.
+- **Beine** heißen `Leg.FL`, `Leg.FR`, `Leg.BL`, `Leg.BR` (Hufe
+  `Leg.FL.Hoof` ...). Sie drehen um ihr oberes Ende, und die höchste Stelle
+  aller Beine ist das Gelenk für alle vier. Die Beine darum oben im Rumpf
+  enden lassen, vorn und hinten etwa gleich hoch.
+- **Kopf und Hals** heißen `Head...` und drehen beim Äsen um den tiefsten,
+  hintersten Punkt aller `Head`-Teile. Der muss hinten im Hals liegen, unter
+  dem Maul. VERIFIED (Wildschwein, 2026-10-10): lag die Rüsselscheibe am
+  tiefsten, drehte der Kopf um die Schnauze. Reicht das Maul von dort nicht
+  bis zum Boden, senkt das Tier den Kopf nur bis 1,45 rad (`grazeAngle`); bei
+  der Kuh hing er dann in der Luft, bis der Halsansatz tiefer in der Brust lag.
+- **Schrittlänge:** Nach einer Änderung an Beinen oder Größe meldet
+  `tests/animal-ground.test.mjs` die neue `stride` der Art, bei der die Hufe
+  nicht rutschen.
+- **Export** je Tier allein: In einer Szene mit mehreren Tieren hängt Blender
+  an gleiche Namen `.001` an, das lehnt `npm run check:models` ab.
+
 ## Ein neues Modell
 
 1. In Blender bauen - neu oder aus einem importierten Modell als Vorlage -
