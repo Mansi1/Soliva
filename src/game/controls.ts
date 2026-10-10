@@ -54,7 +54,7 @@ export const CONTROLS: readonly Control[] = [
     keys: ['r'], run: (c) => c.resetView(),
   },
   // H wie in AoE2 - "Home".
-  { label: ['H'], what: 'Zum Hauptgebäude', short: 'Hauptgebäude', keys: ['h'], run: (c) => c.home() },
+  { label: ['H'], what: 'Zum Dorfzentrum', short: 'Dorfzentrum', keys: ['h'], run: (c) => c.home() },
   { label: [MOUSE_LEFT], what: 'Auswählen (Ziehen: Rahmen)', short: 'auswählen' },
   { label: ['Umschalt', MOUSE_LEFT], sep: '+', what: 'Zur Auswahl hinzu', short: 'hinzu' },
   { label: [MOUSE_LEFT, '~2×'], what: 'Gleiche im Bild', short: 'gleiche' },
@@ -63,7 +63,7 @@ export const CONTROLS: readonly Control[] = [
     label: ['.'], what: 'Untätige (Umschalt: einzeln)', short: 'untätige',
     keys: ['.', ':'], run: (c, e) => c.selectIdle(e.shiftKey ? 'next' : 'all'),
   },
-  { label: [MOUSE_RIGHT], what: 'Befehl: sammeln, jagen, bauen, gehen; mit einem Hauptgebäude: Sammelpunkt', short: 'Befehl' },
+  { label: [MOUSE_RIGHT], what: 'Befehl: sammeln, jagen, bauen, gehen; mit einem Dorfzentrum: Sammelpunkt', short: 'Befehl' },
   {
     label: [BUILDING_KEYS[0], BUILDING_KEYS[BUILDING_KEYS.length - 1]], sep: '-', what: 'Gebäude bauen', short: 'bauen',
     keys: BUILDING_KEYS, run: (c, e) => c.build(BUILDING_ORDER[BUILDING_KEYS.indexOf(e.key)]),

@@ -4,7 +4,7 @@
 
 import type { ResourceKind } from '../catalog';
 
-/** Was Dorfbewohner draußen sammeln - das nimmt das Hauptgebäude an. */
+/** Was Dorfbewohner draußen sammeln - das nimmt das Dorfzentrum an. */
 export const GATHERED_KINDS: readonly ResourceKind[] = ['food', 'wood', 'stone', 'gold'];
 
 /** Alle Rohstoffe im Vorrat: das Gesammelte und was in Werkstätten entsteht. */

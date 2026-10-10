@@ -9,7 +9,7 @@ import { DEFAULT_SEED } from '../worlds';
 const DEFAULT_START = { x: 88, y: -59 };
 
 /**
- * Wo es losgeht: beim ersten Hauptgebäude, in der Standardwelt bei
+ * Wo es losgeht: beim ersten Dorfzentrum, in der Standardwelt bei
  * DEFAULT_START, sonst auf der nächsten Wiese um den Ursprung, um die herum
  * fester Boden liegt - der Ursprung selbst kann mitten im Meer liegen.
  */

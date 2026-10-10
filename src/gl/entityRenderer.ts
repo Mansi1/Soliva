@@ -271,6 +271,16 @@ export const SHAPE = {
   rallyLine: 135,
   /** Am Fuß der Sammelpunkt-Fahne: Ringe in der Farbe, die immer wieder zum Fuß hin schrumpfen. */
   rallyPulse: 136,
+  /**
+   * Was dem Arbeiter einer Werkstatt fehlt (world/render.ts), über dem Dach
+   * wie der Hinweispfeil (motion[1] hebt), zur Kamera gedreht: Holz als
+   * Eiche wie im Vorrat, Bogen, Hering - dazu `needStrike`, ein roter
+   * Balken, der davor gezeichnet wird. Ab 150: 135..144 sind die Stümpfe (STUMPS).
+   */
+  needWood: 150,
+  needBow: 151,
+  needFish: 152,
+  needStrike: 153,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -349,6 +359,8 @@ const PROP_SHAPES: number[] = [
 const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}))`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
+/** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
+const NEED_TEST = `(shape >= ${SHAPE.needWood} && shape <= ${SHAPE.needStrike})`;
 const FIGURE_TEST = `(shape == ${SHAPE.villager} || shape == ${SHAPE.villagerFemale} || ${PROP_TEST})`;
 
 /** Alle Bäume - sie werden gefällt und kippen um. */
@@ -476,7 +488,7 @@ const CLIP_LIBRARIES: {
   // Mühlenflügel (src/models/clips/mill.glb): ein Clip "sails" für alle vier Mühlen.
   { rig: MILL, clips: readClips('mill', () => unpackClips(millClips)),
     shapes: [SHAPE.mill, SHAPE.mill2, SHAPE.mill3, SHAPE.mill4] },
-  // Fahne am Sammelpunkt und auf dem Hauptgebäude (src/models/clips/flag.glb):
+  // Fahne am Sammelpunkt und auf dem Dorfzentrum (src/models/clips/flag.glb):
   // Clip "wave". Gemacht ist er für das Tuch am Sammelpunkt - ein längeres
   // (in Modell-Einheiten) schlägt entsprechend weiter aus.
   {
@@ -1187,7 +1199,7 @@ void main() {
     }
 
     if (part == P_CLOTH && !figure && uClipRow[0] >= 0) {
-      // Fahnentuch (Sammelpunkt, Hauptgebäude): Clip "wave" aus Blender. Die
+      // Fahnentuch (Sammelpunkt, Dorfzentrum): Clip "wave" aus Blender. Die
       // Knochen cloth.0-N liegen gleichmäßig längs des Tuchs; dazwischen die
       // beiden Nachbarn nach der Lage gemischt (an den Eckpunkten genau einer).
       float time = (uTime - uClipShift[0]) * uClipRate[0];
@@ -1220,11 +1232,13 @@ void main() {
       p.z += c * 0.12 * (p.x - 0.4 * p.y);
     }
 
-    // Hinweispfeil: aMotion.y Tiles über dem Boden (übers Dach), wippt.
-    if (shape == ${SHAPE.markerArrow}) p.z += (aMotion.y + 0.05 * sin(uTime * 3.0)) / scale;
+    // Hinweispfeil und was fehlt: aMotion.y Tiles über dem Boden (übers Dach), wippt.
+    if (shape == ${SHAPE.markerArrow} || ${NEED_TEST}) p.z += (aMotion.y + 0.05 * sin(uTime * 3.0)) / scale;
 
     // Felder liegen auf ihren Tiles; aMotion.x ist bei ihnen die Furche.
     float heading = field ? 0.0 : aMotion.x;
+    // Was fehlt, schaut in jeder Blickrichtung zur Kamera (rotateQuarter dreht die Welt).
+    if (${NEED_TEST}) heading -= float(uRotation) * ${(Math.PI / 2).toFixed(6)};
     vec2 forward = vec2(cos(heading), sin(heading));
     vec2 left = vec2(-forward.y, forward.x);
     vec2 offset = (forward * p.x + left * p.y) * scale;
@@ -1432,6 +1446,8 @@ void main() {
   if (${FIELD_TEST}) gl_Position.z -= 0.2 / uDepthRange;
   // Galerie: Gitter über dem Modell ein Stück zur Kamera - sonst flimmerte es mit den Flächen.
   gl_Position.z -= uWireBias / uDepthRange;
+  // Der rote Balken liegt immer vor dem Symbol, das er durchstreicht.
+  if (shape == ${SHAPE.needStrike}) gl_Position.z -= 1.0 / uDepthRange;
 }
 `;
 
@@ -2805,6 +2821,27 @@ const FLOWER_MODEL = loadModel(flowerModel.obj, flowerModel.mtl, 'width', true);
 const PROP_KNIFE = loadModel(propKnifeModel.obj, villagerMtl, 'meters');
 const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
 const PROP_ROD = loadModel(fishingRodModel.obj, fishingRodModel.mtl, 'meters');
+const BOW_MODEL = loadModel(bowModel.obj, bowModel.mtl, 'height');
+
+/**
+ * Roter Balken zum Durchstreichen (SHAPE.needStrike) als OBJ-Text: ein
+ * Quader schräg von unten links nach oben rechts in der Ebene, die zur
+ * Kamera zeigt (Datei: x links, y oben, z vorn), Höhe 1. Material Paint -
+ * die Farbe kommt aus der Instanz.
+ */
+function strikeObj(): string {
+  const [w, h, t, d] = [0.42, 0.5, 0.07, 0.04];
+  const len = Math.hypot(w, h);
+  const [ax, ay] = [w / len, h / len];  // längs
+  const [nx, ny] = [-ay, ax];           // quer, in der Ebene
+  const v: string[] = [];
+  for (const s of [-1, 1]) for (const q of [-1, 1]) for (const z of [-d, d]) {
+    v.push(`v ${(s * w + q * t * nx).toFixed(4)} ${(0.5 + s * h + q * t * ny).toFixed(4)} ${z}`);
+  }
+  // Eckpunkte 1-8: (Ende, Seite, Tiefe) binär - die sechs Seiten des Quaders.
+  const quads = [[1, 2, 4, 3], [5, 7, 8, 6], [1, 5, 6, 2], [3, 4, 8, 7], [1, 3, 7, 5], [2, 6, 8, 4]];
+  return ['o Strike', 'usemtl Paint', ...v, ...quads.flatMap(([a, b, c, e]) => [`f ${a} ${b} ${c}`, `f ${a} ${c} ${e}`])].join('\n');
+}
 
 const MODELS: {
   shape: number; model: Model; scale: number; stride?: number;
@@ -2838,7 +2875,7 @@ const MODELS: {
   { shape: SHAPE.townCenter, model: loadModel(townCenterModel.obj, townCenterModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.miningCamp, model: loadModel(miningCampModel.obj, miningCampModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.bowyer, model: loadModel(bowyerModel.obj, bowyerModel.mtl, 'width'), scale: 1 },
-  { shape: SHAPE.bow, model: loadModel(bowModel.obj, bowModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.bow, model: BOW_MODEL, scale: 1 },
   { shape: SHAPE.armory, model: loadModel(armoryModel.obj, armoryModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.fisherHut, model: loadModel(fisherHutModel.obj, fisherHutModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.fishTrap, model: loadModel(fishTrapModel.obj, fishTrapModel.mtl, 'width'), scale: 1 },
@@ -2848,6 +2885,10 @@ const MODELS: {
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propRodFemale, model: PROP_ROD, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.markerArrow, model: loadModel(markerArrowModel.obj, markerArrowModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.needWood, model: loadModel(treeOakModel.obj, treeOakModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.needBow, model: BOW_MODEL, scale: 1 },
+  { shape: SHAPE.needFish, model: loadModel(herringModel.obj, herringModel.mtl, 'height'), scale: 1 },
+  { shape: SHAPE.needStrike, model: loadModel(strikeObj(), 'newmtl Paint\nKd 1 0 0', 'height'), scale: 1 },
   ...FARM_KINDS.flatMap((kind, i) => lazyFieldModels(kind, FIELD_BASES[i])),
   ...natural(SHAPE.tree, treeSpruceModel.obj, treeSpruceModel.mtl, TREE_METERS),
   ...natural(SHAPE.treePine, treePineModel.obj, treePineModel.mtl, TREE_METERS),

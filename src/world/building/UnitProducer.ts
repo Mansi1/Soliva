@@ -59,6 +59,18 @@ export abstract class UnitProducer extends BuildingBase {
     return true;
   }
 
+  /**
+   * Nimmt die Einheit an Platz `index` (0 = die vorderste) aus der
+   * Warteschlange - null, wenn es den Platz nicht gibt. Fortschritt gibt es
+   * nur für die vorderste: fällt sie weg, beginnt die nächste von vorn.
+   * VERIFIED: tests/training-queue.test.mjs (wartende und vorderste Einheit).
+   */
+  cancelUnit(index: number): QueuedUnit | null {
+    if (!Number.isInteger(index) || index < 0 || index >= this.queue.length) return null;
+    if (index === 0) this.trainingSeconds = 0;
+    return this.queue.splice(index, 1)[0];
+  }
+
   /** Fortschritt der vordersten Einheit, 0..1. */
   trainingProgress(): number {
     return this.queuedUnits > 0 ? Math.min(1, this.trainingSeconds / this.unit.trainTime) : 0;

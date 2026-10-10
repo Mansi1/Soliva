@@ -28,7 +28,7 @@ const CASES = [
   ['Gebäude ohne Eingang', 'buildings/house', rename('Entry', 'Eingang'), 'fehlt Entry'],
   ['Mühle ohne Flügel', 'buildings/mill', rename('Sails', 'Blades'), 'fehlt Sails'],
   ['Fahne ohne Tuch', 'props/rally_flag', rename('Cloth', 'Tuch'), 'fehlt Cloth'],
-  ['Hauptgebäude ohne Fahnentuch', 'buildings/town_center', rename('Cloth', 'Tuch'), 'fehlt Cloth'],
+  ['Dorfzentrum ohne Fahnentuch', 'buildings/town_center', rename('Cloth', 'Tuch'), 'fehlt Cloth'],
   ['Bognerei ohne Werkbank', 'buildings/bowyer', rename('Work.Stand', 'Stand'), 'fehlt Work.Stand'],
   ['Bognerei: Stufe des Bogens fehlt', 'buildings/bowyer', rename('Craft.1', 'Bogen.1'), 'Craft.<n> mit Lücken: 1'],
   ['Waffenkammer: Bogen im Gestell fehlt', 'buildings/armory', rename('Stock.42', 'Bogen.42'), 'Stock.<n> mit Lücken: 42'],

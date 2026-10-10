@@ -57,6 +57,13 @@ export type Task =
       trap?: string; shore?: { x: number; y: number; wx: number; wy: number }; leave?: boolean;
     };
 
+/**
+ * Was einem Arbeiter in der Werkstatt fehlt, solange er wartet: Holz (kein
+ * Lager oder zu wenig im Vorrat), eine Waffenkammer mit Platz, ein Ufer zum
+ * Fischen. Über der Werkstatt steht es durchgestrichen (render.ts).
+ */
+export type WorkNeed = 'wood' | 'armory' | 'water';
+
 export type FishStep = 'enter' | 'choose' | 'boat' | 'launch' | 'row' | 'empty' | 'return' | 'land' | 'shore' | 'angle' | 'net';
 
 export class Villager extends UnitBase {
@@ -65,6 +72,18 @@ export class Villager extends UnitBase {
   task: Task = { kind: 'idle' };
   /** Warum er untätig ist, falls es einen Grund gibt - für die Anzeige. */
   problem: string | null = null;
+  /**
+   * Werkstatt-Arbeiter: worauf er gerade wartet - null, solange er arbeitet. Je Tick neu gesetzt.
+   * VERIFIED: tests/workshop-reason.test.mjs - ohne Holz 'wood', ohne Waffenkammer 'armory'.
+   */
+  need: WorkNeed | null = null;
+  /**
+   * Gebäude, zu denen er zu Fuß keinen Weg fand - nearestDropSite übergeht
+   * sie. Nicht gespeichert, beim neuen Auftrag geleert.
+   * ponytail: ein Fehlschlag gilt bis zum nächsten Auftrag; zeitlich verfallen
+   * lassen, wenn sich Wege oft erst später öffnen (gefällter Wald).
+   */
+  unreachable = new Set<string>();
   /** Was er im letzten Tick getan hat - steuert die Animation (POSE). */
   pose: number = POSE.stand;
   /** Sekunden bei der Arbeit - Takt der Arm-Animation. */
@@ -120,6 +139,8 @@ export class Villager extends UnitBase {
     this.inside = 0;
     this.task = task;
     this.problem = null;
+    this.need = null;
+    this.unreachable.clear();
   }
 
   /** Nimmt `amount` dieser Art auf; eine andere Ladung lässt er fallen - wie in AoE2. */

@@ -58,13 +58,14 @@ function costText(cost: Partial<Record<ResourceKind, number>>): string {
 /** Was ein Tier gerade tut - fürs Panel. */
 const ANIMAL_DOING: Record<AnimalState, string> = { graze: 'äst', walk: 'zieht umher', flee: 'flieht', dead: 'erlegt' };
 
-/** Knöpfe zum Ausbilden: Kosten und ob man sie hat; ob der Sammelpunkt-Schalter an ist. */
-function trainView(world: World, rallyPicking: boolean): TrainView {
+/** Knöpfe zum Ausbilden: Kosten und ob man sie hat; ob der Sammelpunkt-Schalter an ist; wie viele ein Klick ausbildet. */
+function trainView(world: World, rallyPicking: boolean, batch: number): TrainView {
   return {
     label: VILLAGER.label,
     cost: costText(VILLAGER.cost),
     affordable: world.canAffordVillager(),
     rallyPicking,
+    batch,
   };
 }
 
@@ -74,7 +75,7 @@ function trainView(world: World, rallyPicking: boolean): TrainView {
  * SelectionPanel. Ist ein ausgewähltes Vorkommen inzwischen leer, fällt es
  * aus der Auswahl.
  */
-export function selectionView(world: World, selection: Selection, resources: ResourceField, rallyPicking = false): SelectionView {
+export function selectionView(world: World, selection: Selection, resources: ResourceField, rallyPicking = false, trainBatch = 1): SelectionView {
   const building = selection.focused();
   const many = selection.chosenBuildings();
 
@@ -95,7 +96,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       hp: many.reduce((sum, b) => sum + b.hp, 0),
       maxHp: many.reduce((sum, b) => sum + b.maxHp, 0),
       training: trainers.length > 0
-        ? { queued: trainers.reduce((sum, b) => sum + b.queuedUnits, 0), capacity: trainers.length * MAX_TRAINING_QUEUE, train: trainView(world, rallyPicking) }
+        ? { queued: trainers.reduce((sum, b) => sum + b.queuedUnits, 0), capacity: trainers.length * MAX_TRAINING_QUEUE, train: trainView(world, rallyPicking, trainBatch) }
         : undefined,
       farms: many.every((b) => b.isFarm())
         ? {
@@ -135,7 +136,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
             full: pop.used >= pop.cap,
             percent: Math.floor(building.trainingProgress() * 100),
             rally: building.rallyPoint !== null,
-            train: trainView(world, rallyPicking),
+            train: trainView(world, rallyPicking, trainBatch),
           }
         : undefined,
     };

@@ -96,7 +96,7 @@ export const FARM_RATE = 0.7;
 export const RESEED_COST: Partial<Resources> = { wood: 2 };
 
 /**
- * Startvorrat. Reicht für ein Hauptgebäude, eine Handvoll Dorfbewohner und
+ * Startvorrat. Reicht für ein Dorfzentrum, eine Handvoll Dorfbewohner und
  * das erste Lager - ohne ihn stünde das Spiel still: Dorfbewohner kosten
  * Nahrung, und Nahrung sammeln nur Dorfbewohner.
  */
@@ -123,7 +123,7 @@ export const PLAYER_COLORS: Record<string, { label: string; color: Color }> = {
  */
 export const player = { color: PLAYER_COLORS.green.color };
 
-/** Der Dorfbewohner: wird im Hauptgebäude ausgebildet und sammelt Rohstoffe. */
+/** Der Dorfbewohner: wird im Dorfzentrum ausgebildet und sammelt Rohstoffe. */
 export const VILLAGER = {
   label: 'Dorfbewohner',
   key: 'v',
@@ -177,5 +177,5 @@ export const BOWYER = { wood: 10, craftTime: 20 };
  */
 export const FISHING = { trapFillTime: 180, trapFood: 5, trapFish: 5, rodTime: 60, rodFood: 1, range: 8, emptyTime: 2 };
 
-/** Höchstens so viele Dorfbewohner stehen gleichzeitig in der Warteschlange eines Hauptgebäudes. */
+/** Höchstens so viele Dorfbewohner stehen gleichzeitig in der Warteschlange eines Dorfzentrums. */
 export const MAX_TRAINING_QUEUE = 25;

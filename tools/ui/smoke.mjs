@@ -117,10 +117,10 @@ check('neues Spiel startet', (await page.title()).endsWith(SEED) && await page.$
 // Ohne GPU (SwiftShader) dauert ein Bild Sekunden und Klicks laufen in Zeitüberschreitungen.
 console.log(`  GPU: ${await page.evaluate(() => window.getRenderInfo?.().gpu)}`);
 
-// Bauen: Hauptgebäude (1), dann ein Haus (2)
+// Bauen: Dorfzentrum (1), dann ein Haus (2)
 await page.keyboard.press('1');
 const tcPoint = await placeNearCenter('town_center');
-check('Hauptgebäude gebaut', !!tcPoint);
+check('Dorfzentrum gebaut', !!tcPoint);
 await cancel();
 await page.keyboard.press('2');
 const housePoint = await placeNearCenter('house');
@@ -128,11 +128,11 @@ check('Haus gebaut', !!housePoint);
 await cancel();
 
 // Sammelpunkt: Ein Rechtsklick setzt ihn nur, wenn genau ein ausbildendes
-// Gebäude ausgewählt ist. Hier sind es zwei (Hauptgebäude und Haus, nahe der
+// Gebäude ausgewählt ist. Hier sind es zwei (Dorfzentrum und Haus, nahe der
 // Stelle, an der sie gebaut wurden - die Kamera steht noch), also ändert er nichts.
 const rallyAt = async () => (await saved()).buildings.find((b) => b.t === 'town_center')?.r;
 const house = housePoint && await findNear('Haus', housePoint);
-if (tcPoint) await findNear('Hauptgebäude', tcPoint);
+if (tcPoint) await findNear('Dorfzentrum', tcPoint);
 // Fehlt eine Stelle, geht der Klick ins Leere - dann fehlt „2 Gebäude“ und der Check schlägt fehl.
 await page.keyboard.down('Shift');
 await page.mouse.click(house?.x ?? 0, house?.y ?? 0);
@@ -144,7 +144,7 @@ check('Rechtsklick mit mehreren Gebäuden setzt keinen Sammelpunkt', many.includ
   `Auswahl: ${many.slice(0, 20)}, Sammelpunkt: ${JSON.stringify(rallyMany)}`);
 await cancel();
 
-// Ausbilden: Hauptgebäude wählen (H), Dorfbewohner einreihen (V)
+// Ausbilden: Dorfzentrum wählen (H), Dorfbewohner einreihen (V)
 await page.keyboard.press('h');
 await wait(200);
 const foodBefore = await stock('food');
@@ -156,12 +156,36 @@ const queueIcons = await page.$$eval('#selection .sel-queue-unit img', (imgs) =>
 const queued = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;
 check('Warteschlange zeigt Frau oder Mann', queueIcons === 1 && Array.isArray(queued) && queued.length === 1,
   `${queueIcons} im Panel, gespeichert q=${JSON.stringify(queued)}`);
-// Sammelpunkt mit genau einem Hauptgebäude: Rechtsklick auf die Karte setzt
+// Der Ausbilden-Knopf zeigt, wie viele ein Klick einreiht: 1, mit gehaltener Umschalttaste 5.
+const trainCount = () => page.$eval('#actions .cmd-btn[data-action=train] .cmd-count', (e) => e.textContent);
+const countPlain = await trainCount();
+await page.keyboard.down('Shift');
+await wait(100);
+const countShift = await trainCount();
+await page.keyboard.up('Shift');
+await wait(100);
+const countAfter = await trainCount();
+check('Ausbilden-Knopf zeigt 1, mit Umschalt 5', countPlain === '1' && countShift === '5' && countAfter === '1',
+  `${countPlain} → ${countShift} → ${countAfter}`);
+// Klick auf eine Einheit der Warteschlange bricht genau sie ab - Kosten voll zurück.
+// Zwei dazu (3 in der Schlange), dann die oberste Wartende und die in Ausbildung abbrechen: eine bleibt.
+await page.keyboard.press('v');
+await page.keyboard.press('v');
+await wait(200);
+const foodQueued = await stock('food');
+await page.click('#selection .sel-queue [data-action=cancel-train][data-index="2"]');
+await page.click('#selection .sel-training [data-action=cancel-train][data-index="0"]');
+await wait(200);
+const foodCancelled = await stock('food');
+const queueLeft = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;
+check('Klick in die Warteschlange bricht ab und erstattet', foodCancelled === foodQueued + 100 && queueLeft?.length === 1,
+  `Nahrung ${foodQueued} → ${foodCancelled}, gespeichert q=${JSON.stringify(queueLeft)}`);
+// Sammelpunkt mit genau einem Dorfzentrum: Rechtsklick auf die Karte setzt
 // ihn. Der Schalter mit der Fahne geht weiter: an, setzt der nächste Klick den Punkt.
 const sameRally = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 await page.mouse.click(250, 250, { button: 'right' });
 const rallyRight = await rallyAt();
-check('Rechtsklick setzt Sammelpunkt eines einzelnen Hauptgebäudes', Array.isArray(rallyRight), JSON.stringify(rallyRight));
+check('Rechtsklick setzt Sammelpunkt eines einzelnen Dorfzentrums', Array.isArray(rallyRight), JSON.stringify(rallyRight));
 await page.click('#actions .cmd-btn[data-action=rally]');
 await page.mouse.click(300, 270);
 const rallySwitch = await rallyAt();
