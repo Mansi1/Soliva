@@ -88,3 +88,7 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T11:42:03Z s=560a6297 FINDING src/world/unit/*.ts walk/flee learn=none: Requirement interpretation, not a code defect.
 2026-10-10T07:46:55Z s=560a6297 DONE fp=8e3cb678f581 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+59)
 2026-10-10T08:01:28Z s=560a6297 DONE fp=9ba99f4436fd cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+62)
+2026-10-10T15:47:58Z s=560a6297 DONE fp=250970fa8dea cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
+2026-10-10T15:47:58Z s=560a6297 FINDING src/models/animals/boar.glb:Head.Neck learn=memory: Documented as model rule in docs/BLENDER.md (Tiere); no cheap mechanical check for intended pivot location beyond gallery.
+2026-10-10T15:47:58Z s=560a6297 FINDING src/world/unit/Boar.ts:height learn=test: Size test checks every species against its model height.
+2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
