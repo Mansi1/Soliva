@@ -52,7 +52,7 @@ export interface Rig<J = never> {
 }
 
 /** Was ein Clip in der Hand braucht - Bits wie im Shader (uClipProps). */
-export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4 };
+export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4, hoe: 8 };
 
 type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];

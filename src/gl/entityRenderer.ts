@@ -17,6 +17,7 @@ import { link, uploadTerrainParams } from './terrainRenderer';
 // Beim Bauen gelesen (vite.config.ts, glbClips) - hier nur ausgepackt.
 import humanoidClips from '../models/clips/humanoid.glb?clips';
 import sitClips from '../models/clips/humanoid_sit.glb?clips';
+import toolClips from '../models/clips/humanoid_tools.glb?clips';
 import quadrupedClips from '../models/clips/quadruped.glb?clips';
 import millClips from '../models/clips/mill.glb?clips';
 import flagClips from '../models/clips/flag.glb?clips';
@@ -32,6 +33,7 @@ import { indexVertices, parseMtl, parseMtlImages, parseObj, parseObjBones, type 
 import villagerMaleModel from '../models/villagers/male.glb?model';
 import villagerFemaleModel from '../models/villagers/female.glb?model';
 import propAxeModel from '../models/props/axe.glb?model';
+import propHoeModel from '../models/props/hoe.glb?model';
 import propKnifeModel from '../models/props/knife.glb?model';
 import propScytheMaleModel from '../models/props/scythe_male.glb?model';
 import propScytheFemaleModel from '../models/props/scythe_female.glb?model';
@@ -97,7 +99,7 @@ import bowModel from '../models/props/bow.glb?model';
 import flowerModel from '../models/flowers/flower.glb?model';
 
 /** Materialien der Dorfbewohner und ihrer Werkzeuge - jedes Modell bringt seine mit. */
-const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
+const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propHoeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
   .map((m) => m.mtl).join('\n');
 
 /** Formen für aParams.x - die Zahlen stehen so auch im Shader. */
@@ -281,6 +283,9 @@ export const SHAPE = {
   needBow: 151,
   needFish: 152,
   needStrike: 153,
+  /** Hacke zum Pflügen, wie das Beil je Körper (models/props/hoe.glb) - hinter den Stümpfen (135..144) frei. */
+  propHoe: 145,
+  propHoeFemale: 146,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -353,10 +358,10 @@ const RALLY_PULSE_RINGS = 3;
 /** Anhänge der Dorfbewohner (Werkzeuge) - gezeichnet wie Figuren, mit deren Gelenken und Clips. */
 const PROP_SHAPES: number[] = [
   SHAPE.propAxe, SHAPE.propAxeFemale, SHAPE.propScythe, SHAPE.propScytheFemale, SHAPE.propKnife, SHAPE.propKnifeFemale,
-  SHAPE.propFish, SHAPE.propFishFemale, SHAPE.propRod, SHAPE.propRodFemale,
+  SHAPE.propFish, SHAPE.propFishFemale, SHAPE.propRod, SHAPE.propRodFemale, SHAPE.propHoe, SHAPE.propHoeFemale,
 ];
-/** Im Shader: ist die Form ein Anhang? Zwei Bereiche - dazwischen liegen die Blumen. */
-const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}))`;
+/** Im Shader: ist die Form ein Anhang? Drei Bereiche - dazwischen liegen Blumen und Stümpfe. */
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale})`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
 /** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
@@ -449,6 +454,8 @@ export const CLIPS: Clip[] = [
   ...readClips('humanoid', () => unpackClips(humanoidClips)),
   // Eigene Datei, damit humanoid.glb nicht durch Blender muss (docs/OFFEN.md, Export-Einstellungen).
   ...readClips('humanoid_sit', () => unpackClips(sitClips)),
+  // Hacken (Pflügen) und Werfen (Jagd) - eigene Datei wie sit, aus Blender (docs/ANIMATION.md, Neuer Clip).
+  ...readClips('humanoid_tools', () => unpackClips(toolClips)),
 ];
 /** Clips der Tiere (src/models/clips/quadruped.glb). */
 export const ANIMAL_CLIPS: Clip[] = readClips('quadruped', () => unpackClips(quadrupedClips));
@@ -502,7 +509,7 @@ const CLIP_LIBRARIES: {
 ];
 
 /** Höchstens so viele Clips je Figur (Uniform-Arrays im Shader). */
-const MAX_CLIPS = 8;
+const MAX_CLIPS = 10;
 /**
  * Bilder je Spalte der Clip-Textur. Alle Clips aller Figuren ergeben mehr
  * Bilder, als eine Textur hoch sein darf (WebGL2 garantiert nur 2048) - sie
@@ -532,7 +539,7 @@ interface ClipUniforms {
 /** Für Modelle ohne Clips. */
 const NO_CLIPS: ClipUniforms = {
   rows: new Int32Array(MAX_CLIPS).fill(-1), frames: new Int32Array(MAX_CLIPS).fill(2), fps: new Float32Array(MAX_CLIPS).fill(30),
-  props: new Int32Array(MAX_CLIPS), poseClip: new Int32Array(8).fill(-1), poseRate: new Float32Array(8), poseShift: new Float32Array(8),
+  props: new Int32Array(MAX_CLIPS), poseClip: new Int32Array(CLIP_POSE).fill(-1), poseRate: new Float32Array(CLIP_POSE), poseShift: new Float32Array(CLIP_POSE),
   rate: new Float32Array(MAX_CLIPS).fill(1), shift: new Float32Array(MAX_CLIPS),
 };
 /** Kantenlänge der Blatt-Textur in Pixeln (textures/birch_leaf.png). */
@@ -667,6 +674,13 @@ export const POSE = {
   carve: 5,
   /** Auf dem Hocker der Werkstatt sitzen und warten. */
   sit: 6,
+  /**
+   * Mit der Hacke den Boden umbrechen (Pflügen) - Clip hoe, clips/humanoid_tools.
+   * VERIFIED: Galerie (Mann, Frau) und Spiel 2026-10-10 - Hacke über dem Kopf, Blatt im Boden vor den Füßen.
+   */
+  hoe: 7,
+  /** Jäger: ausholen und werfen, ohne Werkzeug - Clip throw, clips/humanoid_tools. Eine Schleife dauert HUNT.reload. */
+  throw: 8,
 } as const;
 
 export interface EntityInstance {
@@ -773,7 +787,7 @@ uniform float uTime;
 // (Zeilen einer 3x4-Matrix). uClipRow: erste Zeile des Clips für diese Figur,
 // -1 = nicht gebacken. uPoseClip: welcher Clip eine Pose spielt (-1: keiner,
 // die Figur steht still), Clip-Zeit = (Phase - uPoseShift) * uPoseRate. uClipProps: Bits
-// Beil 1, Sense 2, Zugmesser 4 (PROP_BITS).
+// Beil 1, Sense 2, Zugmesser 4, Hacke 8 (PROP_BITS).
 uniform highp sampler2D uClipTex;
 uniform int   uClipRow[${MAX_CLIPS}];
 uniform int   uClipFrames[${MAX_CLIPS}];
@@ -785,9 +799,9 @@ uniform float uClipShift[${MAX_CLIPS}];
 // Fahnentuch: vom Mast (x) bis zum Ende (y) in Modell-y, Höhe (z) - die Knochen
 // cloth.0-${FLAG_SEGMENTS} liegen gleichmäßig darauf (FLAG in clips.ts).
 uniform vec3  uCloth;
-uniform int   uPoseClip[8];
-uniform float uPoseRate[8];
-uniform float uPoseShift[8];
+uniform int   uPoseClip[${CLIP_POSE}];
+uniform float uPoseRate[${CLIP_POSE}];
+uniform float uPoseShift[${CLIP_POSE}];
 
 
 out vec3 vWorld;
@@ -1043,13 +1057,15 @@ void main() {
       int pose = int(aMotion.z + 0.5);
       // Clip aus Blender (src/models/clips/humanoid.glb): Pose >=
       // CLIP_POSE (Galerie) oder die Pose, die ein Clip ersetzt (uPoseClip).
-      int clip = pose >= ${CLIP_POSE} ? pose - ${CLIP_POSE} : pose < 8 ? uPoseClip[pose] : -1;
+      int clip = pose >= ${CLIP_POSE} ? pose - ${CLIP_POSE} : uPoseClip[pose];
       if (clip >= 0 && uClipRow[clip] < 0) clip = -1;
       if (clip >= 0) {
         float time = pose >= ${CLIP_POSE} ? phase : (phase - uPoseShift[pose]) * uPoseRate[pose];
         // Werkzeuge nur, wenn der Clip sie braucht (props in clips/humanoid.json).
+        // Beil und Hacke hängen beide als Tool an der Hand - welches gezeichnet
+        // wird, wählt figureProps nach denselben Bits. VERIFIED: ohne Bit 8 fehlte die Hacke in der Galerie.
         int props = uClipProps[clip];
-        bool away = (part == P_TOOL && (props & 1) == 0) || (part == P_SCYTHE && (props & 2) == 0)
+        bool away = (part == P_TOOL && (props & 9) == 0) || (part == P_SCYTHE && (props & 2) == 0)
             || (part == P_KNIFE && (props & 4) == 0);
         if (away) {
           p = vec3(0.0, 0.0, uHip);
@@ -1084,7 +1100,7 @@ void main() {
       // Ohne Clip (Bibliothek nicht geladen) steht es still.
       float phase = aMotion.y;
       int pose = int(aMotion.z + 0.5);
-      int clip = pose >= ${CLIP_POSE} ? pose - ${CLIP_POSE} : pose < 8 ? uPoseClip[pose] : -1;
+      int clip = pose >= ${CLIP_POSE} ? pose - ${CLIP_POSE} : uPoseClip[pose];
       if (clip >= 0 && uClipRow[clip] >= 0) {
         float time = pose >= ${CLIP_POSE} ? phase : (phase - uPoseShift[pose]) * uPoseRate[pose];
         // Knochen je Teil (QUADRUPED in clips.ts): die vier Beine, der Kopf, sonst die Wurzel.
@@ -2817,6 +2833,7 @@ function natural(shape: number, obj: string, mtl: string, meters: number) {
  * Instanzgröße - eine Figur der Größe 0.55 ist 0.55 * 1.7 Tiles hoch.
  */
 const PROP_AXE = loadModel(propAxeModel.obj, villagerMtl, 'meters');
+const PROP_HOE = loadModel(propHoeModel.obj, villagerMtl, 'meters');
 const FLOWER_MODEL = loadModel(flowerModel.obj, flowerModel.mtl, 'width', true);
 const PROP_KNIFE = loadModel(propKnifeModel.obj, villagerMtl, 'meters');
 const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
@@ -2856,6 +2873,8 @@ const MODELS: {
   // Sense je Körper (ihr Stiel liegt in der Mäh-Haltung in beiden Händen).
   { shape: SHAPE.propAxe, model: PROP_AXE, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propAxeFemale, model: PROP_AXE, scale: 1.7, body: SHAPE.villagerFemale },
+  { shape: SHAPE.propHoe, model: PROP_HOE, scale: 1.7, body: SHAPE.villager },
+  { shape: SHAPE.propHoeFemale, model: PROP_HOE, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propKnife, model: PROP_KNIFE, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propKnifeFemale, model: PROP_KNIFE, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propScythe, model: loadModel(propScytheMaleModel.obj, villagerMtl, 'meters'), scale: 1.7, body: SHAPE.villager },
@@ -2945,6 +2964,7 @@ const FIGURE_PROPS: { bit: number; shapes: Record<number, number> }[] = [
   { bit: PROP_BITS.axe, shapes: { [SHAPE.villager]: SHAPE.propAxe, [SHAPE.villagerFemale]: SHAPE.propAxeFemale } },
   { bit: PROP_BITS.scythe, shapes: { [SHAPE.villager]: SHAPE.propScythe, [SHAPE.villagerFemale]: SHAPE.propScytheFemale } },
   { bit: PROP_BITS.knife, shapes: { [SHAPE.villager]: SHAPE.propKnife, [SHAPE.villagerFemale]: SHAPE.propKnifeFemale } },
+  { bit: PROP_BITS.hoe, shapes: { [SHAPE.villager]: SHAPE.propHoe, [SHAPE.villagerFemale]: SHAPE.propHoeFemale } },
 ];
 
 /**
@@ -3279,7 +3299,7 @@ function bakedClips(): NonNullable<typeof bakedClipsCache> {
         const u: ClipUniforms = {
           rows: new Int32Array(MAX_CLIPS).fill(-1),
           frames: Int32Array.from(NO_CLIPS.frames), fps: Float32Array.from(NO_CLIPS.fps), props: new Int32Array(MAX_CLIPS),
-          poseClip: new Int32Array(8).fill(-1), poseRate: new Float32Array(8), poseShift: new Float32Array(8),
+          poseClip: new Int32Array(CLIP_POSE).fill(-1), poseRate: new Float32Array(CLIP_POSE), poseShift: new Float32Array(CLIP_POSE),
           rate: new Float32Array(MAX_CLIPS).fill(1), shift: new Float32Array(MAX_CLIPS),
         };
         const species = library.species?.[m.shape];
@@ -3295,7 +3315,7 @@ function bakedClips(): NonNullable<typeof bakedClipsCache> {
           // Welche Pose ein Clip ersetzt, steht im Clip selbst (Custom Property
           // "pose" der Action in Blender). Die Phase (motion[1]) wird zur
           // Clip-Zeit: (Phase - phaseShift) * phaseRate.
-          if (clip.pose !== null && clip.pose >= 0 && clip.pose < 8) {
+          if (clip.pose !== null && clip.pose >= 0 && clip.pose < CLIP_POSE) {
             u.poseClip[clip.pose] = i;
             u.poseRate[clip.pose] = clip.phaseRate;
             u.poseShift[clip.pose] = clip.phaseShift;

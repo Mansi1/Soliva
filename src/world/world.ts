@@ -41,9 +41,12 @@ export const WORK_TEMPO = 6;
  * Welt kennt keinen Ton - main.ts hängt sich an `onEvent` und entscheidet,
  * was davon zu hören ist.
  */
+/** Woran ein Arbeitsschlag geht - bestimmt sein Geräusch (game/worldSounds.ts). */
+export type StrikeKind = DepositType | 'soil' | 'throw';
+
 export type WorldEvent =
-  /** Ein Arbeitsschlag - zeitgleich mit dem Arm in der Animation. */
-  | { kind: 'strike'; resource: DepositType; x: number; y: number }
+  /** Ein Arbeitsschlag - zeitgleich mit dem Arm in der Animation: an einem Vorkommen, in den Boden (Hacke) oder ein Wurf. */
+  | { kind: 'strike'; resource: StrikeKind; x: number; y: number }
   | { kind: 'treeFall'; x: number; y: number }
   | { kind: 'deliver'; x: number; y: number }
   | { kind: 'collapse'; x: number; y: number }

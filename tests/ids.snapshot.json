@@ -551,303 +551,71 @@
    "Work.Stand"
   ],
   "buildings/fisher_hut": [
-   "Back brace L",
-   "Back brace R",
-   "Back gable board 0",
-   "Back gable board 1",
-   "Back gable board 2",
-   "Back gable board 3",
-   "Back gable board 4",
-   "Back gable board 5",
-   "Back gable board 6",
-   "Back plank 0",
-   "Back plank 1",
-   "Back plank 10",
-   "Back plank 11",
-   "Back plank 12",
-   "Back plank 13",
-   "Back plank 14",
-   "Back plank 18",
-   "Back plank 19",
-   "Back plank 2",
-   "Back plank 20",
-   "Back plank 21",
-   "Back plank 3",
-   "Back plank 4",
-   "Back post +0.65",
-   "Back post +2.40",
-   "Back post -0.95",
-   "Back post -2.40",
-   "Back rail 0.86",
-   "Back rail 1.72",
-   "Back rail 2.52",
+   "Band",
+   "Band.Edge",
    "Barrel",
-   "Barrel band +0.17",
-   "Barrel band -0.17",
+   "Barrel.Fish",
+   "Barrel.Fish.Hoop",
+   "Barrel.Hoop",
+   "Barrel.Lid",
+   "Chimney",
+   "Chimney.Cap",
+   "Chimney.Flue",
    "Crate",
-   "Door crossbar lower",
-   "Door crossbar upper",
-   "Door diag brace",
-   "Door frame left",
-   "Door frame right",
-   "Door frame top",
-   "Door plank 0",
-   "Door plank 1",
-   "Door plank 2",
-   "Door plank 3",
-   "Door plank 4",
-   "Door slab",
-   "Door step",
+   "Door",
+   "Door.Frame",
+   "Door.Handle",
+   "Door.Hinge",
+   "Door.Seam",
    "Entry",
-   "Fish emblem",
-   "Foundation core",
-   "Front brace L",
-   "Front brace R",
-   "Front gable board 0",
-   "Front gable board 1",
-   "Front gable board 2",
-   "Front gable board 3",
-   "Front gable board 4",
-   "Front gable board 5",
-   "Front gable board 6",
-   "Front plank 0",
-   "Front plank 1",
-   "Front plank 10",
-   "Front plank 11",
-   "Front plank 12",
-   "Front plank 13",
-   "Front plank 14",
-   "Front plank 18",
-   "Front plank 19",
-   "Front plank 2",
-   "Front plank 20",
-   "Front plank 21",
-   "Front plank 3",
-   "Front plank 4",
-   "Front post +0.65",
-   "Front post +2.40",
-   "Front post -0.95",
-   "Front post -2.40",
-   "Front rail 0.86",
-   "Front rail 1.72",
-   "Front rail 2.52",
-   "Front window bottom",
-   "Front window cross h",
-   "Front window cross v",
-   "Front window glass",
-   "Front window left",
-   "Front window right",
-   "Front window top",
-   "Gable core",
-   "Grass 0",
-   "Grass 1",
-   "Grass 2",
+   "Float",
+   "Gable",
+   "Gable.Barge",
+   "Gable.Brace",
+   "Gable.Collar",
+   "Gable.KingPost",
+   "Gable.Window",
    "Ground",
-   "Lean beam top",
-   "Lean beam wall",
-   "Lean post +1.45",
-   "Lean post -1.20",
-   "Lean roof plank 0",
-   "Lean roof plank 1",
-   "Lean roof plank 2",
-   "Lean roof plank 3",
-   "Lean roof plank 4",
-   "Lean side slat 0",
-   "Lean side slat 1",
-   "Lean side slat 2",
-   "Lean side slat 3",
-   "Lean side slat 4",
-   "Lean side slat 5",
-   "Lean side slat 6",
-   "Lean side slat 7",
-   "Left plank 0",
-   "Left plank 1",
-   "Left plank 10",
-   "Left plank 11",
-   "Left plank 12",
-   "Left plank 13",
-   "Left plank 14",
-   "Left plank 15",
-   "Left plank 2",
-   "Left plank 3",
-   "Left plank 4",
-   "Left plank 5",
-   "Left plank 6",
-   "Left plank 7",
-   "Left plank 8",
-   "Left plank 9",
-   "Left post +0.00",
-   "Left post +1.72",
-   "Left post -1.72",
-   "Left rail 0.86",
-   "Left rail 1.72",
-   "Left rail 2.52",
-   "Net bundle",
-   "Rack beam",
-   "Rack fish 0",
-   "Rack fish 1",
-   "Rack post +0.28",
-   "Rack post -0.28",
-   "Rack rope 0",
-   "Rack rope 1",
-   "Right plank 0",
-   "Right plank 1",
-   "Right plank 13",
-   "Right plank 14",
-   "Right plank 15",
-   "Right plank 2",
-   "Right plank 3",
-   "Right plank 4",
-   "Right plank 5",
-   "Right plank 6",
-   "Right post +0.00",
-   "Right post +1.72",
-   "Right post -1.72",
-   "Right rail 0.86",
-   "Right rail 1.72",
-   "Right rail 2.52",
-   "Roof ridge",
-   "Roof slab L",
-   "Roof slab R",
-   "Shingle L 0-0",
-   "Shingle L 0-1",
-   "Shingle L 0-2",
-   "Shingle L 0-3",
-   "Shingle L 0-4",
-   "Shingle L 0-5",
-   "Shingle L 0-6",
-   "Shingle L 0-7",
-   "Shingle L 1-0",
-   "Shingle L 1-1",
-   "Shingle L 1-2",
-   "Shingle L 1-3",
-   "Shingle L 1-4",
-   "Shingle L 1-5",
-   "Shingle L 1-6",
-   "Shingle L 1-7",
-   "Shingle L 2-0",
-   "Shingle L 2-1",
-   "Shingle L 2-2",
-   "Shingle L 2-3",
-   "Shingle L 2-4",
-   "Shingle L 2-5",
-   "Shingle L 2-6",
-   "Shingle L 2-7",
-   "Shingle L 3-0",
-   "Shingle L 3-1",
-   "Shingle L 3-2",
-   "Shingle L 3-3",
-   "Shingle L 3-4",
-   "Shingle L 3-5",
-   "Shingle L 3-6",
-   "Shingle L 3-7",
-   "Shingle L 4-0",
-   "Shingle L 4-1",
-   "Shingle L 4-2",
-   "Shingle L 4-3",
-   "Shingle L 4-4",
-   "Shingle L 4-5",
-   "Shingle L 4-6",
-   "Shingle L 4-7",
-   "Shingle L 5-0",
-   "Shingle L 5-1",
-   "Shingle L 5-2",
-   "Shingle L 5-3",
-   "Shingle L 5-4",
-   "Shingle L 5-5",
-   "Shingle L 5-6",
-   "Shingle L 5-7",
-   "Shingle L 6-0",
-   "Shingle L 6-1",
-   "Shingle L 6-2",
-   "Shingle L 6-3",
-   "Shingle L 6-4",
-   "Shingle L 6-5",
-   "Shingle L 6-6",
-   "Shingle L 6-7",
-   "Shingle L 7-0",
-   "Shingle L 7-1",
-   "Shingle L 7-2",
-   "Shingle L 7-3",
-   "Shingle L 7-4",
-   "Shingle L 7-5",
-   "Shingle L 7-6",
-   "Shingle L 7-7",
-   "Shingle R 0-0",
-   "Shingle R 0-1",
-   "Shingle R 0-2",
-   "Shingle R 0-3",
-   "Shingle R 0-4",
-   "Shingle R 0-5",
-   "Shingle R 0-6",
-   "Shingle R 0-7",
-   "Shingle R 1-0",
-   "Shingle R 1-1",
-   "Shingle R 1-2",
-   "Shingle R 1-3",
-   "Shingle R 1-4",
-   "Shingle R 1-5",
-   "Shingle R 1-6",
-   "Shingle R 1-7",
-   "Shingle R 2-0",
-   "Shingle R 2-1",
-   "Shingle R 2-2",
-   "Shingle R 2-3",
-   "Shingle R 2-4",
-   "Shingle R 2-5",
-   "Shingle R 2-6",
-   "Shingle R 2-7",
-   "Shingle R 3-0",
-   "Shingle R 3-1",
-   "Shingle R 3-2",
-   "Shingle R 3-3",
-   "Shingle R 3-4",
-   "Shingle R 3-5",
-   "Shingle R 3-6",
-   "Shingle R 3-7",
-   "Shingle R 4-0",
-   "Shingle R 4-1",
-   "Shingle R 4-2",
-   "Shingle R 4-3",
-   "Shingle R 4-4",
-   "Shingle R 4-5",
-   "Shingle R 4-6",
-   "Shingle R 4-7",
-   "Shingle R 5-0",
-   "Shingle R 5-1",
-   "Shingle R 5-2",
-   "Shingle R 5-3",
-   "Shingle R 5-4",
-   "Shingle R 5-5",
-   "Shingle R 5-6",
-   "Shingle R 5-7",
-   "Shingle R 6-0",
-   "Shingle R 6-1",
-   "Shingle R 6-2",
-   "Shingle R 6-3",
-   "Shingle R 6-4",
-   "Shingle R 6-5",
-   "Shingle R 6-6",
-   "Shingle R 6-7",
-   "Shingle R 7-0",
-   "Shingle R 7-1",
-   "Shingle R 7-2",
-   "Shingle R 7-3",
-   "Shingle R 7-4",
-   "Shingle R 7-5",
-   "Shingle R 7-6",
-   "Shingle R 7-7",
-   "Side bottom",
-   "Side cross h",
-   "Side cross v",
-   "Side far",
-   "Side glass",
-   "Side near",
-   "Side top",
-   "Sign arm horiz",
-   "Sign arm vert",
-   "Sign board",
-   "Wall core",
+   "Ivy",
+   "Jetty.Beam",
+   "Jetty.Bollard",
+   "Jetty.Plank",
+   "Jetty.Post",
+   "Jetty.Rope",
+   "Lantern",
+   "Lantern.Bracket",
+   "Lantern.Cap",
+   "Lantern.Flame",
+   "Net",
+   "Net.Bundle",
+   "Plinth",
+   "Plinth.Stone",
+   "Rack.Beam",
+   "Rack.Fish",
+   "Rack.Post",
+   "Roof",
+   "Roof.Ridge",
+   "Shed.Beam",
+   "Shed.Brace",
+   "Shed.Post",
+   "Shed.Roof",
+   "Sign.Arm",
+   "Sign.Board",
+   "Sign.Fish",
+   "Sign.Fish.Tail",
+   "Step",
+   "Timber.Post",
+   "Timber.Sill",
+   "Walls",
+   "Window.Bar",
+   "Window.Box",
+   "Window.Flower",
+   "Window.Leaf",
+   "Window.Light",
+   "Window.Lintel",
+   "Window.Shutter",
+   "Window.Shutter.Band",
+   "Window.Sill",
    "Work.Aim",
    "Work.Boat",
    "Work.Stand"
@@ -2036,11 +1804,140 @@
    "Shadow",
    "Stem"
   ],
+  "foliage/bush_gemeiner_schneeball_busch": [
+   "BushGemeinerSchneeballBusch"
+  ],
+  "foliage/bush_ginsterbusch": [
+   "BushGinsterbusch"
+  ],
+  "foliage/bush_haselnussbusch": [
+   "BushHaselnussbusch"
+  ],
+  "foliage/bush_roter_hartriegel_busch": [
+   "BushRoterHartriegelBusch"
+  ],
+  "foliage/bush_roter_holunderbusch": [
+   "BushRoterHolunderbusch"
+  ],
+  "foliage/bush_schlehenbusch": [
+   "BushSchlehenbusch"
+  ],
+  "foliage/bush_schwarzer_holunderbusch": [
+   "BushSchwarzerHolunderbusch"
+  ],
+  "foliage/bush_wacholder-busch": [
+   "BushWacholderBusch"
+  ],
+  "foliage/bush_weissdorn": [
+   "BushWeissdorn"
+  ],
   "foliage/cattails": [
    "cattails"
   ],
+  "foliage/meadow_besenginster": [
+   "MeadowBesenginster"
+  ],
+  "foliage/meadow_besenheide": [
+   "MeadowBesenheide"
+  ],
+  "foliage/meadow_deutsches-weidelgras": [
+   "MeadowDeutschesWeidelgras"
+  ],
+  "foliage/meadow_deutsches-weidelgras2": [
+   "MeadowDeutschesWeidelgras2"
+  ],
+  "foliage/meadow_deutsches-weidelgras3": [
+   "MeadowDeutschesWeidelgras3"
+  ],
+  "foliage/meadow_diamant-reisgras2": [
+   "MeadowDiamantReisgras2"
+  ],
+  "foliage/meadow_diamant-reitgras": [
+   "MeadowDiamantReitgras"
+  ],
+  "foliage/meadow_gaensebluemchen": [
+   "MeadowGaensebluemchen"
+  ],
+  "foliage/meadow_ginster": [
+   "MeadowGinster"
+  ],
+  "foliage/meadow_glatthafer": [
+   "MeadowGlatthafer"
+  ],
   "foliage/meadow_grass": [
    "meadow_grass"
+  ],
+  "foliage/meadow_hahnenfuss": [
+   "MeadowHahnenfuss"
+  ],
+  "foliage/meadow_heidekraut": [
+   "MeadowHeidekraut"
+  ],
+  "foliage/meadow_knaulgras": [
+   "MeadowKnaulgras"
+  ],
+  "foliage/meadow_kuckucks-lichtnelke": [
+   "MeadowKuckucksLichtnelke"
+  ],
+  "foliage/meadow_preiselbeere": [
+   "MeadowPreiselbeere"
+  ],
+  "foliage/meadow_reitgras": [
+   "MeadowReitgras"
+  ],
+  "foliage/meadow_rotklee": [
+   "MeadowRotklee"
+  ],
+  "foliage/meadow_schafgabe": [
+   "MeadowSchafgabe"
+  ],
+  "foliage/meadow_schneeheide": [
+   "MeadowSchneeheide"
+  ],
+  "foliage/meadow_spitzwegerich": [
+   "MeadowSpitzwegerich"
+  ],
+  "foliage/meadow_weissklee": [
+   "MeadowWeissklee"
+  ],
+  "foliage/meadow_wiesen-flockenblume": [
+   "MeadowWiesenFlockenblume"
+  ],
+  "foliage/meadow_wiesen-glockenblume": [
+   "MeadowWiesenGlockenblume"
+  ],
+  "foliage/meadow_wiesen-labkraut": [
+   "MeadowWiesenLabkraut"
+  ],
+  "foliage/meadow_wiesen-lieschengras1": [
+   "MeadowWiesenLieschengras1"
+  ],
+  "foliage/meadow_wiesen-lieschengras2": [
+   "MeadowWiesenLieschengras2"
+  ],
+  "foliage/meadow_wiesen-lieschengras3": [
+   "MeadowWiesenLieschengras3"
+  ],
+  "foliage/meadow_wiesen-margerite": [
+   "MeadowWiesenMargerite"
+  ],
+  "foliage/meadow_wiesen-rispengras1": [
+   "MeadowWiesenRispengras1"
+  ],
+  "foliage/meadow_wiesen-rispengras2": [
+   "MeadowWiesenRispengras2"
+  ],
+  "foliage/meadow_wiesen-schaumkraut": [
+   "MeadowWiesenSchaumkraut"
+  ],
+  "foliage/meadow_wiesensauerampfer": [
+   "MeadowWiesensauerampfer"
+  ],
+  "foliage/meadow_wollgras": [
+   "MeadowWollgras"
+  ],
+  "foliage/meadow_ziergras": [
+   "MeadowZiergras"
   ],
   "foliage/reed": [
    "reed"
@@ -2252,6 +2149,13 @@
    "Arm.R.Lower.Tool.PupilL",
    "Arm.R.Lower.Tool.PupilR",
    "Arm.R.Lower.Tool.TailFin"
+  ],
+  "props/hoe": [
+   "Arm.R.Lower.Tool.Edge",
+   "Arm.R.Lower.Tool.Grip",
+   "Arm.R.Lower.Tool.Handle",
+   "Arm.R.Lower.Tool.Head",
+   "Arm.R.Lower.Tool.Socket"
   ],
   "props/knife": [
    "Knife.Blade",
@@ -3224,6 +3128,42 @@
    "clips": {
     "sit": {
      "pose": 6,
+     "props": []
+    }
+   }
+  },
+  "humanoid_tools": {
+   "rig": "humanoid",
+   "bones": [
+    "forearm.L",
+    "forearm.R",
+    "head",
+    "humanoid",
+    "lowerBody",
+    "root",
+    "shin.L",
+    "shin.R",
+    "shoulder.L",
+    "shoulder.R",
+    "thigh.L",
+    "thigh.R",
+    "upperArm.L",
+    "upperArm.R",
+    "upperBody"
+   ],
+   "animations": [
+    "hoe",
+    "throw"
+   ],
+   "clips": {
+    "hoe": {
+     "pose": 7,
+     "props": [
+      "hoe"
+     ]
+    },
+    "throw": {
+     "pose": 8,
      "props": []
     }
    }

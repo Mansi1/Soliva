@@ -225,9 +225,10 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
    bleibt - das ist noch nicht herausgefunden (docs/OFFEN.md).
 3. Die Angaben je Clip stehen in `clips/<name>.json` unter `clips` und werden
    von Hand gepflegt; `frames` und `duration` müssen zur Animation passen:
-   - `props`: die Werkzeuge in der Hand (`axe`, `scythe`, `knife`)
+   - `props`: die Werkzeuge in der Hand (`axe`, `scythe`, `knife`, `hoe`)
    - `pose`: welche Pose des Spiels der Clip ersetzt (0 stehen, 1 gehen,
-     2 hacken, 3 pflücken, 4 mähen, 5 schnitzen, 6 sitzen; Tiere: 0 äsen, 1 gehen,
+     2 hacken, 3 pflücken, 4 mähen, 5 schnitzen, 6 sitzen, 7 Hacke (pflügen),
+     8 werfen (Jagd); Tiere: 0 äsen, 1 gehen,
      5 fliehen, 6 erlegt)
    - `phase_period`, `phase_shift`: welcher Bereich der Spiel-Phase eine
      Schleife ist. Die Clip-Zeit ist (Phase − shift) × Dauer / period.
@@ -240,14 +241,20 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
      den Kopf senkt - das Spiel bringt den Knochen `neck` je Art auf ihre
      Halslänge.
 4. **Neuer Clip, ohne `humanoid.glb` anzufassen:** eigene Datei daneben
-   (so `clips/humanoid_sit.glb` + `.json` mit `sit`), in
+   (so `clips/humanoid_sit.glb` + `.json` mit `sit`, `clips/humanoid_tools`
+   mit `hoe` und `throw`), in
    `src/gl/entityRenderer.ts` an `CLIPS` gehängt. In Blender
    `humanoid.glb` importieren, die NLA-Spuren und die übrigen Actions aus der
    Szene löschen (sonst legt der Export sie zu einer Animation zusammen),
    neue Action anlegen, nur das Skelett exportieren
-   (`export_animation_mode="ACTIONS"`, `use_selection`). Die Knochen
-   heißen wie im Skelett, die Ruhelage bleibt gleich; höchstens 8 Clips je
-   Figur (`MAX_CLIPS`).
+   (`export_animation_mode="ACTIONS"`, `use_selection`,
+   `export_optimize_animation_size=False` - sonst schrumpfen gleichbleibende
+   Knochen auf zwei Bilder). Die Knochen heißen wie im Skelett, die Ruhelage
+   bleibt gleich; höchstens 10 Clips je Figur (`MAX_CLIPS`). Ein Clip
+   speichert je Knochen die Drehung gegenüber der Ruhelage im Weltsinn: per
+   Skript gesetzte Posen (`pose_bone.matrix`) erst ohne aktive Action
+   rechnen und dann als Keyframes schreiben - mit Action überschreibt jedes
+   `view_layer.update()` die Eltern-Knochen mit den schon gesetzten Bildern.
 5. `npm run check:anim` zeigt, wie weit ein Clip von der alten Formel
    abweicht; `npm test`, dass kein Knochen, Clip oder keine Pose verloren
    ging. In der Galerie zeigen „Clips aus Blender" jeden Clip.

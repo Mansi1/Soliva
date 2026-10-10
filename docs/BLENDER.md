@@ -19,12 +19,12 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
-  props/                    axe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
+  props/                    axe, hoe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
                             (Bildkarten fürs Gras, 256 px)
-  clips/                    humanoid, humanoid_sit, quadruped, mill, flag - je .glb + .json
+  clips/                    humanoid, humanoid_sit, humanoid_tools, quadruped, mill, flag - je .glb + .json
                             Bewegungen - je Skelett eine Bibliothek
   poses/                    mow.json, carve.json - Posen für tools/export/poses.mjs
 ```
@@ -48,7 +48,7 @@ liefert `readModel('buildings/house')` dasselbe.
 
 Blender exportiert alle Objekte der Szene, auch ausgeblendete. Hilfsobjekte,
 die nicht ins Spiel sollen, vor dem Export löschen - oder unter Include
-„Visible Objects“ anhaken und sie ausblenden.
+"Visible Objects" anhaken und sie ausblenden.
 
 Achsen und Maße: In Blender ist Z oben, die Vorderseite zeigt nach -Y
 (Vorderansicht, Taste 1); der glTF-Export dreht das richtig. Einheit Meter,
@@ -92,7 +92,7 @@ Höhe - wird ein Gebäude breiter, wirkt es im Spiel also kleiner.
   `forearm.L`, Kopf von `hand.R` = Halterung der Werkzeuge. Je Eckpunkt
   zählen die zwei stärksten Gewichte (Weight Paint). Starre Teile wie
   `Head…`, `Load` und die Stiefel `Leg.*.Lower.*` hängen weiter über ihren
-  Namen an einem Knochen. Export mit „Skinning“ an und dem Skelett
+  Namen an einem Knochen. Export mit "Skinning" an und dem Skelett
   ausgewählt.
 
 Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):

@@ -1,0 +1,35 @@
+{
+  "rig": "humanoid",
+  "height": 1.763,
+  "fps": 30,
+  "clips": [
+    {
+      "name": "hoe",
+      "frames": 31,
+      "duration": 1,
+      "props": [
+        "hoe"
+      ],
+      "kneel": false,
+      "pose": 7,
+      "phase_period": 6.283185307179586,
+      "phase_shift": 0,
+      "strike": [
+        0.666667
+      ]
+    },
+    {
+      "name": "throw",
+      "frames": 43,
+      "duration": 1.4,
+      "props": [],
+      "kneel": false,
+      "pose": 8,
+      "phase_period": 8.4,
+      "phase_shift": 0,
+      "strike": [
+        0.5
+      ]
+    }
+  ]
+}

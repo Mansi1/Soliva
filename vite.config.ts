@@ -35,7 +35,7 @@ function glbModels(): Plugin {
  */
 function glbClips(): Plugin {
   const suffix = '.glb?clips';
-  const rigs = { humanoid: HUMANOID, humanoid_sit: HUMANOID, quadruped: QUADRUPED, mill: MILL, flag: FLAG } as const;
+  const rigs = { humanoid: HUMANOID, humanoid_sit: HUMANOID, humanoid_tools: HUMANOID, quadruped: QUADRUPED, mill: MILL, flag: FLAG } as const;
   return {
     name: 'glb-clips',
     enforce: 'pre',
