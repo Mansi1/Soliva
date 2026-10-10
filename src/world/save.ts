@@ -38,6 +38,15 @@ export interface AnimalSave {
   hp: number;
   f: number;
   d?: boolean;
+  /**
+   * Geschlecht, Rudel (Nummer, gleich für alle Tiere eines Rudels im Stand),
+   * Alter in Sekunden (nur Junge) und Sekunden zum nächsten Jungen schon
+   * vergangen (nur Weibchen) - fehlen in älteren Ständen (wildlife.ts restore).
+   */
+  s?: 'f' | 'm';
+  h?: number;
+  a?: number;
+  b?: number;
 }
 
 export interface SaveData {

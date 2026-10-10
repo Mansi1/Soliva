@@ -4,7 +4,7 @@
 //
 //   UnitBase (abstrakt)          Lage, Blickrichtung, Trefferpunkte, Schritte
 //    ├─ Villager                 Auftrag, Ladung, Name
-//    └─ AnimalBase (abstrakt)    äsen, umherziehen, fliehen, Kadaver
+//    └─ AnimalBase (abstrakt)    äsen, mit dem Rudel (Herd) ziehen und fliehen, Junge, Kadaver
 //        ├─ Deer
 //        ├─ Hare
 //        ├─ Cow
@@ -12,8 +12,9 @@
 //        ├─ Goat
 //        └─ Boar
 
-import { AnimalBase, type AnimalOptions, type AnimalState, type AnimalSurroundings } from './AnimalBase';
-import type { AnimalDefinition } from './definition';
+import { AnimalBase, BIRTH_TIME, GROWN, MATE_RANGE, YOUNG_SIZE, type AnimalOptions, type AnimalState, type AnimalSurroundings } from './AnimalBase';
+import type { AnimalDefinition, AnimalLook } from './definition';
+import { Herd, HERD_MAX } from './Herd';
 import { Boar } from './Boar';
 import { Cow } from './Cow';
 import { Deer } from './Deer';
@@ -23,7 +24,11 @@ import { Sheep } from './Sheep';
 import { UnitBase } from './UnitBase';
 import { Villager, type Task, type WorkNeed } from './Villager';
 
-export { UnitBase, Villager, type Task, type WorkNeed, AnimalBase, Deer, Hare, Cow, Sheep, Goat, Boar, type AnimalDefinition, type AnimalOptions, type AnimalState, type AnimalSurroundings };
+export {
+  UnitBase, Villager, type Task, type WorkNeed, AnimalBase, Deer, Hare, Cow, Sheep, Goat, Boar, Herd,
+  BIRTH_TIME, GROWN, HERD_MAX, MATE_RANGE, YOUNG_SIZE,
+  type AnimalDefinition, type AnimalLook, type AnimalOptions, type AnimalState, type AnimalSurroundings,
+};
 
 /** Alle Tierklassen. */
 export const ANIMAL_CLASSES = [Deer, Hare, Cow, Sheep, Goat, Boar] as const;

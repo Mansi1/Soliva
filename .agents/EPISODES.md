@@ -92,3 +92,5 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T15:47:58Z s=560a6297 FINDING src/models/animals/boar.glb:Head.Neck learn=memory: Documented as model rule in docs/BLENDER.md (Tiere); no cheap mechanical check for intended pivot location beyond gallery.
 2026-10-10T15:47:58Z s=560a6297 FINDING src/world/unit/Boar.ts:height learn=test: Size test checks every species against its model height.
 2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
+2026-10-10T16:32:42Z s=560a6297 DONE fp=b33ff45b11dd cov=80.4% paths=docs/BLENDER.md,src/components/SelectionPanel.tsx,src/gallery.ts,src/game/Picker.ts(+20)
+2026-10-10T16:32:42Z s=560a6297 FINDING src/game/Picker.ts:animal, src/game/overlay.ts, src/game/selectionView.ts, src/game/hoverInfo.ts learn=none: Fixed by reading animal.look/size/maxFood; all display callers grepped (def.food/def.shape/def.height in src/game, src/components).

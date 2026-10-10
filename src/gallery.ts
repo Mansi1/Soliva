@@ -19,6 +19,7 @@ import {
 } from './gl/iso';
 import { AXIS_COLORS, GIZMO_RADIUS, TIMELINE_SECONDS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
 import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
+import { YOUNG_SIZE, type AnimalLook } from './world/unit';
 import { FLOWER_SIZE } from './world/flowers';
 import { FLEE_STRIDE } from './world/render';
 import { STRIDE_LENGTH } from './world/world';
@@ -99,18 +100,32 @@ function animalClip(kind: AnimalKind, label: string, clip: number): Exhibit {
   };
 }
 
-/** Tier in einer Pose - Gehen und Fliehen im Takt seiner Schritte. */
-function animal(kind: AnimalKind, label: string, pose: number): Exhibit {
+/**
+ * Tier in einer Pose - Gehen und Fliehen im Takt seiner Schritte. `look`:
+ * das andere Geschlecht (AnimalDefinition.female/male), `growth`: ein Junges
+ * (Anteil der Größe).
+ */
+function animal(kind: AnimalKind, label: string, pose: number, look: AnimalLook = ANIMALS[kind], growth = 1): Exhibit {
   const def = ANIMALS[kind];
   const speed = pose === ANIMAL_POSE.flee ? def.flee : def.walk;
-  const stride = def.stride * (pose === ANIMAL_POSE.flee ? FLEE_STRIDE : 1);
+  const stride = look.stride * growth * (pose === ANIMAL_POSE.flee ? FLEE_STRIDE : 1);
   return {
     label,
     draw: (t, x, y, out) => out.push({
-      x: x - 0.5, y: y - 0.5, size: def.height * ZOOMED, color: PLAYER, shape: def.shape, alpha: 1,
+      x: x - 0.5, y: y - 0.5, size: look.height * growth * ZOOMED, color: PLAYER, shape: look.shape, alpha: 1,
       motion: [-Math.PI / 4, pose === ANIMAL_POSE.walk || pose === ANIMAL_POSE.flee ? t * speed * Math.PI * 2 / stride : t, pose, 0],
     }),
   };
+}
+
+/** Das andere Geschlecht (mit eigenem Modell) und ein Junges, gehend (B11). */
+function family(kind: AnimalKind, prefix = ''): Exhibit[] {
+  const def = ANIMALS[kind];
+  const other = def.female ? ['Weibchen', def.female] as const : def.male ? ['Männchen', def.male] as const : null;
+  return [
+    ...(other ? [animal(kind, `${prefix}${other[0]}`, ANIMAL_POSE.walk, other[1])] : []),
+    animal(kind, `${prefix}Junges`, ANIMAL_POSE.walk, def, YOUNG_SIZE),
+  ];
 }
 
 /** Gebäude oder anderes Modell, still (Mühlen drehen von selbst). */
@@ -297,6 +312,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       animal(kind, `${ANIMALS[kind].label} · geht`, ANIMAL_POSE.walk),
       animal(kind, `${ANIMALS[kind].label} · flieht`, ANIMAL_POSE.flee),
       animal(kind, `${ANIMALS[kind].label} · erlegt`, ANIMAL_POSE.dead),
+      ...family(kind, `${ANIMALS[kind].label} · `),
     ]),
   },
   {
@@ -497,6 +513,7 @@ const SHOWCASE: Showcase[] = [
     animal(kind, 'geht', ANIMAL_POSE.walk),
     animal(kind, 'flieht', ANIMAL_POSE.flee),
     animal(kind, 'erlegt', ANIMAL_POSE.dead),
+    ...family(kind),
   ], kind === 'hare' ? 420 : 240, kind === 'hare' ? 0.3 : 0.6)),
   building('Dorfzentrum', [SHAPE.townCenter], BUILDINGS.town_center.size, 150, 1.1),
   // Die Varianten, wie sie die Gebäude im Spiel zeigen (BuildingDef.variants).

@@ -123,7 +123,12 @@ früher verloren geht (`tests/ids.snapshot.json`). Die Regeln stehen in
 ## Tiere
 
 Die sechs Tiere (`src/models/animals/`) sind seit 2026-10-10 aus Querschnitten
-gebaut: der Rumpf aus Ellipsen längs des Körpers, Hals, Kopf, Beine, Ohren
+gebaut, dazu je Art das andere Geschlecht (B11): `deer_female` (Ricke ohne
+Gehörn), `goat_female` (Geiß ohne Hörner), `sheep_male` (Widder mit
+Schneckenhörnern), `boar_female` (Bache ohne Hauer) und `cow_male` (Bulle,
+größer, ohne Euter). Welches Modell ein Tier zeigt, steht in `female`/`male`
+seiner Art (`src/world/unit/*.ts`); der Hase hat eins für beide. Gebaut
+ist jedes so: der Rumpf aus Ellipsen längs des Körpers, Hals, Kopf, Beine, Ohren
 und Hörner als Röhren entlang einer Linie. Die Fellfarbe wechselt je Fläche
 zwischen zwei Tönen nach einem Rauschen, Bauch, Spiegel oder Flecken nach
 Lage und Richtung der Fläche. Das Python-Skript dazu liegt nicht im Repo

@@ -11,7 +11,12 @@ const { modules: [render, gl, clips, worldModule, unit], close } = await loadMod
   '/src/world/render.ts', '/src/gl/entityRenderer.ts', '/src/gl/clips.ts', '/src/world/world.ts', '/src/world/unit/index.ts');
 after(close);
 
-const kinds = Object.values(unit.ANIMALS);
+// Je Art das Modell der Definition und die Modelle der Geschlechter (B11):
+// type = Art (Clips), model = Datei in src/models/animals.
+const kinds = Object.values(unit.ANIMALS).flatMap((def) => [
+  { ...def, model: def.type },
+  ...['female', 'male'].filter((sex) => def[sex]).map((sex) => ({ ...def, ...def[sex], model: `${def.type}_${sex}` })),
+]);
 
 test('am Hang: beide Beinpaare stehen auf dem Gelände, an Klippen schwebt keins', () => {
   for (const def of kinds) {
@@ -24,9 +29,9 @@ test('am Hang: beide Beinpaare stehen auf dem Gelände, an Klippen schwebt keins
         const [z, slope] = render.animalGround(ground, def.shape, x, y, def.height, heading);
         // Die Gerade durch beide Hufe - der Shader neigt das Tier auf sie.
         const gaps = legs.map((along) => z + slope * along - ground(x + Math.cos(heading) * along, y + Math.sin(heading) * along));
-        assert.ok(gaps.every((g) => g < 1e-9), `${def.type}: kein Huf in der Luft (${gaps.map((g) => g.toFixed(3))})`);
-        if (steep < 0.6 - 1e-9) assert.ok(gaps.every((g) => Math.abs(g) < 1e-9), `${def.type}: beide Hufe auf dem Hang`);
-        else assert.ok(gaps.some((g) => Math.abs(g) < 1e-9), `${def.type}: ein Huf auf der Klippe`);
+        assert.ok(gaps.every((g) => g < 1e-9), `${def.model}: kein Huf in der Luft (${gaps.map((g) => g.toFixed(3))})`);
+        if (steep < 0.6 - 1e-9) assert.ok(gaps.every((g) => Math.abs(g) < 1e-9), `${def.model}: beide Hufe auf dem Hang`);
+        else assert.ok(gaps.some((g) => Math.abs(g) < 1e-9), `${def.model}: ein Huf auf der Klippe`);
       }
     }
     assert.deepEqual(render.animalGround(() => 1.5, def.shape, 0, 0, def.height, 0.7), [1.5, 0]);
@@ -66,9 +71,9 @@ test('Schrittlänge passt zu den Clips - die Hufe rutschen nicht', () => {
     const own = (pose) => gl.ANIMAL_CLIPS.find((c) => c.pose === pose && (c.species.length === 0 || c.species.includes(def.type))).name;
     const walk = slipFree(def, own(gl.ANIMAL_POSE.walk));
     const flee = slipFree(def, own(gl.ANIMAL_POSE.flee));
-    assert.ok(Math.abs(def.stride / walk - 1) < 0.05, `${def.type}: stride ${def.stride}, Clip ${walk.toFixed(3)}`);
+    assert.ok(Math.abs(def.stride / walk - 1) < 0.05, `${def.model}: stride ${def.stride}, Clip ${walk.toFixed(3)}`);
     assert.ok(Math.abs(render.FLEE_STRIDE * def.stride / flee - 1) < 0.05,
-        `${def.type}: Flucht ${(render.FLEE_STRIDE * def.stride).toFixed(3)}, Clip ${flee.toFixed(3)}`);
+        `${def.model}: Flucht ${(render.FLEE_STRIDE * def.stride).toFixed(3)}, Clip ${flee.toFixed(3)}`);
   }
 });
 
@@ -96,8 +101,8 @@ test('Größe: Tiere im Maßstab der Dorfbewohner (1 Tile = 5 m), nur der Hase e
   };
   const TILE = 5;
   for (const def of kinds) {
-    const real = meters(`animals/${def.type}`) / TILE;
+    const real = meters(`animals/${def.model}`) / TILE;
     const boost = def.type === 'hare' ? 1.25 : 1;
-    assert.ok(Math.abs(def.height / (real * boost) - 1) < 0.03, `${def.type}: height ${def.height}, Modell ${(real * boost).toFixed(3)}`);
+    assert.ok(Math.abs(def.height / (real * boost) - 1) < 0.03, `${def.model}: height ${def.height}, Modell ${(real * boost).toFixed(3)}`);
   }
 });
