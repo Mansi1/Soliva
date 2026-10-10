@@ -18,7 +18,7 @@ import { defineBuilding } from './definition';
 export interface Furrow {
   /** Die Frucht, die darin steht bzw. als Nächstes gesät wird. */
   crop: CropType;
-  /** 0..1 - wie weit umgepflügt. Einmal gepflügt, bleibt es so. */
+  /** 0..1 - wie weit umgepflügt. Nach REPLOUGH_AFTER Ernten wieder 0 (Farm.harvests). */
   plough: number;
   /** 0..1 - wie weit eingesät. */
   sown: number;
@@ -96,6 +96,11 @@ export class Farm extends BuildingBase {
   /** Welche der 3x3 Tiles zum Feld gehören: Bit (dx + 1) * 3 + dy + 1. */
   tiles: number;
   furrows: Furrow[];
+  /**
+   * Ernten seit dem letzten Pflügen - nach REPLOUGH_AFTER wird neu gepflügt.
+   * VERIFIED: tests/fields.test.mjs - gespeichert; ältere Stände ohne Zähler laden mit 0.
+   */
+  harvests = 0;
 
   constructor(x: number, y: number, options: BuildingOptions = {}) {
     super(x, y, options);
@@ -173,6 +178,7 @@ export class Farm extends BuildingBase {
       f: {
         p: this.plan,
         t: this.tiles,
+        h: this.harvests,
         r: this.furrows.map((f) => [f.crop, f.plough, f.sown, f.growth, f.food, f.paid] as
           [CropType, number, number, number, number, boolean]),
       },
@@ -185,6 +191,8 @@ export class Farm extends BuildingBase {
     this.plan = save.f && CROPS[save.f.p] ? save.f.p : 'wheat';
     this.tiles = save.f?.t ?? ALL_TILES;
     this.furrows = newFurrows(this.plan, this.tiles);
+    // Ältere Spielstände zählen noch keine Ernten.
+    this.harvests = save.f?.h ?? 0;
     (save.f?.r ?? []).slice(0, FIELD_ROWS).forEach(([crop, plough, sown, growth, food, paid], i) => {
       if (CROPS[crop]) this.furrows[i] = { crop, plough, sown, growth, food, paid };
     });

@@ -11,7 +11,7 @@ import './SelectionPanel.css';
 import './buttons.css';
 import { formatDuration } from '../format';
 import {
-  CROP_ORDER, CROPS, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
+  CROP_ORDER, CROPS, FARMERS_PER_FIELD, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
 } from '../world/catalog';
 import { animalIcon, buildingIcon, populationIcon, rallyIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
@@ -27,10 +27,11 @@ export interface WorkshopView {
   percent?: number;
 }
 
-/** Stand eines zusammenhängenden Felds. */
+/** Stand eines Feldstücks oder der markierten Feldstücke zusammen. */
 export interface FarmView {
+  /** Was dran ist - bei mehreren Feldstücken jede Phase einmal. */
   phase: string;
-  /** Tiles des Felds - bei mehr als einem angezeigt. */
+  /** Tiles der Feldstücke - bei mehr als einem angezeigt. */
   tiles: number;
   crops: string;
   food: number;
@@ -41,6 +42,8 @@ export interface FarmView {
   /** Sekunden, bis die nächste Furche reif ist - wenn etwas wächst. */
   nextRipeIn?: number;
   farmers: string[];
+  /** So viele Bauern finden Platz - je Feldstück FARMERS_PER_FIELD, höchstens eine je Furche. */
+  maxFarmers: number;
 }
 
 /** Ausbildung von Dorfbewohnern: Knopf und seine Kosten. */
@@ -65,7 +68,7 @@ export type SelectionView =
       hp: number;
       maxHp: number;
       training?: { queued: number; capacity: number; train: TrainView };
-      farms?: { farmers: number; rows: number; plan: CropType | null };
+      farms?: FarmView & { plan: CropType | null };
     }
   | {
       kind: 'building';
@@ -184,11 +187,11 @@ function FarmDetails({ farm }: { farm: FarmView }) {
         ? <div class="muted">Nächste Furche reif in {formatDuration(farm.nextRipeIn)}</div>
         : null}
       <div>
-        Bauern <b>{farm.farmers.length}/{farm.rows}</b>
+        Bauern <b>{farm.farmers.length}/{farm.maxFarmers}</b>
         {farm.farmers.length > 0 ? <span class="muted"> {farm.farmers.join(', ')}</span> : null}
       </div>
       {farm.farmers.length === 0
-        ? <div class="muted">Wähle Dorfbewohner und klicke mit rechts auf das Feld - je Furche arbeitet einer.</div>
+        ? <div class="muted">Wähle Dorfbewohner und klicke mit rechts auf das Feld - je Feldstück arbeiten bis zu {FARMERS_PER_FIELD}.</div>
         : null}
     </>
   );
@@ -210,7 +213,7 @@ function Buildings({ v }: { v: Extract<SelectionView, { kind: 'buildings' }> }) 
               </div>
             </>
           ) : null}
-          {v.farms ? <div>Bauern <b>{v.farms.farmers}/{v.farms.rows}</b></div> : null}
+          {v.farms ? <FarmDetails farm={v.farms} /> : null}
         </div>
       </div>
     </>

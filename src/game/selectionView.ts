@@ -7,38 +7,39 @@ import type { FarmView, SelectionView, TrainView, WorkshopView } from '../compon
 import { FLOWERS } from '../gl/entityRenderer';
 import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
-import { FishTrap, type Building, type UnitProducer } from '../world/building';
+import { FishTrap, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
-  BUILDINGS, CROPS, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
+  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_LABEL, VILLAGER, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import type { AnimalState } from '../world/unit';
-import type { World } from '../world/world';
+import type { FarmPhase, World } from '../world/world';
 import { workplace } from '../world/villagers';
 import type { Selection } from './Selection';
 
-/** Was auf einem Feld gerade dran ist - fürs Panel. */
-const FARM_PHASE_TEXT = {
-  plough: 'Alle pflügen um',
-  sow: 'Alle säen',
+/** Was auf einem Feldstück gerade dran ist - fürs Panel. */
+const FARM_PHASE_TEXT: Record<FarmPhase, string> = {
+  plough: 'Wird umgepflügt',
+  sow: 'Wird gesät',
+  wood: 'Zu wenig Holz zum Säen - die Bauern jäten',
   grow: 'Wächst - die Bauern jäten',
-  harvest: 'Alle ernten',
+  harvest: 'Wird geerntet',
   done: 'Abgeerntet - wird neu gesät',
-} as const;
+};
 
 /**
- * Stand eines Felds fürs Panel - des ganzen zusammenhängenden Felds, auf dem
- * alle gemeinsam arbeiten: Phase, Furchen je Arbeitsschritt, Ernte, Bauern.
+ * Stand der markierten Feldstücke fürs Panel, zusammengezählt - jedes
+ * arbeitet für sich (farming.ts): Phasen, Furchen je Arbeitsschritt, Ernte, Bauern.
+ * VERIFIED: tests/fields.test.mjs - eins allein zeigt nur sich, mehrere zählen zusammen.
  */
-function farmView(world: World, building: Building): FarmView {
-  const group = world.farmGroup(building);
+function farmView(world: World, farms: Farm[]): FarmView {
   // Nur die Furchen, die es gibt - ein Feldstück hat drei.
-  const furrows = group.flatMap((b) => b.activeFurrows());
+  const furrows = farms.flatMap((b) => b.activeFurrows());
   const count = (test: (f: (typeof furrows)[number]) => boolean) => furrows.filter(test).length;
   const growing = furrows.filter((f) => f.sown >= 1 && f.growth < 1);
   return {
-    phase: FARM_PHASE_TEXT[world.farmPhase(building)],
-    tiles: group.length,
+    phase: [...new Set(farms.map((b) => FARM_PHASE_TEXT[world.farmPhase(b)]))].join(' · '),
+    tiles: farms.reduce((sum, b) => sum + b.footprintTiles().length, 0),
     crops: [...new Set(furrows.map((f) => CROPS[f.crop].label))].join(', '),
     food: furrows.reduce((sum, f) => sum + (f.sown >= 1 ? f.food : 0), 0),
     rows: furrows.length,
@@ -46,7 +47,8 @@ function farmView(world: World, building: Building): FarmView {
     sown: count((f) => f.sown >= 1),
     ripe: count((f) => f.growth >= 1 && f.food > 1e-6),
     nextRipeIn: growing.length > 0 ? Math.min(...growing.map((f) => (1 - f.growth) * CROPS[f.crop].growTime)) : undefined,
-    farmers: group.flatMap((b) => world.farmers(b)).map((v) => v.name),
+    farmers: farms.flatMap((b) => world.farmers(b)).map((v) => v.name),
+    maxFarmers: farms.reduce((sum, b) => sum + Math.min(FARMERS_PER_FIELD, b.activeFurrows().length), 0),
   };
 }
 
@@ -84,6 +86,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     const kinds = new Map<string, number>();
     for (const b of many) kinds.set(b.label, (kinds.get(b.label) ?? 0) + 1);
     const trainers = many.filter((b): b is UnitProducer => b.isUnitProducer());
+    const farms = many.filter((b): b is Farm => b.isFarm());
     const plans = new Set(many.map((b) => (b.isFarm() ? b.plan : undefined)));
     const plan = plans.size === 1 ? [...plans][0] : undefined;
     // Fürs Porträt die häufigste Art.
@@ -98,12 +101,8 @@ export function selectionView(world: World, selection: Selection, resources: Res
       training: trainers.length > 0
         ? { queued: trainers.reduce((sum, b) => sum + b.queuedUnits, 0), capacity: trainers.length * MAX_TRAINING_QUEUE, train: trainView(world, rallyPicking, trainBatch) }
         : undefined,
-      farms: many.every((b) => b.isFarm())
-        ? {
-            farmers: many.reduce((sum, b) => sum + world.farmers(b).length, 0),
-            rows: many.reduce((sum, b) => sum + (b.isFarm() ? b.activeFurrows().length : 0), 0),
-            plan: plan ?? null,
-          }
+      farms: farms.length === many.length
+        ? { ...farmView(world, farms), plan: plan ?? null }
         : undefined,
     };
   }
@@ -118,7 +117,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       maxHp: def.hp,
       storedResources: def.storedResources.length > 0 ? def.storedResources.map((r) => RESOURCE_LABEL[r]).join(', ') : undefined,
       housing: def.housing > 0 ? def.housing : undefined,
-      farm: building.isFarm() ? { ...farmView(world, building), plan: building.plan } : undefined,
+      farm: building.isFarm() ? { ...farmView(world, [building]), plan: building.plan } : undefined,
       workshop: building.isWorkshop() ? workshopView(world, building) : undefined,
       weapons: def.weaponCapacity > 0
         ? { bows: world.armoryStock().get(building.anchor) ?? 0, capacity: def.weaponCapacity }

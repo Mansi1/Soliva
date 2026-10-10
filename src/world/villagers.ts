@@ -11,7 +11,7 @@ import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
 import { FishTrap, furrowFood, type Building, type Farm } from './building';
 import {
-  BOWYER, CROPS, FARM_RATE, FISHING, HUNT, MAX_GATHERERS, PLOUGH_TIME, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
+  BOWYER, CROPS, FARM_RATE, FISHING, HUNT, MAX_GATHERERS, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, SOW_TIME, VILLAGER, YIELD, type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
 import type { Animal, Task, Villager, WorkNeed } from './unit';
@@ -28,6 +28,8 @@ const INSIDE_TIME = 1.2;
 const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
 /** Grund, wenn es zu Fuß keinen Weg zum Ziel gibt (walk). */
 const UNREACHABLE = 'Dort kommt er nicht hin';
+/** Grund, wenn ein Bauer säen müsste und das Holz fehlt - er jätet derweil (tickFarmer). */
+const NO_SEED_WOOD = 'Zu wenig Holz, um neu zu säen';
 
 const key = (x: number, y: number) => `${x},${y}`;
 
@@ -122,8 +124,8 @@ export class VillagerWork {
       return rest.length > 0 ? `In der ${target.label} arbeitet nur einer` : null;
     }
     if (target?.isFarm()) {
-      // Je Furche ein Bauer - sind alle besetzt, geht es aufs nächste Feld
-      // mit einer freien Furche.
+      // Je Furche ein Bauer, je Feldstück höchstens FARMERS_PER_FIELD - ist
+      // es voll, geht es aufs nächste Feldstück mit Platz.
       for (const v of selected) v.task = { kind: 'idle' };
       const busy = new Set(this.world.villagers.flatMap((v) => (v.task.kind === 'farm' ? [`${v.task.building}#${v.task.row}`] : [])));
       for (const v of selected) {
@@ -459,14 +461,14 @@ export class VillagerWork {
   }
 
   /**
-   * Die nächste Furche auf dem Feld, in der es in dieser Phase Arbeit gibt
-   * und kein anderer Bauer arbeitet - die dem Bauern nächste.
+   * Die nächste Furche auf dem Feldstück, in der es in dieser Phase Arbeit
+   * gibt und kein anderer Bauer arbeitet - die dem Bauern nächste.
    */
-  private nextFurrow(v: Villager, group: Farm[], phase: FarmPhase): { building: Farm; row: number; distance: number } | undefined {
+  private nextFurrow(v: Villager, farm: Farm, phase: FarmPhase): { building: Farm; row: number; distance: number } | undefined {
     // Solange es wächst, hat keine Furche Arbeit (furrowNeeds).
-    if (phase === 'grow') return undefined;
+    if (phase === 'grow' || phase === 'wood') return undefined;
     let best: { building: Farm; row: number; distance: number } | undefined;
-    for (const { building, row, f } of this.world.farming.furrows(group)) {
+    for (const { building, row, f } of this.world.farming.furrows(farm)) {
       if (!furrowNeeds(f, phase) || this.farmerOn(furrowKey(building, row), v)) continue;
       const spot = this.farmSpot(building, row, v);
       const distance = Math.hypot(spot.x - v.x, spot.y - v.y);
@@ -508,10 +510,11 @@ export class VillagerWork {
   }
 
   /**
-   * Bauer: arbeitet mit den anderen auf seinem Feld Phase für Phase - erst
-   * alles pflügen, dann alles säen, jäten, bis alles reif ist, dann ernten
-   * und abliefern; abgeerntet wird alles neu gesät. Er nimmt sich jeweils die
-   * nächste freie Furche, in der es noch etwas zu tun gibt.
+   * Bauer: arbeitet mit den anderen auf seinem Feldstück Phase für Phase -
+   * erst alles pflügen, dann alles säen, jäten, bis alles reif ist, dann
+   * ernten und abliefern; abgeerntet wird alles neu gesät, nach
+   * REPLOUGH_AFTER Ernten vorher neu gepflügt. Er nimmt sich jeweils die
+   * nächste freie Furche seines Stücks, in der es noch etwas zu tun gibt.
    */
   private tickFarmer(v: Villager, task: Extract<Task, { kind: 'farm' }>, dt: number) {
     const found = this.world.building(task.building);
@@ -531,7 +534,6 @@ export class VillagerWork {
       return;
     }
 
-    const group = this.world.farmGroup(building);
     let phase = this.world.farmPhase(building);
     // Die Ernte ist vorbei: wer noch etwas trägt, bringt es erst zum Lager.
     if (phase !== 'harvest' && v.carrying > 0 && v.carryType === 'food') {
@@ -539,19 +541,22 @@ export class VillagerWork {
       return;
     }
     if (phase === 'done') {
-      // Alles abgeerntet: alles wird neu gesät.
-      for (const { building: b, row, f } of this.world.farming.furrows(group)) {
-        Object.assign(f, { crop: b.plan, sown: 0, growth: 0, food: furrowFood(b.plan, b.tiles, row), paid: false });
+      // Alles abgeerntet: alles wird neu gesät - nach REPLOUGH_AFTER Ernten vorher neu gepflügt.
+      const replough = ++building.harvests >= REPLOUGH_AFTER;
+      if (replough) building.harvests = 0;
+      for (const { row, f } of this.world.farming.furrows(building)) {
+        Object.assign(f, { crop: building.plan, sown: 0, growth: 0, food: furrowFood(building.plan, building.tiles, row), paid: false });
+        if (replough) f.plough = 0;
       }
       this.world.markDirty();
-      phase = 'sow';
+      phase = this.world.farmPhase(building);
     }
     // In der eigenen Furche nichts mehr zu tun: die nächste mit Arbeit. Beim
     // Ernten geht er immer zum nächsten reifen Getreide, auch in einer fremden
     // Furche - seine eigene behält er nur, solange sie kaum weiter weg ist.
     const ownNeeds = furrowNeeds(building.furrows[task.row], phase);
     if (!ownNeeds || phase === 'harvest') {
-      const next = this.nextFurrow(v, group, phase);
+      const next = this.nextFurrow(v, building, phase);
       const own = this.farmSpot(building, task.row, v);
       const keep = ownNeeds && (!next || Math.hypot(own.x - v.x, own.y - v.y) <= next.distance + 0.3);
       if (keep) {
@@ -568,16 +573,19 @@ export class VillagerWork {
       }
     }
     const f = building.furrows[task.row];
-    const working = furrowNeeds(f, phase);
+    let working = furrowNeeds(f, phase);
+    // Ohne Holz zum Säen jätet er, statt stillzustehen - Reifes erntet er (Phase).
+    let problem: string | null = phase === 'wood' ? NO_SEED_WOOD : null;
     if (working && phase === 'sow' && !f.paid) {
-      if (!this.world.canPay(RESEED_COST)) {
-        v.problem = 'Zu wenig Holz, um neu zu säen';
-        return;
+      if (this.world.canPay(RESEED_COST)) {
+        this.world.pay(RESEED_COST);
+        f.paid = true;
+      } else {
+        working = false;
+        problem = NO_SEED_WOOD;
       }
-      this.world.pay(RESEED_COST);
-      f.paid = true;
     }
-    v.problem = null;
+    v.problem = problem;
     const crop = CROPS[f.crop];
     // Ohne eigene Arbeit (es wächst, oder die übrigen Furchen haben andere)
     // geht er seine Furche ab und jätet.
@@ -620,9 +628,9 @@ export class VillagerWork {
     if (v.carrying >= VILLAGER.capacity - 1e-6) task.delivering = true;
   }
 
-  /** Cheat "speedy gonzales": Pflügen oder Säen auf dem ganzen Feld auf einmal. */
+  /** Cheat "speedy gonzales": Pflügen oder Säen auf dem ganzen Feldstück auf einmal. */
   private finishField(building: Farm, phase: FarmPhase) {
-    for (const { f } of this.world.farming.furrows(this.world.farmGroup(building))) {
+    for (const { f } of this.world.farming.furrows(building)) {
       if (phase === 'plough') f.plough = 1;
       if (phase === 'sow' && f.sown < 1) {
         if (!f.paid && !this.world.canPay(RESEED_COST)) continue;
@@ -1171,6 +1179,7 @@ export class VillagerWork {
         switch (this.world.farmPhase(building)) {
           case 'plough': return 'pflügt' + load;
           case 'sow': return `sät ${crop}` + load;
+          case 'wood': return 'jätet (kein Holz zum Säen)' + load;
           case 'grow': return `jätet (${crop} wächst)` + load;
           case 'harvest': return `erntet ${crop}` + load;
           case 'done': return 'sät neu' + load;
