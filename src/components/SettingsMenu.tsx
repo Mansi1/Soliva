@@ -335,11 +335,10 @@ export class SettingsMenu {
             ))}
           </div>
           <p class="menu-hint">
-            Zum Messen, was ein Teil kostet - die Entwickler-Infos (P) zeigen die Bildzeit. Ohne Haken wird der
-            Teil nicht gezeichnet. Gras: Gras- und Steinkarten; Modelle: Gebäude, Bäume, Blumen, Figuren und
-            Felder; Partikel: Rauch, Staub, Insekten und Fische; Vorausrechnen: der Boden wird im Hintergrund
-            für die Nachbarschaft und die nächste Zoomstufe berechnet. Gilt bis zum Neuladen, wie im
-            Entwickler-Panel.
+            Zum Messen, was ein Teil kostet - die Entwickler-Infos (P) zeigen die Bildzeit und die Reihenfolge.
+            Ohne Haken wird der Teil nicht gezeichnet; was er umfasst, zeigt der Hinweis unter dem Zeiger.
+            Vorausrechnen: der Boden wird im Hintergrund für die Nachbarschaft und die nächste Zoomstufe
+            berechnet. Gilt bis zum Neuladen, wie im Entwickler-Panel.
           </p>
           <div class="menu-row">
             <span title="Bäume als flaches Bild statt als 3D-Modell - man sieht kaum einen Unterschied, das Spiel läuft aber viel flüssiger.">Bäume als Bild bis Zoom</span>
