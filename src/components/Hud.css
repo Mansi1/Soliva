@@ -158,19 +158,46 @@
   opacity: 1;
   background: rgba(255, 255, 255, 0.12);
 }
-/* Abschalter in den Entwickler-Infos - dürfen umbrechen */
+/* Ebenen in Zeichenreihenfolge und Abschalter in den Entwickler-Infos - dürfen umbrechen */
 #debug > div#dev-off {
   white-space: normal;
 }
+#dev-layers {
+  margin: 2px 0;
+  padding: 0;
+  list-style: none;
+}
+#dev-layers label,
 #dev-off label {
   margin-left: 6px;
   cursor: pointer;
 }
+#dev-layers input,
 #dev-off input {
   margin: 0 1px 0 0;
   width: 9px;
   height: 9px;
   vertical-align: -1px;
+}
+.dev-move {
+  display: inline-block;
+  width: 26px;
+  text-align: center;
+}
+.dev-move button {
+  font: inherit;
+  line-height: 1;
+  color: var(--text);
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.dev-move button:hover {
+  color: var(--accent);
+}
+.dev-pass {
+  color: var(--accent);
 }
 /* Knopf in den Entwickler-Infos */
 .panel-btn {

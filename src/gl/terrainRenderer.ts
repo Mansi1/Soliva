@@ -342,6 +342,8 @@ export class TerrainRenderer {
   debugMode = 0;
   /** Drahtgitter des Geländes wie in der Galerie: 0 aus, 1 über dem Gelände, 2 nur Gitter. */
   wire = 0;
+  /** Entwickler-Panel: Bit 1 Land, Bit 2 Wasser nicht zeichnen (uHide) - Bild und Tiefe bleiben gelöscht. */
+  hide = 0;
   /** Sonne und Himmel (gl/light.ts) - die Übersichtskarte bleibt bei der festen Sonne. */
   light: Light = CLASSIC_LIGHT;
   /** Uhr der Brandung in Sekunden - MapRenderer setzt sie, die Übersichtskarte steht bei 0. */
@@ -1298,6 +1300,7 @@ export class TerrainRenderer {
     }
 
     gl.uniform1i(this.location('uWire'), this.wire);
+    gl.uniform1i(this.location('uHide'), this.hide);
     gl.uniform1f(this.location('uHoverActive'), this.hoverTile ? 1 : 0);
     if (this.hoverTile) {
       gl.uniform2f(this.location('uHoverTile'), this.hoverTile.x, this.hoverTile.y);
@@ -1310,10 +1313,12 @@ export class TerrainRenderer {
 
     // Nur die nötigen Zeilen - die Indizes liegen zeilenweise hintereinander.
     const indices = (rows - 1) * (stride - 1) * 6;
-    gl.drawElements(gl.TRIANGLES, indices, gl.UNSIGNED_INT, 0);
-    addRenderStats('drawCalls', 1);
-    // Eigener Wert: jeder Gelände-Eckpunkt rechnet die ganze Höhenfunktion, viel teurer als einer eines Modells.
-    addRenderStats('terrainVertices', indices);
+    if (this.hide !== 3) {
+      gl.drawElements(gl.TRIANGLES, indices, gl.UNSIGNED_INT, 0);
+      addRenderStats('drawCalls', 1);
+      // Eigener Wert: jeder Gelände-Eckpunkt rechnet die ganze Höhenfunktion, viel teurer als einer eines Modells.
+      addRenderStats('terrainVertices', indices);
+    }
     gl.bindVertexArray(null);
     return true;
   }

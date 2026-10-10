@@ -19,6 +19,8 @@ import { WORK_TEMPO, type StrikeKind, type World } from './world';
 
 /** Abstand der Sammelplätze von der Feldmitte, in Tiles. */
 const GATHER_SPREAD = 0.4;
+/** So nah kommt er zurück an ein leer gewordenes Feld, bevor er weitersucht. */
+const RETURN_REACH = 1;
 /** Abstand zur Gebäudekante, ab dem er abliefern kann. */
 const DELIVER_REACH = 0.6;
 /** So nah kommt er bei einem Gang (Aufgabe move) an sein Ziel - auch für route. */
@@ -1061,8 +1063,11 @@ export class VillagerWork {
 
         const found = this.world.remainingAt(task.x, task.y);
         if (found.type !== task.type || found.amount <= 0) {
-          // Feld leer: im Umkreis weitermachen, sonst Rest abliefern und aufhören.
-          // Er selbst zählt am leeren Feld nicht mehr mit.
+          // Feld leer: erst zurück an die alte Arbeitsstelle (etwa nach dem
+          // Abliefern), dort im Umkreis weitermachen, sonst Rest abliefern,
+          // wiederkommen und dort aufhören. Er selbst zählt am leeren Feld
+          // nicht mehr mit. VERIFIED: tests/return-to-work.test.mjs.
+          if (!this.walk(v, task.x + 0.5, task.y + 0.5, RETURN_REACH, dt)) return;
           const occupancy = this.occupancy();
           const own = key(task.x, task.y);
           occupancy.set(own, (occupancy.get(own) ?? 1) - 1);
@@ -1072,9 +1077,7 @@ export class VillagerWork {
             task.y = next.y;
             task.slot = undefined;
           } else if (v.carrying > 0) {
-            const site = this.nearestDropSite(v, YIELD[task.type]);
-            v.task = site ? { kind: 'deliver', building: key(site.x, site.y) } : { kind: 'idle' };
-            v.problem = site ? null : 'Kein Lager für diese Ressource';
+            task.delivering = true;
           } else {
             v.task = { kind: 'idle' };
             v.problem = 'Hier gibt es nichts mehr';

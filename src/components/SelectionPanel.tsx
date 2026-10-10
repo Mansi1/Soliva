@@ -511,11 +511,29 @@ function DemolishIcon() {
   );
 }
 
+/**
+ * Entlassen: der Arbeiter tritt aus der Tür, ein Pfeil zeigt hinaus - nicht zu verwechseln mit Ausbilden.
+ * VERIFIED: Bildschirmfoto der Befehlsleiste einer besetzten Bognerei (2026-10-10), bei DPR 1 und 2 lesbar.
+ */
+function DismissIcon({ src }: { src: string }) {
+  return (
+    <svg viewBox="0 0 44 44" aria-hidden="true">
+      <path d="M2 42 V8 Q10 0 18 8 V42 Z" fill="#c9a36a" stroke="#1a0f07" stroke-width="2" stroke-linejoin="round" />
+      <path d="M5 42 V10 Q10 5 15 10 V42 Z" fill="#1a0f07" />
+      <image href={src} x="7" y="1" width="34" height="34" />
+      <path d="M17 37 H38 M32 31 L39 37 L32 43" fill="none" stroke="#1a0f07" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M17 37 H38 M32 31 L39 37 L32 43" fill="none" stroke="#f2c45a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  );
+}
+
 function CommandButton({ c }: { c: Command }) {
   return (
     <button type="button" class="cmd-btn" data-action={c.action} data-crop={c.crop} title={c.title}
       disabled={c.disabled} aria-pressed={c.pressed === undefined ? undefined : String(c.pressed)}>
-      {c.icon === 'demolish' ? <DemolishIcon /> : <img src={c.icon} alt="" draggable={false} />}
+      {c.icon === 'demolish' ? <DemolishIcon />
+        : c.action === 'dismiss' ? <DismissIcon src={c.icon} />
+        : <img src={c.icon} alt="" draggable={false} />}
       {c.key ? <span class="cmd-key">{c.key}</span> : null}
       {c.count ? <span class="cmd-count">{c.count}</span> : null}
     </button>
