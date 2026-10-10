@@ -27,6 +27,7 @@ import {
 import { TERRAIN_COMMON } from './terrainShader';
 import { CLASSIC_LIGHT, LIGHT_GLSL, setLightUniforms, type Light } from './light';
 import { addRenderStats } from '../renderStats';
+import type { ModelLayer } from '../layers';
 import { FLATTEN_GLSL, MAX_FLAT_ZONES } from '../world/flatten';
 import { indexVertices, parseMtl, parseMtlImages, parseObj, parseObjBones, type BoneWeight, type ObjTriangle, type RGB01 } from './obj';
 import villagerMaleModel from '../models/villagers/male.glb?model';
@@ -3128,6 +3129,30 @@ interface Mesh {
 interface ModelSlot {
   shape: number; model: Model; scale: number; stride?: number; body?: number;
   mesh: Mesh; lodMeshes: Mesh[]; list: EntityInstance[];
+  /** Ebene im Entwickler-Panel (modelLayer) - einmal beim Anlegen bestimmt. */
+  layer: ModelLayer;
+}
+
+/** Was über einer Werkstatt oder am Sammelpunkt schwebt - Überlagerungen, keine Gebäude. */
+const OVERLAY_MODELS = new Set<number>([
+  SHAPE.rallyFlag, SHAPE.markerArrow, SHAPE.needWood, SHAPE.needBow, SHAPE.needFish, SHAPE.needStrike,
+  SHAPE.gizmoX, SHAPE.gizmoY, SHAPE.gizmoZ, SHAPE.gizmoDiscX, SHAPE.gizmoDiscY, SHAPE.gizmoDiscZ,
+]);
+
+/**
+ * Ebene einer Modellart im Entwickler-Panel (layers.ts). Felsen, Gold und
+ * Sträucher zählen zu den Bäumen (Vorkommen), Boote zu den Figuren; was
+ * sonst nirgends hingehört, ist ein Gebäude.
+ */
+export function modelLayer(shape: number): ModelLayer {
+  if (FIGURES.includes(shape) || shape === SHAPE.fisherBoat) return 'figures';
+  if (BEASTS.includes(shape)) return 'animals';
+  if (FIELD_SET.has(shape)) return 'fields';
+  if (FLOWERS.includes(shape)) return 'flowers';
+  // Vor den Überlagerungen: Stümpfe teilen sich Nummern mit dem Sammelpunkt-Weg (der ist kein Modell).
+  if (NATURAL.includes(shape)) return 'trees';
+  if (OVERLAY_MODELS.has(shape)) return 'overlays';
+  return 'buildings';
 }
 
 /**
@@ -3363,6 +3388,8 @@ export class EntityRenderer {
   skirts = true;
   /** Modelle schreiben Tiefe - aus für Durchsichtiges, das sich schneidet (Flächen des Gizmos). */
   depthWrite = true;
+  /** Abgeschaltete Ebenen (Entwickler-Panel, MapRenderer.off) - diese Modellarten nicht zeichnen. */
+  off: Readonly<Partial<Record<ModelLayer, boolean>>> = {};
   /** Nur die Kanten der Dreiecke zeichnen (Galerie) - siehe draw(). */
   wireframe = false;
   /** Galerie: Farbe des Drahtgitters (RGBA 0..1), null = Materialfarben. */
@@ -3426,6 +3453,9 @@ export class EntityRenderer {
   private uniforms = new Map<string, WebGLUniformLocation | null>();
   /** Wird nur vergrößert, nie neu belegt - eine Allokation je Frame wäre Müll. */
   private data = new Float32Array(STRIDE * 256);
+  /** Dasselbe für die Balken (renderBars) - eigener Puffer, sie zeichnen getrennt. */
+  private barData = new Float32Array(STRIDE * 16);
+  private barBuffer: WebGLBuffer;
   /** Sortierpuffer, ebenfalls wiederverwendet. */
   private flats: EntityInstance[] = [];
   private solids: EntityInstance[] = [];
@@ -3435,6 +3465,7 @@ export class EntityRenderer {
     this.program = link(gl, VERTEX_SOURCE, FRAGMENT_SOURCE);
 
     this.instanceBuffer = gl.createBuffer()!;
+    this.barBuffer = gl.createBuffer()!;
     this.building = this.createMesh(buildingMesh());
     this.flat = this.createMesh(flatMesh());
     this.quad = this.createMesh(new Float32Array([0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0]));
@@ -3446,7 +3477,7 @@ export class EntityRenderer {
         lodMeshes: (m.model.lods ?? []).map((l) => this.createMesh(l, m.model.floats)),
       };
       return {
-        shape: m.shape, scale: m.scale, stride: m.stride, body: m.body, list: [],
+        shape: m.shape, scale: m.scale, stride: m.stride, body: m.body, list: [], layer: modelLayer(m.shape),
         get model() { return m.model; },
         get mesh() { return upload().mesh; },
         get lodMeshes() { return upload().lodMeshes; },
@@ -3923,8 +3954,9 @@ export class EntityRenderer {
    * Zeichnet über ein bereits gezeichnetes Gelände - dessen Tiefenpuffer
    * verdeckt, was hinter Hügeln liegt.
    * @param minSizeTiles Mindestgröße, damit Gebäude beim Herauszoomen nicht verschwinden
-   * @param pixelRatio Geräte-Pixel je CSS-Pixel - Lebensbalken haben feste CSS-Größe
-   * @param healthBars Lebensbalken über allem mit `health` zeichnen
+   * @param pixelRatio Geräte-Pixel je CSS-Pixel
+   * @param selection Ausgewähltes (alles mit `health`) für das Entwickler-Panel gesondert zählen -
+   *   seine Lebensbalken zeichnet renderBars
    * @param batches feste Puffer (createBatch), dazu gezeichnet
    */
   render(
@@ -3932,7 +3964,7 @@ export class EntityRenderer {
       camera: GpuCamera,
       minSizeTiles: number,
       pixelRatio = 1,
-      healthBars = false,
+      selection = false,
       batches: readonly StaticBatch[] = [],
   ) {
     this.billboardsActive = false;
@@ -3973,13 +4005,11 @@ export class EntityRenderer {
       if (!NATURAL.includes(m.shape)) m.list.sort(backToFront);
     }
 
-    const bars = healthBars ? instances.filter((e) => e.health !== undefined) : [];
     // Ausgewähltes trägt einen Lebensbalken - seine Modellarten werden für das
     // Entwickler-Panel gesondert gezählt (alle Instanzen der Art).
     this.selected.clear();
-    for (const e of bars) this.selected.add(e.shape);
-    const barCount = bars.length + bars.filter((e) => e.food !== undefined).length;
-    const total = instances.length + barCount;
+    if (selection) for (const e of instances) if (e.health !== undefined) this.selected.add(e.shape);
+    const total = instances.length;
     if (this.data.length < total * STRIDE) {
       this.data = new Float32Array(total * STRIDE * 2);
     }
@@ -3988,32 +4018,11 @@ export class EntityRenderer {
     for (const list of [flats, solids, ...this.models.map((m) => m.list), puffs]) {
       for (const e of list) packInstance(d, i++ * STRIDE, e);
     }
-    for (const e of bars) {
-      this.writeBar(d, i++ * STRIDE, e, camera.pixelsPerTile, minSizeTiles, pixelRatio, false);
-      if (e.food !== undefined) this.writeBar(d, i++ * STRIDE, e, camera.pixelsPerTile, minSizeTiles, pixelRatio, true);
-    }
 
     gl.useProgram(this.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, d.subarray(0, total * STRIDE), gl.DYNAMIC_DRAW);
-
-    setCameraUniforms(gl, (name) => this.location(name), camera, this.targetSize ?? gl.canvas);
-    gl.uniform3fv(this.location('uToCamera'), cameraDirection());
-    // Baumbilder (targetSize) mit der festen Sonne - sie leben länger als ein Wetter.
-    setLightUniforms(gl, (name) => this.location(name), this.targetSize ? CLASSIC_LIGHT : this.light);
-    gl.uniform1f(this.location('uMinSizeTiles'), minSizeTiles);
-    gl.uniform1i(this.location('uSilhouette'), 0);
-    gl.uniform1f(this.location('uGroundStep'), this.groundStep);
-    // Ohne eingeebnete Flächen liest der Shader das Feld nicht - 192 Werte weniger je Bild.
-    if (this.flatCount > 0) gl.uniform4fv(this.location('uFlat[0]'), this.flatZones);
-    gl.uniform1i(this.location('uFlatCount'), this.flatCount);
-    gl.uniform1i(this.location('uPlain'), this.plain ? 1 : 0);
-    gl.uniformMatrix3fv(this.location('uModelRot'), false, this.modelRotation);
-    gl.uniform3fv(this.location('uModelPivot'), this.modelPivot);
-    gl.uniform1f(this.location('uWireBias'), this.wireBias);
-    gl.uniform4fv(this.location('uWire'), this.wireframe && this.wireColor ? this.wireColor : [0, 0, 0, 0]);
-    // Nur Modelle setzen ihr Detail-Bild (drawModel) - alles andere malt nichts auf.
-    gl.uniform1i(this.location('uDetailLayer'), -1);
+    this.frameUniforms(camera, minSizeTiles);
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -4022,10 +4031,11 @@ export class EntityRenderer {
 
     // Overlays schreiben keine Tiefe - sie liegen auf dem Boden und sollen
     // Gebäude auf demselben Feld nicht verdecken.
+    const off = this.off;
     gl.depthMask(false);
-    this.draw(this.flat, 0, flats.length);
+    if (!off.overlays) this.draw(this.flat, 0, flats.length);
     gl.depthMask(this.depthWrite);
-    this.draw(this.building, flats.length, solids.length);
+    if (!off.overlays) this.draw(this.building, flats.length, solids.length);
 
     gl.uniform1f(this.location('uTime'), animationTime());
     gl.uniform3f(this.location('uPlayerColor'), this.playerColor[0] / 255, this.playerColor[1] / 255, this.playerColor[2] / 255);
@@ -4043,6 +4053,7 @@ export class EntityRenderer {
     const fieldLod = FIELD_LOD_ZOOM.filter((z) => cssPixelsPerTile < z).length;
     let first = flats.length + solids.length;
     const drawModel = (m: (typeof this.models)[number], offset: number) => {
+      if (off[m.layer]) return;
       // Ein Anhang (Werkzeug) zeichnet sich mit Gelenken, Clips und Hand
       // seines Körpers - er bewegt sich genau mit dessen Unterarm.
       const b = m.body === undefined ? m : this.modelByShape.get(m.body) ?? m;
@@ -4155,22 +4166,72 @@ export class EntityRenderer {
     gl.uniform1i(this.location('uDetailLayer'), -1);
     // Staub zuletzt: halbdurchsichtig über allem, was dahinter steht, ohne
     // selbst Tiefe zu schreiben.
-    if (puffs.length > 0) {
+    if (puffs.length > 0 && !off.buildings) {
       gl.depthMask(false);
       this.draw(this.flat, first, puffs.length);
       gl.depthMask(true);
     }
 
-    // Lebensbalken zuletzt und ohne Tiefentest: sie liegen über allem, auch
-    // wenn ein Hügel oder ein Gebäude davor steht.
-    if (barCount > 0) {
-      gl.disable(gl.DEPTH_TEST);
-      this.draw(this.flat, instances.length, barCount);
-      gl.enable(gl.DEPTH_TEST);
-    }
-
     gl.disable(gl.BLEND);
     gl.depthFunc(gl.LESS);
+    gl.bindVertexArray(null);
+  }
+
+  /** Uniforms, die für alle Instanzen eines Bildes gleich sind (render, renderBars). */
+  private frameUniforms(camera: GpuCamera, minSizeTiles: number) {
+    const gl = this.gl;
+    setCameraUniforms(gl, (name) => this.location(name), camera, this.targetSize ?? gl.canvas);
+    gl.uniform3fv(this.location('uToCamera'), cameraDirection());
+    // Baumbilder (targetSize) mit der festen Sonne - sie leben länger als ein Wetter.
+    setLightUniforms(gl, (name) => this.location(name), this.targetSize ? CLASSIC_LIGHT : this.light);
+    gl.uniform1f(this.location('uMinSizeTiles'), minSizeTiles);
+    gl.uniform1i(this.location('uSilhouette'), 0);
+    gl.uniform1f(this.location('uGroundStep'), this.groundStep);
+    // Ohne eingeebnete Flächen liest der Shader das Feld nicht - 192 Werte weniger je Bild.
+    if (this.flatCount > 0) gl.uniform4fv(this.location('uFlat[0]'), this.flatZones);
+    gl.uniform1i(this.location('uFlatCount'), this.flatCount);
+    gl.uniform1i(this.location('uPlain'), this.plain ? 1 : 0);
+    gl.uniformMatrix3fv(this.location('uModelRot'), false, this.modelRotation);
+    gl.uniform3fv(this.location('uModelPivot'), this.modelPivot);
+    gl.uniform1f(this.location('uWireBias'), this.wireBias);
+    gl.uniform4fv(this.location('uWire'), this.wireframe && this.wireColor ? this.wireColor : [0, 0, 0, 0]);
+    // Nur Modelle setzen ihr Detail-Bild (drawModel) - alles andere malt nichts auf.
+    gl.uniform1i(this.location('uDetailLayer'), -1);
+  }
+
+  /**
+   * Lebens- und Nahrungsbalken über allem in `instances` mit `health` - ein
+   * eigener, kleiner Durchgang mit eigenem Puffer. MapRenderer zeichnet ihn
+   * nach den Post-Effekten direkt ins Canvas: scharf, in echter Farbe, und
+   * ohne Tiefentest über allem, auch über Hügeln und Gebäuden davor.
+   * VERIFIED: Bildvergleich 2026-10-10 (Testseed, angehalten) - Balken vorher
+   * weich, nachher scharf; übriges Bild im Rauschen zweier Läufe.
+   */
+  renderBars(instances: readonly EntityInstance[], camera: GpuCamera, minSizeTiles: number, pixelRatio = 1) {
+    let count = 0;
+    for (const e of instances) if (e.health !== undefined) count += e.food !== undefined ? 2 : 1;
+    if (count === 0) return;
+    const gl = this.gl;
+    if (this.barData.length < count * STRIDE) this.barData = new Float32Array(count * STRIDE * 2);
+    const d = this.barData;
+    let i = 0;
+    for (const e of instances) {
+      if (e.health === undefined) continue;
+      this.writeBar(d, i++ * STRIDE, e, camera.pixelsPerTile, minSizeTiles, pixelRatio, false);
+      if (e.food !== undefined) this.writeBar(d, i++ * STRIDE, e, camera.pixelsPerTile, minSizeTiles, pixelRatio, true);
+    }
+    gl.useProgram(this.program);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.barBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, d.subarray(0, count * STRIDE), gl.DYNAMIC_DRAW);
+    this.frameUniforms(camera, minSizeTiles);
+    gl.uniform1i(this.location('uBillboard'), 0);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.disable(gl.DEPTH_TEST);
+    this.draw(this.flat, 0, count, this.barBuffer);
+    // Wie nach dem Gelände: die übrigen Durchgänge erwarten den Tiefentest an.
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
     gl.bindVertexArray(null);
   }
 

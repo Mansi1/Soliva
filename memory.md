@@ -45,6 +45,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-27: Die Demo baut ihre Felder im ersten Bild, in dem eins sichtbar ist - ~0,5-1 s Stocken. Kosten je Feldart etwa zu gleichen Teilen: `farmModel` erzeugt OBJ-Text (~60 MB für alle), `parseObj` liest ihn wieder, `loadModel` misst je Furche das ganze Feld (9×).
 - 2026-09-26: `tools/perf/baseline.json` stammt von vor den Optimierungen (`5a68a39+geändert`, M4). Nach der nächsten bewussten Messung neu setzen. Auf einer anderen GPU meldet der Bench "Basis auf anderer GPU" - dann nur `main` gegen Branch im selben Lauf vergleichen.
 - 2026-09-26, M4: Screenshot-Rauschen zweier Läufe desselben Codes (angehalten, 1280×800, DPR 1): 0,004-0,095 % der Pixel, einzelne Pixel bis 237 Farbstufen (Animationen). Darunter gilt ein Bild als gleich.
+- 2026-10-10: Angehalten zeichnet das Spiel nur mit `idleFps` (Panel: FPS 2) - nach einem Schalter im Entwickler-Panel gut 1 s warten, bevor ein Bildschirmfoto die Änderung zeigen kann. Wald in `Testseed` (`lat=-43&lng=12&zoom=4&festesLicht`, angehalten): zwei Läufe desselben Codes wichen 2-3,5 % der Pixel ab (Wind im Laub).
 - 2026-10-02, M1: Nur `paused: true` reicht für den Bildvergleich nicht - zwei Läufe desselben Stands wichen bis 76 % der Pixel ab (Licht, Wetter, Tageszeit). Szenen-Links mit `?festesLicht&ohneEffekte` aufnehmen. Und vor dem Aufnehmen auf `window.getRenderStats` warten, sonst ist `#loading` der Startseite schon verborgen und das Bild zeigt "Lädt ...".
 - 2026-09-26, M4: `stadt` zeigt reproduzierbar eine einzelne `frameMsMax`-Spitze von 50-90 ms, auch auf `main` ohne Änderung (91,7 ms) - kein Befund gegen eine Änderung, Ursache noch offen.
 - Medianwerte je Szene verstecken Spitzen: Beim Zoom-Wechsel `frameMsMax` und `terrainTexels` mit ansehen, nicht nur `frameMs`.
@@ -66,7 +67,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-09-30: Das Ladeschild (`#loading`) fängt Maus und Rad ab, bis der Boden samt Vorrat gefüllt ist, höchstens 6 s (`LOADING_MAX_MS` in `main.ts`). Skripte, die gleich zoomen oder klicken, erst warten: `document.getElementById('loading').hidden`.
 - Zerlegen per Abschalten: Schalter über `localStorage.probe` in `map.ts`/`entityRenderer.ts` einbauen (nicht committen), Szenen des Bench ohne Deckel, je zwei Runden. `cheapground` (groundZ = 0) ist kein reiner Messwert - die Modelle stehen dann anders im Bild.
 
-- 2026-10-06: Geländegitter ansehen per Playwright: `#terrain-wire` zweimal (nur Gitter), `#terrain-cell` per `value` + `input`-Ereignis (6 = 64 px), Modelle/Gras über `#dev-off` aus, Leertaste für flaches Gelände. Das Panel ist dabei unsichtbar - per `$eval` klicken, nicht `page.click`. Eckpunkte je Zoom: `getRenderStats().at(-1).terrainVertices`.
+- 2026-10-06: Geländegitter ansehen per Playwright: `#terrain-wire` zweimal (nur Gitter), `#terrain-cell` per `value` + `input`-Ereignis (6 = 64 px), Modelle/Gras über `#dev-layers input[data-on=...]` aus (Haken = an), Leertaste für flaches Gelände. Das Panel ist dabei unsichtbar - per `$eval` klicken, nicht `page.click`. Eckpunkte je Zoom: `getRenderStats().at(-1).terrainVertices`.
 
 ## Offen
 

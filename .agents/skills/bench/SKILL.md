@@ -33,7 +33,7 @@ Hintergrund und Plan: `docs/OPTIMIZATION_PLAN.md` (ein Hinweis, keine Tatsache, 
 
 - `npm run bench -- --uncapped` startet Chrome ohne vsync und Bildraten-Deckel. Dann zeigen `fps`/`frameMs` die Last. Nicht mit einer Basis ohne `--uncapped` vergleichen.
 - `gpuMs` mit vsync misst auf Apple (ANGLE Metal) das Warten aufs nächste Bild mit und taugt dort nicht zum Vergleich.
-- Abschalten statt Vermuten: einen Teil testweise nicht zeichnen und die fps ohne Deckel vergleichen. Dafür hat das Entwickler-Panel (`showDebug`) die Zeile „Aus“: Gras, Modelle, Partikel, Vorausrechnen (`MapRenderer.off`). Per Playwright: `page.click('#dev-off input[data-off=models]')`. `getRenderInfo().off` nennt, was aus ist.
+- Abschalten statt Vermuten: einen Teil testweise nicht zeichnen und die fps ohne Deckel vergleichen. Dafür listet das Entwickler-Panel (`showDebug`) die Ebenen in Zeichenreihenfolge (`layers.ts`, `MapRenderer.off`), Haken = wird gezeichnet. Per Playwright: `page.click('#dev-layers input[data-on=trees]')`. `getRenderInfo().off` nennt, was aus ist.
 - Die Leertaste (flaches Gelände) spart die Höhen im Gelände-Gitter.
 - Das Vorausrechnen läuft im Stand mit (3 Kacheln je Bild). Für Bildzeiten im Stand abschalten.
 

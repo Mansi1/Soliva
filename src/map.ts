@@ -7,6 +7,7 @@ import { PostRenderer } from './gl/postRenderer';
 import { GrassRenderer } from './gl/grassRenderer';
 import { ParticleRenderer } from './gl/particleRenderer';
 import { MAX_SOURCES, ParticleSources } from './particles';
+import { DRAW_ORDER, LAYER_KEYS, type LayerKey, type Pass } from './layers';
 import { gpuFrameBegin, gpuFrameEnd } from './gpuTimer';
 import {
   MAX_RELIEF,
@@ -445,11 +446,16 @@ export class MapRenderer {
   }
 
   /**
-   * Abschalter aus dem Entwickler-Panel: diese Teile nicht zeichnen bzw. nicht
-   * vorausrechnen - so misst man, was sie kosten (Bildzeit ohne Deckel vorher
-   * und nachher). Die Kosten des flachen Geländes zeigt schon die Leertaste.
+   * Abschalter aus dem Entwickler-Panel: diese Ebenen (layers.ts) nicht
+   * zeichnen bzw. den Boden nicht vorausrechnen (bake) - so misst man, was sie
+   * kosten (Bildzeit ohne Deckel vorher und nachher), und sieht, was wozu
+   * gehört. Die Kosten des flachen Geländes zeigt schon die Leertaste.
    */
-  readonly off = { grass: false, models: false, particles: false, bake: false };
+  readonly off = Object.fromEntries([...LAYER_KEYS, 'bake'].map((key) => [key, false])) as Record<LayerKey | 'bake', boolean>;
+  /** Reihenfolge der Durchgänge (layers.ts) - im Entwickler-Panel zum Testen umsortierbar (movePass). */
+  readonly order: Pass[] = [...DRAW_ORDER];
+  /** Post-Effekte laut Einstellungen und Regen laut Wetter - render nimmt davon, was nicht abgeschaltet ist. */
+  private effects = { fxaa: true, grading: true, bloom: true, rain: 0 };
 
   /** Mitten der Gebäudegruppen des Spielers - um sie herum wird vorausgerechnet (TerrainRenderer.bake). */
   bakeBuildings: { x: number; y: number }[] = [];
@@ -539,18 +545,17 @@ export class MapRenderer {
     this.particleRenderer = new ParticleRenderer(this.terrain.context, MAX_SOURCES);
     const grass = TILE_TYPE_GRADIENT.grass;
     this.grass = new GrassRenderer(this.terrain.context, grass[0].toRGB(), grass[1].toRGB());
+    this.entities.off = this.off;
   }
 
   /** Regen vor der Kamera, 0..1 (game/Lighting.ts). */
   set rain(amount: number) {
-    this.post.rain = amount;
+    this.effects.rain = amount;
   }
 
   /** Welche Post-Effekte laufen (Einstellungen). */
   setEffects(fxaa: boolean, grading: boolean, bloom: boolean) {
-    this.post.fxaa = fxaa;
-    this.post.grading = grading;
-    this.post.bloom = bloom;
+    Object.assign(this.effects, { fxaa, grading, bloom });
   }
 
   /**
@@ -641,6 +646,11 @@ export class MapRenderer {
 
     // Nichts gezeichnet: das letzte Bild bleibt stehen - ohne Figuren darüber.
     // Alle Effekte aus und kein Regen: direkt ins Canvas, ohne Umweg.
+    const off = this.off;
+    this.post.fxaa = this.effects.fxaa && !off.fxaa;
+    this.post.grading = this.effects.grading && !off.grading;
+    this.post.bloom = this.effects.bloom && !off.bloom;
+    this.post.rain = off.weather ? 0 : this.effects.rain;
     const post = this.postEnabled && this.post.active;
     if (post) this.post.begin();
     this.terrain.time = animationTime();
@@ -650,25 +660,50 @@ export class MapRenderer {
     this.terrain.bakeScales = BAKE_TILE_SIZES.map((t) => t * this.cacheRatio);
     this.terrain.bakeFocus = [this.seenCenter ?? { x: centerX, y: centerY }, ...this.bakeBuildings];
     this.terrain.cacheRatio = this.cacheRatio;
-    this.terrain.baking = !this.off.bake;
+    this.terrain.baking = !off.bake;
+    this.terrain.hide = (off.terrain ? 1 : 0) | (off.water ? 2 : 0);
     gpuFrameBegin();
     if (!this.terrain.render(camera)) {
       gpuFrameEnd();
       this.post.cancel();
       return false;
     }
+    this.entities.groundStep = this.terrain.gridCell;
     // Mindestens acht Geräte-Pixel: kleiner wird ein Gebäude auf der
     // herausgezoomten Karte zum Einzelpunkt und ist nicht mehr zu erkennen.
-    this.entities.groundStep = this.terrain.gridCell;
-    // Gras in den Tiefenpuffer des Geländes, vor den Modellen - undurchsichtig, ohne Sortieren.
-    if (!this.off.grass) this.grass.render(camera, this.tileSize, {
-      light: this.terrain.light, time: this.terrain.time, gridCell: this.terrain.gridCell,
-      flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
-      center: this.seenCenter ?? { x: centerX, y: centerY },
-    });
-    if (!this.off.models) this.entities.render(overlay, camera, 8 / camera.pixelsPerTile, this.pixelRatio, true, batches);
-    if (!this.off.particles) this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
-    if (post) this.post.end();
+    const minSize = 8 / camera.pixelsPerTile;
+    // Das Gelände steht immer vorn (es löscht Bild und Tiefe, movePass), danach
+    // die übrigen Durchgänge in der Reihenfolge des Entwickler-Panels.
+    for (const pass of this.order) {
+      switch (pass) {
+        case 'grass':
+          // Gras in den Tiefenpuffer des Geländes, vor den Modellen - undurchsichtig, ohne Sortieren.
+          if (!off.grass) this.grass.render(camera, this.tileSize, {
+            light: this.terrain.light, time: this.terrain.time, gridCell: this.terrain.gridCell,
+            flatZones: this.terrain.flatZones, flatCount: this.terrain.flatCount, fields: this.terrain.fieldWindow,
+            center: this.seenCenter ?? { x: centerX, y: centerY },
+          });
+          break;
+        // Die Modellarten filtert EntityRenderer selbst (off ist dasselbe Objekt).
+        case 'models':
+          this.entities.render(overlay, camera, minSize, this.pixelRatio, true, batches);
+          break;
+        case 'particles':
+          if (!off.particles) this.particleRenderer.render(this.particles, camera, this.terrain.time, this.terrain.light);
+          break;
+        // ponytail: was hinter 'post' steht, zeichnet direkt ins Canvas, dessen
+        // Tiefenpuffer das Gelände nicht kennt - Modelle dort verdeckt kein
+        // Hügel. Für die Balken gewollt, für anderes nur ein Test; Tiefe
+        // übernehmen (blitFramebuffer), wenn dort mehr dauerhaft hin soll.
+        // VERIFIED: Rauchtest und Bildvergleich 2026-10-10 mit der Reihenfolge ab Werk.
+        case 'post':
+          if (post) this.post.end();
+          break;
+        case 'bars':
+          if (!off.bars) this.entities.renderBars(overlay, camera, minSize, this.pixelRatio);
+          break;
+      }
+    }
     gpuFrameEnd();
     return true;
   }

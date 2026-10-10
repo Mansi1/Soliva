@@ -286,6 +286,8 @@ out vec2 vWorld;
 out vec2 vCache;            // normierte Koordinate im Farb-Cache
 out vec2 vPrevTexel;        // Texel im alten Cache ab seiner Fenster-Ecke
 out vec2 vGrid;             // Spalte, Zeile des Gitters - für das Drahtgitter
+out float vSea;             // Höhe über dem Meeresspiegel (< 0 Wasser) - nur mit uHide gerechnet
+uniform int uHide;          // Entwickler-Panel: Bit 1 Land, Bit 2 Wasser nicht zeichnen
 
 void main() {
   int col = gl_VertexID % uGridColumns;
@@ -297,10 +299,12 @@ void main() {
   vec2 world = groundToWorld(g);
 
   float z = 0.0;
+  // Mit der Zellgroesse als Abtastschritt: Feinoktaven, die das Gitter
+  // nicht aufloesen kann, bleiben aus dem Relief heraus.
+  float h = uReliefScale > 0.0 || uHide != 0 ? elevation(world * uMapScale, uGridCell) : 0.0;
+  vSea = h - uSeaLevel;
   if (uReliefScale > 0.0) {
-    // Mit der Zellgroesse als Abtastschritt: Feinoktaven, die das Gitter
-    // nicht aufloesen kann, bleiben aus dem Relief heraus.
-    z = reliefZ(elevation(world * uMapScale, uGridCell)) * uReliefScale;
+    z = reliefZ(h) * uReliefScale;
     // Unter Gebäuden eben (siehe world/flatten.ts).
     z = flattenZ(world, z);
   }
@@ -1189,6 +1193,13 @@ in vec2 vWorld;
 in vec2 vCache;
 in vec2 vPrevTexel;
 in vec2 vGrid;
+in float vSea;
+// Entwickler-Panel: Bit 1 Land, Bit 2 Wasser nicht zeichnen. ponytail: Wasser
+// nach der Höhe an den Gitterpunkten, die Küste folgt also dem Gitter statt
+// dem Cache; genauer (Wasser-Kennung im Cache), wenn das beim Prüfen stört.
+// VERIFIED: im Browser je Ebene abgeschaltet (2026-10-10), Land und Wasser verschwinden getrennt.
+// highp wie im Vertex-Shader - sonst linkt das Programm nicht.
+uniform highp int uHide;
 uniform vec2 uGridPhase;        // Lage des Gitters in der Welt, je Achse modulo 3 - für die Sechsecke im Drahtgitter
 out vec4 fragColor;
 
@@ -1255,6 +1266,7 @@ vec3 soilColor(vec2 world, vec3 ground, float step) {
 }
 
 void main() {
+  if (uHide != 0 && (uHide & (vSea < 0.0 ? 2 : 1)) != 0) discard;
   float step = 1.0 / uPixelsPerTile;
   vec2 tile = vWorld;
   vec4 cached = texture(uCache, vCache);

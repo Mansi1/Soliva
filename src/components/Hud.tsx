@@ -10,6 +10,7 @@ import { createRef, render, type Props } from 'defuss';
 import './Hud.css';
 import { TILE_TYPE_COLOR, TILE_TYPE_LABEL } from '../map';
 import type { TileType } from '../noise';
+import { DRAW_ORDER, LAYERS, PASS_LABELS, type Layer } from '../layers';
 import { MenuButton } from './MenuButton';
 import { SaveButton } from './SaveButton';
 import { ShortcutLine } from './Shortcuts';
@@ -73,12 +74,26 @@ function DebugPanel() {
       {/* Was das Ausgewählte kostet: seine Modellart und je Objekt gemittelt. */}
       <div>Auswahl <b id="selection-cost">-</b></div>
       <div>je Objekt <b id="selection-each">-</b></div>
-      {/* Teile abschalten, um ihre Kosten zu messen (MapRenderer.off, main.ts). */}
-      <div id="dev-off">
-        Aus
-        {DEV_OFF.map(([key, label, hint]) => (
-          <label title={hint}><input type="checkbox" data-off={key} /> {label}</label>
+      {/* Ebenen in Zeichenreihenfolge (layers.ts): Haken = wird gezeichnet (MapRenderer.off), die
+          Pfeile sortieren die Durchgänge zum Testen um (MapRenderer.order) - beides main.ts. */}
+      <ol id="dev-layers">
+        {DRAW_ORDER.map((pass) => (
+          <li data-pass={pass}>
+            {pass === 'terrain' ? <span class="dev-move" title="Das Gelände löscht das Bild - es bleibt vorn">·</span> : (
+              <span class="dev-move">
+                <button type="button" data-move="-1" title="Früher zeichnen">↑</button>
+                <button type="button" data-move="1" title="Später zeichnen">↓</button>
+              </span>
+            )}
+            {LAYERS[pass].length > 1 ? <span class="dev-pass">{PASS_LABELS[pass]}:</span> : null}
+            {LAYERS[pass].map(([key, label, hint]) => (
+              <label title={hint}><input type="checkbox" data-on={key} /> {label}</label>
+            ))}
+          </li>
         ))}
+      </ol>
+      <div id="dev-off">
+        <label title={BAKE[2]}><input type="checkbox" data-on={BAKE[0]} /> {BAKE[1]}</label>
       </div>
       {/* Drahtgitter des Geländes wie in der Galerie (main.ts). */}
       <div><button type="button" id="terrain-wire" class="panel-btn"
@@ -94,13 +109,17 @@ function DebugPanel() {
   );
 }
 
-/** Abschalter im Entwickler-Panel und im Menü unter Grafik: Schlüssel in MapRenderer.off, Name, Hinweis. */
-export const DEV_OFF = [
-  ['grass', 'Gras', 'Gras- und Steinkarten nicht zeichnen'],
-  ['models', 'Modelle', 'Gebäude, Bäume, Blumen, Figuren, Felder nicht zeichnen'],
-  ['particles', 'Partikel', 'Rauch, Staub, Insekten, Fische nicht zeichnen'],
-  ['bake', 'Vorausrechnen', 'Boden nicht im Hintergrund vorausrechnen'],
-] as const;
+const BAKE = ['bake', 'Vorausrechnen', 'Boden im Hintergrund vorausrechnen'] as const;
+
+/**
+ * Abschalter im Menü unter Grafik: Schlüssel in MapRenderer.off, Name, Hinweis -
+ * dieselben Ebenen wie im Entwickler-Panel, ohne die Post-Effekte (die haben im
+ * Menü eigene Einstellungen).
+ */
+export const DEV_OFF: readonly (Layer | typeof BAKE)[] = [
+  ...DRAW_ORDER.filter((pass) => pass !== 'post').flatMap((pass): readonly Layer[] => LAYERS[pass]),
+  BAKE,
+];
 
 /** Ton an/aus - das Lautsprecher-Symbol, durchgestrichen, wenn aus (Klasse muted). */
 function SoundButton() {

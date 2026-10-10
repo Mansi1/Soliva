@@ -59,6 +59,7 @@ import { ResourceField, type OnScreen } from './world/resources';
 import { FlowerField } from './world/flowers';
 import { Sound } from './audio';
 import { addRenderStats, renderStatsFrame, setRenderInfo, startRenderStats, withoutRenderStats } from './renderStats';
+import { movePass, type Pass } from './layers';
 import { collectGpuTimes, initGpuTimer } from './gpuTimer';
 import { Music } from './music';
 import { currentSeed, deleteSave, gameUrl, shareUrl, switchWorld, takeStartRequest } from './worlds';
@@ -363,22 +364,31 @@ cellSlider.addEventListener('input', () => {
   renderer.terrainCellTiles = 2 ** Number(cellSlider.value);
   showCell();
 });
-// Abschalter (MapRenderer.off): im Entwickler-Panel "Aus" (data-off, Haken =
-// aus), im Menü unter Grafik "Teile zeichnen" (data-on, Haken = an). Alle
+// Abschalter (MapRenderer.off): im Entwickler-Panel die Ebenen und im Menü
+// unter Grafik "Teile zeichnen" (data-on, Haken = wird gezeichnet). Alle
 // zeigen denselben Stand.
-const offBoxes = document.querySelectorAll<HTMLInputElement>('input[data-off], input[data-on]');
-const offKey = (box: HTMLInputElement) => (box.dataset.off ?? box.dataset.on) as keyof typeof renderer.off;
+const offBoxes = document.querySelectorAll<HTMLInputElement>('input[data-on]');
+const offKey = (box: HTMLInputElement) => box.dataset.on as keyof typeof renderer.off;
 const showOff = (box: HTMLInputElement) => {
-  const off = renderer.off[offKey(box)];
-  box.checked = box.dataset.off ? off : !off;
+  box.checked = !renderer.off[offKey(box)];
 };
 for (const box of offBoxes) {
   showOff(box);
   box.addEventListener('change', () => {
-    renderer.off[offKey(box)] = box.dataset.off ? box.checked : !box.checked;
+    renderer.off[offKey(box)] = !box.checked;
     offBoxes.forEach(showOff);
   });
 }
+// Reihenfolge der Durchgänge (MapRenderer.order): die Pfeile im Entwickler-Panel
+// tauschen mit dem Nachbarn, die Liste folgt.
+const layerList = document.getElementById('dev-layers') as HTMLOListElement;
+layerList.addEventListener('click', (e) => {
+  const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-move]');
+  const item = button?.closest<HTMLLIElement>('li[data-pass]');
+  if (!button || !item) return;
+  if (!movePass(renderer.order, item.dataset.pass as Pass, Number(button.dataset.move) as -1 | 1)) return;
+  for (const pass of renderer.order) layerList.append(layerList.querySelector(`li[data-pass=${pass}]`)!);
+});
 const minimap = new MiniMap(minimapCanvas, seed, camera.pixelRatio);
 /**
  * Sonne und Wetter (game/Lighting.ts). Mit ?festesLicht in der Adresse steht
@@ -1190,6 +1200,7 @@ setRenderInfo(() => {
     minimapFps: settings.minimapFps,
     // Im Entwickler-Panel abgeschaltet - dann misst der Lauf nicht das ganze Bild.
     off: Object.keys(renderer.off).filter((k) => renderer.off[k as keyof typeof renderer.off]),
+    order: renderer.order.join(','),
     billboards: settings.billboards,
     fxaa: settings.fxaa,
     colorGrading: settings.colorGrading,
