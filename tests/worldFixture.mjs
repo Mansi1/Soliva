@@ -42,7 +42,8 @@ export function terrain(kind) {
 /** Eine Welt auf diesem Gelände mit reichlich Vorrat zum Bauen. */
 export function makeWorld(World, kind) {
   const world = new World(terrain(kind), 'test');
-  Object.assign(world.stock, { wood: 10000, food: 10000, stone: 10000, gold: 10000 });
+  // Ohne Lager liegt er ohne Lager und kommt ins erste Dorfzentrum (World.absorbReserve).
+  for (const r of ['wood', 'food', 'stone', 'gold']) world.addStock(r, 10000 - world.stock[r]);
   return world;
 }
 

@@ -105,6 +105,16 @@ function shapeAt(x: number, y: number, type: DepositType, height: number): numbe
   return look.variants ? variantAt(x, y, look.variants) : look.shape;
 }
 
+/**
+ * Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined
+ * (auch bei Fels und Gold). Rein aus dem Gelände, darum auch für die Welt:
+ * eine Ladung merkt sich, welche Sorte sie ist (villagers.ts).
+ */
+export function depositKind(terrain: Terrain, x: number, y: number): string | undefined {
+  const found = terrain.resourceAt(x, y);
+  return found.type === 'none' ? undefined : KIND_LABEL[shapeAt(x, y, found.type as DepositType, found.height)];
+}
+
 interface ResourceNode {
   x: number;
   y: number;
@@ -218,8 +228,7 @@ export class ResourceField {
 
   /** Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined. */
   kindAt(x: number, y: number): string | undefined {
-    const shape = this.modelAt(x, y);
-    return shape === undefined ? undefined : KIND_LABEL[shape];
+    return depositKind(this.terrain, x, y);
   }
 
   /**

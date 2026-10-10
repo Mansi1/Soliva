@@ -151,6 +151,9 @@ const foodBefore = await stock('food');
 await page.keyboard.press('v');
 await wait(300);
 check('Dorfbewohner in Ausbildung', (await stock('food')) < foodBefore, `Nahrung ${foodBefore} → ${await stock('food')}`);
+// Jedes Lager zeigt, was darin liegt (B7) - der Startvorrat liegt im Dorfzentrum, ohne Sorte.
+const tcGoods = await page.$eval('#selection .sel-goods', (e) => e.textContent).catch(() => '');
+check('Dorfzentrum zeigt seinen Vorrat', /^Vorrat: Nahrung \d+, Holz \d+/.test(tcGoods), tcGoods);
 // Die Warteschlange zeigt jeden Eingereihten als Frau oder Mann - gespeichert wird das mit (q: 1 = Frau).
 const queueIcons = await page.$$eval('#selection .sel-queue-unit img', (imgs) => imgs.filter((i) => i.src).length);
 const queued = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;
@@ -279,8 +282,11 @@ await started();
 await wait(2500);
 const old = await saved('Altstand');
 const camp = old.buildings.find((b) => b.t === 'lumber_camp');
-check('alter Stand: berries → food', old.stock.food === 77 && !('berries' in old.stock) && old.villagers[0]?.ct === 'food',
-  `Nahrung ${old.stock.food}, Ladung ${old.villagers[0]?.ct}`);
+// Der eine Vorrat von damals kommt ins Dorfzentrum (World.absorbReserve), ohne Lager bleibt nichts.
+const oldGoods = old.buildings.find((b) => b.t === 'town_center')?.g;
+check('alter Stand: berries → food, Vorrat im Dorfzentrum', oldGoods?.food?.Nahrung === 77 && oldGoods?.wood?.Holz === 100
+  && old.stock.food === 0 && !('berries' in old.stock) && old.villagers[0]?.ct === 'food',
+  `Dorfzentrum ${JSON.stringify(oldGoods)}, ohne Lager ${JSON.stringify(old.stock)}, Ladung ${old.villagers[0]?.ct}`);
 check('alter Stand: lumberjack → lumber_camp, Koordinaten verdoppelt', camp?.x === 60 && camp?.y === 40,
   camp ? `bei ${camp.x}, ${camp.y}` : old.buildings.map((b) => b.t).join(', '));
 // Damals war die Warteschlange nur eine Anzahl (q: 2) - jetzt je Einheit Frau oder Mann. Wer

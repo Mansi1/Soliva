@@ -20,7 +20,7 @@ after(() => close?.());
 /** Welt mit einem Dorfzentrum und drei Eingereihten: Frau, Mann, Frau. */
 function queued() {
   const world = new World(new Terrain(new MapGenerator('Testseed'), 'Testseed'), 'Testseed');
-  world.stock.food = 1000;
+  world.addStock('food', 1000 - world.stock.food);
   const tc = createBuilding('town_center', 0, 0);
   for (let i = 0; i < 3; i++) assert.equal(world.train(tc), null);
   tc.queue = [{ female: true }, { female: false }, { female: true }];

@@ -709,7 +709,7 @@ function showZoom() {
  */
 const CHEATS: Record<string, () => string | undefined> = {
   imtheking: () => {
-    for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.stock[kind] += 30000;
+    for (const kind of ['food', 'wood', 'stone', 'gold'] as const) world.addStock(kind, 30000);
     world.bonusHousing += 100;
     return '+30.000 Nahrung, Holz, Stein und Gold, +100 Bevölkerung';
   },

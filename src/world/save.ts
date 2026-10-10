@@ -11,6 +11,10 @@
 // Umbenennungen ohne neue Version: Vorrat und Ladung `berries` heißen `food`,
 // Gebäude-Arten `lumberjack`/`mine`/`forager` heißen `lumber_camp`/
 // `mining_camp`/`mill` (siehe building/index.ts).
+// Vorrat je Lager ohne neue Version: Jedes Lager speichert, was darin liegt
+// (BuildingSave.g), `stock` nur noch den Rest ohne Lager. Ältere Stände haben
+// nur `stock` - die Welt legt ihn beim Laden ins erste Lager, das ihn annimmt
+// (World.absorbReserve), unbenannt als "Holz", "Nahrung" usw.
 
 import type { BuildingSave } from './building';
 import { initialResources, RESOURCE_KINDS, type AnimalKind, type ResourceKind, type Resources } from './catalog';
@@ -24,6 +28,8 @@ export interface VillagerSave {
   c: number;
   ct: ResourceKind | null;
   task: Task;
+  /** Sorte der Ladung, z. B. "Eiche" (siehe BuildingBase.goods) - fehlt ohne Ladung und in älteren Ständen. */
+  ck?: string;
   hp?: number;
   /** Name und Geschlecht - fehlen in älteren Speicherständen. */
   n?: string;
@@ -44,6 +50,7 @@ export interface SaveData {
   version: 3;
   /** Wann gespeichert wurde (ms seit 1970) - fürs Laden-Menü; fehlt in älteren Ständen. */
   savedAt?: number;
+  /** Vorrat, der in keinem Lager liegt - in älteren Ständen der ganze Vorrat. */
   stock: Resources;
   buildings: BuildingSave[];
   villagers: VillagerSave[];

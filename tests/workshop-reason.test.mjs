@@ -22,13 +22,13 @@ function bowyerWorld() {
 
 test('Bognerei ohne Holz im Vorrat: Grund "wood", er zählt nicht als untätig', () => {
   const { world, v } = bowyerWorld();
-  world.stock.wood = 0;
+  world.pay({ wood: world.stock.wood });
   run(world, 20);
   assert.equal(v.task.kind, 'craft');
   assert.equal(v.need, 'wood');
   assert.equal(world.gatherers().idle, 0);
   // Kommt Holz, arbeitet er weiter - der Grund ist weg.
-  world.stock.wood = 100;
+  world.addStock('wood', 100);
   run(world, 1);
   assert.equal(v.need, null);
 });
