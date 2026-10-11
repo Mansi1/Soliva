@@ -55,7 +55,15 @@ export type Task =
   | {
       kind: 'fish'; building: string; step: FishStep; progress: number; fish: number;
       trap?: string; shore?: { x: number; y: number; wx: number; wy: number }; leave?: boolean;
-    };
+    }
+  /**
+   * Förster der Försterhütte `building`: geht hinein (`enter`), sucht ein
+   * freies Tile im Umkreis (`choose`; findet er keins, wartet er `progress`
+   * Sekunden), geht hin (`walk`), gräbt und setzt den Baum (`dig`,
+   * Fortschritt 0..1) und geht zurück in die Hütte. (x, y): das Tile.
+   * `leave`: entlassen.
+   */
+  | { kind: 'plant'; building: string; step: 'enter' | 'choose' | 'walk' | 'dig'; progress: number; x?: number; y?: number; leave?: boolean };
 
 /**
  * Was einem Arbeiter in der Werkstatt fehlt, solange er wartet: Holz (kein

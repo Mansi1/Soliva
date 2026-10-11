@@ -8,10 +8,10 @@ import { uniqueName } from './names';
 import { POSE, animationTime } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ } from '../noise';
-import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, RESOURCE_LABEL, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
-import type { BuildingType, CropType, DepositType, ResourceKind, Resources } from './catalog';
+import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, RESOURCE_LABEL, TREE_SPECIES, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
+import type { BuildingType, CropType, DepositType, ResourceKind, Resources, TreeSpecies } from './catalog';
 import {
-  buildingFromSave, createBuilding, furrowPosition, maskCovers, randomFemale, CENTER_TILE, FishTrap,
+  buildingFromSave, createBuilding, furrowPosition, maskCovers, randomFemale, CENTER_TILE, FishTrap, Forester,
   type Building, type Farm, type UnitProducer,
 } from './building';
 import { readSave, writeSave, type LoadedSave, type SaveData } from './save';
@@ -262,7 +262,7 @@ export class World {
    * viele Dorfbewohner gerade daran sammeln. null, wenn dort nichts (mehr) ist.
    */
   resourceInfo(x: number, y: number):
-      { type: DepositType; remaining: number; total: number; gatherers: number; regrowIn?: number } | null {
+      { type: DepositType; remaining: number; total: number; gatherers: number; regrowIn?: number; sapling?: boolean } | null {
     const info = this.deposits.info(x, y, this.time);
     if (!info) return null;
     let gatherers = 0;
@@ -552,7 +552,9 @@ export class World {
     let soil = this.sowableTiles.get(k);
     if (soil === undefined) {
       const tile = this.terrain.getTile(x, y);
-      soil = !BUILDINGS.farm.terrain.includes(tile.tileType) ? 0 : tile.resource === 'none' ? 1 : tile.resource === 'berries' ? 0 : 2;
+      // Auch ein gepflanzter Baum (deposits.base) muss erst weg.
+      const found = this.deposits.base(x, y).type;
+      soil = !BUILDINGS.farm.terrain.includes(tile.tileType) ? 0 : found === null ? 1 : found === 'berries' ? 0 : 2;
       if (this.sowableTiles.size > 50_000) this.sowableTiles.clear();
       this.sowableTiles.set(k, soil);
     }
@@ -621,7 +623,7 @@ export class World {
     // ein anderes Lager oder bleibt mit seiner Ladung stehen.
     for (const v of this.villagers) {
       const t = v.task;
-      if ((t.kind === 'deliver' || t.kind === 'farm' || t.kind === 'craft' || t.kind === 'fish') && t.building === anchor) v.task = { kind: 'idle' };
+      if ((t.kind === 'deliver' || t.kind === 'farm' || t.kind === 'craft' || t.kind === 'fish' || t.kind === 'plant') && t.building === anchor) v.task = { kind: 'idle' };
     }
     this.dirty = true;
   }
@@ -640,10 +642,11 @@ export class World {
    * Befehl, als hätte man ihn mit Rechtsklick auf dieses Feld geschickt -
    * auf ein Vorkommen sammelt er, sonst geht er hin - zur genauen Stelle
    * `point`, wenn angegeben (dort steht auch die Fahne). Ein Klick auf das
-   * Gebäude selbst hebt den Sammelpunkt auf.
+   * Gebäude selbst hebt den Sammelpunkt auf. Bei der Försterhütte ist es der
+   * Pflanzplatz: um ihn pflanzt der Förster (Forester).
    */
   setRally(building: Building, x: number, y: number, point?: { x: number; y: number }): string | null {
-    if (!building.isUnitProducer()) return 'Nur ausbildende Gebäude haben einen Sammelpunkt';
+    if (!building.hasRallyPoint()) return 'Nur ausbildende Gebäude haben einen Sammelpunkt';
     if (this.at(x, y) === building) {
       building.setRallyPoint(null);
       this.dirty = true;
@@ -836,6 +839,55 @@ export class World {
     this.dirty = true;
   }
 
+  // --- Förster ---------------------------------------------------------------
+
+  /**
+   * Darf der Förster auf Tile (x, y) einen Baum pflanzen? Wiese oder
+   * Waldboden, kein Gebäude und kein Feld, nichts darauf außer einem
+   * abgeholzten Baumstumpf, kein Wasser am Ufer (feine Höhe) - und ringsum
+   * (8 Nachbarn) kein Gebäude und kein anderer gepflanzter Baum: so wird
+   * keine Tür zugepflanzt, und zwischen seinen Bäumen bleiben Wege frei. Am
+   * Waldrand und zwischen Stümpfen stehender Bäume darf er pflanzen.
+   * ponytail: ob ein neuer Baum die einzige Lücke im Wald schließt, wird nicht
+   * geprüft; Wege prüfen (findPath vor dem Pflanzen), wenn Dorfbewohner dadurch
+   * eingeschlossen werden.
+   * VERIFIED: tests/forester.test.mjs - nur auf solchen Tiles, im Umkreis.
+   */
+  canPlant(x: number, y: number): boolean {
+    if (this.occupied.has(key(x, y))) return false;
+    const tileType = this.terrain.getTile(x, y).tileType;
+    if (tileType !== 'grass' && tileType !== 'forest') return false;
+    if ((this.groundAt?.(x + 0.5, y + 0.5, NEAR_STEP) ?? 1) <= 0) return false;
+    // Auf dem Tile selbst nichts - ein abgeholzter Baum (leer) zählt als frei.
+    const found = this.deposits.base(x, y).type;
+    if (found && !(found === 'wood' && this.deposits.isExhausted(x, y))) return false;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const b = this.at(x + dx, y + dy);
+        if (b && !b.isFarm()) return false;
+        if ((dx || dy) && this.deposits.plantedAt(x + dx, y + dy) && !this.deposits.isExhausted(x + dx, y + dy)) return false;
+      }
+    }
+    return true;
+  }
+
+  /** Pflanzt einen Baum (Förster, villagers.ts) - false, wenn das Tile nicht (mehr) frei ist. */
+  plant(x: number, y: number, species: TreeSpecies): boolean {
+    if (!TREE_SPECIES[species] || !this.canPlant(x, y)) return false;
+    this.deposits.plant(x, y, species, this.time);
+    this.sowableTiles.delete(key(x, y));
+    this.work.forgetTile(x, y);
+    this.dirty = true;
+    return true;
+  }
+
+  /** Baumart der Försterhütte wählen - gilt ab dem nächsten Baum. */
+  setTreeSpecies(building: Building, species: TreeSpecies) {
+    if (!(building instanceof Forester) || !TREE_SPECIES[species]) return;
+    building.species = species;
+    this.dirty = true;
+  }
+
   // --- Wild ------------------------------------------------------------------
 
   /** Darf ein Tier dieses Tile betreten? Nicht ins Wasser, nicht in Gebäude - zwischen Bäumen hindurch schon. */
@@ -912,6 +964,7 @@ export class World {
         ...(v.carrying > 0 && this.work.carryKind(v) ? { ck: this.work.carryKind(v) } : {}),
       })),
       harvested: Object.fromEntries(this.deposits.harvested),
+      planted: this.deposits.plantedSave(this.time),
       animals: this.wildlife.toSave(),
       spawned: [...this.wildlife.spawnedChunks],
     };
@@ -920,7 +973,7 @@ export class World {
   /** Übernimmt einen geladenen Stand - schon auf das heutige Format gebracht (save.ts). */
   private applySave({ data, scale }: LoadedSave) {
     this.reserve = data.stock;
-    this.deposits.restore(data.harvested);
+    this.deposits.restore(data.harvested, data.planted, this.time);
 
     for (const saved of data.buildings) {
       // Unbekannte Arten fallen weg; umbenannte schreibt buildingFromSave um.

@@ -7,9 +7,9 @@ import type { FarmView, SelectionView, TrainView, WorkshopView } from '../compon
 import { FLOWERS } from '../gl/entityRenderer';
 import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
-import { FishTrap, type Building, type Farm, type UnitProducer } from '../world/building';
+import { FishTrap, Forester, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
-  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, VILLAGER, type AnimalKind, type ResourceKind,
+  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, FORESTER, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, VILLAGER, type AnimalKind, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import { GROWN, type Animal, type AnimalState } from '../world/unit';
@@ -155,6 +155,9 @@ export function selectionView(world: World, selection: Selection, resources: Res
       trap: building instanceof FishTrap
         ? { fish: building.fish, max: FISHING.trapFish, fullIn: (1 - building.fill) * FISHING.trapFillTime }
         : undefined,
+      forester: building instanceof Forester
+        ? { species: building.species, spot: building.rallyPoint !== null, radius: FORESTER.radius, rallyPicking }
+        : undefined,
       trainer: building.isUnitProducer()
         ? {
             units: building.queue.map((u) => u.female),
@@ -185,8 +188,10 @@ export function selectionView(world: World, selection: Selection, resources: Res
       left,
       total: info.total,
       percent: Math.round((info.remaining / info.total) * 100),
-      // Beerensträucher wachsen nach - wie lange noch, bis er wieder voll ist.
-      regrow: info.regrowIn !== undefined && info.regrowIn > 1 ? { empty: left === 0, seconds: info.regrowIn } : undefined,
+      // Beerensträucher wachsen nach - wie lange noch, bis er wieder voll ist; gepflanzte Bäume, bis man sie fällen kann.
+      regrow: info.regrowIn !== undefined && (info.regrowIn > 1 || info.sapling)
+        ? { empty: left === 0, seconds: info.regrowIn, sapling: info.sapling }
+        : undefined,
       gatherers: info.gatherers,
       max: MAX_GATHERERS,
     };
@@ -240,12 +245,13 @@ export function selectionView(world: World, selection: Selection, resources: Res
 
 /** Werkstatt: wer dort arbeitet, was er tut, wie weit der Bogen ist. */
 function workshopView(world: World, building: Building): WorkshopView {
-  const role = building.type === 'fisher_hut' ? 'Fischer' : 'Bogner';
+  const role = building.type === 'fisher_hut' ? 'Fischer' : building.type === 'forester' ? 'Förster' : 'Bogner';
   const worker = world.villagers.find((v) => workplace(v.task) === building.anchor);
   if (!worker) return { role };
   const task = worker.task;
   const busy = (task.kind === 'craft' && task.step === 'carve' && worker.carryType !== 'wood')
-    || (task.kind === 'fish' && (task.step === 'angle' || task.step === 'empty'));
+    || (task.kind === 'fish' && (task.step === 'angle' || task.step === 'empty'))
+    || (task.kind === 'plant' && task.step === 'dig');
   return {
     role,
     worker: worker.name,

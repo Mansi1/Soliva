@@ -3,13 +3,15 @@
 // Stein und Gold, Sträucher auf Beeren. Welche Tiles etwas tragen, ist eine
 // reine Funktion des Geländes - es wird in Stücken von 16x16 Tiles einmal
 // ausgerechnet und gemerkt, verteilt über mehrere Bilder. Ein Wald hat
-// Tausende Tiles; je Bild neu zu rechnen wäre viel zu teuer.
+// Tausende Tiles; je Bild neu zu rechnen wäre viel zu teuer. Dazu kommen die
+// Bäume des Försters (Deposits.plant) - sie stehen vor dem Gelände.
 
 import type { EntityInstance, StaticBatch } from '../gl/entityRenderer';
 import { BILLBOARD_HEADINGS, SHAPE, TREES, modelSize, stumpOf } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ, type MapGenerator } from '../noise';
-import type { DepositType } from './catalog';
+import { FORESTER, TREE_SPECIES, type DepositType } from './catalog';
+import type { Deposits } from './deposits';
 import type { ViewRect, World } from './world';
 import { addRenderStats } from '../renderStats';
 
@@ -106,13 +108,26 @@ function shapeAt(x: number, y: number, type: DepositType, height: number): numbe
 }
 
 /**
- * Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined
- * (auch bei Fels und Gold). Rein aus dem Gelände, darum auch für die Welt:
- * eine Ladung merkt sich, welche Sorte sie ist (villagers.ts).
+ * Was auf Tile (x, y) steht, bevor etwas entnommen wurde: Art, Anfangsmenge
+ * und Form - ein gepflanzter Baum (Deposits.plant) vor dem Gelände; null, wenn nichts.
  */
-export function depositKind(terrain: Terrain, x: number, y: number): string | undefined {
-  const found = terrain.resourceAt(x, y);
-  return found.type === 'none' ? undefined : KIND_LABEL[shapeAt(x, y, found.type as DepositType, found.height)];
+function depositAt(deposits: Deposits, x: number, y: number): { type: DepositType; amount: number; height: number; shape: number } | null {
+  const planted = deposits.plantedAt(x, y);
+  const found = deposits.terrain.resourceAt(x, y);
+  if (planted) return { type: 'wood', amount: FORESTER.wood, height: found.height, shape: TREE_SPECIES[planted.species].shape };
+  if (found.type === 'none' || found.amount <= 0) return null;
+  const type = found.type as DepositType;
+  return { type, amount: found.amount, height: found.height, shape: shapeAt(x, y, type, found.height) };
+}
+
+/**
+ * Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined
+ * (auch bei Fels und Gold). Aus Gelände und Pflanzungen, darum auch für die
+ * Welt: eine Ladung merkt sich, welche Sorte sie ist (villagers.ts).
+ */
+export function depositKind(deposits: Deposits, x: number, y: number): string | undefined {
+  const found = depositAt(deposits, x, y);
+  return found ? KIND_LABEL[found.shape] : undefined;
 }
 
 interface ResourceNode {
@@ -184,7 +199,7 @@ export class ResourceField {
   private stumps = new Set<string>();
   private selectedKey: string | null = null;
 
-  constructor(private terrain: Terrain, private mapGen: MapGenerator) {}
+  constructor(private terrain: Terrain, private mapGen: MapGenerator, private deposits: Deposits) {}
 
   /**
    * Vorkommen, deren Objekt am Bildschirmpunkt liegt: `hit` bekommt je
@@ -221,14 +236,12 @@ export class ResourceField {
 
   /** Modell (SHAPE) des Vorkommens auf Tile (x, y) - dasselbe wie auf der Karte; sonst undefined. */
   modelAt(x: number, y: number): number | undefined {
-    const found = this.terrain.resourceAt(x, y);
-    if (found.type === 'none') return undefined;
-    return shapeAt(x, y, found.type as DepositType, found.height);
+    return depositAt(this.deposits, x, y)?.shape;
   }
 
   /** Baum- oder Strauchart auf Tile (x, y), z. B. "Eiche" - sonst undefined. */
   kindAt(x: number, y: number): string | undefined {
-    return depositKind(this.terrain, x, y);
+    return depositKind(this.deposits, x, y);
   }
 
   /**
@@ -250,9 +263,9 @@ export class ResourceField {
     const nodes: ResourceNode[] = [];
     for (let y = cy * CHUNK; y < (cy + 1) * CHUNK; y++) {
       for (let x = cx * CHUNK; x < (cx + 1) * CHUNK; x++) {
-        const found = this.terrain.resourceAt(x, y);
-        if (found.type === 'none' || found.amount <= 0) continue;
-        const look = LOOK[found.type as DepositType];
+        const found = depositAt(this.deposits, x, y);
+        if (!found) continue;
+        const look = LOOK[found.type];
         // Etwas Streuung, damit ein Wald nicht aus lauter gleichen Bäumen
         // besteht: Größe, Drehung, Farbton und Lage im Tile.
         const size = look.size * (0.8 + 0.4 * hash(x, y, 1));
@@ -260,7 +273,7 @@ export class ResourceField {
         const [px, py] = found.type === 'berries' ? this.towardGroup(x, y) : [0, 0];
         const ox = x + px + (hash(x, y, 3) - 0.5) * 0.35;
         const oy = y + py + (hash(x, y, 4) - 0.5) * 0.35;
-        const shape = shapeAt(x, y, found.type as DepositType, found.height);
+        const shape = found.shape;
         nodes.push({
           x,
           y,
@@ -409,7 +422,9 @@ export class ResourceField {
     // Liegt auf dem Tile ein Feld, ist der Stumpf ausgegraben - Felder
     // gibt es nur auf abgebauten Vorkommen, gefragt wird also nur dort.
     if (share <= 0 && world.at(node.x, node.y)?.isFarm()) return;
-    node.instance.size = bush || tree ? node.size : node.size * (0.45 + 0.55 * share);
+    // Gepflanzte Bäume wachsen vom Setzling (15 %) zur vollen Größe (Deposits.growth).
+    const grown = tree ? world.deposits.growth(node.x, node.y, world.timeAt(blend)) : 1;
+    node.instance.size = bush || tree ? node.size * (grown < 1 ? 0.15 + 0.85 * grown : 1) : node.size * (0.45 + 0.55 * share);
     // Gefällte Bäume kippen um bzw. liegen: Winkel und Richtung des
     // Falls stecken in motion[1] und motion[2].
     const motion = node.instance.motion!;
@@ -457,6 +472,18 @@ export class ResourceField {
     this.seenDeposits = deposits;
     this.seenRevision = deposits.revision;
     this.seenBuildings = world.buildingsRevision;
+    // Neu gepflanzt: Stücke, die schon gerechnet sind, kennen den Baum noch
+    // nicht (oder zeigen den alten Stumpf) - neu rechnen.
+    for (const k of deposits.plantedKeys()) {
+      const comma = k.indexOf(',');
+      const x = Number(k.slice(0, comma));
+      const y = Number(k.slice(comma + 1));
+      const chunk = `${Math.floor(x / CHUNK)},${Math.floor(y / CHUNK)}`;
+      const node = this.nodeAt(x, y);
+      if (!this.chunks.has(chunk) || (node?.shape === TREE_SPECIES[deposits.plantedAt(x, y)!.species].shape && node.total === FORESTER.wood)) continue;
+      this.chunks.set(chunk, this.generate(Math.floor(x / CHUNK), Math.floor(y / CHUNK)));
+      wrong(k);
+    }
     const stumps = new Set<string>();
     const next = new Set<string>();
     for (const k of deposits.touched()) {

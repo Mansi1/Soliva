@@ -74,6 +74,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 - 2026-10-06: Geländegitter ansehen per Playwright: `#terrain-wire` zweimal (nur Gitter), `#terrain-cell` per `value` + `input`-Ereignis (6 = 64 px), Modelle/Gras über `#dev-layers input[data-on=...]` aus (Haken = an), Leertaste für flaches Gelände. Das Panel ist dabei unsichtbar - per `$eval` klicken, nicht `page.click`. Eckpunkte je Zoom: `getRenderStats().at(-1).terrainVertices`.
 
+- 2026-10-11, `feat/foerster`: Försterhütte auf der Lichtung in `Testseed` (12,-43) ganz im Bild bei `lat=-46&lng=9&zoom=5`. Die Lichtung hat nur ~9 Plätze für gepflanzte Bäume (je Baum ein Tile Abstand, ringsum dichter Wald) - danach meldet der Förster "kein freier Platz". Ob ein Setzling steht: Raster abklicken, bis das Panel "Gepflanzt" zeigt.
+
 ## Offen
 
 - Schilf und Rohrkolben (`gl/grassRenderer.ts`, Uferstreifen über `uShoreLevel`) sind nur mit erzwungener Art geprüft: in `Testseed` folgt auf den Strand Wald, eine Wiese am Ufer fehlte zum Ansehen.
