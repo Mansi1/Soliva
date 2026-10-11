@@ -4,7 +4,8 @@
 // belegte Tiles, Speichern. Was für alle Gebäude einer Art gilt, steht
 // statisch an der Klasse: `static definition`.
 
-import type { BuildingType, CropType, ResourceKind } from '../catalog';
+import { BUILDING_HEADING, modelEntry } from '../../gl/entityRenderer';
+import type { BuildingType, CropType, ResourceKind, TreeSpecies } from '../catalog';
 import type { BuildingDefinition } from './definition';
 import type { Farm } from './Farm';
 import type { StorageBuilding } from './StorageBuilding';
@@ -22,7 +23,7 @@ export interface BuildingSave {
   v?: number;
   /** UnitProducer: Warteschlange, 1 = Frau, 0 = Mann - ältere Stände: nur die Anzahl. */
   q?: number | (0 | 1)[];
-  /** UnitProducer: Sammelpunkt - Tile, dahinter die genaue Stelle (fehlt in älteren Ständen). */
+  /** Sammelpunkt (UnitProducer) bzw. Pflanzplatz (Förster) - Tile, dahinter die genaue Stelle (fehlt in älteren Ständen). */
   r?: [number, number] | [number, number, number, number];
   /** Farm: nächste Frucht, Tiles, Ernten seit dem Pflügen, je Furche [Frucht, gepflügt, gesät, Wuchs, Nahrung, bezahlt]. */
   f?: { p: CropType; t?: number; h?: number; r: [CropType, number, number, number, number, boolean][] };
@@ -30,6 +31,8 @@ export interface BuildingSave {
   fl?: number;
   /** Lager: was darin liegt, je Rohstoff und Sorte (siehe BuildingBase.goods) - fehlt, wenn leer. */
   g?: Goods;
+  /** Förster: Baumart, die er pflanzt. */
+  ts?: TreeSpecies;
 }
 
 /**
@@ -81,6 +84,12 @@ export abstract class BuildingBase {
    * VERIFIED: tests/storage-stock.test.mjs - Ablieferung mit Baumart, Speichern und Laden.
    */
   goods: Goods = {};
+  /**
+   * Sammelpunkt (UnitProducer) bzw. Pflanzplatz (Förster), oder null - nur
+   * bei Gebäuden mit hasRallyPoint(): das Tile und `point`, die genaue Stelle
+   * des Klicks - dort steht die Fahne. Ältere Stände haben nur das Tile.
+   */
+  rallyPoint: { x: number; y: number; point?: { x: number; y: number } } | null = null;
 
   /** @param x, y Ankerpunkt: die Mitte des Grundrisses */
   constructor(readonly x: number, readonly y: number, options: BuildingOptions = {}) {
@@ -190,7 +199,31 @@ export abstract class BuildingBase {
     return false;
   }
 
-  /** Eine Werkstatt, in der genau ein Dorfbewohner arbeitet (Bognerei, Fischerhütte)? */
+  /** Setzt man ihm einen Punkt auf der Karte (Fahne, Knopf im Panel)? Siehe rallyPoint. */
+  hasRallyPoint(): boolean {
+    return false;
+  }
+
+  /** Sammelpunkt bzw. Pflanzplatz setzen, oder mit null aufheben. */
+  setRallyPoint(rally: BuildingBase['rallyPoint']) {
+    this.rallyPoint = rally;
+  }
+
+  /**
+   * Wo Dorfbewohner herauskommen (Welt, Tiles): die Tür des Modells, durch
+   * die sie auch abliefern - ohne Tür die Vorderkante (frontPoint).
+   */
+  spawnPoint(): { x: number; y: number } {
+    return modelEntry(this.model, this.x, this.y, this.definition.size, BUILDING_HEADING) ?? this.frontPoint();
+  }
+
+  /** Vor der Vorderkante des Gebäudes, zur Kamera hin - dort warten Ausgebildete ohne Sammelpunkt. */
+  frontPoint(): { x: number; y: number } {
+    const r = this.definition.footprint / 2 + 0.4;
+    return { x: this.x + 0.5 + r, y: this.y + 0.5 + r };
+  }
+
+  /** Eine Werkstatt, in der genau ein Dorfbewohner arbeitet (Bognerei, Fischerhütte, Försterhütte)? */
   isWorkshop(): boolean {
     return false;
   }
@@ -201,6 +234,7 @@ export abstract class BuildingBase {
       t: this.type, x: this.x, y: this.y, hp: this.hp,
       ...(this.models.length > 1 ? { v: this.variant } : {}),
       ...(Object.keys(this.goods).length > 0 ? { g: this.goods } : {}),
+      ...(this.rallyPoint ? { r: rallySave(this.rallyPoint) } : {}),
     };
   }
 
@@ -208,10 +242,19 @@ export abstract class BuildingBase {
    * Übernimmt, was im Speicherstand steht - Unterklassen ergänzen ihres.
    * `scale` vergrößert Koordinaten älterer Stände (siehe buildingFromSave).
    */
-  restore(save: BuildingSave, _scale: number) {
+  restore(save: BuildingSave, scale: number) {
     // Ältere Speicherstände kennen keine Trefferpunkte - dann unbeschädigt.
     this.hp = Math.min(save.hp ?? this.maxHp, this.maxHp);
     // Ältere Speicherstände kennen keinen Vorrat je Lager - World.applySave verteilt ihren.
     if (save.g) this.goods = structuredClone(save.g);
+    const r = this.hasRallyPoint() ? save.r : undefined;
+    this.rallyPoint = r
+      ? { x: r[0] * scale, y: r[1] * scale, point: r.length === 4 ? { x: r[2] * scale, y: r[3] * scale } : undefined }
+      : null;
   }
+}
+
+/** Sammelpunkt im Spielstand: [Tile x, y] und, wenn bekannt, die genaue Stelle dazu. */
+function rallySave(rally: NonNullable<BuildingBase['rallyPoint']>): NonNullable<BuildingSave['r']> {
+  return rally.point ? [rally.x, rally.y, rally.point.x, rally.point.y] : [rally.x, rally.y];
 }

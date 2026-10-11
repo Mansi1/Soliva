@@ -15,8 +15,11 @@
 // (BuildingSave.g), `stock` nur noch den Rest ohne Lager. Ältere Stände haben
 // nur `stock` - die Welt legt ihn beim Laden ins erste Lager, das ihn annimmt
 // (World.absorbReserve), unbenannt als "Holz", "Nahrung" usw.
+// Gepflanzte Bäume ohne neue Version: `planted` fehlt in älteren Ständen -
+// dort steht dann nur, was das Gelände trägt.
 
 import type { BuildingSave } from './building';
+import type { PlantedSave } from './deposits';
 import { initialResources, RESOURCE_KINDS, type AnimalKind, type ResourceKind, type Resources } from './catalog';
 import type { Task } from './world';
 
@@ -65,6 +68,8 @@ export interface SaveData {
   villagers: VillagerSave[];
   /** "x,y" -> bereits entnommene Menge. */
   harvested: Record<string, number>;
+  /** Vom Förster gepflanzte Bäume: "x,y" -> [Art, Sekunden gewachsen] (deposits.ts). */
+  planted?: PlantedSave;
   animals?: AnimalSave[];
   /** Stücke der Karte, in denen schon Tiere entstanden sind. */
   spawned?: string[];
@@ -143,6 +148,7 @@ function migrate(old: AnySave): LoadedSave | null {
         task: scale === 1 ? v.task ?? { kind: 'idle' } : { kind: 'idle' },
       })),
       harvested: scale === 1 ? old.harvested ?? {} : {},
+      planted: scale === 1 ? old.planted ?? {} : {},
       animals: old.version === 3 ? old.animals ?? [] : [],
       spawned: old.version === 3 ? old.spawned ?? [] : [],
     },

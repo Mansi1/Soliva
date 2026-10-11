@@ -9,7 +9,7 @@ import { mountMinimapMenu } from '../components/Hud';
 import { ResourceBar } from '../components/ResourceBar';
 import { hasDetails, renderSelection } from '../components/SelectionPanel';
 import { GATHER_CURSOR, RALLY_CURSOR } from '../cursors';
-import { CROP_ORDER, RESOURCE_LABEL, VILLAGER, type BuildingType, type CropType, type ResourceKind } from '../world/catalog';
+import { CROP_ORDER, RESOURCE_LABEL, VILLAGER, type BuildingType, type CropType, type ResourceKind, type TreeSpecies } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import type { World } from '../world/world';
 import type { IdlePick } from './actions';
@@ -40,6 +40,8 @@ export interface UiHooks {
   /** Arbeiter der Werkstatt entlassen. */
   dismiss(): void;
   setFieldCrop(crop: CropType): void;
+  /** Försterhütte: Baumart wählen. */
+  setTreeSpecies(species: TreeSpecies): void;
   /** Bild im Auswahl-Panel: zum Ausgewählten springen. */
   focusSelection(): void;
 }
@@ -133,6 +135,7 @@ export class GameUi {
       if (action === 'trap') this.setPlacing('fish_trap');
       if (action === 'dismiss') hooks.dismiss();
       if (action === 'crop' && button?.dataset.crop) hooks.setFieldCrop(button.dataset.crop as CropType);
+      if (action === 'species' && button?.dataset.species) hooks.setTreeSpecies(button.dataset.species as TreeSpecies);
     });
   }
 
@@ -236,8 +239,8 @@ export class GameUi {
   refreshSelection() {
     const { world, selection, resources } = this.state;
     selection.prune();
-    // Der Schalter gilt nur, solange ein ausbildendes Gebäude ausgewählt ist.
-    if (!selection.chosenBuildings().some((b) => b.isUnitProducer())) this.rallyPicking = false;
+    // Der Schalter gilt nur, solange ein Gebäude mit Sammelpunkt (oder Pflanzplatz) ausgewählt ist.
+    if (!selection.chosenBuildings().some((b) => b.hasRallyPoint())) this.rallyPicking = false;
     // Hat die Auswahl Befehle (ein Gebäude), zeigt die Steintafel sie statt des Baumenüs.
     const view = selectionView(world, selection, resources, this.rallyPicking, this.trainBatch);
     const hasCommands = renderSelection(this.selectionEl, this.actionsEl, view);

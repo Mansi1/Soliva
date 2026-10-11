@@ -348,6 +348,10 @@ function workParticles(world: World, v: World['villagers'][number], x: number, y
     // Nur beim Pflügen hat der Bauer die Hacke (POSE.work, villagers.ts).
     const [px, py] = [x + fx * 0.15, y + fy * 0.15];
     out.push(PARTICLE.dirt, px, py, ground(px, py), 0.08, fx, fy, 0, 1, v.id, 0, 8);
+  } else if (t.kind === 'plant' && v.pose === POSE.hoe) {
+    // Der Förster gräbt das Pflanzloch.
+    const [px, py] = [x + fx * 0.15, y + fy * 0.15];
+    out.push(PARTICLE.dirt, px, py, ground(px, py), 0.08, fx, fy, 0, 1, v.id, 0, 8);
   } else if (t.kind === 'gather' && t.type === 'berries' && v.pose === POSE.pick) {
     const [px, py] = [t.x + 0.5, t.y + 0.5];
     out.push(PARTICLE.leaf, px, py, ground(px, py), 0.22, fx, fy, 0, 1, v.id, 0, 4);
