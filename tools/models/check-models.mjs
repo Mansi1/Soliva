@@ -21,6 +21,7 @@ const RULES = [
   { match: /^buildings\/mill/, needs: ['Sails'], why: 'Flügel, die sich drehen' },
   { match: /^(buildings\/town_center|props\/rally_flag)$/, needs: ['Cloth'], why: 'Tuch, das weht' },
   { match: /^buildings\/(bowyer|spear_maker|cobbler)$/, needs: ['Work.Stand', 'Work.Aim', 'Work.Seat', 'Work.Face'], numbered: [['Craft', 3]], why: 'Werkbank, Hocker und Stufen des Werkstücks' },
+  { match: /^buildings\/archery_range$/, needs: ['Work.Stand', 'Work.Aim'], why: 'Schießlinie und Scheibe der mittleren Bahn (archery.ts, rangeSpot)' },
   { match: /^buildings\/armory$/, needs: ['Cut.Roof', 'Cut.Wall'], numbered: [['Stock', 100]], why: 'aufdeckbares Dach und 100 Bögen im Gestell' },
   { match: /^resources\/berry_bush/, needs: ['Berry'], why: 'Beeren, die beim Pflücken verschwinden (die Nummer wählt nur den Zufall je Beere)' },
   { match: /^trees\//, needs: ['Trunk', 'Trunk.Stump'], why: 'Stamm und Stumpf zum Absägen' },
@@ -40,6 +41,7 @@ const RULES = [
   { match: /^props\/spear$/, needs: ['Arm.R.Lower.Tool'], why: 'Speer an der Hand (Jagd)' },
   // Die Schuhe hängen an den Unterschenkeln (B31) - andere Namen hingen an der Hand.
   { match: /^props\/clogs$/, needs: ['Leg.L.Lower', 'Leg.R.Lower'], only: ['Leg.L.Lower', 'Leg.R.Lower'], why: 'Holzschuhe an beiden Füßen' },
+  { match: /^props\/prop_bow$/, only: ['Arm.R.Lower.Tool'], why: 'Bogen an der Hand (Schießplatz, B24)' },
   { match: /^props\/scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
   { match: /^props\/knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
   // Andere Namen hingen an der Hand statt am Rücken, "Load" wäre ein unsichtbarer Marker.

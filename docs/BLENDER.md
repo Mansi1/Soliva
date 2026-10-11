@@ -15,11 +15,11 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   villagers/                male, female
   buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-                            mill(_2.._4), bowyer, spear_maker, cobbler, armory, fisher_hut, forester
+                            mill(_2.._4), bowyer, spear_maker, cobbler, armory, fisher_hut, forester, archery_range
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
-  props/                    axe, hoe, knife, scythe_male/_female, bow, spear, clogs, rally_flag, marker_arrow,
+  props/                    axe, hoe, knife, scythe_male/_female, bow, prop_bow, spear, clogs, rally_flag, marker_arrow,
                             load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears/_shoes (Lasten, docs/ANIMATION.md)
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
@@ -101,7 +101,7 @@ Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 | Name | Bedeutung |
 |---|---|
 | `Entry` | Eingang - dorthin gehen Dorfbewohner, wird nicht gezeichnet |
-| `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei, Speermacherei, Schusterei) |
+| `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei, Speermacherei, Schusterei); am Schießplatz Schießlinie und Scheibe der mittleren Bahn |
 | `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei, Speermacherei, Schusterei) |
 | `Leg.L`, `Leg.L.Lower`, `Arm.R`, `Arm.R.Lower`, `Head` ... | Körperteile der Figuren - an ihnen hängen die Knochen |
 | `Load` (im Körper) | Anker der Lasten am Rücken - wird nicht gezeichnet |
@@ -217,6 +217,20 @@ Scheibe. Dazu kommen ein Paar am Pflock, ein Regal mit sechs Paaren und auf
 der Werkbank `Craft.0` (Klotz mit Rinde), `Craft.1` (grob behauen) und
 `Craft.2` (fertiges Paar). Marker und Maße sind die der Bognerei. Gebaut ist
 alles headless in Blender, das Skript liegt nicht im Repo.
+
+## Schießplatz und Bogen in der Hand
+
+`buildings/archery_range.glb` und `props/prop_bow.glb` (B24, 2026-10-12) sind
+headless in Blender gebaut, die Skripte liegen nicht im Repo. Der Schießplatz
+ist 13 × 13 m (`size` 2,6, drei Tiles Grund): sechs Strohscheiben (`Target`,
+Ringe `Target.Ring` in `Canvas`, `Paint`, `Gold`) im Abstand von 2,25 m vor
+einem Kugelfang aus Strohballen (`Bale`), Zaun an zwei Seiten, Bank, Fass mit
+Pfeilen, Wimpel in Spielerfarbe. Die Materialien stammen aus der Bognerei.
+`Work.Stand` und `Work.Aim` markieren die mittlere Bahn; die sechs Plätze
+rechnet `rangeSpot` (`world/archery.ts`) quer dazu im selben Abstand - wer die
+Scheiben verschiebt, ändert `ARCHERY.spacing` mit. Der Bogen in der Hand ist
+`props/bow.glb` ohne Pfeil, gedreht (Griff im Ursprung, Wurfarme nach vorn,
+Sehne oben) und umbenannt (`Arm.R.Lower.Tool.Bow…`), siehe docs/ANIMATION.md.
 
 ## Felder
 

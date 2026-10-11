@@ -11,7 +11,7 @@
 
 import {
   ANIMAL_CLIPS, ANIMAL_POSE, BUILDING_HEADING, CLIPS, CLIP_POSE, EntityRenderer, FALL_LYING, FIELDS, FLOWERS, POSE, SHAPE, animationTime, setAnimationTime, setAnimationsPaused,
-  buildingHeading, carryPose, figureHolding, figureProps, figureShoes, frozenMillMotion, millMotion, modelWorkSpot,
+  CARRY_STILL, buildingHeading, carryPose, figureHolding, figureProps, figureShoes, frozenMillMotion, millMotion, modelWorkSpot,
   type EntityInstance,
 } from './gl/entityRenderer';
 import {
@@ -24,6 +24,7 @@ import { FLOWER_SIZE } from './world/flowers';
 import { FLEE_STRIDE, loadLook, type LoadOf } from './world/render';
 import { STRIDE_LENGTH } from './world/world';
 import { spearThrown } from './world/villagers';
+import { ARCHERY, rangeSpot } from './world/archery';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
 import { ParticleRenderer } from './gl/particleRenderer';
@@ -91,6 +92,48 @@ function hunter(label: string, female: boolean, pose: number, rate: number, spea
         shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1, motion: [-Math.PI / 4, phase, pose, 0],
       };
       out.push(f, ...figureHolding(f, spear && !(pose === POSE.throw && spearThrown(phase)) ? 'spear' : null));
+    },
+  };
+}
+
+/**
+ * Schütze mit Bogen wie im Spiel (world/render.ts, B24): gehend oder zielend -
+ * dann der Clip carry, angehalten (CARRY_STILL), der Bogen senkrecht vor ihm.
+ */
+function archer(label: string, female: boolean, pose: number, rate: number): Exhibit {
+  return {
+    label,
+    draw: (t, x, y, out) => {
+      const f: EntityInstance = {
+        x: x - 0.5, y: y - 0.5, size: VILLAGER.size * ZOOMED, color: PLAYER,
+        shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1,
+        motion: [-Math.PI / 4, pose === POSE.carry ? CARRY_STILL : pose === POSE.stand ? t : t * rate, pose, 0],
+      };
+      out.push(f, ...figureHolding(f, 'bow'));
+    },
+  };
+}
+
+/**
+ * Schießplatz mit `count` Schützen an ihren Plätzen (archery.ts, rangeSpot), in
+ * echter Größe, zur Scheibe gewandt; jeder hebt den Bogen versetzt.
+ */
+function withArchers(label: string, count: number): Exhibit {
+  const def = BUILDINGS.archery_range;
+  return {
+    label,
+    draw: (t, x, y, out) => {
+      out.push({ x: x - 0.5, y: y - 0.5, size: def.size, color: PLAYER, shape: def.model, alpha: 1, motion: [BUILDING_HEADING, 0, 0, 0] });
+      for (let slot = 0; slot < count; slot++) {
+        const spot = rangeSpot({ model: def.model, x: x - 0.5, y: y - 0.5, definition: def }, slot);
+        const aiming = loop(t + slot * 0.37, ARCHERY.shotTime) >= ARCHERY.lowered;
+        const f: EntityInstance = {
+          x: spot.x - 0.5, y: spot.y - 0.5, size: VILLAGER.size, color: PLAYER,
+          shape: slot % 2 ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1,
+          motion: [Math.atan2(spot.aimY - spot.y, spot.aimX - spot.x), aiming ? CARRY_STILL : t, aiming ? POSE.carry : POSE.stand, 0],
+        };
+        out.push(f, ...figureHolding(f, 'bow'));
+      }
     },
   };
 }
@@ -353,6 +396,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       model('Bognerei', SHAPE.bowyer, BUILDINGS.bowyer.size),
       model('Speermacherei', SHAPE.spearMaker, BUILDINGS.spear_maker.size),
       model('Schusterei', SHAPE.cobbler, BUILDINGS.cobbler.size),
+      model('Schießplatz', SHAPE.archeryRange, BUILDINGS.archery_range.size),
       model('Försterhütte', SHAPE.forester, BUILDINGS.forester.size),
       model('Waffenkammer', SHAPE.armory, BUILDINGS.armory.size),
       model('Sammelpunkt', SHAPE.rallyFlag, 0.54),
@@ -444,6 +488,8 @@ const people = (female: boolean) => {
     figure('geht in Holzschuhen', female, POSE.walk, walkRate, -Math.PI / 4, undefined, true),
     figure('pflückt in Holzschuhen', female, POSE.pick, 6, 0.3, undefined, true),
     figure('hackt in Holzschuhen', female, POSE.work, 6, 0.3, undefined, true),
+    archer('geht mit Bogen', female, POSE.walk, walkRate),
+    archer('zielt mit Bogen', female, POSE.carry, 1),
   ], 240, 0.9);
 };
 
@@ -602,6 +648,15 @@ const SHOWCASE: Showcase[] = [
       withWorker('Schuster wartet', SHAPE.cobbler, BUILDINGS.cobbler.size, false, POSE.sit),
     ], 200, 0.7),
     demolish: [0, 1, 2].map(() => collapse('Abriss', SHAPE.cobbler, BUILDINGS.cobbler.size)),
+    extras: ['Abriss'],
+  },
+  // Der Schießplatz (B24): leer und mit sechs übenden Schützen.
+  {
+    ...showcase('Gebäude', 'Schießplatz', [
+      model('steht', SHAPE.archeryRange, BUILDINGS.archery_range.size),
+      withArchers('mit Schützen', ARCHERY.trainees),
+    ], 120, 0.5),
+    demolish: [0, 1].map(() => collapse('Abriss', SHAPE.archeryRange, BUILDINGS.archery_range.size)),
     extras: ['Abriss'],
   },
   // Wie im Spiel, wenn der Zeiger darauf steht: ohne Dach, mit Bögen gefüllt.

@@ -16,6 +16,7 @@ import {
 } from './building';
 import { readSave, writeSave, type LoadedSave, type SaveData } from './save';
 import { Villager, type Animal, type AnimalSurroundings, type Task } from './unit';
+import { skillsFromSave, skillsSave } from './unit/skills';
 import { Wildlife } from './wildlife';
 import { Deposits } from './deposits';
 import { VillagerWork } from './villagers';
@@ -963,6 +964,7 @@ export class World {
         x: v.x, y: v.y, c: v.carrying, ct: v.carryType, task: v.task, hp: v.hp, n: v.name, f: v.female,
         ...(v.carrying > 0 && this.work.carryKind(v) ? { ck: this.work.carryKind(v) } : {}),
         ...(v.inventory.weapon || v.inventory.shoes ? { inv: { ...v.inventory } } : {}),
+        ...(skillsSave(v.skills) ? { sk: skillsSave(v.skills) } : {}),
       })),
       harvested: Object.fromEntries(this.deposits.harvested),
       planted: this.deposits.plantedSave(this.time),
@@ -1002,6 +1004,8 @@ export class World {
       // sonst Unbekanntes mit. Ältere Stände: ohne Schuhe, also barfuß (B31).
       const { weapon, shoes } = s.inv ?? {};
       v.inventory = { weapon: weapon && weapon in WEAPONS ? weapon : null, shoes: shoes && shoes in SHOES ? shoes : null };
+      // Fähigkeiten (B24) - ältere Stände haben keine.
+      v.skills = skillsFromSave(s.sk);
       v.hp = Math.min(s.hp ?? VILLAGER.hp, VILLAGER.hp);
       this.villagers.push(v);
     }

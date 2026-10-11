@@ -7,7 +7,7 @@ import type { FarmView, SelectionView, TrainView, WorkshopView } from '../compon
 import { FLOWERS } from '../gl/entityRenderer';
 import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
-import { FishTrap, Forester, type Building, type Farm, type UnitProducer } from '../world/building';
+import { ArcheryRange, FishTrap, Forester, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
   BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, FORESTER, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, SHOES, VILLAGER, WEAPONS, craftRecipe, type AnimalKind, type ResourceKind,
 } from '../world/catalog';
@@ -15,6 +15,8 @@ import type { ResourceField } from '../world/resources';
 import { GROWN, type Animal, type AnimalState, type Inventory } from '../world/unit';
 import type { FarmPhase, World } from '../world/world';
 import { workplace } from '../world/villagers';
+import { rangeView } from '../world/archery';
+import { skillsText } from '../world/unit/skills';
 import type { Selection } from './Selection';
 
 /**
@@ -155,6 +157,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       housing: def.housing > 0 ? def.housing : undefined,
       farm: building.isFarm() ? { ...farmView(world, [building]), plan: building.plan } : undefined,
       workshop: building.isWorkshop() ? workshopView(world, building) : undefined,
+      range: building instanceof ArcheryRange ? rangeView(world, building) : undefined,
       weapons: def.weaponCapacity > 0
         ? { bows: Math.floor(building.stored('bows')), spears: Math.floor(building.stored('spears')), capacity: def.weaponCapacity }
         : undefined,
@@ -244,6 +247,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
             ...inventoryView(single.inventory),
           }
         : undefined,
+      skills: single ? skillsText(single.skills) || undefined : undefined,
       count: chosen.length,
       label: VILLAGER.label,
       names: chosen.slice(0, 6).map((v) => v.name).join(', ') + (chosen.length > 6 ? ` +${chosen.length - 6}` : ''),

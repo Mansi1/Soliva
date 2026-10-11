@@ -19,12 +19,14 @@
 // dort steht dann nur, was das Gelände trägt.
 // Habe der Dorfbewohner ohne neue Version: `inv` fehlt in älteren Ständen und
 // ohne Habe - dann hat er nichts (B25) und ist barfuß (`inv.shoes` fehlt, B31).
+// Ebenso `sk` (Fähigkeiten, B24): ohne kann er noch nichts.
 
 import type { BuildingSave } from './building';
 import type { PlantedSave } from './deposits';
 import { initialResources, RESOURCE_KINDS, type AnimalKind, type ResourceKind, type Resources } from './catalog';
 import type { Task } from './world';
 import type { Inventory } from './unit';
+import type { Skills } from './unit/skills';
 
 /** Ein Dorfbewohner im Speicherstand. */
 export interface VillagerSave {
@@ -42,6 +44,8 @@ export interface VillagerSave {
   f?: boolean;
   /** Habe (Villager.inventory) - fehlt ohne Habe und in älteren Ständen. */
   inv?: Partial<Inventory>;
+  /** Fähigkeiten: Sekunden Übung (Villager.skills, B24) - fehlt ohne Übung und in älteren Ständen. */
+  sk?: Skills;
 }
 
 /** Ein Tier im Speicherstand: Art, Lage, Trefferpunkte, Nahrung, erlegt. */

@@ -174,9 +174,10 @@ export { ANIMALS, type AnimalKind, type AnimalDefinition } from './unit';
  * Jagen: Wurfweite des Speers (Tiles), Sekunden zwischen zwei Würfen, Zerlegen
  * (Nahrung je Sekunde). Ohne Speer (B25) muss er bis `reach` ans Tier heran
  * und gibt auf, wenn er es nicht binnen `chaseLimit` Sekunden Jagd erreichen
- * kann (villagers.ts, hopeless).
+ * kann (villagers.ts, hopeless). Mit dem Bogen (B24) schießt er aus `bowRange`
+ * (20 m statt 11 m mit dem Speer).
  */
-export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0, reach: 0.35, chaseLimit: 20 };
+export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0, reach: 0.35, chaseLimit: 20, bowRange: 4 };
 
 /**
  * Bognerei, wie der Fletcher in Stronghold: ein Bogner holt so viel Holz aus
@@ -235,12 +236,13 @@ export function craftRecipe(type: string): CraftRecipe | undefined {
 
 /**
  * Was ein Dorfbewohner als Waffe bei sich tragen kann (Villager.inventory) -
- * heute nur der Speer des Jägers (B25); der Bogen kommt mit B24 dazu.
+ * der Speer des Jägers (B25) und der Bogen des Schützen (B24, world/archery.ts).
  */
-export type Weapon = 'spear';
+export type Weapon = 'spear' | 'bow';
 /** Je Waffe: woraus sie in der Waffenkammer kommt und wie sie im Panel heißt. */
 export const WEAPONS: Record<Weapon, { resource: ResourceKind; label: string }> = {
   spear: { resource: 'spears', label: 'Speer' },
+  bow: { resource: 'bows', label: 'Bogen' },
 };
 
 /**

@@ -9,12 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T21:55:27Z s=560a6297 DONE fp=16639f7cd7cc cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T21:57:58Z s=560a6297 DONE fp=485f83e6dde1 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T21:59:00Z s=560a6297 DONE fp=882598d1dc84 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T21:59:56Z s=560a6297 DONE fp=d2fd54d09dbd cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:00:24Z s=560a6297 DONE fp=c19d59f56e09 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:02:11Z s=560a6297 DONE fp=2067011fa074 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:04:52Z s=560a6297 DONE fp=16787a5011ae cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:05:57Z s=560a6297 DONE fp=e725c3d87292 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:07:08Z s=560a6297 DONE fp=d62863867460 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T22:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:shin anchor learn=none: Visual-only shader change.
 2026-10-11T22:31:17Z s=560a6297 FINDING src/models/villagers/{male,female}.glb learn=test: tests/ids + check-models.
 2026-10-11T22:31:17Z s=560a6297 FINDING src/world/save.ts:inv.shoes learn=test: tests/shoes.test.mjs save round-trip.
+2026-10-11T22:46:39Z s=560a6297 FAIL tests.unit,coverage
+2026-10-11T22:49:58Z s=560a6297 DONE fp=4a467cf24e27 cov=80.5% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+21)
+2026-10-11T22:49:58Z s=560a6297 FINDING src/world/archery.ts (allBuildings().some) learn=test: tests/archery.test.mjs exercises sendToRange.
+2026-10-11T22:49:58Z s=560a6297 FINDING merge feat/schuhe (PR #65) into feat/bogen learn=test: tests/archery + tests/shoes cover both inventory slots after merge.
+2026-10-11T22:49:58Z s=560a6297 FINDING src/world/unit/skills.ts:practise learn=test: tests/archery.test.mjs master 1.5x, capped.
+2026-10-11T22:49:58Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask bow bit learn=none: Visual-only shader constant.

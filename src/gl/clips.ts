@@ -52,7 +52,8 @@ export interface Rig<J = never> {
 }
 
 /** Was ein Clip in der Hand braucht - Bits wie im Shader (uClipProps). */
-export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4, hoe: 8, spear: 16 };
+// bow (B24): nur, damit der Bogen im Clip carry zu sehen ist (Schütze zielt) - figureProps hängt dafür nichts an.
+export const PROP_BITS: Record<string, number> = { axe: 1, scythe: 2, knife: 4, hoe: 8, spear: 16, bow: 32 };
 
 type Vec3 = [number, number, number];
 type Quat = [number, number, number, number];

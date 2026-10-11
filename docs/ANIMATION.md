@@ -231,6 +231,20 @@ eines Anhangs nicht an `uSocket` (eine Zeile GLSL). `figureShoes` gibt die
 Instanz, solange der Dorfbewohner Schuhe hat. Ohne sie ist er barfuß.
 VERIFIED: Galerie, Mann und Frau → „steht/geht/pflückt/hackt in Holzschuhen" (2026-10-12).
 
+**Bogen (B24):** `props/prop_bow.glb` ist der Bogen des Symbols (`props/bow.glb`)
+ohne Pfeil, als `Arm.R.Lower.Tool…` an die Hand gesetzt (`SHAPE.propBow`): in
+Ruhelage liegen die Wurfarme waagerecht nach vorn, die Sehne oben. Einen
+eigenen Clip `aim` gibt es nicht, die Dorfbewohner haben schon `MAX_CLIPS`
+(10) Clips. Der Schütze zielt darum mit `carry`, angehalten bei `CARRY_STILL`
+(beide Unterarme waagerecht vorn): der Bogen steht so senkrecht vor ihm, die
+Sehne zum Schützen. Nach jedem Schuss senkt er ihn kurz (`stand`,
+`ARCHERY.lowered` in `world/archery.ts`). Damit der Bogen in `carry` zu sehen
+ist, hat der Clip `props: ["bow"]` (Bit 32) - `figureProps` hängt für das Bit
+nichts an, Holz und Kiste in den Armen bleiben, wie sie sind. Gehend hält er
+den Bogen waagerecht an der Seite. Ein echter Clip `aim` (Bogen links, Sehne
+ausgezogen) braucht größere Uniform-Arrays (`MAX_CLIPS`).
+VERIFIED: Galerie, Mann → „zielt mit Bogen", „geht mit Bogen"; Schießplatz → „mit Schützen" (2026-10-12).
+
 ## Lasten
 
 Seit B8 (2026-10-11) trägt kein Dorfbewohner mehr den einen Rucksack. Er trägt

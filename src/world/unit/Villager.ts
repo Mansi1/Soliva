@@ -10,6 +10,7 @@
 
 import { POSE } from '../../gl/entityRenderer';
 import { SHOES, VILLAGER, type DepositType, type ResourceKind, type Shoes, type Weapon } from '../catalog';
+import type { Skills } from './skills';
 import { UnitBase } from './UnitBase';
 
 /**
@@ -66,7 +67,14 @@ export type Task =
    * Fortschritt 0..1) und geht zurück in die Hütte. (x, y): das Tile.
    * `leave`: entlassen.
    */
-  | { kind: 'plant'; building: string; step: 'enter' | 'choose' | 'walk' | 'dig'; progress: number; x?: number; y?: number; leave?: boolean };
+  | { kind: 'plant'; building: string; step: 'enter' | 'choose' | 'walk' | 'dig'; progress: number; x?: number; y?: number; leave?: boolean }
+  /**
+   * Übt am Schießplatz `building` auf Platz `slot` (B24, world/archery.ts):
+   * geht hin (`walk`), holt ohne Bogen einen aus der Waffenkammer `armory`
+   * (`fetch`, wie der Jäger seinen Speer) und schießt (`practise`, `progress`
+   * 0..1 je Schuss).
+   */
+  | { kind: 'archery'; building: string; slot: number; step: 'walk' | 'fetch' | 'practise'; progress: number; armory?: string | null };
 
 /**
  * Was einem Arbeiter in der Werkstatt fehlt, solange er wartet: Holz (kein
@@ -92,6 +100,8 @@ export class Villager extends UnitBase {
   carrying = 0;
   /** Seine Habe (Inventory) - im Spielstand gespeichert. */
   inventory: Inventory = { weapon: null, shoes: null };
+  /** Fähigkeiten: Sekunden Übung je Arbeit (B24, skills.ts) - im Spielstand `sk`. */
+  skills: Skills = {};
   carryType: ResourceKind | null = null;
   task: Task = { kind: 'idle' };
   /** Warum er untätig ist, falls es einen Grund gibt - für die Anzeige. */
