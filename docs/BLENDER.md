@@ -19,12 +19,13 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
-  props/                    axe, hoe, knife, scythe_male/_female, bow, rally_flag, marker_arrow
+  props/                    axe, hoe, knife, scythe_male/_female, bow, rally_flag, marker_arrow,
+                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow (Lasten, docs/ANIMATION.md)
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
                             (Bildkarten fürs Gras, 256 px)
-  clips/                    humanoid, humanoid_sit, humanoid_tools, quadruped, mill, flag - je .glb + .json
+  clips/                    humanoid, humanoid_sit, humanoid_tools, humanoid_carry, quadruped, mill, flag - je .glb + .json
                             Bewegungen - je Skelett eine Bibliothek
   poses/                    mow.json, carve.json - Posen für tools/export/poses.mjs
 ```
@@ -91,7 +92,7 @@ Höhe - wird ein Gebäude breiter, wirkt es im Spiel also kleiner.
   `thigh.L`, Knie = `shin.L`, Schulter = `upperArm.L`, Ellbogen =
   `forearm.L`, Kopf von `hand.R` = Halterung der Werkzeuge. Je Eckpunkt
   zählen die zwei stärksten Gewichte (Weight Paint). Starre Teile wie
-  `Head…`, `Load` und die Stiefel `Leg.*.Lower.*` hängen weiter über ihren
+  `Head…` und die Stiefel `Leg.*.Lower.*` hängen weiter über ihren
   Namen an einem Knochen. Export mit "Skinning" an und dem Skelett
   ausgewählt.
 
@@ -102,7 +103,9 @@ Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 | `Entry` | Eingang - dorthin gehen Dorfbewohner, wird nicht gezeichnet |
 | `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei) |
 | `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei) |
-| `Leg.L`, `Leg.L.Lower`, `Arm.R`, `Arm.R.Lower`, `Head`, `Load` ... | Körperteile der Figuren - an ihnen hängen die Knochen |
+| `Leg.L`, `Leg.L.Lower`, `Arm.R`, `Arm.R.Lower`, `Head` ... | Körperteile der Figuren - an ihnen hängen die Knochen |
+| `Load` (im Körper) | Anker der Lasten am Rücken - wird nicht gezeichnet |
+| `Goods…`, `Carry…` (`props/load_*`) | Ware (wächst mit der Ladung) und Behälter einer Last |
 | `Leg.FL/FR/BL/BR`, `Head` | Beine und Kopf der Tiere |
 | `Arm.R.Lower.Tool…`, `…Scythe…`, `Knife…` | Werkzeuge an der Hand |
 | `Sails` | Flügel der Mühle (drehen sich) |

@@ -83,7 +83,7 @@ function variantAt(x: number, y: number, kinds: number[]): number {
 }
 
 /** Namen der Baum- und Straucharten für die Anzeige. */
-const KIND_LABEL: Record<number, string> = {
+export const KIND_LABEL: Record<number, string> = {
   [SHAPE.tree]: 'Fichte',
   [SHAPE.treePine]: 'Kiefer',
   [SHAPE.treeOak]: 'Eiche',

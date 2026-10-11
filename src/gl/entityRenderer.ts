@@ -18,6 +18,7 @@ import { link, uploadTerrainParams } from './terrainRenderer';
 import humanoidClips from '../models/clips/humanoid.glb?clips';
 import sitClips from '../models/clips/humanoid_sit.glb?clips';
 import toolClips from '../models/clips/humanoid_tools.glb?clips';
+import carryClips from '../models/clips/humanoid_carry.glb?clips';
 import quadrupedClips from '../models/clips/quadruped.glb?clips';
 import millClips from '../models/clips/mill.glb?clips';
 import flagClips from '../models/clips/flag.glb?clips';
@@ -101,6 +102,13 @@ import fisherBoatModel from '../models/props/fisher_boat.glb?model';
 import foresterModel from '../models/buildings/forester.glb?model';
 import herringModel from '../models/props/herring.glb?model';
 import fishingRodModel from '../models/props/fishing_rod.glb?model';
+import loadLogsModel from '../models/props/load_logs.glb?model';
+import loadCrateModel from '../models/props/load_crate.glb?model';
+import loadHotteModel from '../models/props/load_hotte.glb?model';
+import loadBasketModel from '../models/props/load_basket.glb?model';
+import loadSheafModel from '../models/props/load_sheaf.glb?model';
+import loadMeatModel from '../models/props/load_meat.glb?model';
+import loadBowModel from '../models/props/load_bow.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
 import bowModel from '../models/props/bow.glb?model';
 import flowerModel from '../models/flowers/flower.glb?model';
@@ -272,6 +280,25 @@ export const SHAPE = {
   propRod: 133,
   propRodFemale: 134,
   /**
+   * Lasten der Dorfbewohner (B8, models/props/load_*.glb): je Ware und Körper
+   * eine Form wie die Werkzeuge, am Oberkörper statt an der Hand - siehe
+   * LOAD_PROPS. Ab 171: 160..169 sind für Gebäude reserviert.
+   */
+  loadLogs: 171,
+  loadLogsFemale: 172,
+  loadCrate: 173,
+  loadCrateFemale: 174,
+  loadHotte: 175,
+  loadHotteFemale: 176,
+  loadBasket: 177,
+  loadBasketFemale: 178,
+  loadSheaf: 179,
+  loadSheafFemale: 180,
+  loadMeat: 181,
+  loadMeatFemale: 182,
+  loadBow: 183,
+  loadBowFemale: 184,
+  /**
    * Weg zum Sammelpunkt, ein Stück davon: Streifen auf dem Boden von der Mitte
    * um motion[0..1] (Tiles) weiter, `size` breit. Der Shader malt Punkte in
    * der Farbe darauf, die zum Ende hin wandern; motion[2] = Strecke der Stücke
@@ -378,9 +405,12 @@ const RALLY_PULSE_RINGS = 3;
 const PROP_SHAPES: number[] = [
   SHAPE.propAxe, SHAPE.propAxeFemale, SHAPE.propScythe, SHAPE.propScytheFemale, SHAPE.propKnife, SHAPE.propKnifeFemale,
   SHAPE.propFish, SHAPE.propFishFemale, SHAPE.propRod, SHAPE.propRodFemale, SHAPE.propHoe, SHAPE.propHoeFemale,
+  SHAPE.loadLogs, SHAPE.loadLogsFemale, SHAPE.loadCrate, SHAPE.loadCrateFemale, SHAPE.loadHotte, SHAPE.loadHotteFemale,
+  SHAPE.loadBasket, SHAPE.loadBasketFemale, SHAPE.loadSheaf, SHAPE.loadSheafFemale, SHAPE.loadMeat, SHAPE.loadMeatFemale,
+  SHAPE.loadBow, SHAPE.loadBowFemale,
 ];
-/** Im Shader: ist die Form ein Anhang? Drei Bereiche - dazwischen liegen Blumen und Stümpfe. */
-const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale})`;
+/** Im Shader: ist die Form ein Anhang? Vier Bereiche - dazwischen liegen Blumen, Stümpfe und Gebäude. */
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.loadBowFemale}))`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
 /** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
@@ -475,6 +505,8 @@ export const CLIPS: Clip[] = [
   ...readClips('humanoid_sit', () => unpackClips(sitClips)),
   // Hacken (Pflügen) und Werfen (Jagd) - eigene Datei wie sit, aus Blender (docs/ANIMATION.md, Neuer Clip).
   ...readClips('humanoid_tools', () => unpackClips(toolClips)),
+  // Tragen vor der Brust (Holz, Kiste): Beine wie walk, Arme fest angewinkelt (B8).
+  ...readClips('humanoid_carry', () => unpackClips(carryClips)),
 ];
 /** Clips der Tiere (src/models/clips/quadruped.glb). */
 export const ANIMAL_CLIPS: Clip[] = readClips('quadruped', () => unpackClips(quadrupedClips));
@@ -706,6 +738,11 @@ export const POSE = {
   hoe: 7,
   /** Jäger: ausholen und werfen, ohne Werkzeug - Clip throw, clips/humanoid_tools. Eine Schleife dauert HUNT.reload. */
   throw: 8,
+  /**
+   * Gehen mit der Last vor der Brust (Holz, Tomatenkiste) - Clip carry,
+   * clips/humanoid_carry: Beine wie walk, beide Unterarme waagerecht nach vorn.
+   */
+  carry: 9,
 } as const;
 
 export interface EntityInstance {
@@ -784,7 +821,8 @@ uniform float uArm;
 // gestreckt wird.
 uniform vec3  uSocket;
 uniform float uKnifeScale;
-uniform vec3  uLoadAnchor;   // Befestigung der Last am Ruecken
+uniform vec3  uLoadAnchor;   // Befestigung der Last am Ruecken (Marker "Load" des Koerpers)
+uniform vec3  uGoodsAnchor;  // Last: um diesen Punkt waechst die Ware (Mitte unten, Meter)
 // Modelle: Groesse je Tile der Instanzgroesse und die Zeit fuer alles, was
 // sich von selbst bewegt.
 uniform float uModelScale;
@@ -873,7 +911,11 @@ const int P_LEG_R = 2;
 const int P_ARM_L = 3;
 const int P_ARM_R = 4;
 const int P_HEAD = 5;
+// Last (models/props/load_*.glb): die Ware ("Goods") wächst mit der Ladung,
+// Korb, Kiste, Riemen ("Carry") bleiben - beide am Oberkörper, am Anker
+// des Körpers (uLoadAnchor).
 const int P_LOAD = 6;
+const int P_CARRY = 33;
 const int P_SAILS = 7;
 const int P_CLOTH = 8;
 const int P_SHIN_L = 9;
@@ -944,7 +986,7 @@ int boneOf(int part, float z) {
   if (part == P_ARM_R) return ${BONE['upperArm.R']};
   if (part == P_FOREARM_R || part == P_TOOL || part == P_SCYTHE) return ${BONE['forearm.R']};
   if (part == P_HEAD) return ${BONE.head};
-  if (part == P_LOAD) return ${BONE.upperBody};
+  if (part == P_LOAD || part == P_CARRY) return ${BONE.upperBody};
   return z > uHip ? ${BONE.upperBody} : ${BONE.lowerBody};
 }
 
@@ -1073,7 +1115,10 @@ void main() {
       // des Körpers, der es trägt, in dessen Einheiten. Das Zugmesser auf
       // seinen Handabstand gestreckt (gebaut ist es für den Mann).
       if (part == P_KNIFE) p.y *= uKnifeScale;
-      p = uSocket + p / uMeters;
+      // Last: in Metern ab dem Anker am Rücken; die Ware wächst mit der
+      // Ladung (aMotion.w) um ihre Mitte unten.
+      if (part == P_LOAD) p = uGoodsAnchor + (p - uGoodsAnchor) * aMotion.w;
+      p = (part == P_LOAD || part == P_CARRY ? uLoadAnchor : uSocket) + p / uMeters;
     }
     gRest = p;
 
@@ -1095,8 +1140,6 @@ void main() {
         if (away) {
           p = vec3(0.0, 0.0, uHip);
         } else {
-          // Die Last waechst mit der Ladung aus dem Ruecken heraus.
-          if (part == P_LOAD) p = uLoadAnchor + (p - uLoadAnchor) * aMotion.w;
           // Der Hosenboden schwingt etwas mit, wenn sich die Schultern
           // gegen die Hüfte drehen.
           if (part == P_TORSO && p.z <= uHip && aBones.x < 0.5) p.y += clipTwist(clip, time) * 0.25 * (uHip - p.z);
@@ -1115,7 +1158,6 @@ void main() {
       } else {
         // Ohne Clip (Bibliothek nicht geladen): Ruhelage, Werkzeuge weggesteckt.
         if (part == P_TOOL || part == P_SCYTHE || part == P_KNIFE) p = vec3(0.0, 0.0, uHip);
-        if (part == P_LOAD) p = uLoadAnchor + (p - uLoadAnchor) * aMotion.w;
       }
     }
 
@@ -1476,7 +1518,8 @@ void main() {
     bool figureTex = role >= ${FIGURE_TEX.cloth} && role <= ${FIGURE_TEX.skin};
     vTex = role == ${IMAGE_ROLE} ? role
       : figureTex ? (villager ? role : 0)
-      : villager && (role == 1 || role == 2) ? ${FIGURE_TEX.cloth}
+      // Die Ware (role 2, Lasten) bleibt glatt in ihrer Farbe - kein Stoff.
+      : villager && role == 1 ? ${FIGURE_TEX.cloth}
       : role >= 6 && role != ${FOLIAGE_ROLE} ? role : !tree ? 0 : gSawn > 0.5 ? 5 : (role == 3 || role == 4) ? role : 0;
     vLocal = gRest * uMeters;
     if (gCut < 1e8) vCut = gCut * uMeters;
@@ -2171,7 +2214,9 @@ const PARTS: [prefix: string, part: number][] = [
   ['Arm.L', 3],
   ['Arm.R', 4],
   ['Head', 5],
-  ['Load', 6],
+  // Lasten (load_*.glb): Ware und Behälter, siehe P_LOAD. "Load" im Körper ist nur ein Marker.
+  ['Goods', 6],
+  ['Carry', 33],
   ['Sails', 7],
   ['Cloth', 8],
   // Zugmesser der Figuren (siehe P_KNIFE).
@@ -2199,7 +2244,7 @@ function partOf(object: string): number {
 const MATERIAL_ROLE: Record<string, number> = {
   Tunic: 1, // Instanzfarbe (Dorfbewohner)
   Paint: 1, // Instanzfarbe (Gebäude)
-  Load: 2, // Farbe der getragenen Ressource
+  Load: 2, // Farbe der getragenen Ware (Lasten, load_*.glb)
   // Bäume: Rinde als Textur im Fragment-Shader (treeTexture)
   Bark: 3,
   BarkDark: 3,
@@ -2237,7 +2282,7 @@ const MATERIAL_ROLE: Record<string, number> = {
   SoilLight: 9,
   CornCob: 11,
   // Dorfbewohner (nur Figuren, siehe figureTexture): Stoff, Leder, Haar, Haut.
-  // Der Kittel (Tunic, Rolle 1) und die Last (Load, Rolle 2) sind auch Stoff.
+  // Der Kittel (Tunic, Rolle 1) ist auch Stoff.
   Wool: FIGURE_TEX.cloth,
   WoolShade: FIGURE_TEX.cloth,
   Apron: FIGURE_TEX.cloth,
@@ -2279,7 +2324,10 @@ interface Model {
   stump: number;
   /** Bäume: Halbmesser des Stumpfs (Modell-Einheiten) - so weit rutscht der Stamm daneben. */
   stumpRadius: number;
+  /** Figuren: Anker der Last am Rücken (Marker "Load", Modell-Einheiten) - dort sitzen die Lasten (load_*.glb). */
   loadAnchor: [number, number, number];
+  /** Lasten: Mitte unten der Ware (Teile "Goods") - um sie wächst sie mit der Ladung. */
+  goodsAnchor: [number, number, number];
   /** Mitte der Flügel (links, oben). */
   hub: [number, number];
   /** Fahnentuch (Teil Cloth): vom Mast bis zum Ende in Modell-y, seine Höhe - für die Fahne (FLAG). */
@@ -2430,10 +2478,11 @@ function boneSlots(weight: BoneWeight | undefined): [number, number, number] {
  */
 function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'width' | 'meters', lod = false, sawable = false,
                    only?: ObjTriangle[]): Model {
-  // Die Objekte "Entry" (Eingang) und "Work.*" (Platz an der Werkbank)
+  // Die Objekte "Entry" (Eingang), "Work.*" (Platz an der Werkbank) und
+  // "Load" (Anker der Last am Rücken der Figuren, der frühere Rucksack)
   // markieren nur Stellen - nicht zeichnen, nicht mitmessen.
   const all = typeof obj === 'string' ? parseObj(obj) : obj;
-  const isMarker = (object: string) => object.startsWith('Entry') || object.startsWith('Work.');
+  const isMarker = (object: string) => object.startsWith('Entry') || object.startsWith('Work.') || object.startsWith('Load');
   const markers = all.filter((t) => isMarker(t.object));
   const markerPoints = (prefix: string) => markers.filter((t) => t.object.startsWith(prefix)).flatMap((t) => t.points);
   const entryPoints = markerPoints('Entry');
@@ -2530,7 +2579,7 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
   let elbow = 0;
   const forearm = [Infinity, 0];
   let stump = 0;
-  const load = { back: -Infinity, y: [Infinity, -Infinity], z: [Infinity, -Infinity] };
+  const goods = { x: [Infinity, -Infinity], y: [Infinity, -Infinity], z: Infinity };
   const crown = { lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] };
   const legSum = [0, 0];
   const legCount = [0, 0];
@@ -2689,10 +2738,10 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
       }
       if (t.object.startsWith('Trunk.Stump')) stump = Math.max(stump, z);
       if (part === 6) {
-        // Die Last hängt mit ihrer Vorderseite am Rücken.
-        load.back = Math.max(load.back, x);
-        load.y = [Math.min(load.y[0], y), Math.max(load.y[1], y)];
-        load.z = [Math.min(load.z[0], z), Math.max(load.z[1], z)];
+        // Ware einer Last: sie wächst um ihre Mitte unten.
+        goods.x = [Math.min(goods.x[0], x), Math.max(goods.x[1], x)];
+        goods.y = [Math.min(goods.y[0], y), Math.max(goods.y[1], y)];
+        goods.z = Math.min(goods.z, z);
       }
       if (part === 8) {
         cloth.y = [Math.min(cloth.y[0], y), Math.max(cloth.y[1], y)];
@@ -2720,6 +2769,12 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
     elbow = boneHead('forearm.L')[2];
     forearm[0] = forearm[1] = Math.abs(boneHead('upperArm.L')[1]);
   }
+  // Anker der Last (Marker "Load" der Figuren): Mitte der Fläche, die am Rücken liegt.
+  const loadPoints = markerPoints('Load').map((p) => local(p));
+  const mid = (a: number[]) => (Math.min(...a) + Math.max(...a)) / 2;
+  const loadAnchor: [number, number, number] = loadPoints.length
+    ? [Math.max(...loadPoints.map((p) => p[0])), mid(loadPoints.map((p) => p[1])), mid(loadPoints.map((p) => p[2]))]
+    : [0, 0, 0];
   const stand = markerAt(markerPoints('Work.Stand'));
   const aim = markerAt(markerPoints('Work.Aim'));
   const seat = markerAt(markerPoints('Work.Seat'));
@@ -2741,9 +2796,8 @@ function loadModel(obj: string | ObjTriangle[], mtl: string, unit: 'height' | 'w
     arm: Number.isFinite(forearm[0]) ? (forearm[0] + forearm[1]) / 2 : 0,
     stump,
     stumpRadius,
-    loadAnchor: Number.isFinite(load.back)
-      ? [load.back, (load.y[0] + load.y[1]) / 2, (load.z[0] + load.z[1]) / 2]
-      : [0, 0, 0],
+    loadAnchor,
+    goodsAnchor: Number.isFinite(goods.z) ? [(goods.x[0] + goods.x[1]) / 2, (goods.y[0] + goods.y[1]) / 2, goods.z] : [0, 0, 0],
     hub: [(sails.y[0] + sails.y[1]) / 2, (sails.z[0] + sails.z[1]) / 2],
     cloth: Number.isFinite(cloth.y[0]) ? [cloth.y[0], cloth.y[1], (cloth.z[0] + cloth.z[1]) / 2] : [0, 1, 0],
     canopy: Number.isFinite(crown.lo[0]) ? crown.lo.map((l, i) => (l + crown.hi[i]) / 2) as [number, number, number] : [0, 0, 0.5],
@@ -2940,6 +2994,16 @@ const MODELS: {
   { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propRodFemale, model: PROP_ROD, scale: 1.7, body: SHAPE.villagerFemale },
+  // Lasten (B8): je Ware ein Modell, für beide Körper einmal geladen.
+  ...([
+    [SHAPE.loadLogs, loadLogsModel], [SHAPE.loadCrate, loadCrateModel], [SHAPE.loadHotte, loadHotteModel],
+    [SHAPE.loadBasket, loadBasketModel], [SHAPE.loadSheaf, loadSheafModel], [SHAPE.loadMeat, loadMeatModel],
+    [SHAPE.loadBow, loadBowModel],
+  ] as const).flatMap(([shape, file]) => {
+    const model = loadModel(file.obj, file.mtl, 'meters');
+    // Die Form für die Frau folgt jeweils direkt auf die des Mannes (SHAPE).
+    return [{ shape, model, scale: 1.7, body: SHAPE.villager }, { shape: shape + 1, model, scale: 1.7, body: SHAPE.villagerFemale }];
+  }),
   { shape: SHAPE.markerArrow, model: loadModel(markerArrowModel.obj, markerArrowModel.mtl, 'height'), scale: 1 },
   { shape: SHAPE.needWood, model: loadModel(treeOakModel.obj, treeOakModel.mtl, 'height'), scale: 1 },
   { shape: SHAPE.needBow, model: BOW_MODEL, scale: 1 },
@@ -3023,16 +3087,22 @@ function propsOfPose(pose: number): number {
 const POSE_PROPS = Array.from({ length: CLIP_POSE }, (_, pose) => CLIPS.find((c) => c.pose === pose)?.props ?? 0);
 
 /**
- * Die Anhänge (Werkzeuge) einer Figur als eigene Instanzen: gleiche Lage,
- * Größe und Bewegung wie die Figur - der Shader hängt sie an ihre Hand.
+ * Die Anhänge einer Figur als eigene Instanzen: gleiche Lage, Größe und
+ * Bewegung wie die Figur - der Shader hängt Werkzeuge an ihre Hand, Lasten
+ * an ihren Rücken (`load`, siehe LOAD_PROPS; ihre Menge ist motion[3]).
  * Leer für alles, was keine Figur ist. Wer Figuren zeichnet, zeichnet diese dazu.
  */
-export function figureProps(figure: EntityInstance): EntityInstance[] {
+export function figureProps(figure: EntityInstance, load?: LoadLook): EntityInstance[] {
   if (figure.shape !== SHAPE.villager && figure.shape !== SHAPE.villagerFemale) return [];
-  const bits = propsOfPose(Math.round(figure.motion?.[2] ?? 0));
-  return FIGURE_PROPS
+  const pose = Math.round(figure.motion?.[2] ?? 0);
+  const bits = propsOfPose(pose);
+  const look = load && LOAD_PROPS[load];
+  // In den Armen nur beim Tragen (Clip carry) - bei der Arbeit (hacken, ernten) nicht zu sehen.
+  const shown = look && (!look.arms || pose === POSE.carry);
+  const tools = shown && look.hand ? [] : FIGURE_PROPS
     .filter((p) => (bits & p.bit) !== 0)
     .map((p) => ({ ...figure, shape: p.shapes[figure.shape], health: undefined }));
+  return shown ? [...tools, { ...figure, shape: look.shapes[figure.shape], health: undefined }] : tools;
 }
 
 /** Was der Fischer in der Hand hat - statt der Werkzeuge seines Clips (figureProps). */
@@ -3040,6 +3110,48 @@ const HELD = {
   fish: { [SHAPE.villager]: SHAPE.propFish, [SHAPE.villagerFemale]: SHAPE.propFishFemale },
   rod: { [SHAPE.villager]: SHAPE.propRod, [SHAPE.villagerFemale]: SHAPE.propRodFemale },
 } as Record<string, Record<number, number>>;
+
+/**
+ * Wie eine Last aussieht (B8) - welche Ware zu welchem Aussehen gehört,
+ * entscheidet world/render.ts (loadLook).
+ */
+export const LOAD_LOOKS = ['logs', 'crate', 'hotte', 'basket', 'sheaf', 'meat', 'bow', 'fish'] as const;
+export type LoadLook = (typeof LOAD_LOOKS)[number];
+
+/** Form je Körper: die der Frau folgt auf die des Mannes (SHAPE.loadLogs, loadLogsFemale ...). */
+const bodies = (shape: number) => ({ [SHAPE.villager]: shape, [SHAPE.villagerFemale]: shape + 1 });
+
+/**
+ * Lasten als Anhänge (models/props/load_*.glb, Fisch: der Hering der Fischer).
+ * `arms`: vor der Brust in beiden Armen, nur mit dem Clip carry zu sehen
+ * (carryPose). `hand`: die Hand hält sie (über der Schulter) - das Beil der
+ * Clips stand und walk steckt dann weg.
+ */
+const LOAD_PROPS: Record<LoadLook, { shapes: Record<number, number>; arms?: boolean; hand?: boolean }> = {
+  logs: { shapes: bodies(SHAPE.loadLogs), arms: true },
+  crate: { shapes: bodies(SHAPE.loadCrate), arms: true },
+  hotte: { shapes: bodies(SHAPE.loadHotte) },
+  basket: { shapes: bodies(SHAPE.loadBasket) },
+  sheaf: { shapes: bodies(SHAPE.loadSheaf), hand: true },
+  meat: { shapes: bodies(SHAPE.loadMeat), hand: true },
+  bow: { shapes: bodies(SHAPE.loadBow) },
+  fish: { shapes: HELD.fish, hand: true },
+};
+
+/**
+ * Pose einer Figur mit Last: Gehen und Stehen werden zum Tragen vor der Brust
+ * (Clip carry), wenn die Last in den Armen liegt - sonst bleibt die Pose.
+ */
+export function carryPose(pose: number, load?: LoadLook): number {
+  return load && LOAD_PROPS[load].arms && (pose === POSE.walk || pose === POSE.stand) ? POSE.carry : pose;
+}
+
+/**
+ * Phase des Clips carry, wenn die Figur mit der Last steht (angehalten): bei
+ * 0,15 s der Schleife stehen beide Füße fast nebeneinander - einen eigenen
+ * Clip fürs Stehen mit Last gibt es nicht. VERIFIED: Galerie, Mann (Clips) → carry.
+ */
+export const CARRY_STILL = 0.15 * Math.PI;
 
 /** Anhang eines Fischers: Hering, Angel oder nichts - das Beil der Clips steckt er weg. */
 export function figureHolding(figure: EntityInstance, item: 'fish' | 'rod' | null): EntityInstance[] {
@@ -4136,6 +4248,7 @@ export class EntityRenderer {
       gl.uniform1f(this.location('uStump'), m.model.stump);
       gl.uniform1f(this.location('uStumpRadius'), m.model.stumpRadius);
       gl.uniform3fv(this.location('uLoadAnchor'), b.model.loadAnchor);
+      gl.uniform3fv(this.location('uGoodsAnchor'), m.model.goodsAnchor);
       gl.uniform3fv(this.location('uCanopy'), m.model.canopy);
       gl.uniform3fv(this.location('uCanopyHalf'), m.model.canopyHalf);
       const clips = this.clipUniforms.get(b.shape) ?? NO_CLIPS;
