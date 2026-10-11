@@ -11,6 +11,7 @@ import { hasDetails, renderSelection } from '../components/SelectionPanel';
 import { GATHER_CURSOR, RALLY_CURSOR } from '../cursors';
 import { CROP_ORDER, RESOURCE_LABEL, VILLAGER, type BuildingType, type CropType, type ResourceKind, type TreeSpecies } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
+import type { ResearchId } from '../world/research';
 import type { World } from '../world/world';
 import type { IdlePick } from './actions';
 import type { Placement } from './Placement';
@@ -36,6 +37,9 @@ export interface UiHooks {
   train(count: number): void;
   /** Klick in die Warteschlange: die Einheit an Platz `index` abbrechen. */
   cancelTraining(index: number): void;
+  /** Dorfzentrum: Forschung beginnen bzw. die laufende abbrechen (world/research.ts). */
+  research(id: ResearchId): void;
+  cancelResearch(): void;
   demolish(): void;
   /** Arbeiter der Werkstatt entlassen. */
   dismiss(): void;
@@ -111,6 +115,7 @@ export class GameUi {
       const target = e.target as HTMLElement;
       const queued = target.closest<HTMLElement>('[data-action=cancel-train]');
       if (queued) hooks.cancelTraining(Number(queued.dataset.index));
+      else if (target.closest('[data-action=cancel-research]')) hooks.cancelResearch();
       else if (target.closest('.sel-frame')) hooks.focusSelection();
     });
     // Umschalttaste gehalten: der Ausbilden-Knopf zeigt 5 statt 1. Capture,
@@ -136,6 +141,7 @@ export class GameUi {
       if (action === 'dismiss') hooks.dismiss();
       if (action === 'crop' && button?.dataset.crop) hooks.setFieldCrop(button.dataset.crop as CropType);
       if (action === 'species' && button?.dataset.species) hooks.setTreeSpecies(button.dataset.species as TreeSpecies);
+      if (action === 'research' && button?.dataset.research) hooks.research(button.dataset.research as ResearchId);
     });
   }
 

@@ -18,7 +18,7 @@ import {
   groundToWorld, setViewElevation, snapCamera, viewElevation, worldToGround, worldToScreen, type IsoView,
 } from './gl/iso';
 import { AXIS_COLORS, GIZMO_RADIUS, TIMELINE_SECONDS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
-import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, FISH_KIND, MEAT_KIND, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
+import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, FISH_KIND, MEAT_KIND, VILLAGER, type AnimalKind, type CropType, type Shoes } from './world/catalog';
 import { YOUNG_SIZE, type AnimalLook } from './world/unit';
 import { FLOWER_SIZE } from './world/flowers';
 import { FLEE_STRIDE, loadLook, type LoadOf } from './world/render';
@@ -56,8 +56,8 @@ const loop = (t: number, period: number) => (t % period) / period;
 const ZOOMED = 3;
 
 /** Figur: Dorfbewohner(in) in einer Pose, `rate` = Phase je Sekunde - mit Last voll beladen. */
-/** Eine Figur in Spielerfarbe - barfuß wie zu Beginn des Spiels, mit `shoes` in Holzschuhen (B31). */
-function figure(label: string, female: boolean, pose: number, rate: number, heading: number, load?: LoadOf, shoes = false): Exhibit {
+/** Eine Figur in Spielerfarbe - barfuß wie zu Beginn des Spiels, mit `shoes` in Holz- oder Lederschuhen (B31). */
+function figure(label: string, female: boolean, pose: number, rate: number, heading: number, load?: LoadOf, shoes: Shoes | null = null): Exhibit {
   return {
     label,
     draw: (t, x, y, out) => {
@@ -66,7 +66,7 @@ function figure(label: string, female: boolean, pose: number, rate: number, head
         shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1,
         motion: [heading, pose === POSE.stand ? t : t * rate, carryPose(pose, load?.look), load ? 1 : 0], accent: load?.accent ?? WOOD,
       };
-      out.push(f, ...figureProps(f, load?.look), ...figureShoes(f, shoes ? 'wood' : null));
+      out.push(f, ...figureProps(f, load?.look), ...figureShoes(f, shoes));
     },
   };
 }
@@ -509,10 +509,12 @@ const people = (female: boolean) => {
     hunter('steht mit Speer', female, POSE.stand, 1, true),
     hunter('wirft den Speer', female, POSE.throw, 6, true),
     hunter('jagt ohne Speer', female, POSE.throw, 6, false),
-    figure('steht in Holzschuhen', female, POSE.stand, 1, Math.PI * 0.25, undefined, true),
-    figure('geht in Holzschuhen', female, POSE.walk, walkRate, -Math.PI / 4, undefined, true),
-    figure('pflückt in Holzschuhen', female, POSE.pick, 6, 0.3, undefined, true),
-    figure('hackt in Holzschuhen', female, POSE.work, 6, 0.3, undefined, true),
+    figure('steht in Holzschuhen', female, POSE.stand, 1, Math.PI * 0.25, undefined, 'wood'),
+    figure('geht in Holzschuhen', female, POSE.walk, walkRate, -Math.PI / 4, undefined, 'wood'),
+    figure('pflückt in Holzschuhen', female, POSE.pick, 6, 0.3, undefined, 'wood'),
+    figure('hackt in Holzschuhen', female, POSE.work, 6, 0.3, undefined, 'wood'),
+    figure('steht in Lederschuhen', female, POSE.stand, 1, Math.PI * 0.25, undefined, 'leather'),
+    figure('geht in Lederschuhen', female, POSE.walk, walkRate, -Math.PI / 4, undefined, 'leather'),
     archer('geht mit Bogen', female, POSE.walk, walkRate),
     archer('zielt mit Bogen', female, POSE.carry, 1),
   ], 240, 0.9);

@@ -9,11 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T22:10:38Z s=560a6297 DONE fp=bb37b783044c cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:12:23Z s=560a6297 DONE fp=2aff7be73b88 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:13:41Z s=560a6297 DONE fp=e83df8aeb3a9 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:14:33Z s=560a6297 DONE fp=3c8717d56dd3 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:16:40Z s=560a6297 DONE fp=094befb331a2 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:17:06Z s=560a6297 DONE fp=d213a3a0b8e4 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:21:07Z s=560a6297 DONE fp=2fcc3cdd1717 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:24:06Z s=560a6297 DONE fp=78ffa8041904 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +99,8 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:tick case archery learn=none: Merge artefact; tsc noFallthrough not enabled, tests/archery+pasture pass after fix.
 2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:hopeless / blockedAt / hunt learn=test: tests/pasture, spear, shoes, archery all green (139).
 2026-10-11T22:58:26Z s=560a6297 FINDING src/gl/entityRenderer.ts:PROP_TEST learn=none: Visual-only shader constant.
+2026-10-11T23:37:49Z s=560a6297 DONE fp=eee85c79118a cov=80.5% paths=docs/OFFEN.md,memory.md,src/components/SelectionPanel.css,src/components/SelectionPanel.tsx(+17)
+2026-10-11T23:37:49Z s=560a6297 FINDING src/world/save.ts:migrate learn=test: tests/research.test.mjs save round-trip; memory.md notes migrate must pass new top-level fields.
+2026-10-11T23:37:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:SHAPE.clogs icon learn=test: smoke checks research buttons have an image.
+2026-10-11T23:37:49Z s=560a6297 FINDING src/world/research.ts:blocker learn=none: Depends on B26 merge; will be handled there.
+2026-10-11T23:37:49Z s=560a6297 FINDING src/world/villagers.ts:hunt leather learn=test: tests/research.test.mjs hunted sheep gives 4 leather + meat.

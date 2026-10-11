@@ -11,7 +11,7 @@ import { after, test } from 'node:test';
 import { loadModules } from './worldFixture.mjs';
 
 const {
-  modules: [{ loadLook }, { CRAFTS, CROPS, FISH_KIND, MEAT_KIND, RESOURCE_LABEL }, { KIND_LABEL }, { SHAPE, POSE, LOAD_LOOKS, carryPose, figureProps }],
+  modules: [{ loadLook }, { CRAFTS, CROPS, FISH_KIND, LEATHER_SHOES, MEAT_KIND, RESOURCE_LABEL }, { KIND_LABEL }, { SHAPE, POSE, LOAD_LOOKS, carryPose, figureProps }],
   close,
 } = await loadModules('/src/world/render.ts', '/src/world/catalog.ts', '/src/world/resources.ts', '/src/gl/entityRenderer.ts');
 after(close);
@@ -33,6 +33,7 @@ const LOADS = [
   ['bows', RESOURCE_LABEL.bows],
   ['spears', RESOURCE_LABEL.spears],
   ['shoes', CRAFTS.cobbler.kind],
+  ['shoes', LEATHER_SHOES.kind],
   // Von der Weide (B27, pasture.ts): Milch, Wolle, Leder - die Sorte ist der Name des Rohstoffs.
   ['milk', RESOURCE_LABEL.milk],
   ['wool', RESOURCE_LABEL.wool],

@@ -170,12 +170,13 @@ export abstract class BuildingBase {
     sorts[kind] = (sorts[kind] ?? 0) + amount;
   }
 
-  /** Nimmt bis zu `amount` von `resource` heraus, Sorte um Sorte - gibt zurück, wie viel. */
-  takeGoods(resource: ResourceKind, amount: number): number {
+  /** Nimmt bis zu `amount` von `resource` heraus, Sorte um Sorte (nur `only`, falls angegeben) - gibt zurück, wie viel. */
+  takeGoods(resource: ResourceKind, amount: number, only?: string): number {
     const sorts = this.goods[resource];
     if (!sorts) return 0;
     let taken = 0;
     for (const [kind, have] of Object.entries(sorts)) {
+      if (only !== undefined && kind !== only) continue;
       const take = Math.min(have, amount - taken);
       taken += take;
       if (have - take <= 1e-9) delete sorts[kind];

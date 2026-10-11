@@ -45,7 +45,7 @@ export type Task =
    * den Bogen zur nächsten Waffenkammer (`deliver`) - dann von vorn.
    * `leave`: entlassen (siehe VillagerWork.dismiss).
    */
-  | { kind: 'craft'; building: string; step: 'enter' | 'fetch' | 'carve' | 'deliver'; progress: number; leave?: boolean }
+  | { kind: 'craft'; building: string; step: 'enter' | 'fetch' | 'carve' | 'deliver'; progress: number; leave?: boolean; leather?: boolean }
   /**
    * Fischer der Fischerhütte `building`. Geht erst durch ihre Tür hinein
    * (`enter`). Mit Boot zur vollen Reuse `trap`:

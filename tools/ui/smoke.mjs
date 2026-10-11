@@ -167,6 +167,13 @@ check('Dorfbewohner in Ausbildung', (await stock('food')) < foodBefore, `Nahrung
 // Jedes Lager zeigt, was darin liegt (B7) - der Startvorrat liegt im Dorfzentrum, ohne Sorte.
 const tcGoods = await page.$eval('#selection .sel-goods', (e) => e.textContent).catch(() => '');
 check('Dorfzentrum zeigt seinen Vorrat', /^Vorrat: Nahrung \d+, Holz \d+/.test(tcGoods), tcGoods);
+// Forschung (world/research.ts): je Forschung ein Knopf mit Bild - ohne Leder gesperrt, mit dem Grund im Tooltip.
+// Das Bild der Gerberei sind die Holzschuhe (SHAPE.clogs) - es blieb leer, solange ihre Teile wie Beine bewegt wurden.
+const research = await page.$$eval('#actions .cmd-btn[data-action=research]',
+  (bs) => bs.map((b) => [b.dataset.research, b.disabled, b.title, (b.querySelector('img')?.getAttribute('src') ?? '').length > 0]));
+check('Dorfzentrum zeigt die Forschung', research.length === 2 && research[0][0] === 'leather_shoes' && research[0][1]
+  && research[0][2].startsWith('Gerberei erforschen') && research[0][2].includes('Zu wenig Rohstoffe') && research.every((r) => r[3]),
+  JSON.stringify(research));
 // Die Warteschlange zeigt jeden Eingereihten als Frau oder Mann - gespeichert wird das mit (q: 1 = Frau).
 const queueIcons = await page.$$eval('#selection .sel-queue-unit img', (imgs) => imgs.filter((i) => i.src).length);
 const queued = (await saved()).buildings.find((b) => b.t === 'town_center')?.q;

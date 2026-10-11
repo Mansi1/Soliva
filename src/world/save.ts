@@ -20,9 +20,11 @@
 // Habe der Dorfbewohner ohne neue Version: `inv` fehlt in älteren Ständen und
 // ohne Habe - dann hat er nichts (B25) und ist barfuß (`inv.shoes` fehlt, B31).
 // Ebenso `sk` (Fähigkeiten, B24): ohne kann er noch nichts.
+// Forschung ohne neue Version: `research` fehlt in älteren Ständen - dann ist nichts erforscht.
 
 import type { BuildingSave } from './building';
 import type { PlantedSave } from './deposits';
+import type { ResearchSave } from './research';
 import { initialResources, RESOURCE_KINDS, type AnimalKind, type ResourceKind, type Resources } from './catalog';
 import type { Task } from './world';
 import type { Inventory } from './unit';
@@ -85,6 +87,8 @@ export interface SaveData {
   animals?: AnimalSave[];
   /** Stücke der Karte, in denen schon Tiere entstanden sind. */
   spawned?: string[];
+  /** Forschung (research.ts): erforscht und was gerade läuft - fehlt ohne und in älteren Ständen. */
+  research?: ResearchSave;
 }
 
 /**
@@ -163,6 +167,8 @@ function migrate(old: AnySave): LoadedSave | null {
       planted: scale === 1 ? old.planted ?? {} : {},
       animals: old.version === 3 ? old.animals ?? [] : [],
       spawned: old.version === 3 ? old.spawned ?? [] : [],
+      // Forschung gibt es erst in Version 3 - ihre Anker (Dorfzentren) sind Koordinaten.
+      research: scale === 1 ? old.research : undefined,
     },
   };
 }

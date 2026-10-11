@@ -1,7 +1,8 @@
 // Cobbler.ts
 // Schusterei (B31) - wie die Bognerei: ein Dorfbewohner arbeitet hier als
 // Schuster, holt Holz aus dem Vorrat (CRAFTS.cobbler) und schnitzt an der
-// Werkbank Holzschuhe. Die fertigen Paare bleiben hier im Regal (goods);
+// Werkbank Holzschuhe - nach der Gerberei im Dorfzentrum (research.ts) aus
+// Leder Lederschuhe, solange Leder da ist. Die fertigen Paare bleiben hier im Regal (goods);
 // barfüßige Dorfbewohner holen sich selbst ein Paar ab (villagers.ts,
 // fetchShoes). Was der Schuster Schritt für Schritt tut, steht bei den
 // Dorfbewohnern (Auftrag 'craft').
