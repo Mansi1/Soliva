@@ -9,12 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T22:04:52Z s=560a6297 DONE fp=16787a5011ae cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:05:57Z s=560a6297 DONE fp=e725c3d87292 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:07:08Z s=560a6297 DONE fp=d62863867460 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:07:48Z s=560a6297 DONE fp=8ac7615a7f54 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:08:05Z s=560a6297 DONE fp=b77fc6cd30c2 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:09:19Z s=560a6297 DONE fp=61c793304d3c cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:10:38Z s=560a6297 DONE fp=bb37b783044c cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:12:23Z s=560a6297 DONE fp=2aff7be73b88 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:13:41Z s=560a6297 DONE fp=e83df8aeb3a9 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T22:49:58Z s=560a6297 FINDING merge feat/schuhe (PR #65) into feat/bogen learn=test: tests/archery + tests/shoes cover both inventory slots after merge.
 2026-10-11T22:49:58Z s=560a6297 FINDING src/world/unit/skills.ts:practise learn=test: tests/archery.test.mjs master 1.5x, capped.
 2026-10-11T22:49:58Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask bow bit learn=none: Visual-only shader constant.
+2026-10-11T22:58:26Z s=560a6297 DONE fp=87959e667926 cov=80.5% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+28)
+2026-10-11T22:58:26Z s=560a6297 FINDING src/world/pasture.ts:deliver (inside) learn=test: tests/pasture.test.mjs asserts he is visible while tending.
+2026-10-11T22:58:26Z s=560a6297 FINDING src/world/building/Pasture.ts:key learn=none: No check for duplicate build keys exists; a cheap test could assert unique BUILDINGS keys - left as note.
+2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:tick case archery learn=none: Merge artefact; tsc noFallthrough not enabled, tests/archery+pasture pass after fix.
+2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:hopeless / blockedAt / hunt learn=test: tests/pasture, spear, shoes, archery all green (139).
+2026-10-11T22:58:26Z s=560a6297 FINDING src/gl/entityRenderer.ts:PROP_TEST learn=none: Visual-only shader constant.

@@ -121,6 +121,12 @@ import propBowModel from '../models/props/prop_bow.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
 import bowModel from '../models/props/bow.glb?model';
 import flowerModel from '../models/flowers/flower.glb?model';
+// Weide (B27): Gatter, Zaun und die Lasten Milch, Wolle, Leder.
+import pastureGateModel from '../models/buildings/pasture_gate.glb?model';
+import pastureFenceModel from '../models/props/pasture_fence.glb?model';
+import loadMilkModel from '../models/props/load_milk.glb?model';
+import loadWoolModel from '../models/props/load_wool.glb?model';
+import loadLeatherModel from '../models/props/load_leather.glb?model';
 
 /** Materialien der Dorfbewohner und ihrer Werkzeuge - jedes Modell bringt seine mit. */
 const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propHoeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
@@ -372,6 +378,17 @@ export const SHAPE = {
    */
   propBow: 200,
   propBowFemale: 201,
+  /** Weide (B27): das Gatter, ein Tile breit (models/buildings/pasture_gate.glb) - das Modell der Gebäudeart. */
+  pasture: 164,
+  /** Lasten der Weide wie die anderen Lasten, je Körper (models/props/load_milk|wool|leather.glb) - PROP_TEST zählt sie als eigenen Bereich. */
+  loadMilk: 220,
+  loadMilkFemale: 221,
+  loadWool: 222,
+  loadWoolFemale: 223,
+  loadLeather: 224,
+  loadLeatherFemale: 225,
+  /** Zaun der Weide, ein halbes Tile lang (models/props/pasture_fence.glb): motion[0] = Blickrichtung (world/pasture.ts). */
+  pastureFence: 226,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -450,9 +467,10 @@ const PROP_SHAPES: number[] = [
   SHAPE.loadBow, SHAPE.loadBowFemale, SHAPE.loadSpears, SHAPE.loadSpearsFemale, SHAPE.propSpear, SHAPE.propSpearFemale,
   SHAPE.loadShoes, SHAPE.loadShoesFemale, SHAPE.propClogs, SHAPE.propClogsFemale,
   SHAPE.propBow, SHAPE.propBowFemale,
+  SHAPE.loadMilk, SHAPE.loadMilkFemale, SHAPE.loadWool, SHAPE.loadWoolFemale, SHAPE.loadLeather, SHAPE.loadLeatherFemale,
 ];
-/** Im Shader: ist die Form ein Anhang? Sechs Bereiche - dazwischen liegen Blumen, Stümpfe, Gebäude und der Speer. */
-const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}) || (shape >= ${SHAPE.loadShoes} && shape <= ${SHAPE.propClogsFemale}) || shape == ${SHAPE.propBow} || shape == ${SHAPE.propBowFemale})`;
+/** Im Shader: ist die Form ein Anhang? Sieben Bereiche - dazwischen liegen Blumen, Stümpfe, Gebäude und der Speer. */
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}) || (shape >= ${SHAPE.loadShoes} && shape <= ${SHAPE.propClogsFemale}) || shape == ${SHAPE.propBow} || shape == ${SHAPE.propBowFemale} || (shape >= ${SHAPE.loadMilk} && shape <= ${SHAPE.loadLeatherFemale}))`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
 /** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
@@ -3045,6 +3063,8 @@ const MODELS: {
   { shape: SHAPE.fishTrap, model: loadModel(fishTrapModel.obj, fishTrapModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.fisherBoat, model: loadModel(fisherBoatModel.obj, fisherBoatModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.forester, model: loadModel(foresterModel.obj, foresterModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.pasture, model: loadModel(pastureGateModel.obj, pastureGateModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.pastureFence, model: loadModel(pastureFenceModel.obj, pastureFenceModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.propFish, model: PROP_FISH, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },
@@ -3060,6 +3080,7 @@ const MODELS: {
     [SHAPE.loadLogs, loadLogsModel], [SHAPE.loadCrate, loadCrateModel], [SHAPE.loadHotte, loadHotteModel],
     [SHAPE.loadBasket, loadBasketModel], [SHAPE.loadSheaf, loadSheafModel], [SHAPE.loadMeat, loadMeatModel],
     [SHAPE.loadBow, loadBowModel], [SHAPE.loadSpears, loadSpearsModel], [SHAPE.loadShoes, loadShoesModel],
+    [SHAPE.loadMilk, loadMilkModel], [SHAPE.loadWool, loadWoolModel], [SHAPE.loadLeather, loadLeatherModel],
   ] as const).flatMap(([shape, file]) => {
     const model = loadModel(file.obj, file.mtl, 'meters');
     // Die Form für die Frau folgt jeweils direkt auf die des Mannes (SHAPE).
@@ -3180,7 +3201,7 @@ export type HeldItem = 'fish' | 'rod' | 'spear' | 'bow';
  * Wie eine Last aussieht (B8) - welche Ware zu welchem Aussehen gehört,
  * entscheidet world/render.ts (loadLook).
  */
-export const LOAD_LOOKS = ['logs', 'crate', 'hotte', 'basket', 'sheaf', 'meat', 'bow', 'spears', 'shoes', 'fish'] as const;
+export const LOAD_LOOKS = ['logs', 'crate', 'hotte', 'basket', 'sheaf', 'meat', 'bow', 'spears', 'shoes', 'fish', 'milk', 'wool', 'leather'] as const;
 export type LoadLook = (typeof LOAD_LOOKS)[number];
 
 /** Form je Körper: die der Frau folgt auf die des Mannes (SHAPE.loadLogs, loadLogsFemale ...). */
@@ -3203,6 +3224,9 @@ const LOAD_PROPS: Record<LoadLook, { shapes: Record<number, number>; arms?: bool
   spears: { shapes: bodies(SHAPE.loadSpears) },
   shoes: { shapes: bodies(SHAPE.loadShoes) },
   fish: { shapes: HELD.fish, hand: true },
+  milk: { shapes: bodies(SHAPE.loadMilk) },
+  wool: { shapes: bodies(SHAPE.loadWool) },
+  leather: { shapes: bodies(SHAPE.loadLeather) },
 };
 
 /**

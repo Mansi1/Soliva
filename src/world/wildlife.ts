@@ -97,7 +97,7 @@ export class Wildlife {
   private herdNear(kind: AnimalKind, x: number, y: number): Herd | null {
     for (const a of this.animals) {
       const herd = a.herd;
-      if (a.kind === kind && herd.members[0] === a && Math.hypot(herd.x - x, herd.y - y) < JOIN_RANGE && herd.size < HERD_MAX) return herd;
+      if (a.kind === kind && !a.tamed && herd.members[0] === a && Math.hypot(herd.x - x, herd.y - y) < JOIN_RANGE && herd.size < HERD_MAX) return herd;
     }
     return null;
   }
@@ -117,7 +117,7 @@ export class Wildlife {
     saved.forEach((s, i) => {
       if (!isAnimalKind(s.k)) return;
       const female = s.s ? s.s === 'f' : hash01(Math.round(s.x * 100), Math.round(s.y * 100), i) < 0.5;
-      const options = { hp: s.hp, food: s.f, dead: s.d, female, age: s.a, breed: s.b };
+      const options = { hp: s.hp, food: s.f, dead: s.d, female, age: s.a, breed: s.b, tamed: s.tm === 1, produce: s.pr };
       const herd = s.h === undefined ? this.herdNear(s.k, s.x, s.y) : herds.get(s.h) ?? null;
       const animal = this.add(s.k, s.x, s.y, options, herd);
       if (s.h !== undefined) herds.set(s.h, animal.herd);
@@ -142,12 +142,15 @@ export class Wildlife {
     return best;
   }
 
-  /** Ein Tick für alle Tiere; leer zerlegte Kadaver verschwinden. true, wenn sich etwas geändert hat. */
-  tick(dt: number, surroundings: AnimalSurroundings): boolean {
+  /**
+   * Ein Tick für alle Tiere; leer zerlegte Kadaver verschwinden. true, wenn
+   * sich etwas geändert hat. `pen`: was gezähmte Tiere sehen - nur die Weide (pasture.ts).
+   */
+  tick(dt: number, surroundings: AnimalSurroundings, pen: AnimalSurroundings = surroundings): boolean {
     let changed = false;
     // Jedes Rudel einmal, vor seinen Tieren: beim ersten in seiner Liste.
-    for (const a of this.animals) if (a.herd.members[0] === a) a.herd.tick(dt, surroundings);
-    for (const a of this.animals) changed = a.tick(dt, surroundings) || changed;
+    for (const a of this.animals) if (a.herd.members[0] === a) a.herd.tick(dt, a.tamed ? pen : surroundings);
+    for (const a of this.animals) changed = a.tick(dt, a.tamed ? pen : surroundings) || changed;
     changed = this.births(dt) || changed;
     if (this.animals.some((a) => a.isEmptyCarcass)) {
       for (const a of this.animals) if (a.isEmptyCarcass) a.herd.members.splice(a.herd.members.indexOf(a), 1);
@@ -172,9 +175,10 @@ export class Wildlife {
       mother.breed += dt;
       if (mother.breed < BIRTH_TIME) continue;
       mother.breed -= BIRTH_TIME;
-      // Hinter der Mutter, neu im Rudel.
-      const back = mother.size * 0.8;
-      this.add(mother.kind, mother.x - Math.cos(mother.heading) * back, mother.y - Math.sin(mother.heading) * back, { age: 0 }, mother.herd);
+      // Hinter der Mutter, neu im Rudel - auf der Weide bei ihr: hinter ihr stünde es vielleicht vor dem Zaun.
+      const back = mother.tamed ? 0 : mother.size * 0.8;
+      this.add(mother.kind, mother.x - Math.cos(mother.heading) * back, mother.y - Math.sin(mother.heading) * back,
+          { age: 0, tamed: mother.tamed }, mother.herd);
       born = true;
     }
     return born;

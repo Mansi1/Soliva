@@ -82,7 +82,7 @@ export class Ground {
     for (const b of this.world.allBuildings()) {
       // Felder bleiben, wie das Gelände ist - Pflanzen wachsen auch am Hang.
       // Reusen liegen im Wasser, der Boden darunter bleibt.
-      if (b.isFarm() || b.type === 'fish_trap') continue;
+      if (b.isOpenGround() || b.type === 'fish_trap') continue;
       const footprint = b.definition.footprint;
       const k = `${b.type}:${b.x},${b.y}`;
       let z = this.flatHeights.get(k);

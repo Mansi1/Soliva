@@ -18,6 +18,7 @@ import {
 import { describeArcher, sendToRange, tickArcher } from './archery';
 import { practise, skillFactor } from './unit/skills';
 import { depositKind } from './resources';
+import { PastureWork } from './pasture';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
 import type { Animal, Task, Villager, WorkNeed } from './unit';
 import { WORK_TEMPO, type StrikeKind, type World } from './world';
@@ -34,7 +35,7 @@ const MOVE_REACH = 0.05;
 const INSIDE_TIME = 1.2;
 const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
 /** Grund, wenn es zu Fuß keinen Weg zum Ziel gibt (walk). */
-const UNREACHABLE = 'Dort kommt er nicht hin';
+export const UNREACHABLE = 'Dort kommt er nicht hin';
 /** Grund, wenn ein Bauer säen müsste und das Holz fehlt - er jätet derweil (tickFarmer). */
 const NO_SEED_WOOD = 'Zu wenig Holz, um neu zu säen';
 /**
@@ -145,8 +146,12 @@ export class VillagerWork {
   private shoeTrips = new WeakMap<Villager, string>();
   /** Schustereien mit mindestens einem Paar Schuhe - einmal je Tick gesucht (beginTick). */
   private shoeShops: Building[] = [];
+  /** Hirten der Weiden (B27, pasture.ts) - mit den Schritten von hier (walk, deliverTo, ...). */
+  private readonly pastures: PastureWork;
 
-  constructor(private world: World) {}
+  constructor(private world: World) {
+    this.pastures = new PastureWork(world, this);
+  }
 
   /** Sorte seiner Ladung - undefined ohne Ladung. */
   carryKind(v: Villager): string | undefined {
@@ -162,7 +167,7 @@ export class VillagerWork {
    * Beginnt eine Ladung `resource` der Sorte `kind()`, wenn er nichts davon
    * trägt. Trägt er anderes, lässt er es fallen - wie in AoE2.
    */
-  private startLoad(v: Villager, resource: ResourceKind, kind: () => string) {
+  startLoad(v: Villager, resource: ResourceKind, kind: () => string) {
     if (v.carryType === resource && v.carrying > 0) return;
     v.carrying = 0;
     v.carryType = resource;
@@ -198,6 +203,11 @@ export class VillagerWork {
         : target.type === 'forester' ? { kind: 'plant', building: anchor, step: 'enter', progress: 0 }
         : { kind: 'craft', building: anchor, step: 'enter', progress: 0 });
       return rest.length > 0 ? `In der ${target.label} arbeitet nur einer` : null;
+    }
+    // Weide (B27): sie hüten dort die Tiere (pasture.ts).
+    if (target?.type === 'pasture') {
+      this.pastures.assign(selected, target);
+      return null;
     }
     if (target?.isFarm()) {
       // Je Furche ein Bauer, je Feldstück höchstens FARMERS_PER_FIELD - ist
@@ -311,10 +321,10 @@ export class VillagerWork {
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
   blockedAt(x: number, y: number): boolean {
     const anchor = this.world.occupied.get(key(x, y));
-    // Über Felder geht man hinweg - Bauern arbeiten ja darauf; ebenso über den Schießplatz (B24).
+    // Über Felder und Weiden geht man hinweg - Bauern und Hirten arbeiten ja darauf; ebenso über den Schießplatz (B24).
     if (anchor !== undefined) {
       const b = this.world.building(anchor);
-      return !(b?.isFarm() || b instanceof ArcheryRange);
+      return !(b?.isOpenGround() || b instanceof ArcheryRange);
     }
     const t = this.terrainAt(x, y);
     if (t === 2) return !this.world.deposits.isExhausted(x, y) && !this.world.deposits.isFelled(x, y);
@@ -433,7 +443,7 @@ export class VillagerWork {
    * VERIFIED: tests/water-path.test.mjs - liegt das nächste Lager jenseits des
    * Flusses, bringt er das Holz ins weitere auf seiner Seite.
    */
-  private nearestDropSite(v: Villager, type: ResourceKind): Building | undefined {
+  nearestDropSite(v: Villager, type: ResourceKind): Building | undefined {
     let best: Building | undefined;
     let bestDistance = Infinity;
     let any: Building | undefined;
@@ -454,7 +464,7 @@ export class VillagerWork {
   }
 
   /** Läuft zum Lager; true, sobald die Ladung abgegeben ist. */
-  private deliverTo(v: Villager, building: Building, dt: number): boolean {
+  deliverTo(v: Villager, building: Building, dt: number): boolean {
     return this.enter(v, building, dt, () => {
       if (v.carryType && v.carrying > 0) {
         // Es bleibt in diesem Lager (passt es nicht, im nächsten - World.addStock).
@@ -576,7 +586,7 @@ export class VillagerWork {
    * Arbeitstakt am Platz: Zeit weiterzählen und bei jedem Schlag bzw. Griff
    * ein Ereignis melden - im Takt der Animation (siehe Shader).
    */
-  private swing(v: Villager, dt: number, resource: StrikeKind, picking: boolean) {
+  swing(v: Villager, dt: number, resource: StrikeKind, picking: boolean) {
     const before = v.workTime;
     v.workTime += dt;
     // Der Ton kommt im Takt des Clips, der die Pose spielt: zu seinen
@@ -1067,13 +1077,16 @@ export class VillagerWork {
     v.pose = POSE.sit;
   }
 
-  /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
-  hunt(ids: ReadonlySet<number>, animal: Animal): string | null {
+  /**
+   * Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den
+   * Kadaver - ein Weidetier schlachten sie, zähmbares Wild fangen sie für die
+   * Weide (pasture.ts), außer mit `force` (Alt): dann wird gejagt.
+   */
+  hunt(ids: ReadonlySet<number>, animal: Animal, force = false): string | null {
     const chosen = this.controllable(ids);
-    for (const v of chosen) {
-      v.assign({ kind: 'hunt', animal: animal.id, delivering: false, cooldown: 0 });
-      this.shoeTrips.delete(v);
-    }
+    for (const v of chosen) this.shoeTrips.delete(v);
+    if ((!force || animal.tamed) && this.pastures.command(chosen, animal)) return chosen.length === 0 && ids.size > 0 ? WORKER_BUSY : null;
+    for (const v of chosen) v.assign({ kind: 'hunt', animal: animal.id, delivering: false, cooldown: 0 });
     return chosen.length === 0 && ids.size > 0 ? WORKER_BUSY : null;
   }
 
@@ -1103,7 +1116,8 @@ export class VillagerWork {
     let bestScore: number = VILLAGER.searchRadius;
     for (const a of this.world.wildlife.animals) {
       if (a.state === 'dead' && a.food <= 1e-6) continue;
-      if (kind && a.kind !== kind) continue;
+      // Weidetiere jagt keiner - geschlachtet wird nur auf Befehl (pasture.ts).
+      if (a.tamed || (kind && a.kind !== kind)) continue;
       const score = Math.hypot(a.x - v.x, a.y - v.y) - (a.state === 'dead' ? 4 : 0);
       if (score < bestScore) {
         bestScore = score;
@@ -1172,7 +1186,7 @@ export class VillagerWork {
    * er oder schneller, sofort. So läuft er nie endlos hinterher.
    * VERIFIED: tests/spear.test.mjs - den Hasen (flee 0.79) gibt er auf, das Schaf holt er ein.
    */
-  private hopeless(v: Villager, task: Extract<Task, { kind: 'hunt' }>, a: Animal, gap: number): boolean {
+  hopeless(v: Villager, task: { chase?: number }, a: Animal, gap: number): boolean {
     const def = a.definition;
     const speed = a.state === 'flee' ? def.flee : a.state === 'walk' ? def.walk : 0;
     const closing = v.speed - speed;
@@ -1200,7 +1214,8 @@ export class VillagerWork {
       return;
     }
     let a = this.world.wildlife.byId(task.animal);
-    if (!a || (a.state === 'dead' && a.food <= 1e-6)) {
+    // Inzwischen gefangen oder auf der Weide (pasture.ts): ein anderes Tier.
+    if (!a || (a.state === 'dead' && a.food <= 1e-6) || a.tamed || a.leash > 0) {
       const next = this.nearestPrey(v, a?.kind ?? null);
       if (next) {
         task.animal = next.id;
@@ -1376,6 +1391,9 @@ export class VillagerWork {
       case 'archery':
         tickArcher(this, this.world, v, task, dt);
         return;
+      case 'tend':
+        this.pastures.tick(v, task, dt);
+        return;
 
       case 'deliver': {
         const building = this.world.building(task.building);
@@ -1549,6 +1567,8 @@ export class VillagerWork {
           case 'dig': return `pflanzt ${species} (${Math.floor(v.task.progress * 100)} %)`;
         }
       }
+      case 'tend':
+        return this.pastures.describe(v, v.task);
       case 'farm': {
         const building = this.world.building(v.task.building);
         const f = building?.isFarm() ? building.furrows[v.task.row] : undefined;

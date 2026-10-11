@@ -17,8 +17,9 @@ import type { ResourceType } from '../map';
  * Vorrat ist sie eins. Bögen und Speere sammelt man nicht, sie entstehen in
  * Bognerei und Speermacherei und liegen in der Waffenkammer. Schuhe (B31)
  * macht der Schuster, sie bleiben in der Schusterei, bis einer sie holt.
+ * Milch, Wolle und Leder kommen von den Tieren der Weide (B27, pasture.ts).
  */
-export type ResourceKind = 'food' | 'wood' | 'stone' | 'gold' | 'bows' | 'spears' | 'shoes';
+export type ResourceKind = 'food' | 'wood' | 'stone' | 'gold' | 'bows' | 'spears' | 'shoes' | 'milk' | 'wool' | 'leather';
 /** Eine Menge Rohstoffe: der Vorrat, Kosten, eine Ladung. */
 export type Resources = Record<ResourceKind, number>;
 export { RESOURCE_KINDS, WEAPON_KINDS };
@@ -26,6 +27,7 @@ export { RESOURCE_KINDS, WEAPON_KINDS };
 /** Namen der Rohstoffe für die Oberfläche. */
 export const RESOURCE_LABEL: Record<ResourceKind, string> = {
   food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold', bows: 'Bögen', spears: 'Speere', shoes: 'Schuhe',
+  milk: 'Milch', wool: 'Wolle', leather: 'Leder',
 };
 
 /**
@@ -114,7 +116,7 @@ export const REPLOUGH_AFTER = 3;
  * Nahrung, und Nahrung sammeln nur Dorfbewohner.
  */
 export function initialResources(): Resources {
-  return { food: 200, wood: 350, stone: 120, gold: 0, bows: 0, spears: 0, shoes: 0 };
+  return { food: 200, wood: 350, stone: 120, gold: 0, bows: 0, spears: 0, shoes: 0, milk: 0, wool: 0, leather: 0 };
 }
 
 /** Spielerfarben zur Auswahl in den Einstellungen - wie in AoE2. */

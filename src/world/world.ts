@@ -23,6 +23,7 @@ import { VillagerWork } from './villagers';
 import { Farming, FIELD_INNER, METERS_PER_TILE, type FarmPhase } from './farming';
 import { DIG_DURATION, RUIN_DURATION, type Ruin } from './ruin';
 import { addRenderStats } from '../renderStats';
+import { penSurroundings, tickPastures } from './pasture';
 
 // Gebäude sind Klassen (building/) - hier weiter unter diesen Namen erreichbar.
 export type { Building, FarmPhase, Task };
@@ -508,6 +509,11 @@ export class World {
       if (this.farmTiles(x, y) === 0) return 'Hier kann nichts gesät werden - Felder brauchen freie Wiese oder Waldboden';
       return this.affordable(type) ? null : 'Zu wenig Rohstoffe';
     }
+    // Weide (B27): wie ein Feld Tile für Tile, wo auch gesät werden könnte; folgt dem Gelände.
+    if (type === 'pasture') {
+      if (!this.sowable(x, y)) return 'Eine Weide braucht freie Wiese oder Waldboden';
+      return this.affordable(type) ? null : 'Zu wenig Rohstoffe';
+    }
 
     for (const [tx, ty] of this.footprintTiles(x, y, type)) {
       if (this.occupied.has(key(tx, ty))) return 'Hier steht schon etwas';
@@ -704,9 +710,13 @@ export class World {
     return this.work.dismiss(anchor);
   }
 
-  /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
-  hunt(ids: ReadonlySet<number>, animal: Animal): string | null {
-    return this.work.hunt(ids, animal);
+  /**
+   * Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den
+   * Kadaver; zähmbares Wild fangen sie für die Weide, ein Weidetier schlachten
+   * sie (pasture.ts). `force` (Alt): Wild wird gejagt, auch wenn es eine Weide gibt.
+   */
+  hunt(ids: ReadonlySet<number>, animal: Animal, force = false): string | null {
+    return this.work.hunt(ids, animal, force);
   }
 
   /** Sorte seiner Ladung, z. B. "Eiche" oder "Weizen" - undefined ohne Ladung. */
@@ -741,7 +751,8 @@ export class World {
     if (this.deposits.regrow(dt, this.time)) this.dirty = true;
     if (this.farming.grow(this.speedy ? Infinity : dt)) this.dirty = true;
     const t0 = performance.now();
-    if (this.wildlife.tick(dt, this.animalSurroundings)) this.dirty = true;
+    if (this.wildlife.tick(dt, this.animalSurroundings, this.penSurroundings)) this.dirty = true;
+    if (tickPastures(this, dt)) this.dirty = true;
     const t1 = performance.now();
     this.work.beginTick();
     for (const v of this.villagers) {
@@ -926,6 +937,8 @@ export class World {
       return nearest;
     },
   };
+  /** Was Weidetiere sehen: nur die Weide, keine Gefahr (pasture.ts). */
+  private readonly penSurroundings = penSurroundings(this, this.animalSurroundings);
 
   /** Weltzeit in Sekunden. */
   get now(): number {

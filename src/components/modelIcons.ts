@@ -60,6 +60,10 @@ function scene(name: IconName, player: RGB): EntityInstance[] {
     // Frau und Mann nebeneinander.
     case 'population': return [...villager(true, -0.12, player), ...villager(false, 0.12, player)];
     case 'idle': return villager(false, 0, player);
+    // Von der Weide (B27) - nicht in der Leiste, sie zeigt nur NAMES.
+    case 'milk':
+    case 'wool':
+    case 'leather': return [];
   }
 }
 

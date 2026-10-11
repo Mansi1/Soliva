@@ -1,5 +1,5 @@
 // Rauchtest im Browser: spielt die wichtigsten Wege einmal durch - Hauptmenü,
-// neues Spiel, bauen, ausbilden, Feld über das Untermenü, speichern und neu
+// neues Spiel, bauen, ausbilden, Feld über das Untermenü, Weide, speichern und neu
 // laden, Demo, alter Spielstand, Galerie, Clips aus Blender. Bricht mit Exit-Code 1 ab, wenn
 // etwas fehlt oder die Seite einen Fehler wirft.
 //
@@ -223,6 +223,19 @@ await page.mouse.up();
 await wait(200);
 const farmsAfter = count(await saved(), 'farm');
 check('Feld abgesteckt', farmsAfter > farmsBefore, `${farmsBefore} → ${farmsAfter} Feldstücke`);
+await cancel();
+
+// Weide (B27): G, dann wie beim Feld über die Wiese ziehen - je Tile ein Stück Weide.
+await page.keyboard.press('g');
+const pasturesBefore = count(await saved(), 'pasture');
+// Quer übers Bild - unterwegs liegt sicher etwas Wiese, auch neben den Feldern eben.
+await page.mouse.move(300, 250);
+await page.mouse.down();
+await page.mouse.move(1000, 650, { steps: 30 });
+await page.mouse.up();
+await wait(200);
+const pasturesAfter = count(await saved(), 'pasture');
+check('Weide abgesteckt', pasturesAfter > pasturesBefore, `${pasturesBefore} → ${pasturesAfter} Weide-Tiles`);
 await cancel();
 
 // Ist nichts mehr abzubrechen, öffnet Esc das Menü, ein weiteres Esc schließt es.

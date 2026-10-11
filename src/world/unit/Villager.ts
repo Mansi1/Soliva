@@ -74,7 +74,17 @@ export type Task =
    * (`fetch`, wie der Jäger seinen Speer) und schießt (`practise`, `progress`
    * 0..1 je Schuss).
    */
-  | { kind: 'archery'; building: string; slot: number; step: 'walk' | 'fetch' | 'practise'; progress: number; armory?: string | null };
+  | { kind: 'archery'; building: string; slot: number; step: 'walk' | 'fetch' | 'practise'; progress: number; armory?: string | null }
+  /**
+   * Hirte der Weide, zu der das Tile `pasture` gehört (B27, world/pasture.ts):
+   * fängt das Tier `animal` (`catch`, ohne Speer wie beim Jagen, `chase`
+   * Sekunden), führt es am Strick durchs Gatter (`lead`, `progress` =
+   * Wegstück), hütet (`tend`: Milch und Wolle holen), schlachtet (`slaughter`)
+   * und bringt die Ladung zum Lager (`deliver`).
+   */
+  | { kind: 'tend'; pasture: string; step: TendStep; animal?: number; progress: number; chase?: number };
+
+export type TendStep = 'catch' | 'lead' | 'tend' | 'slaughter' | 'deliver';
 
 /**
  * Was einem Arbeiter in der Werkstatt fehlt, solange er wartet: Holz (kein

@@ -208,6 +208,14 @@ export abstract class BuildingBase {
     return false;
   }
 
+  /**
+   * Liegt es flach auf dem Gelände wie ein Feld (Feld, Weide)? Dann geht man
+   * darüber, der Boden wird nicht eingeebnet, und geklickt wird das Tile.
+   */
+  isOpenGround(): boolean {
+    return this.isFarm();
+  }
+
   /** Setzt man ihm einen Punkt auf der Karte (Fahne, Knopf im Panel)? Siehe rallyPoint. */
   hasRallyPoint(): boolean {
     return false;

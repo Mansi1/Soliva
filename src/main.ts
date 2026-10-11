@@ -440,7 +440,8 @@ const mouse = new MouseInput(canvas, boxEl, {
     }
     if (!placement.isActive) return false;
     const { x, y } = picker.tile(p.x, p.y);
-    placement.sowing = placement.placingType === 'farm';
+    // Felder und Weiden (B27) steckt man ab, indem man über die Wiese zieht.
+    placement.sowing = placement.placingType === 'farm' || placement.placingType === 'pasture';
     actions.placeAt(x, y);
     return true;
   },
@@ -449,7 +450,7 @@ const mouse = new MouseInput(canvas, boxEl, {
   },
   click: (p, add, double) => actions.clickSelect(p.x, p.y, add, double),
   box: (a, b, add) => actions.boxSelect(a.x, a.y, b.x, b.y, add),
-  rightClick: (p) => actions.rightClick(p),
+  rightClick: (p, alt) => actions.rightClick(p, alt),
   pan: (dx, dy) => camera.panPixels(dx, dy),
   panEnd: () => ui.updateCursor(),
   zoom: (steps, p) => zoomBy(steps, p.x, p.y),
@@ -459,7 +460,7 @@ const mouse = new MouseInput(canvas, boxEl, {
     const tileChanged = updateHoveredTile(p.x, p.y);
     // Felder markieren: jedes überstrichene Tile, auf dem gesät werden kann.
     const tile = pointer.tile;
-    if (tileChanged && tile && placement.sowing && placement.placingType === 'farm' && (buttons & 1) && world.sowable(tile.x, tile.y)) {
+    if (tileChanged && tile && placement.sowing && (buttons & 1) && world.sowable(tile.x, tile.y)) {
       actions.placeAt(tile.x, tile.y, true);
     }
   },

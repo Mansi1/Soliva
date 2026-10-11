@@ -33,6 +33,10 @@ const LOADS = [
   ['bows', RESOURCE_LABEL.bows],
   ['spears', RESOURCE_LABEL.spears],
   ['shoes', CRAFTS.cobbler.kind],
+  // Von der Weide (B27, pasture.ts): Milch, Wolle, Leder - die Sorte ist der Name des Rohstoffs.
+  ['milk', RESOURCE_LABEL.milk],
+  ['wool', RESOURCE_LABEL.wool],
+  ['leather', RESOURCE_LABEL.leather],
 ];
 
 test('jede Sorte einer Ladung hat ihre eigene Last', () => {

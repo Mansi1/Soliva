@@ -197,7 +197,7 @@ export class PlayerActions {
    * Rechtsklick: im Baumodus abbrechen, mit Dorfbewohnern ein Befehl, mit
    * genau einem ausbildenden Gebäude dessen Sammelpunkt (ohne den Schalter).
    */
-  rightClick(p: { x: number; y: number }) {
+  rightClick(p: { x: number; y: number }, alt = false) {
     if (this.ui.rallyPicking) {
       this.setRallyAt(p);
       return;
@@ -217,11 +217,12 @@ export class PlayerActions {
     const { x, y } = this.picker.target(p.x, p.y);
 
     if (this.selection.villagers.size === 0) return;
-    // Auf ein Tier (lebend oder erlegt): jagen bzw. zerlegen.
+    // Auf ein Tier (lebend oder erlegt): jagen bzw. zerlegen - zähmbares Wild
+    // fangen für die Weide, mit Alt doch jagen; ein Weidetier schlachten (B27).
     const at = this.picker.point(p.x, p.y);
     const prey = this.world.animalNear(at.x, at.y, 0.6);
     if (prey) {
-      const busy = this.world.hunt(this.selection.villagers, prey);
+      const busy = this.world.hunt(this.selection.villagers, prey, alt);
       if (busy) this.ui.hint(busy);
       else this.sound.play('click', 0.7);
       this.ui.refreshSelection();

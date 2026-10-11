@@ -54,6 +54,9 @@ export interface AnimalOptions {
   age?: number;
   /** Sekunden bis zum nächsten Jungen schon vergangen (BIRTH_TIME). */
   breed?: number;
+  /** Gezähmt, auf der Weide (B27) - und was es dort schon gibt (Milch, Wolle; geschlachtet die Haut). */
+  tamed?: boolean;
+  produce?: number;
 }
 
 interface AnimalClass {
@@ -83,6 +86,15 @@ export abstract class AnimalBase extends UnitBase {
   age: number;
   /** Weibchen: Sekunden mit einem Männchen in der Nähe, bei BIRTH_TIME kommt ein Junges (wildlife.ts). */
   breed: number;
+  /** Gezähmt (B27): lebt auf der Weide, flieht nicht, wird nicht gejagt (world/pasture.ts). */
+  tamed: boolean;
+  /**
+   * Am Strick: so viele Ticks führt es noch der Dorfbewohner (pasture.ts setzt
+   * es je Tick neu) - solange zieht es nicht selbst. Lässt er los, ist es wieder frei.
+   */
+  leash = 0;
+  /** Was es auf der Weide hergibt und noch nicht abgeholt ist: lebend Milch oder Wolle, geschlachtet die Haut (pasture.ts). */
+  produce: number;
 
   constructor(id: number, x: number, y: number, options: AnimalOptions = {}) {
     super(id, x, y, Math.random() * Math.PI * 2, 0);
@@ -90,6 +102,8 @@ export abstract class AnimalBase extends UnitBase {
     this.female = options.female ?? (Math.imul(id, 2654435761) >>> 0) % 2 === 1;
     this.age = Math.min(GROWN, options.age ?? GROWN);
     this.breed = options.breed ?? 0;
+    this.tamed = options.tamed ?? false;
+    this.produce = options.produce ?? 0;
     this.hp = options.hp ?? definition.hp;
     this.food = options.food ?? this.maxFood;
     this.state = options.dead ? 'dead' : 'graze';
@@ -167,6 +181,8 @@ export abstract class AnimalBase extends UnitBase {
       s: this.female ? 'f' : 'm', h: herd,
       ...(this.grown ? {} : { a: Math.round(this.age) }),
       ...(this.breed > 0 ? { b: Math.round(this.breed) } : {}),
+      ...(this.tamed ? { tm: 1 as const } : {}),
+      ...(this.produce > 0 ? { pr: +this.produce.toFixed(2) } : {}),
     };
   }
 
@@ -178,6 +194,11 @@ export abstract class AnimalBase extends UnitBase {
   tick(dt: number, surroundings: AnimalSurroundings): boolean {
     this.rememberPosition();
     if (this.isDead) return false;
+    // Am Strick zieht es der Dorfbewohner (pasture.ts) - es selbst tut nichts.
+    if (this.leash > 0) {
+      this.leash--;
+      return false;
+    }
     const definition = this.definition;
     const herd = this.herd;
     let changed = false;

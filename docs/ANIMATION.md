@@ -260,6 +260,8 @@ Die Last ist ein Anhang wie ein Werkzeug (`figureProps(figure, load)`).
   ebenso ein Speer (`spears`, `props/load_spears.glb`, nur `Carry…`: er trägt
   immer einen). Ein Paar Holzschuhe hängt an einer Schnur am Rücken (`shoes`,
   `props/load_shoes.glb`, nur `Carry…`) - so trägt der Schuster es ins Regal.
+  immer einen). Von der Weide (B27) kommen Milch im Eimer (`milk`), Wolle als
+  Bündel (`wool`) und Leder als gerollte Häute (`leather`), alle auf dem Rücken.
   Fisch hängt in der Hand (der Hering der Fischer). Die Farbe der Ware
   (Material `Load`) kommt als `accent` der Instanz.
   VERIFIED: `tests/load-look.test.mjs` prüft, dass jede Sorte des Spiels eine
