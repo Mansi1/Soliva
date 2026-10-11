@@ -1,0 +1,17 @@
+{
+  "rig": "humanoid",
+  "height": 1.763,
+  "fps": 30,
+  "clips": [
+    {
+      "name": "carry",
+      "frames": 61,
+      "duration": 2,
+      "props": [],
+      "kneel": false,
+      "pose": 9,
+      "phase_period": 6.283185307179586,
+      "phase_shift": 0
+    }
+  ]
+}

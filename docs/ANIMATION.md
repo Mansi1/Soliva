@@ -211,6 +211,39 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
 3. Den Namen in `props` der Clips eintragen, die es brauchen
    (`clips/humanoid.json`).
 
+## Lasten
+
+Seit B8 (2026-10-11) trägt kein Dorfbewohner mehr den einen Rucksack. Er trägt
+die Ware selbst, als eigenes Modell je Aussehen (`src/models/props/load_*.glb`).
+Die Last ist ein Anhang wie ein Werkzeug (`figureProps(figure, load)`).
+
+- **Welche Ware wie:** `loadLook` in `world/render.ts` nach Rohstoff und Sorte
+  (`world.carryKind`). Holz liegt in den Armen (`logs`), Tomaten in der Kiste
+  vor der Brust (`crate`). Beeren, Kartoffeln, Hopfen und Mais trägt er in der
+  Hotte, Stein und Gold im Korb (`basket`). Weizen liegt als Garbe auf der
+  Schulter (`sheaf`), Fleisch als Keule über der Schulter (`meat`). Ein
+  Bogen hängt schräg auf dem Rücken (`bow`, aus `props/bow.glb` ohne Pfeil).
+  Fisch hängt in der Hand (der Hering der Fischer). Die Farbe der Ware
+  (Material `Load`) kommt als `accent` der Instanz.
+  VERIFIED: `tests/load-look.test.mjs` prüft, dass jede Sorte des Spiels eine
+  Last hat.
+- **Anker:** Die Objekte `Load…` im Körper (der frühere Rucksack) sind nur
+  noch ein Marker und werden nicht gezeichnet. Ihre Rückenfläche ist
+  `uLoadAnchor`. Die Last ist in Metern um diesen Punkt gebaut und hängt
+  am Knochen `upperBody`.
+- **Teile:** `Goods…` ist die Ware. Sie wächst mit der Ladung (`motion[3]`)
+  um ihre Mitte unten (`uGoodsAnchor`). `Carry…` sind Korb, Kiste, Riemen
+  und Bogen, sie bleiben gleich groß. Andere Namen lehnt `npm run check:models` ab.
+- **In den Armen:** Holz und Kiste spielen statt `walk` und `stand` den Clip
+  `carry` (Pose 9, `clips/humanoid_carry`). Die Beine laufen wie in `walk`,
+  beide Unterarme liegen fest waagerecht vorn. Stehend hält der Clip bei
+  `CARRY_STILL` an. Bei der Arbeit (hacken, ernten) ist eine Last in den Armen
+  nicht zu sehen. Garbe, Fleisch und Fisch hält die Hand, das Beil der Clips
+  `stand` und `walk` fällt dann weg.
+- **Gebaut** sind Lasten und Clip headless in Blender. Die Python-Skripte liegen
+  nicht im Repo. Wer eine Last ändert, bearbeitet die `.glb` und behält Ursprung
+  und Namen.
+
 ## So wird jetzt gearbeitet
 
 1. Blender: Datei → Import → glTF 2.0, z. B. `src/models/clips/humanoid.glb`.
@@ -377,7 +410,7 @@ prozedural, weil Richtung, Zufall oder Physik erst zur Laufzeit feststehen.
 |---|---|---|---|
 | Stehen: Atmen, Arme pendeln, Umschauen, Gewicht verlagern | Pose 0, Formel mit Weltzeit | Clip `stand` (Schleife) | 2 |
 | Gehen | Pose 1, Phase aus der Schrittlänge | Clip `walk`, Tempo aus der Strecke | 2 |
-| Tragen (Last wächst mit der Ladung) | Teil `Load`, skaliert mit `motion[3]` | Knochen `load`, Skalierung aus dem Instanzwert | 2 |
+| Tragen (Last wächst mit der Ladung) | Anhang je Ware (`props/load_*.glb`), Ware skaliert mit `motion[3]`; Holz und Kiste mit Clip `carry` | erledigt (B8, siehe "Lasten") | 2 |
 | Hacken, Pflügen, Speerwurf | Pose 2, Beil (`P_TOOL`) | Clip `chop` (Beil sichtbar) | 2 |
 | Pflücken, Säen, Jäten, Zerlegen (kniend, der Rock staucht sich) | Pose 3, eigene Rock-Formel | Clip `pick`, Rock über Gewichte an den Oberschenkeln | 2 |
 | Mähen | Pose 4, `poses/mow.json`, Sense in Ruhelage zurückgerechnet | Clip `mow`, Sense an beiden Händen per IK | 2 |

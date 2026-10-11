@@ -2218,6 +2218,42 @@
    "Knife.Handle",
    "Knife.Tang"
   ],
+  "props/load_basket": [
+   "Carry.Basket",
+   "Carry.Basket.Band",
+   "Carry.Basket.Strap",
+   "Goods.Rock"
+  ],
+  "props/load_bow": [
+   "Carry.Bow",
+   "Carry.Bow.Grip",
+   "Carry.Bow.String"
+  ],
+  "props/load_crate": [
+   "Carry.Crate",
+   "Goods.Tomato"
+  ],
+  "props/load_hotte": [
+   "Carry.Hotte",
+   "Carry.Hotte.Band",
+   "Carry.Hotte.Strap",
+   "Goods.Heap"
+  ],
+  "props/load_logs": [
+   "Goods.Log",
+   "Goods.Log.End"
+  ],
+  "props/load_meat": [
+   "Goods.Meat",
+   "Goods.Meat.Bone",
+   "Goods.Meat.Fat",
+   "Goods.Meat.Knob"
+  ],
+  "props/load_sheaf": [
+   "Goods.Sheaf",
+   "Goods.Sheaf.Band",
+   "Goods.Sheaf.Ear"
+  ],
   "props/marker_arrow": [
    "Arrow.Cap",
    "Arrow.Head",
@@ -3155,6 +3191,35 @@
      "props": [
       "knife"
      ]
+    }
+   }
+  },
+  "humanoid_carry": {
+   "rig": "humanoid",
+   "bones": [
+    "forearm.L",
+    "forearm.R",
+    "head",
+    "humanoid",
+    "lowerBody",
+    "root",
+    "shin.L",
+    "shin.R",
+    "shoulder.L",
+    "shoulder.R",
+    "thigh.L",
+    "thigh.R",
+    "upperArm.L",
+    "upperArm.R",
+    "upperBody"
+   ],
+   "animations": [
+    "carry"
+   ],
+   "clips": {
+    "carry": {
+     "pose": 9,
+     "props": []
     }
    }
   },

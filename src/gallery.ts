@@ -11,17 +11,17 @@
 
 import {
   ANIMAL_CLIPS, ANIMAL_POSE, BUILDING_HEADING, CLIPS, CLIP_POSE, EntityRenderer, FALL_LYING, FIELDS, FLOWERS, POSE, SHAPE, animationTime, setAnimationTime, setAnimationsPaused,
-  buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelWorkSpot,
+  buildingHeading, carryPose, figureHolding, figureProps, frozenMillMotion, millMotion, modelWorkSpot,
   type EntityInstance,
 } from './gl/entityRenderer';
 import {
   groundToWorld, setViewElevation, snapCamera, viewElevation, worldToGround, worldToScreen, type IsoView,
 } from './gl/iso';
 import { AXIS_COLORS, GIZMO_RADIUS, TIMELINE_SECONDS, mountGallery, type GalleryItem } from './components/GalleryOverlay';
-import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
+import { ANIMALS, BUILDINGS, CROPS, FIELD_ROWS, FISH_KIND, MEAT_KIND, VILLAGER, type AnimalKind, type CropType } from './world/catalog';
 import { YOUNG_SIZE, type AnimalLook } from './world/unit';
 import { FLOWER_SIZE } from './world/flowers';
-import { FLEE_STRIDE } from './world/render';
+import { FLEE_STRIDE, loadLook, type LoadOf } from './world/render';
 import { STRIDE_LENGTH } from './world/world';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
@@ -52,20 +52,27 @@ const loop = (t: number, period: number) => (t % period) / period;
  */
 const ZOOMED = 3;
 
-/** Figur: Dorfbewohner(in) in einer Pose, `rate` = Phase je Sekunde. */
-function figure(label: string, female: boolean, pose: number, rate: number, heading: number, load = 0): Exhibit {
+/** Figur: Dorfbewohner(in) in einer Pose, `rate` = Phase je Sekunde - mit Last voll beladen. */
+function figure(label: string, female: boolean, pose: number, rate: number, heading: number, load?: LoadOf): Exhibit {
   return {
     label,
     draw: (t, x, y, out) => {
       const f: EntityInstance = {
         x: x - 0.5, y: y - 0.5, size: VILLAGER.size * ZOOMED, color: PLAYER,
         shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1,
-        motion: [heading, pose === POSE.stand ? t : t * rate, pose, load], accent: WOOD,
+        motion: [heading, pose === POSE.stand ? t : t * rate, carryPose(pose, load?.look), load ? 1 : 0], accent: load?.accent ?? WOOD,
       };
-      out.push(f, ...figureProps(f));
+      out.push(f, ...figureProps(f, load?.look));
     },
   };
 }
+
+/** Lasten (B8): je Aussehen eine Ware, wie im Spiel (world/render.ts, loadLook). */
+const LOADS: [string, Parameters<typeof loadLook>[0], string | undefined][] = [
+  ['Holz', 'wood', undefined], ['Beeren', 'food', 'Himbeere'], ['Kartoffeln', 'food', CROPS.potato.label],
+  ['Tomaten', 'food', CROPS.tomato.label], ['Weizen', 'food', CROPS.wheat.label], ['Stein', 'stone', undefined],
+  ['Gold', 'gold', undefined], ['Fleisch', 'food', MEAT_KIND], ['Fisch', 'food', FISH_KIND], ['Bogen', 'bows', undefined],
+];
 
 /** Fischer mit Angel oder Fang in der Hand, dazu nach Wunsch das Boot, das er zieht. */
 function fisher(label: string, female: boolean, pose: number, item: 'fish' | 'rod' | null, drag = false): Exhibit {
@@ -297,7 +304,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       return [
         figure(`${who} · steht`, female, POSE.stand, 1, Math.PI * 0.25),
         figure(`${who} · geht`, female, POSE.walk, walkRate, -Math.PI / 4),
-        figure(`${who} · trägt`, female, POSE.walk, walkRate, -Math.PI / 4, 1),
+        figure(`${who} · trägt`, female, POSE.walk, walkRate, -Math.PI / 4, loadLook('wood', undefined)),
         figure(`${who} · hackt`, female, POSE.work, 6, 0.3),
         figure(`${who} · pflückt`, female, POSE.pick, 6, 0.3),
         figure(`${who} · mäht`, female, POSE.scythe, 6, 0.3),
@@ -400,7 +407,7 @@ const people = (female: boolean) => {
   return showcase('Dorfbewohner', who, [
     figure('steht', female, POSE.stand, 1, Math.PI * 0.25),
     figure('geht', female, POSE.walk, walkRate, -Math.PI / 4),
-    figure('trägt', female, POSE.walk, walkRate, -Math.PI / 4, 1),
+    ...LOADS.map(([what, type, kind]) => figure(`trägt ${what}`, female, POSE.walk, walkRate, -Math.PI / 4, loadLook(type, kind))),
     figure('hackt', female, POSE.work, 6, 0.3),
     figure('pflückt', female, POSE.pick, 6, 0.3),
     figure('mäht', female, POSE.scythe, 6, 0.3),

@@ -98,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T16:32:42Z s=560a6297 FINDING src/game/Picker.ts:animal, src/game/overlay.ts, src/game/selectionView.ts, src/game/hoverInfo.ts learn=none: Fixed by reading animal.look/size/maxFood; all display callers grepped (def.food/def.shape/def.height in src/game, src/components).
 2026-10-11T11:36:32Z s=560a6297 DONE fp=71f4d4813424 cov=80.4% paths=docs/BLENDER.md,src/components/SelectionPanel.tsx,src/gallery.ts,src/game/Picker.ts(+33)
 2026-10-11T11:36:32Z s=560a6297 FINDING src/game/selectionView.ts:import catalog, goodsText/animalName learn=none: Pure merge resolution; covered by existing storage-stock and herd tests plus smoke.
+2026-10-11T14:07:06Z s=560a6297 FAIL prose
+2026-10-11T14:09:11Z s=560a6297 DONE fp=d5ca381ab268 cov=80.4% paths=docs/ANIMATION.md,docs/BLENDER.md,memory.md,src/gallery.ts(+10)
+2026-10-11T14:09:11Z s=560a6297 FINDING docs/ANIMATION.md:413 T06 learn=none: Prose gate checks it mechanically.
+2026-10-11T14:09:11Z s=560a6297 FINDING make e2e port 4173 learn=memory: memory.md Umgebung entry 2026-10-11.
+2026-10-11T14:09:11Z s=560a6297 FINDING src/world/render.ts:loadLook learn=test: tests/load-look.test.mjs
+2026-10-11T14:09:11Z s=560a6297 FINDING src/gl/entityRenderer.ts:CARRY_STILL learn=none: Visual stand-in; a real stand-with-load clip needs larger uniform arrays.

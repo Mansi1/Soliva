@@ -14,7 +14,7 @@ const modelsDir = new URL('../../src/models/', import.meta.url).pathname;
  * Regeln je Modell (nach dem Dateinamen): `needs` - Namensanfänge, die
  * mindestens ein Objekt haben muss; `numbered` - Name und wie viele: die
  * Nummern müssen lückenlos von 0 laufen (Stock.0 ... Stock.99); `forbids` -
- * Namensanfänge, die nicht vorkommen dürfen.
+ * Namensanfänge, die nicht vorkommen dürfen; `only` - jedes Objekt beginnt mit einem davon.
  */
 const RULES = [
   { match: /^buildings\//, needs: ['Entry'], why: 'Eingang, zu dem Dorfbewohner gehen' },
@@ -27,6 +27,7 @@ const RULES = [
   { match: /^animals\//, needs: ['Leg.FL', 'Leg.FR', 'Leg.BL', 'Leg.BR', 'Head'], why: 'Beine und Kopf für die Knochen' },
   {
     match: /^villagers\//,
+    // Load: nur noch Marker - Anker der Lasten am Rücken (load_*.glb), wird nicht gezeichnet.
     needs: ['Head', 'Load'],
     // Starr in Teilen (Knochen aus dem Namen) oder eine Hülle mit Knochen aus Blender (Armature).
     parts: ['Leg.L', 'Leg.L.Lower', 'Leg.R', 'Leg.R.Lower', 'Arm.L', 'Arm.L.Lower', 'Arm.R', 'Arm.R.Lower', 'Arm.R.Lower.Hand'],
@@ -38,6 +39,8 @@ const RULES = [
   { match: /^props\/hoe$/, needs: ['Arm.R.Lower.Tool'], why: 'Hacke an der Hand (Pflügen)' },
   { match: /^props\/scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
   { match: /^props\/knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
+  // Andere Namen hingen an der Hand statt am Rücken, "Load" wäre ein unsichtbarer Marker.
+  { match: /^props\/load_/, only: ['Goods', 'Carry'], why: 'Last am Oberkörper: Ware (Goods) wächst, Behälter (Carry) bleibt' },
 ];
 
 /** Objektnamen, Knochen (j) und ob jede Fläche ein Material hat. */
@@ -78,6 +81,8 @@ export function checkModels(dir = modelsDir) {
         const gone = rule.parts.filter((p) => !has(names, p));
         if (gone.length) say(`fehlt ${gone.join(', ')} (${rule.why})`);
       }
+      const stray = rule.only ? names.filter((n) => !rule.only.some((p) => has([n], p))) : [];
+      if (stray.length) say(`nur ${rule.only.join(' oder ')}: ${[...new Set(stray)].slice(0, 5).join(', ')} (${rule.why})`);
       const extra = (rule.forbids ?? []).filter((p) => has(names, p));
       if (extra.length) say(`darf nicht enthalten ${extra.join(', ')} (${rule.why})`);
       for (const [prefix, count] of rule.numbered ?? []) {

@@ -5,16 +5,16 @@
 // gelesen.
 
 import {
-  ANIMAL_POSE, BUILDING_HEADING, POSE, SHAPE, animalJoints, buildingHeading, figureHolding, figureProps, frozenMillMotion, millMotion, modelSize, modelStockSlots,
-  animationTime, modelWorkSpot,
-  type EntityInstance,
+  ANIMAL_POSE, BUILDING_HEADING, CARRY_STILL, POSE, SHAPE, animalJoints, buildingHeading, carryPose, figureHolding, figureProps, frozenMillMotion, millMotion,
+  modelSize, modelStockSlots, animationTime, modelWorkSpot,
+  type EntityInstance, type LoadLook,
 } from '../gl/entityRenderer';
 import { RESOURCE_TYPE_COLORS } from '../map';
 import { reliefZ } from '../noise';
 import { DETAIL_TILE_SIZE, PARTICLE, type ParticleSources } from '../particles';
 import { FishTrap, furrowPosition } from './building';
-import { hash } from './resources';
-import { BUILDINGS, CROPS, FISHING, VILLAGER, player, type DepositType, type ResourceKind } from './catalog';
+import { KIND_LABEL, hash } from './resources';
+import { BUILDINGS, CROPS, FISH_KIND, FISHING, MEAT_KIND, VILLAGER, player, type CropType, type ResourceKind } from './catalog';
 import {
   RUIN_COLLAPSE, RUIN_COLLAPSE_START, RUIN_DURATION, RUIN_FADE_START, RUIN_FLIGHT, RUIN_SHAKE,
 } from './ruin';
@@ -60,8 +60,52 @@ const TRAP_DRAFT = 1.05 / 4.12;
 /** Farbe von Staub und Schutt beim Einsturz. */
 const DUST_COLOR: [number, number, number] = [214, 200, 172];
 
-/** Farbe der Ladung auf dem Rücken: wie das Vorkommen, aus dem sie meist stammt. */
-const LOAD_LOOK: Record<ResourceKind, DepositType> = { food: 'berries', wood: 'wood', stone: 'stone', gold: 'gold', bows: 'wood' };
+type RGB = [number, number, number];
+/** Wie eine Ladung aussieht: welche Last (gl/entityRenderer.ts, LOAD_PROPS) und die Farbe der Ware darin. */
+export interface LoadOf { look: LoadLook; accent?: RGB }
+
+/**
+ * Feldfrüchte als Last (B8, Vorgabe des Spielers 2026-10-11): Weizen als Garbe
+ * auf der Schulter, Tomaten in der Kiste vor der Brust, der Rest in der Hotte.
+ */
+const CROP_LOAD: Record<CropType, LoadOf> = {
+  wheat: { look: 'sheaf' },
+  corn: { look: 'hotte', accent: [226, 184, 50] },
+  tomato: { look: 'crate', accent: [206, 42, 30] },
+  potato: { look: 'hotte', accent: [176, 136, 84] },
+  hop: { look: 'hotte', accent: [156, 196, 92] },
+};
+/** Beeren in der Hotte, je Strauch in seiner Farbe (Namen: resources.ts, KIND_LABEL). */
+const BERRY_COLOR: Record<number, RGB> = {
+  [SHAPE.berryBush]: [178, 24, 40],
+  [SHAPE.berryBush2]: [44, 22, 48],
+  [SHAPE.berryBush3]: [58, 72, 150],
+  [SHAPE.berryBush4]: [214, 56, 86],
+};
+/** Nahrung nach Sorte (Villagers.carryKind): Feldfrüchte, Beeren, Fang und Fleisch. */
+const FOOD_LOAD = new Map<string, LoadOf>([
+  ...Object.entries(CROP_LOAD).map(([type, load]) => [CROPS[type as CropType].label, load] as const),
+  ...Object.entries(BERRY_COLOR).map(([shape, accent]) => [KIND_LABEL[Number(shape)], { look: 'hotte', accent }] as const),
+  [FISH_KIND, { look: 'fish' }],
+  [MEAT_KIND, { look: 'meat' }],
+]);
+/** Nahrung ohne bekannte Sorte (Spielstand von vor den Sorten): Beeren in der Hotte. */
+const FOOD_UNKNOWN: LoadOf = { look: 'hotte', accent: RESOURCE_TYPE_COLORS.berries.toRGB() };
+
+/**
+ * Was ein Dorfbewohner mit dieser Ladung trägt: Holz in den Armen, Stein und
+ * Gold im Korb, Bögen als Bogen, Nahrung nach ihrer Sorte (FOOD_LOAD) -
+ * undefined für eine Sorte, die es nicht gibt (tests/load-look.test.mjs).
+ */
+export function loadLook(type: ResourceKind, kind: string | undefined): LoadOf | undefined {
+  switch (type) {
+    case 'wood': return { look: 'logs' };
+    case 'stone':
+    case 'gold': return { look: 'basket', accent: RESOURCE_TYPE_COLORS[type].toRGB() };
+    case 'bows': return { look: 'bow' };
+    case 'food': return kind === undefined ? undefined : FOOD_LOAD.get(kind);
+  }
+}
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -216,9 +260,13 @@ export function worldInstances(
         ? lerp(v.prevWorkTime, v.workTime, blend) * WORK_TEMPO
         // Stehen: Weltzeit in Sekunden, je Figur versetzt (Leerlauf-Animation).
         : world.timeAt(blend) + v.id * 7.3;
-    // Die Last auf dem Rücken wächst mit der Ladung und trägt die Farbe
-    // der Ressource - man sieht, wer was trägt und wie viel.
+    // Die Last zeigt die Ware (loadLook) und wächst mit der Ladung - man
+    // sieht, wer was trägt und wie viel. Holz und die Kiste liegen in den
+    // Armen: Gehen und Stehen werden dann zum Tragen (Clip carry).
     const load = v.carryType ? Math.min(1, v.carrying / VILLAGER.capacity) : 0;
+    const carried = v.carryType ? loadLook(v.carryType, world.carryKind(v)) ?? FOOD_UNKNOWN : undefined;
+    const pose = carryPose(v.pose, carried?.look);
+    const still = pose === POSE.carry && v.pose === POSE.stand;
     const figure: EntityInstance = {
       // Instanzen werden um die Tile-Mitte gezeichnet, die Figur steht auf (x, y).
       x: x - 0.5,
@@ -228,16 +276,16 @@ export function worldInstances(
       // Frau oder Mann - steht beim Dorfbewohner fest (siehe Villager.female).
       shape: v.female ? SHAPE.villagerFemale : SHAPE.villager,
       alpha: 1,
-      motion: [v.heading, phase, v.pose, load],
+      motion: [v.heading, still ? CARRY_STILL : phase, pose, load],
       ground: world.groundAt?.(x, y),
       health: selection?.villagers.has(v.id) ? v.hp / VILLAGER.hp : undefined,
-      accent: v.carryType ? RESOURCE_TYPE_COLORS[LOAD_LOOK[v.carryType]].toRGB() : undefined,
+      accent: carried?.accent,
     };
     if (particles && particles.tileSize >= DETAIL_TILE_SIZE) workParticles(world, v, x, y, particles);
     const fishing = v.task.kind === 'fish' ? v.task : undefined;
     if (!fishing) {
-      // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip).
-      out.push(figure, ...figureProps(figure));
+      // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip), und seine Last.
+      out.push(figure, ...figureProps(figure, carried?.look));
       continue;
     }
     // Fischer: im Boot steht er auf dessen Boden; an Land zieht er es mit der
