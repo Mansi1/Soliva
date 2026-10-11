@@ -8,6 +8,7 @@
 import { RESOURCE_LABEL, YIELD } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import type { Animal } from '../world/unit';
+import { animalName } from './selectionView';
 import type { Villager, World } from '../world/world';
 
 /** Was unter dem Zeiger gefunden wurde. */
@@ -28,10 +29,11 @@ export function hoverDescription(world: World, resources: ResourceField, target:
     };
   }
   if (animal) {
-    const { label, food, hp } = animal.definition;
+    const { hp } = animal.definition;
+    const label = animalName(animal);
     return {
       label: 'Tier',
-      text: animal.isDead ? `${label} (erlegt) | Nahrung ${Math.ceil(animal.food)}/${food}` : `${label} | Leben ${Math.ceil(animal.hp)}/${hp}`,
+      text: animal.isDead ? `${label} (erlegt) | Nahrung ${Math.ceil(animal.food)}/${animal.maxFood}` : `${label} | Leben ${Math.ceil(animal.hp)}/${hp}`,
     };
   }
   const building = tile ? world.at(tile.x, tile.y) : undefined;

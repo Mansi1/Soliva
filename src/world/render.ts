@@ -261,23 +261,26 @@ export function worldInstances(
     const pose = a.state === 'dead' ? ANIMAL_POSE.dead
       : a.state === 'flee' ? ANIMAL_POSE.flee
       : a.state === 'walk' ? ANIMAL_POSE.walk : ANIMAL_POSE.graze;
+    // Männchen und Weibchen mit eigenem Modell, Junge kleiner (B11).
+    const { shape } = a.look;
+    const size = a.size;
     // Gehen und Fliehen: Beine nach der Strecke; äsen: nach der Uhr, je Tier versetzt.
     const phase = pose === ANIMAL_POSE.walk || pose === ANIMAL_POSE.flee
-      ? lerp(a.prevStride, a.stride, blend) * (Math.PI * 2 / (def.stride * (pose === ANIMAL_POSE.flee ? FLEE_STRIDE : 1)))
+      ? lerp(a.prevStride, a.stride, blend) * (Math.PI * 2 / (a.strideLength * (pose === ANIMAL_POSE.flee ? FLEE_STRIDE : 1)))
       : world.timeAt(blend) + a.id * 3.1;
-    const [ground, slope] = world.groundAt ? animalGround(world.groundAt, def.shape, x, y, def.height, a.heading) : [undefined, 0];
+    const [ground, slope] = world.groundAt ? animalGround(world.groundAt, shape, x, y, size, a.heading) : [undefined, 0];
     out.push({
-      x: x - 0.5, y: y - 0.5, size: def.height, color: [255, 255, 255], shape: def.shape, alpha: 1,
+      x: x - 0.5, y: y - 0.5, size, color: [255, 255, 255], shape, alpha: 1,
       motion: [a.heading, phase, pose, slope],
       ground,
       health: selection?.animal === a.id ? a.hp / def.hp : undefined,
-      food: selection?.animal === a.id ? a.food / def.food : undefined,
+      food: selection?.animal === a.id ? a.food / a.maxFood : undefined,
     });
     // Dreck wie beim Pflügen: am Maul, wenn es äst; hinter den Hufen, wenn es flieht.
     if (particles && particles.tileSize >= DETAIL_TILE_SIZE && (pose === ANIMAL_POSE.graze || pose === ANIMAL_POSE.flee)) {
       const [fx, fy] = [Math.cos(a.heading), Math.sin(a.heading)];
       const flee = pose === ANIMAL_POSE.flee;
-      const reach = def.height * (flee ? -0.5 : 0.6);
+      const reach = size * (flee ? -0.5 : 0.6);
       const [px, py] = [x + fx * reach, y + fy * reach];
       particles.push(PARTICLE.dirt, px, py, world.groundAt?.(px, py) ?? 0, 0.06,
           flee ? -fx : fx, flee ? -fy : fy, 0, 1, a.id + 100000, 0, flee ? 8 : 4);

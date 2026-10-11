@@ -2,6 +2,19 @@
 // Was für alle Tiere einer Art gilt. Jede Tierklasse trägt ihre Definition
 // statisch: `static readonly definition: AnimalDefinition<'deer'> = {...}`.
 
+/** Aussehen eines Geschlechts mit eigenem Modell (B11) - Felder wie in AnimalDefinition. */
+export interface AnimalLook {
+  shape: number;
+  height: number;
+  stride: number;
+  /**
+   * Weibchen bzw. Männchen mit eigenem Modell (Ricke ohne Gehörn, Widder mit
+   * Hörnern ...). Ohne: dieses Geschlecht sieht aus wie `shape`.
+   */
+  female?: AnimalLook;
+  male?: AnimalLook;
+}
+
 export interface AnimalDefinition<T extends string = string> {
   /** Kennung der Art, gleich der Klasse in snake_case: 'deer' ↔ Deer. */
   type: T;
@@ -43,4 +56,10 @@ export interface AnimalDefinition<T extends string = string> {
    * VERIFIED: tests/animal-ground.test.mjs - je Art auf 5 % an Clip und Modell.
    */
   stride: number;
+  /**
+   * Weibchen bzw. Männchen mit eigenem Modell (Ricke ohne Gehörn, Widder mit
+   * Hörnern ...). Ohne: dieses Geschlecht sieht aus wie `shape`.
+   */
+  female?: AnimalLook;
+  male?: AnimalLook;
 }
