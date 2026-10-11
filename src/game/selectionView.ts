@@ -17,6 +17,7 @@ import type { FarmPhase, World } from '../world/world';
 import { workplace } from '../world/villagers';
 import { rangeView } from '../world/archery';
 import { skillsText } from '../world/unit/skills';
+import { pastureText } from '../world/pasture';
 import type { Selection } from './Selection';
 
 /**
@@ -220,7 +221,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     return {
       kind: 'animal', type: animal.kind, label: animalName(animal), info: def.info, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
       hp: animal.hp, maxHp: def.hp, food: animal.food, maxFood: animal.maxFood,
-      herd: animal.isDead ? undefined : `${young}Herde: ${animal.herd.size} Tiere`,
+      herd: animal.isDead ? undefined : `${young}${animal.tamed ? pastureText(animal) : `Herde: ${animal.herd.size} Tiere`}`,
     };
   }
   if (selection.flower) {

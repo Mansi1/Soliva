@@ -15,12 +15,13 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   villagers/                male, female
   buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-                            mill(_2.._4), bowyer, spear_maker, cobbler, armory, fisher_hut, forester, archery_range
+                            mill(_2.._4), bowyer, spear_maker, cobbler, armory, fisher_hut, forester, archery_range, pasture_gate
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
   props/                    axe, hoe, knife, scythe_male/_female, bow, prop_bow, spear, clogs, rally_flag, marker_arrow,
-                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears/_shoes (Lasten, docs/ANIMATION.md)
+                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears/_shoes/_milk/_wool/_leather (Lasten, docs/ANIMATION.md)
+                            pasture_fence
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
@@ -231,6 +232,19 @@ rechnet `rangeSpot` (`world/archery.ts`) quer dazu im selben Abstand - wer die
 Scheiben verschiebt, ändert `ARCHERY.spacing` mit. Der Bogen in der Hand ist
 `props/bow.glb` ohne Pfeil, gedreht (Griff im Ursprung, Wurfarme nach vorn,
 Sehne oben) und umbenannt (`Arm.R.Lower.Tool.Bow…`), siehe docs/ANIMATION.md.
+
+## Weide
+
+`buildings/pasture_gate.glb`, `props/pasture_fence.glb` und die Lasten
+`props/load_milk|wool|leather.glb` (B27, 2026-10-12) sind headless in Blender
+gebaut, das Skript liegt nicht im Repo. Der Zaun ist 2,5 m lang (zwei Pfosten
+`Post`, zwei Latten `Rail`), das Gatter 5 m (Torflügel `Gate…` zwischen zwei
+dicken Pfosten, Schild `Gate.Sign` in Spielerfarbe, `Entry` davor). Beide
+laufen entlang X, die Vorderseite (-Y) zeigt im Spiel nach draußen. Das Spiel
+stellt je Außenkante eines Weide-Tiles zwei Zaunstücke auf, jedes auf seinem
+Boden, und je Weide ein Gatter (`world/pasture.ts`, `fenceInstances`). Die
+Lasten tragen den Riemen der Hotte (`Carry.Strap`) und die Ware (`Goods…`):
+Eimer mit Milch, Wollbündel, gerollte Häute.
 
 ## Felder
 

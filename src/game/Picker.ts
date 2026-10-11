@@ -224,7 +224,7 @@ export class Picker {
     const minSize = 8 / (this.camera.tileSize * this.camera.pixelRatio);
     let best: { x: number; y: number; depth: number } | undefined;
     for (const b of this.world.allBuildings()) {
-      if (b.isFarm()) continue;
+      if (b.isOpenGround()) continue;
       const cx = b.x + 0.5;
       const cy = b.y + 0.5;
       const ground = this.ground.heightAt(cx, cy);
@@ -248,7 +248,7 @@ export class Picker {
   target(px: number, py: number): { x: number; y: number; bareGround?: boolean } {
     const tile = this.tile(px, py);
     const onTile = this.world.at(tile.x, tile.y);
-    if (onTile?.isFarm()) return tile;
+    if (onTile?.isOpenGround()) return tile;
     const object = this.resourceObject(px, py);
     const house = this.building(px, py);
     if (house && (!object

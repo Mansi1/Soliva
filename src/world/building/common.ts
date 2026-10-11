@@ -4,8 +4,12 @@
 
 import type { ResourceKind } from '../catalog';
 
-/** Was Dorfbewohner draußen sammeln - das nimmt das Dorfzentrum an. */
-export const GATHERED_KINDS: readonly ResourceKind[] = ['food', 'wood', 'stone', 'gold'];
+/**
+ * Was Dorfbewohner draußen sammeln - das nimmt das Dorfzentrum an.
+ * ponytail: Milch, Wolle und Leder (B27) nimmt nur das Dorfzentrum; eigene
+ * Lager (Molkerei, Gerberei) bauen, wenn der Weg der Hirten dorthin zu lang wird.
+ */
+export const GATHERED_KINDS: readonly ResourceKind[] = ['food', 'wood', 'stone', 'gold', 'milk', 'wool', 'leather'];
 
 /** Alle Rohstoffe im Vorrat: das Gesammelte und was in Werkstätten entsteht. */
 export const RESOURCE_KINDS: readonly ResourceKind[] = [...GATHERED_KINDS, 'bows', 'spears', 'shoes'];

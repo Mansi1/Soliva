@@ -19,8 +19,8 @@ export interface MouseHandlers {
   click(p: CanvasPoint, add: boolean, double: boolean): void;
   /** Rechteck aufgezogen (von a nach b). */
   box(a: CanvasPoint, b: CanvasPoint, add: boolean): void;
-  /** Rechtsklick ohne Ziehen. */
-  rightClick(p: CanvasPoint): void;
+  /** Rechtsklick ohne Ziehen; `alt`: mit Alt (Option) gedrückt. */
+  rightClick(p: CanvasPoint, alt: boolean): void;
   /** Karte mit der rechten Taste gezogen: um (dx, dy) Pixel verschieben. */
   pan(dx: number, dy: number): void;
   /** Ziehen mit der rechten Taste beendet. */
@@ -170,7 +170,7 @@ export class MouseInput {
       const moved = this.rightDrag.moved;
       this.rightDrag = null;
       if (moved) this.handlers.panEnd();
-      else if (e.target === this.canvas) this.handlers.rightClick(this.point(e));
+      else if (e.target === this.canvas) this.handlers.rightClick(this.point(e), e.altKey);
       return;
     }
     if (e.button !== 0) return;

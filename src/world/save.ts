@@ -65,6 +65,9 @@ export interface AnimalSave {
   h?: number;
   a?: number;
   b?: number;
+  /** Gezähmt auf der Weide (B27) und was es dort hergibt, noch nicht abgeholt - fehlen bei Wild und in älteren Ständen. */
+  tm?: 1;
+  pr?: number;
 }
 
 export interface SaveData {

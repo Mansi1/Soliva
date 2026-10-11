@@ -25,6 +25,7 @@ import { FLEE_STRIDE, loadLook, type LoadOf } from './world/render';
 import { STRIDE_LENGTH } from './world/world';
 import { spearThrown } from './world/villagers';
 import { ARCHERY, rangeSpot } from './world/archery';
+import { fenceInstances } from './world/pasture';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
 import { ParticleRenderer } from './gl/particleRenderer';
@@ -76,6 +77,7 @@ const LOADS: [string, Parameters<typeof loadLook>[0], string | undefined][] = [
   ['Tomaten', 'food', CROPS.tomato.label], ['Weizen', 'food', CROPS.wheat.label], ['Stein', 'stone', undefined],
   ['Gold', 'gold', undefined], ['Fleisch', 'food', MEAT_KIND], ['Fisch', 'food', FISH_KIND], ['Bogen', 'bows', undefined],
   ['Speer', 'spears', undefined], ['Holzschuhe', 'shoes', undefined],
+  ['Milch', 'milk', undefined], ['Wolle', 'wool', undefined], ['Leder', 'leather', undefined],
 ];
 
 /**
@@ -200,6 +202,27 @@ function family(kind: AnimalKind, prefix = ''): Exhibit[] {
 }
 
 /** Gebäude oder anderes Modell, still (Mühlen drehen von selbst). */
+/**
+ * Weide (B27) wie im Spiel (world/pasture.ts): 2x2 Tiles mit Zaun und Gatter
+ * (zur Kamera hin), darin `kinds` äsend.
+ */
+function pen(label: string, kinds: AnimalKind[]): Exhibit {
+  return {
+    label,
+    draw: (t, x, y, out) => {
+      const [x0, y0] = [Math.floor(x) - 1, Math.floor(y) - 1];
+      const inside = (tx: number, ty: number) => tx >= x0 && tx <= x0 + 1 && ty >= y0 && ty <= y0 + 1;
+      const gate = { x: x0 + 1, y: y0 + 1, dx: 0, dy: 1 };
+      for (let ty = y0; ty <= y0 + 1; ty++) for (let tx = x0; tx <= x0 + 1; tx++) fenceInstances(tx, ty, inside, gate, () => undefined, PLAYER, out);
+      kinds.forEach((kind, i) => out.push({
+        // Instanzen um die Tile-Mitte: das Tier steht auf (x + 0.5, y + 0.5).
+        x: x0 + 0.1 + i * 0.6, y: y0 + 0.3 + (i % 2) * 0.6, size: ANIMALS[kind].height, color: [255, 255, 255],
+        shape: ANIMALS[kind].shape, alpha: 1, motion: [0.8 + i, t + i, ANIMAL_POSE.graze, 0],
+      }));
+    },
+  };
+}
+
 function model(label: string, shape: number, size: number, motion?: [number, number, number, number]): Exhibit {
   return {
     label,
@@ -398,6 +421,8 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       model('Schusterei', SHAPE.cobbler, BUILDINGS.cobbler.size),
       model('Schießplatz', SHAPE.archeryRange, BUILDINGS.archery_range.size),
       model('Försterhütte', SHAPE.forester, BUILDINGS.forester.size),
+      model('Weide · Gatter', SHAPE.pasture, BUILDINGS.pasture.size),
+      model('Weide · Zaun', SHAPE.pastureFence, 0.5),
       model('Waffenkammer', SHAPE.armory, BUILDINGS.armory.size),
       model('Sammelpunkt', SHAPE.rallyFlag, 0.54),
       collapse('Abriss', SHAPE.house, BUILDINGS.house.size),
@@ -607,6 +632,12 @@ const SHOWCASE: Showcase[] = [
   building('Minenlager', [SHAPE.miningCamp], BUILDINGS.mining_camp.size, 200, 0.7),
   building('Fischerhütte', [SHAPE.fisherHut], BUILDINGS.fisher_hut.size, 200, 0.7),
   building('Försterhütte', [SHAPE.forester], BUILDINGS.forester.size, 200, 0.7),
+  showcase('Gebäude', 'Weide', [
+    pen('Kühe', ['cow', 'cow']),
+    pen('Schafe und Ziege', ['sheep', 'goat', 'sheep']),
+    model('Gatter', SHAPE.pasture, BUILDINGS.pasture.size),
+    model('Zaun', SHAPE.pastureFence, 0.5),
+  ], 160, 0.4),
   showcase('Partikel', 'Partikel', PARTICLE_EXHIBITS, 300, 0.4),
   showcase('Gebäude', 'Fischerei', [
     model('Boot', SHAPE.fisherBoat, (1.73 / 5) * ZOOMED),

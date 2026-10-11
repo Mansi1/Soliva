@@ -1505,6 +1505,15 @@
    "Wall.Gable",
    "Wall.Stone"
   ],
+  "buildings/pasture_gate": [
+   "Entry",
+   "Gate",
+   "Gate.Brace",
+   "Gate.Hinge",
+   "Gate.Sign",
+   "Post",
+   "Rail"
+  ],
   "buildings/spear_maker": [
    "Band",
    "Barrel",
@@ -2429,6 +2438,11 @@
    "Carry.Hotte.Strap",
    "Goods.Heap"
   ],
+  "props/load_leather": [
+   "Carry.Cord",
+   "Carry.Strap",
+   "Goods.Hide"
+  ],
   "props/load_logs": [
    "Goods.Log",
    "Goods.Log.End"
@@ -2438,6 +2452,12 @@
    "Goods.Meat.Bone",
    "Goods.Meat.Fat",
    "Goods.Meat.Knob"
+  ],
+  "props/load_milk": [
+   "Carry.Pail",
+   "Carry.Pail.Band",
+   "Carry.Strap",
+   "Goods.Milk"
   ],
   "props/load_sheaf": [
    "Goods.Sheaf",
@@ -2456,11 +2476,20 @@
    "Carry.Spear.Socket",
    "Carry.Spear.Strap"
   ],
+  "props/load_wool": [
+   "Carry.Cord",
+   "Carry.Strap",
+   "Goods.Wool"
+  ],
   "props/marker_arrow": [
    "Arrow.Cap",
    "Arrow.Head",
    "Arrow.Rim",
    "Arrow.Shaft"
+  ],
+  "props/pasture_fence": [
+   "Post",
+   "Rail"
   ],
   "props/prop_bow": [
    "Arm.R.Lower.Tool.Bow",

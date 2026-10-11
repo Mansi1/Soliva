@@ -13,6 +13,7 @@ import { RESOURCE_TYPE_COLORS } from '../map';
 import { reliefZ } from '../noise';
 import { DETAIL_TILE_SIZE, PARTICLE, type ParticleSources } from '../particles';
 import { FishTrap, furrowPosition } from './building';
+import { pastureInstances } from './pasture';
 import { KIND_LABEL, hash } from './resources';
 import { BUILDINGS, CROPS, FISH_KIND, FISHING, MEAT_KIND, VILLAGER, player, type CropType, type ResourceKind } from './catalog';
 import {
@@ -105,6 +106,10 @@ export function loadLook(type: ResourceKind, kind: string | undefined): LoadOf |
     case 'bows': return { look: 'bow' };
     case 'spears': return { look: 'spears' };
     case 'shoes': return { look: 'shoes' };
+    // Von der Weide (B27): Milch im Eimer, Wolle als Bündel, Leder als Rollen - alles auf dem Rücken.
+    case 'milk':
+    case 'wool':
+    case 'leather': return { look: type };
     case 'food': return kind === undefined ? undefined : FOOD_LOAD.get(kind);
   }
 }
@@ -173,6 +178,11 @@ export function worldInstances(
   for (const building of world.allBuildings()) {
     if (building.x < x0 || building.x > x1 || building.y < y0 || building.y > y1) continue;
     const def = building.definition;
+    // Weide (B27): Zaun an den Außenkanten, ein Gatter je Weide (pasture.ts).
+    if (building.type === 'pasture') {
+      pastureInstances(world, building, out);
+      continue;
+    }
     if (building.isFarm()) {
       // Über einem Teil der Feldstücke summen ein, zwei Bienen.
       if (particles && particles.tileSize >= DETAIL_TILE_SIZE && hash(building.x, building.y, 70) < 0.3) {
@@ -461,7 +471,7 @@ function ruinInstances(world: World, x0: number, y0: number, x1: number, y1: num
     if (ruin.x < x0 || ruin.x > x1 || ruin.y < y0 || ruin.y > y1) continue;
     const def = BUILDINGS[ruin.type];
     // Ein aufgegebenes Feld stürzt nicht ein - es ist einfach weg.
-    if (ruin.type === 'farm') continue;
+    if (ruin.type === 'farm' || ruin.type === 'pasture') continue;
     const t = now - ruin.at;
     const fade = t < RUIN_FADE_START ? 1 : Math.max(0, 1 - (t - RUIN_FADE_START) / (RUIN_DURATION - RUIN_FADE_START));
     const collapse = ease(Math.min(1, Math.max(0, (t - RUIN_COLLAPSE_START) / RUIN_COLLAPSE)));
