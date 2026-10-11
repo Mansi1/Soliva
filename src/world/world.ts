@@ -15,7 +15,7 @@ import {
   type Building, type Farm, type UnitProducer,
 } from './building';
 import { readSave, writeSave, type LoadedSave, type SaveData } from './save';
-import { isAnimalKind, Villager, type Animal, type AnimalSurroundings, type Task } from './unit';
+import { Villager, type Animal, type AnimalSurroundings, type Task } from './unit';
 import { Wildlife } from './wildlife';
 import { Deposits } from './deposits';
 import { VillagerWork } from './villagers';
@@ -862,6 +862,7 @@ export class World {
     isBlocked: (x, y) => this.animalBlocked(x, y),
     // Wie man das Ufer sieht: feine Höhe, auf Meereshöhe (0) ist Wasser.
     isWater: (x, y) => (this.groundAt?.(x, y, NEAR_STEP) ?? 1) <= 0,
+    heightAt: (x, y) => this.groundAt?.(x, y, NEAR_STEP) ?? 0,
     nearestThreat: (x, y) => {
       let nearest: { x: number; y: number; distance: number } | undefined;
       for (const v of this.villagers) {
@@ -911,10 +912,7 @@ export class World {
         ...(v.carrying > 0 && this.work.carryKind(v) ? { ck: this.work.carryKind(v) } : {}),
       })),
       harvested: Object.fromEntries(this.deposits.harvested),
-      animals: this.wildlife.animals.map((a) => ({
-        k: a.kind, x: +a.x.toFixed(2), y: +a.y.toFixed(2), hp: a.hp, f: +a.food.toFixed(1),
-        ...(a.state === 'dead' ? { d: true } : {}),
-      })),
+      animals: this.wildlife.toSave(),
       spawned: [...this.wildlife.spawnedChunks],
     };
   }
@@ -936,9 +934,7 @@ export class World {
     this.absorbReserve();
 
     for (const k of data.spawned ?? []) this.wildlife.spawnedChunks.add(k);
-    for (const a of data.animals ?? []) {
-      if (isAnimalKind(a.k)) this.wildlife.add(a.k, a.x, a.y, { hp: a.hp, food: a.f, dead: a.d });
-    }
+    this.wildlife.restore(data.animals ?? []);
 
     for (const s of data.villagers) {
       // Ältere Speicherstände kennen weder Namen noch Geschlecht.

@@ -117,11 +117,10 @@ export function selectionOverlay(
   const animal = selection.animal !== null ? world.wildlife.byId(selection.animal) : undefined;
   if (animal && !hideAnimal(animal.kind)) {
     const at = animal.positionAt(blend);
-    const def = animal.definition;
-    // Erlegt: unter dem liegenden Körper, nicht unter dem Stehpunkt.
-    const p = animalCenter(def.shape, at.x - 0.5, at.y - 0.5, def.height, animal.heading, animal.isDead);
+    // Erlegt: unter dem liegenden Körper, nicht unter dem Stehpunkt - Modell und Größe dieses Tiers (B11).
+    const p = animalCenter(animal.look.shape, at.x - 0.5, at.y - 0.5, animal.size, animal.heading, animal.isDead);
     out.push({
-      x: p.x - 0.5, y: p.y - 0.5, size: animal.definition.height * 2,
+      x: p.x - 0.5, y: p.y - 0.5, size: animal.size * 2,
       color: SELECTED, shape: SHAPE.ring, alpha: 1, ground: world.groundAt!(p.x, p.y),
     });
   }

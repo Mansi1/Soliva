@@ -12,5 +12,7 @@ export class Deer extends AnimalBase {
     info: 'Rehe fressen Knospen und junge Triebe und halten so den Waldrand licht. Mit ihrem Kot verteilen sie Samen über weite Strecken.',
     shape: SHAPE.deer, height: 0.26, hp: 3, food: 140, walk: 0.13, flee: 0.51,
     fear: 4, herd: [2, 4], stride: 0.38,
+    // Das Modell ist der Bock; die Ricke ohne Gehörn.
+    female: { shape: SHAPE.deerFemale, height: 0.239, stride: 0.38 },
   };
 }
