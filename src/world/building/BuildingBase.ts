@@ -28,7 +28,17 @@ export interface BuildingSave {
   f?: { p: CropType; t?: number; h?: number; r: [CropType, number, number, number, number, boolean][] };
   /** Reuse: wie voll sie ist, 0..1. */
   fl?: number;
+  /** Lager: was darin liegt, je Rohstoff und Sorte (siehe BuildingBase.goods) - fehlt, wenn leer. */
+  g?: Goods;
 }
+
+/**
+ * Was in einem Lager liegt: je Rohstoff die Sorten mit Menge, z. B.
+ * `{ wood: { Eiche: 40 }, food: { Weizen: 120 } }`. Die Sorte ist ihr Name in
+ * der Oberfläche (Baum- und Beerenart, Frucht, "Fisch", "Fleisch"); ohne
+ * bekannte Sorte der Name des Rohstoffs ("Holz", "Nahrung").
+ */
+export type Goods = Partial<Record<ResourceKind, Record<string, number>>>;
 
 /** Was beim Bauen mitgegeben werden kann - jede Klasse nimmt, was sie braucht. */
 export interface BuildingOptions {
@@ -65,6 +75,12 @@ export abstract class BuildingBase {
   hp: number;
   /** Welches der Modelle in `models` es zeigt. */
   variant: number;
+  /**
+   * Lager: was hier abgeliefert wurde und noch liegt. Es bleibt, wo es
+   * abgeliefert wurde; bezahlt wird aus allen Lagern zusammen (World.pay).
+   * VERIFIED: tests/storage-stock.test.mjs - Ablieferung mit Baumart, Speichern und Laden.
+   */
+  goods: Goods = {};
 
   /** @param x, y Ankerpunkt: die Mitte des Grundrisses */
   constructor(readonly x: number, readonly y: number, options: BuildingOptions = {}) {
@@ -117,6 +133,41 @@ export abstract class BuildingBase {
     return this.definition.storedResources.includes(resource);
   }
 
+  /** So viel von `resource` liegt hier, alle Sorten zusammen. */
+  stored(resource: ResourceKind): number {
+    let sum = 0;
+    for (const amount of Object.values(this.goods[resource] ?? {})) sum += amount;
+    return sum;
+  }
+
+  /** So viel `resource` passt noch hinein: Bögen bis weaponCapacity, sonst unbegrenzt; 0, wenn es das nicht annimmt. */
+  room(resource: ResourceKind): number {
+    if (!this.stores(resource)) return 0;
+    return resource === 'bows' ? Math.max(0, this.definition.weaponCapacity - this.stored('bows')) : Infinity;
+  }
+
+  /** Legt `amount` der Sorte `kind` hinein - ohne Prüfung, ob es passt (siehe room). */
+  addGoods(resource: ResourceKind, kind: string, amount: number) {
+    const sorts = (this.goods[resource] ??= {});
+    sorts[kind] = (sorts[kind] ?? 0) + amount;
+  }
+
+  /** Nimmt bis zu `amount` von `resource` heraus, Sorte um Sorte - gibt zurück, wie viel. */
+  takeGoods(resource: ResourceKind, amount: number): number {
+    const sorts = this.goods[resource];
+    if (!sorts) return 0;
+    let taken = 0;
+    for (const [kind, have] of Object.entries(sorts)) {
+      const take = Math.min(have, amount - taken);
+      taken += take;
+      if (have - take <= 1e-9) delete sorts[kind];
+      else sorts[kind] = have - take;
+      if (taken >= amount) break;
+    }
+    if (Object.keys(sorts).length === 0) delete this.goods[resource];
+    return taken;
+  }
+
   /** Belegte Tiles: das Quadrat des Grundrisses um den Ankerpunkt. */
   footprintTiles(): [number, number][] {
     const r = (this.definition.footprint - 1) / 2;
@@ -149,6 +200,7 @@ export abstract class BuildingBase {
     return {
       t: this.type, x: this.x, y: this.y, hp: this.hp,
       ...(this.models.length > 1 ? { v: this.variant } : {}),
+      ...(Object.keys(this.goods).length > 0 ? { g: this.goods } : {}),
     };
   }
 
@@ -159,5 +211,7 @@ export abstract class BuildingBase {
   restore(save: BuildingSave, _scale: number) {
     // Ältere Speicherstände kennen keine Trefferpunkte - dann unbeschädigt.
     this.hp = Math.min(save.hp ?? this.maxHp, this.maxHp);
+    // Ältere Speicherstände kennen keinen Vorrat je Lager - World.applySave verteilt ihren.
+    if (save.g) this.goods = structuredClone(save.g);
   }
 }

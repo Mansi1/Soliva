@@ -58,7 +58,7 @@ test('B2: ohne Holz zum Säen wird Reifes geerntet, sonst gejätet - kein Stills
   const [first, ...rest] = world.farming.furrows(a);
   ripen(world, a);
   for (const { f } of rest) Object.assign(f, { sown: 0, growth: 0, paid: false });
-  world.stock.wood = 0;
+  world.pay({ wood: world.stock.wood });
   assert.equal(world.farmPhase(a), 'harvest');
   const [v] = farmers(world, a, 1);
   run(world, 30);
@@ -69,7 +69,7 @@ test('B2: ohne Holz zum Säen wird Reifes geerntet, sonst gejätet - kein Stills
   run(world, 20);
   assert.equal(v.task.kind, 'farm');
   assert.match(v.problem ?? '', /Holz/);
-  world.stock.wood = 100;
+  world.addStock('wood', 100);
   assert.equal(world.farmPhase(a), 'sow');
 });
 

@@ -27,6 +27,14 @@ export const RESOURCE_LABEL: Record<ResourceKind, string> = {
   food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold', bows: 'Bögen',
 };
 
+/**
+ * Sorten im Lager (BuildingBase.goods), die nicht auf der Karte stehen: der
+ * Fang der Fischer und das Fleisch aus der Jagd. Bäume und Beeren heißen nach
+ * ihrer Art (resources.ts, depositKind), Feldfrüchte nach CROPS.
+ */
+export const FISH_KIND = 'Fisch';
+export const MEAT_KIND = 'Fleisch';
+
 /** Was auf der Karte liegt und gesammelt wird: Baum, Fels, Beerenstrauch. */
 export type DepositType = Exclude<ResourceType, 'none'>;
 
@@ -167,7 +175,8 @@ export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0 };
 /**
  * Bognerei, wie der Fletcher in Stronghold: ein Bogner holt so viel Holz aus
  * dem Vorrat (am nächsten Lager für Holz), schnitzt daraus an der Werkbank
- * in `craftTime` Sekunden einen Bogen und trägt ihn zur nächsten Waffenkammer.
+ * in `craftTime` Sekunden einen Bogen und trägt ihn zur nächsten Waffenkammer
+ * mit Platz.
  */
 export const BOWYER = { wood: 10, craftTime: 20 };
 

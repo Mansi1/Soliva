@@ -92,5 +92,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T15:47:58Z s=560a6297 FINDING src/models/animals/boar.glb:Head.Neck learn=memory: Documented as model rule in docs/BLENDER.md (Tiere); no cheap mechanical check for intended pivot location beyond gallery.
 2026-10-10T15:47:58Z s=560a6297 FINDING src/world/unit/Boar.ts:height learn=test: Size test checks every species against its model height.
 2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
+2026-10-10T16:19:50Z s=560a6297 DONE fp=62a0de175c8b cov=80.4% paths=src/components/SelectionPanel.tsx,src/game/selectionView.ts,src/main.ts,src/world/building/Armory.ts(+13)
+2026-10-10T16:19:50Z s=560a6297 FINDING src/main.ts:imtheking cheat learn=none: Frozen getter makes any leftover write fail loudly; no further check needed.
 2026-10-10T16:32:42Z s=560a6297 DONE fp=b33ff45b11dd cov=80.4% paths=docs/BLENDER.md,src/components/SelectionPanel.tsx,src/gallery.ts,src/game/Picker.ts(+20)
 2026-10-10T16:32:42Z s=560a6297 FINDING src/game/Picker.ts:animal, src/game/overlay.ts, src/game/selectionView.ts, src/game/hoverInfo.ts learn=none: Fixed by reading animal.look/size/maxFood; all display callers grepped (def.food/def.shape/def.height in src/game, src/components).
+2026-10-11T11:36:32Z s=560a6297 DONE fp=71f4d4813424 cov=80.4% paths=docs/BLENDER.md,src/components/SelectionPanel.tsx,src/gallery.ts,src/game/Picker.ts(+33)
+2026-10-11T11:36:32Z s=560a6297 FINDING src/game/selectionView.ts:import catalog, goodsText/animalName learn=none: Pure merge resolution; covered by existing storage-stock and herd tests plus smoke.

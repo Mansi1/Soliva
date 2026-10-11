@@ -12,7 +12,7 @@
 //    └─ Farm                      Feld mit Furchen
 
 import type { BuildingDefinition } from './definition';
-import { BuildingBase, type BuildingClass, type BuildingOptions, type BuildingSave } from './BuildingBase';
+import { BuildingBase, type BuildingClass, type BuildingOptions, type BuildingSave, type Goods } from './BuildingBase';
 import { UnitProducer, randomFemale, type TrainableUnit } from './UnitProducer';
 import { StorageBuilding } from './StorageBuilding';
 import { TownCenter } from './TownCenter';
@@ -29,7 +29,7 @@ import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, C
 export {
   BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, Armory,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
-  type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type TrainableUnit,
+  type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type Goods, type TrainableUnit,
 };
 
 /** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs (ohne Taste: nicht darin). */
