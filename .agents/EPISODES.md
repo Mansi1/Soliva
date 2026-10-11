@@ -4,22 +4,11 @@
 Agents append `<UTC ISO> s=<session> LESSON <Signan>` only for a falsified HYPOTHESIS, a dead end, or a root cause.
 A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then delete its lines. -->
 
-2026-10-01T05:42:15Z s=328f726c FAIL layout,env.example,tests.unit=?,coverage=?
-2026-10-01T05:48:36Z s=328f726c FINDING tools/ui/smoke.mjs:107 learn=test: make e2e runs the smoke test against the Pages build under /soliva/, so any new root-absolute path or check fails there
 2026-10-01T05:48:36Z s=328f726c FINDING vite.config.ts:63 learn=none: one-line config fallback; no cheap mechanical rule beyond the .env.example default BASE_PATH=/
-2026-10-09T21:09:36Z s=560a6297 DONE fp=931afad83a22 cov=79.1% paths=AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md,memory.md(+23)
-2026-10-09T21:24:52Z s=560a6297 DONE fp=30bd0a2c69f0 cov=79.1% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+24)
 2026-10-09T21:24:52Z s=560a6297 FINDING src/trackTags.ts:readTrackTags link learn=none: Assets are our own files; one guarded line, no recurring mechanism worth a verifier rule.
-2026-10-09T21:24:52Z s=560a6297 FINDING tools/ui/smoke.mjs:menu checks learn=test: Smoke test now pins tag display and the default-off checkbox.
-2026-10-09T21:24:52Z s=560a6297 FINDING tools/ui/smoke.mjs:end learn=verifier: Encoded by the existing gate check tests.e2e.evidence.
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
-2026-10-09T21:24:52Z s=560a6297 FINDING memory.md:21,47,49 T06 learn=verifier: Prose gate checks typography.
-2026-10-09T21:24:52Z s=560a6297 FINDING AGENTS.md:277,282,300 T06 learn=verifier: Prose gate checks typography on every touched page.
-2026-10-09T21:24:52Z s=560a6297 FINDING docs/OPTIMIZATION_PLAN.md:3-537 T02,T06 learn=verifier: Prose gate checks typography of every touched page.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
-2026-10-09T21:24:52Z s=560a6297 FINDING memory.md:27 learn=memory: Lives in memory.local.md now.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T21:36:02Z s=560a6297 DONE fp=39773e816be6 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+24)
 2026-10-09T21:36:02Z s=560a6297 FINDING src/trackTags.ts:readTrackTags link learn=test: tests/track-tags.test.mjs: no link for WCOM only, other description, javascript: URL.
 2026-10-09T21:38:33Z s=560a6297 DONE fp=b164b6cf31da cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+24)
 2026-10-09T21:38:33Z s=560a6297 FINDING assets/music/*.mp3 WCOM; tests/track-tags.test.mjs no-link cases learn=test: No-link cases stay in tests/track-tags.test.mjs.
@@ -109,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T14:04:13Z s=560a6297 FINDING make e2e / make start (port 4173) learn=memory: Parallel worktrees share the fixed preview port; run make verify in worktrees one after another. Recorded in memory.md.
 2026-10-11T14:04:13Z s=560a6297 FINDING src/world/world.ts:canPlant learn=none: Not observed in Testseed; the condition is named in the ponytail comment.
 2026-10-11T14:04:13Z s=560a6297 FINDING src/world/deposits.ts:restore/plantedSave learn=test: tests/forester.test.mjs
+2026-10-11T21:55:49Z s=560a6297 DONE fp=88457e3ead34 cov=80.4% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+26)
+2026-10-11T21:55:49Z s=560a6297 FINDING src/world/render.ts:throw/hoe phase learn=none: Visual timing; checked in gallery throw sequence screenshots, no cheap mechanical check.
+2026-10-11T21:55:49Z s=560a6297 FINDING src/world/render.ts:figureHolding (hunter) learn=test: tests/spear.test.mjs + load-look; gallery screenshot.
+2026-10-11T21:55:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask learn=none: Shader constant; covered visually only.
+2026-10-11T21:55:49Z s=560a6297 FINDING src/world/villagers.ts:hopeless learn=test: tests/spear.test.mjs gives up on the hare.
+2026-10-11T21:55:49Z s=560a6297 FINDING src/world/save.ts:inv learn=test: tests/spear.test.mjs save round-trip and old save.

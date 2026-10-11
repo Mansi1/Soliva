@@ -75,6 +75,9 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-10-06: Geländegitter ansehen per Playwright: `#terrain-wire` zweimal (nur Gitter), `#terrain-cell` per `value` + `input`-Ereignis (6 = 64 px), Modelle/Gras über `#dev-layers input[data-on=...]` aus (Haken = an), Leertaste für flaches Gelände. Das Panel ist dabei unsichtbar - per `$eval` klicken, nicht `page.click`. Eckpunkte je Zoom: `getRenderStats().at(-1).terrainVertices`.
 
 - 2026-10-11, `feat/foerster`: Försterhütte auf der Lichtung in `Testseed` (12,-43) ganz im Bild bei `lat=-46&lng=9&zoom=5`. Die Lichtung hat nur ~9 Plätze für gepflanzte Bäume (je Baum ein Tile Abstand, ringsum dichter Wald) - danach meldet der Förster "kein freier Platz". Ob ein Setzling steht: Raster abklicken, bis das Panel "Gepflanzt" zeigt.
+- 2026-10-11, `feat/speer`: Jagd in `Testseed` zum Ansehen: Waffenkammer bei 12,-45, Dorfbewohner bei 11,-43.5, Schafe bei 10.3,-41.3 und 12.6,-41.4, Ansicht `lat=-44&lng=10&zoom=5`. Weiter südlich (y > -41) laufen sie in den Wald und sind nur als Umriss zu sehen; per `save` gesetzte Tiere ohne Weg dorthin bleiben einfach stehen. Die Tier-Kennungen im Stand folgen der Reihenfolge in `animals` (erstes = 1), daher geht `task.animal` von Hand.
+- 2026-10-11: `makeWorld` (tests/worldFixture.mjs) liest und schreibt immer den Stand `pgm.world.test`. Ruft ein Test darauf `world.save()` (mit dem localStorage-Ersatz), laden alle späteren Tests der Datei diesen Stand - für Speicher-Tests eine eigene Welt `new World(terrain(...), '<seed>')` nehmen.
+- 2026-10-11: In der Galerie überschreibt das automatische Einpassen `?zoom=`; Bildschirmfotos zeigen das Stück ganz, ein langer Speer macht die Figur darum klein.
 
 ## Offen
 

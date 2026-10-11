@@ -22,7 +22,9 @@
       "name": "throw",
       "frames": 43,
       "duration": 1.4,
-      "props": [],
+      "props": [
+        "spear"
+      ],
       "kneel": false,
       "pose": 8,
       "phase_period": 8.4,

@@ -7,6 +7,7 @@
 import { BUILDING_HEADING, modelEntry } from '../../gl/entityRenderer';
 import type { BuildingType, CropType, ResourceKind, TreeSpecies } from '../catalog';
 import type { BuildingDefinition } from './definition';
+import { WEAPON_KINDS } from './common';
 import type { Farm } from './Farm';
 import type { StorageBuilding } from './StorageBuilding';
 import type { UnitProducer } from './UnitProducer';
@@ -149,10 +150,18 @@ export abstract class BuildingBase {
     return sum;
   }
 
-  /** So viel `resource` passt noch hinein: Bögen bis weaponCapacity, sonst unbegrenzt; 0, wenn es das nicht annimmt. */
+  /**
+   * So viel `resource` passt noch hinein: Waffen (Bögen und Speere zusammen)
+   * bis weaponCapacity, sonst unbegrenzt; 0, wenn es das nicht annimmt.
+   */
   room(resource: ResourceKind): number {
     if (!this.stores(resource)) return 0;
-    return resource === 'bows' ? Math.max(0, this.definition.weaponCapacity - this.stored('bows')) : Infinity;
+    return WEAPON_KINDS.includes(resource) ? Math.max(0, this.definition.weaponCapacity - this.weapons()) : Infinity;
+  }
+
+  /** So viele Waffen liegen hier, alle Arten zusammen. */
+  weapons(): number {
+    return WEAPON_KINDS.reduce((sum, w) => sum + this.stored(w), 0);
   }
 
   /** Legt `amount` der Sorte `kind` hinein - ohne Prüfung, ob es passt (siehe room). */

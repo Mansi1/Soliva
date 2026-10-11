@@ -11,8 +11,8 @@ import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
 import { FishTrap, Forester, furrowFood, type Building, type Farm } from './building';
 import {
-  BOWYER, CROPS, FARM_RATE, FISH_KIND, FISHING, FORESTER, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL, SOW_TIME,
-  TREE_SPECIES, VILLAGER, YIELD,
+  CROPS, FARM_RATE, FISH_KIND, FISHING, FORESTER, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL, SOW_TIME,
+  TREE_SPECIES, VILLAGER, WEAPONS, WEAPON_KINDS, YIELD, craftRecipe,
   type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
 import { depositKind } from './resources';
@@ -49,6 +49,21 @@ function throwRelease(workTime: number): number {
   const at = ((clip.strike[0] ?? 0) / clip.phaseRate + clip.phaseShift) / WORK_TEMPO;
   const loop = clip.duration / clip.phaseRate / WORK_TEMPO;
   return at + Math.ceil((workTime - at) / loop - 1e-6) * loop;
+}
+
+/**
+ * Ist der Speer im Clip throw gerade geworfen (Phase der Pose wie im Bild:
+ * Arbeitszeit * WORK_TEMPO)? Vom Loslassen bis kurz vor Ende der Schleife ist
+ * die Hand leer.
+ * ponytail: der Speer fliegt nicht sichtbar und ist zum nächsten Wurf wieder
+ * in der Hand; einen fliegenden Speer zeichnen, wenn man den Wurf deutlicher sehen soll.
+ */
+export function spearThrown(phase: number): boolean {
+  const clip = CLIPS.find((c) => c.pose === POSE.throw);
+  if (!clip || clip.strike.length === 0) return false;
+  const loop = clip.duration;
+  const t = (((phase - clip.phaseShift) * clip.phaseRate) % loop + loop) % loop;
+  return t >= clip.strike[0] && t < loop - 0.25;
 }
 
 const key = (x: number, y: number) => `${x},${y}`;
@@ -697,22 +712,24 @@ export class VillagerWork {
   }
 
   /**
-   * Bogner: holt Holz vom nächsten Lager, das Holz annimmt, schnitzt daraus
-   * an der Werkbank einen Bogen und trägt ihn zur nächsten Waffenkammer -
-   * immer wieder, solange Holz im Vorrat ist.
+   * Bogner und Speermacher: holt Holz vom nächsten Lager, das Holz annimmt,
+   * schnitzt daraus an der Werkbank ein Stück (Rezept der Werkstatt, CRAFTS)
+   * und trägt es zur nächsten Waffenkammer - immer wieder, solange Holz im Vorrat ist.
+   * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer.
    */
   private tickCrafter(v: Villager, task: Extract<Task, { kind: 'craft' }>, dt: number) {
     v.need = null;
     const shop = this.world.building(task.building);
-    if (!shop?.isWorkshop()) {
-      // Die Werkstatt ist weg - einen Bogen bringt er trotzdem zur Waffenkammer.
-      const armory = v.carryType === 'bows' ? this.nearestDropSite(v, 'bows') : undefined;
+    const recipe = shop && craftRecipe(shop.type);
+    if (!shop?.isWorkshop() || !recipe) {
+      // Die Werkstatt ist weg - eine fertige Waffe bringt er trotzdem zur Waffenkammer.
+      const armory = v.carryType && WEAPON_KINDS.includes(v.carryType) ? this.nearestDropSite(v, v.carryType) : undefined;
       v.task = armory ? { kind: 'deliver', building: armory.anchor } : { kind: 'idle' };
       return;
     }
     if (task.leave && task.step !== 'deliver') {
       // Das Holz auf der Werkbank kommt zurück in den Vorrat.
-      if (task.step === 'carve' && v.carryType !== 'wood') this.world.addStock('wood', BOWYER.wood);
+      if (task.step === 'carve' && v.carryType !== 'wood') this.world.addStock('wood', recipe.wood);
       task.step = 'fetch';
       if (this.deliverTo(v, shop, dt)) v.assign({ kind: 'idle' });
       return;
@@ -724,11 +741,11 @@ export class VillagerWork {
     if (task.step === 'deliver') {
       // Zur nächsten Waffenkammer, die noch Platz hat - so füllen sie sich eine
       // nach der anderen. Alle voll: er wartet mit dem Bogen, bis Platz ist.
-      const armory = this.nearestDropSite(v, 'bows');
+      const armory = this.nearestDropSite(v, recipe.product);
       if (!armory) {
         v.problem = this.world.weaponCapacity() > 0
           ? 'Alle Waffenkammern sind voll - baue noch eine'
-          : 'Keine Waffenkammer für den Bogen - baue eine';
+          : `Keine Waffenkammer für ${recipe.product === 'bows' ? 'den Bogen' : 'den Speer'} - baue eine`;
         this.sitDown(v, shop, dt, 'armory');
         return;
       }
@@ -744,18 +761,18 @@ export class VillagerWork {
         return;
       }
       // Erst losgehen, wenn es genug gibt - sonst wartet er an der Werkbank.
-      if (v.inside <= 0 && !this.world.canPay({ wood: BOWYER.wood })) {
-        v.problem = `Zu wenig Holz im Vorrat (${BOWYER.wood} je Bogen)`;
+      if (v.inside <= 0 && !this.world.canPay({ wood: recipe.wood })) {
+        v.problem = `Zu wenig Holz im Vorrat (${recipe.wood} je ${recipe.product === 'bows' ? 'Bogen' : 'Speer'})`;
         this.sitDown(v, shop, dt, 'wood');
         return;
       }
       v.problem = null;
       // Am Lager: was er noch trug, liefert er ab, und nimmt das Holz mit.
       if (!this.deliverTo(v, store, dt)) return;
-      if (!this.world.canPay({ wood: BOWYER.wood })) return;
-      this.world.pay({ wood: BOWYER.wood }, 1, store);
-      // ponytail: das Holz aus dem Lager kommt ohne Sorte; Sorte mitnehmen, wenn Bögen nach Holzart verschieden werden.
-      v.pickUp('wood', BOWYER.wood);
+      if (!this.world.canPay({ wood: recipe.wood })) return;
+      this.world.pay({ wood: recipe.wood }, 1, store);
+      // ponytail: das Holz aus dem Lager kommt ohne Sorte; Sorte mitnehmen, wenn Waffen nach Holzart verschieden werden.
+      v.pickUp('wood', recipe.wood);
       this.carryKinds.set(v, RESOURCE_LABEL.wood);
       task.step = 'carve';
       return;
@@ -769,11 +786,11 @@ export class VillagerWork {
     v.heading = Math.atan2(spot.aimY - v.y, spot.aimX - v.x);
     v.pose = POSE.carve;
     this.swing(v, dt, 'berries', true);
-    task.progress += dt / BOWYER.craftTime;
+    task.progress += dt / recipe.craftTime;
     if (task.progress >= 1) {
       task.progress = 0;
-      v.pickUp('bows', 1);
-      this.carryKinds.set(v, RESOURCE_LABEL.bows);
+      v.pickUp(recipe.product, 1);
+      this.carryKinds.set(v, RESOURCE_LABEL[recipe.product]);
       task.step = 'deliver';
     }
     this.world.markDirty();
@@ -1071,9 +1088,70 @@ export class VillagerWork {
   }
 
   /**
-   * Jäger: hinterher, bis er in Wurfweite ist, dann Speer um Speer, bis das
-   * Tier fällt; am Kadaver zerlegt er das Fleisch und bringt es zum Lager.
-   * Ist es leer, macht er beim nächsten Tier derselben Art weiter.
+   * Ohne Speer holt der Jäger erst einen aus der nächsten Waffenkammer, die
+   * Speere hat (B25) - true, solange er damit beschäftigt ist. Hat keine
+   * einen, jagt er mit bloßen Händen (task.armory = null).
+   * VERIFIED: tests/spear.test.mjs - er nimmt genau einen und behält ihn.
+   */
+  private fetchSpear(v: Villager, task: Extract<Task, { kind: 'hunt' }>, dt: number): boolean {
+    if (task.armory === null || (v.inventory.weapon && v.inside <= 0)) return false;
+    const resource = WEAPONS.spear.resource;
+    let armory = task.armory ? this.world.building(task.armory) : undefined;
+    // Noch keine gewählt, inzwischen leer oder ohne Weg: die nächste mit Speer.
+    if (!v.inventory.weapon && (!armory || v.unreachable.has(armory.anchor) || (armory.stored(resource) < 1 && v.inside <= 0))) {
+      armory = this.nearestWithSpear(v);
+      task.armory = armory?.anchor ?? null;
+    }
+    if (!armory) {
+      v.inside = 0;
+      return false;
+    }
+    const target = armory;
+    if (!this.enter(v, target, dt, () => {
+      if (target.takeGoods(resource, 1) < 1) return;
+      v.inventory.weapon = 'spear';
+      this.world.markDirty();
+    })) return true;
+    // Wieder draußen: mit Speer geht die Jagd los; war die Kammer inzwischen leer, sucht er weiter.
+    return !v.inventory.weapon;
+  }
+
+  /** Nächste Waffenkammer mit mindestens einem Speer, zu der er einen Weg hat. */
+  private nearestWithSpear(v: Villager): Building | undefined {
+    let best: Building | undefined;
+    let bestDistance = Infinity;
+    for (const b of this.world.allBuildings()) {
+      if (b.stored(WEAPONS.spear.resource) < 1 || v.unreachable.has(b.anchor)) continue;
+      const d = Math.hypot(b.x + 0.5 - v.x, b.y + 0.5 - v.y);
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = b;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Ohne Speer: hoffnungslos, wenn er das Tier nicht binnen HUNT.chaseLimit
+   * Sekunden Jagd einholen kann - schon gelaufene Zeit (task.chase) plus
+   * Abstand durch das, was er je Sekunde aufholt (eigenes Tempo minus das des
+   * Tiers: auf der Flucht `flee`, sonst `walk`, äsend 0). Ist es so schnell wie
+   * er oder schneller, sofort. So läuft er nie endlos hinterher.
+   * VERIFIED: tests/spear.test.mjs - den Hasen (flee 0.79) gibt er auf, das Schaf holt er ein.
+   */
+  private hopeless(task: Extract<Task, { kind: 'hunt' }>, a: Animal, gap: number): boolean {
+    const def = a.definition;
+    const speed = a.state === 'flee' ? def.flee : a.state === 'walk' ? def.walk : 0;
+    const closing = VILLAGER.speed - speed;
+    return closing <= 1e-6 || (task.chase ?? 0) + gap / closing > HUNT.chaseLimit;
+  }
+
+  /**
+   * Jäger: holt sich erst einen Speer (fetchSpear), dann hinterher, bis er in
+   * Wurfweite ist, und Speer um Speer, bis das Tier fällt - ohne Speer muss er
+   * bis auf HUNT.reach heran und gibt auf, wenn es hoffnungslos ist (hopeless).
+   * Am Kadaver zerlegt er das Fleisch und bringt es zum Lager. Ist es leer,
+   * macht er beim nächsten Tier derselben Art weiter.
    */
   private tickHunter(v: Villager, task: Extract<Task, { kind: 'hunt' }>, dt: number) {
     if (task.delivering) {
@@ -1091,6 +1169,7 @@ export class VillagerWork {
       const next = this.nearestPrey(v, a?.kind ?? null);
       if (next) {
         task.animal = next.id;
+        task.chase = 0;
         a = next;
       } else if (v.carrying > 0 && v.carryType === 'food') {
         task.delivering = true;
@@ -1103,15 +1182,24 @@ export class VillagerWork {
     }
     v.problem = null;
     if (a.state !== 'dead') {
-      // In Wurfweite heran - und dann werfen, auch wenn es wegläuft.
+      if (this.fetchSpear(v, task, dt)) return;
+      // In Wurfweite heran - und dann werfen, auch wenn es wegläuft. Ohne Speer ganz heran.
+      const armed = v.inventory.weapon === 'spear';
+      const range = armed ? HUNT.range : HUNT.reach;
       const d = Math.hypot(a.x - v.x, a.y - v.y);
       task.cooldown = Math.max(0, task.cooldown - dt);
-      if (d > HUNT.range) {
-        this.walk(v, a.x, a.y, HUNT.range * 0.8, dt);
+      if (d > range) {
+        if (!armed && this.hopeless(task, a, d - range)) {
+          v.assign({ kind: 'idle' });
+          v.problem = `Ohne Speer zu langsam - ${a.label} entkommt`;
+          return;
+        }
+        if (!armed) task.chase = (task.chase ?? 0) + dt;
+        this.walk(v, a.x, a.y, range * 0.8, dt);
         return;
       }
       v.heading = Math.atan2(a.y - v.y, a.x - v.x);
-      // Werfen ohne Beil: der Clip throw dauert eine Nachladezeit (HUNT.reload),
+      // Werfen bzw. zustoßen ohne Beil: der Clip throw dauert eine Nachladezeit (HUNT.reload),
       // seine Clip-Zeit ist die Arbeitszeit.
       v.pose = POSE.throw;
       v.workTime += dt;
@@ -1301,16 +1389,20 @@ export class VillagerWork {
         if (!a) return 'jagt' + load;
         return (a.isDead ? `zerlegt ${a.label}` : `jagt ${a.label}`) + load;
       }
-      case 'craft':
-        if (v.task.leave && v.task.step !== 'deliver') return 'entlassen, geht aus der Bognerei';
+      case 'craft': {
+        const shop = this.world.building(v.task.building);
+        const label = shop?.label ?? 'Werkstatt';
+        const item = craftRecipe(shop?.type ?? '')?.item ?? 'etwas';
+        if (v.task.leave && v.task.step !== 'deliver') return `entlassen, geht aus der ${label}`;
         switch (v.task.step) {
-          case 'enter': return 'geht in die Bognerei';
-          case 'fetch': return 'holt Holz für die Bognerei' + load;
-          case 'deliver': return 'bringt einen Bogen zur Waffenkammer';
+          case 'enter': return `geht in die ${label}`;
+          case 'fetch': return `holt Holz für die ${label}` + load;
+          case 'deliver': return `bringt ${item} zur Waffenkammer`;
           case 'carve': return v.carryType === 'wood'
             ? 'bringt Holz zur Werkbank' + load
-            : `schnitzt einen Bogen (${Math.floor(v.task.progress * 100)} %)`;
+            : `schnitzt ${item} (${Math.floor(v.task.progress * 100)} %)`;
         }
+      }
       case 'fish':
         if (v.task.leave && !AFLOAT.has(v.task.step) && !DRAGGING.has(v.task.step)) return 'entlassen, geht aus der Fischerhütte';
         switch (v.task.step) {

@@ -8,7 +8,7 @@ import { uniqueName } from './names';
 import { POSE, animationTime } from '../gl/entityRenderer';
 import type { Terrain } from '../map';
 import { NEAR_STEP, reliefZ } from '../noise';
-import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, RESOURCE_LABEL, TREE_SPECIES, YIELD, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
+import { BUILDINGS, FIELD_ROWS, FISHING, RESOURCE_KINDS, RESOURCE_LABEL, TREE_SPECIES, WEAPONS, YIELD, craftRecipe, MAX_BUILD_SLOPE, VILLAGER, initialResources } from './catalog';
 import type { BuildingType, CropType, DepositType, ResourceKind, Resources, TreeSpecies } from './catalog';
 import {
   buildingFromSave, createBuilding, furrowPosition, maskCovers, randomFemale, CENTER_TILE, FishTrap, Forester,
@@ -217,10 +217,10 @@ export class World {
     return sum;
   }
 
-  /** Wie viele Bögen in jeder Waffenkammer liegen. Schlüssel: Ankerpunkt. */
+  /** Wie viele Waffen (Bögen und Speere) in jeder Waffenkammer liegen. Schlüssel: Ankerpunkt. */
   armoryStock(): Map<string, number> {
     const stock = new Map<string, number>();
-    for (const b of this.allBuildings()) if (b.definition.weaponCapacity > 0) stock.set(b.anchor, Math.floor(b.stored('bows')));
+    for (const b of this.allBuildings()) if (b.definition.weaponCapacity > 0) stock.set(b.anchor, Math.floor(b.weapons()));
     return stock;
   }
 
@@ -241,7 +241,7 @@ export class World {
     for (const v of this.villagers) {
       if (v.task.kind === 'gather') counts[YIELD[v.task.type]]++;
       else if (v.task.kind === 'farm' || v.task.kind === 'hunt' || v.task.kind === 'fish') counts.food++;
-      else if (v.task.kind === 'craft') counts.bows++;
+      else if (v.task.kind === 'craft') counts[craftRecipe(this.building(v.task.building)?.type ?? '')?.product ?? 'bows']++;
       else if (v.task.kind === 'idle') idle++;
     }
     return { counts, idle };
@@ -962,6 +962,7 @@ export class World {
       villagers: this.villagers.map((v) => ({
         x: v.x, y: v.y, c: v.carrying, ct: v.carryType, task: v.task, hp: v.hp, n: v.name, f: v.female,
         ...(v.carrying > 0 && this.work.carryKind(v) ? { ck: this.work.carryKind(v) } : {}),
+        ...(v.inventory.weapon ? { inv: { ...v.inventory } } : {}),
       })),
       harvested: Object.fromEntries(this.deposits.harvested),
       planted: this.deposits.plantedSave(this.time),
@@ -997,6 +998,9 @@ export class World {
       v.carryType = s.ct;
       if (s.ck) this.work.setCarryKind(v, s.ck);
       v.task = s.task;
+      // Nur bekannte Waffen - ein Stand aus einer anderen Fassung bringt sonst Unbekanntes mit.
+      const weapon = s.inv?.weapon;
+      v.inventory = { weapon: weapon && weapon in WEAPONS ? weapon : null };
       v.hp = Math.min(s.hp ?? VILLAGER.hp, VILLAGER.hp);
       this.villagers.push(v);
     }

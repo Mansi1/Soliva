@@ -211,6 +211,18 @@ hängt). Das Spiel hängt es an die rechte Hand des Körpers, der es trägt:
 3. Den Namen in `props` der Clips eintragen, die es brauchen
    (`clips/humanoid.json`).
 
+**Speer (B25):** `props/spear.glb` hängt wie das Beil als `Arm.R.Lower.Tool…`
+an der Hand (`SHAPE.propSpear`), gegriffen 0,8 m vom Ende, in Ruhelage
+waagerecht nach vorn. Der Clip `throw` hat `props: ["spear"]` (Bit 16); so
+liegt der Speer beim Ausholen über dem Kopf mit der Spitze nach vorn.
+Gehen und Stehen eines Jägers zeigen statt des Beils den Speer
+(`figureHolding`, wie die Angel des Fischers), ohne Speer nichts. Beim Wurf
+ist die Hand vom Loslassen bis kurz vor dem nächsten Wurf leer
+(`spearThrown` in `world/villagers.ts`). Die Phase von `throw` und `hoe`
+läuft seitdem wie bei den anderen Arbeitsposen nach der Arbeitszeit
+(`world/render.ts`); vorher spielten beide 6-mal zu langsam.
+VERIFIED: Galerie, Mann → „wirft den Speer", „jagt mit Speer" (2026-10-11).
+
 ## Lasten
 
 Seit B8 (2026-10-11) trägt kein Dorfbewohner mehr den einen Rucksack. Er trägt
@@ -222,7 +234,9 @@ Die Last ist ein Anhang wie ein Werkzeug (`figureProps(figure, load)`).
   vor der Brust (`crate`). Beeren, Kartoffeln, Hopfen und Mais trägt er in der
   Hotte, Stein und Gold im Korb (`basket`). Weizen liegt als Garbe auf der
   Schulter (`sheaf`), Fleisch als Keule über der Schulter (`meat`). Ein
-  Bogen hängt schräg auf dem Rücken (`bow`, aus `props/bow.glb` ohne Pfeil).
+  Bogen hängt schräg auf dem Rücken (`bow`, aus `props/bow.glb` ohne Pfeil),
+  ebenso ein Speer (`spears`, `props/load_spears.glb`, nur `Carry…`: er trägt
+  immer einen).
   Fisch hängt in der Hand (der Hering der Fischer). Die Farbe der Ware
   (Material `Load`) kommt als `accent` der Instanz.
   VERIFIED: `tests/load-look.test.mjs` prüft, dass jede Sorte des Spiels eine
@@ -258,7 +272,7 @@ Die Last ist ein Anhang wie ein Werkzeug (`figureProps(figure, load)`).
    bleibt - das ist noch nicht herausgefunden (docs/OFFEN.md).
 3. Die Angaben je Clip stehen in `clips/<name>.json` unter `clips` und werden
    von Hand gepflegt; `frames` und `duration` müssen zur Animation passen:
-   - `props`: die Werkzeuge in der Hand (`axe`, `scythe`, `knife`, `hoe`)
+   - `props`: die Werkzeuge in der Hand (`axe`, `scythe`, `knife`, `hoe`, `spear`)
    - `pose`: welche Pose des Spiels der Clip ersetzt (0 stehen, 1 gehen,
      2 hacken, 3 pflücken, 4 mähen, 5 schnitzen, 6 sitzen, 7 Hacke (pflügen),
      8 werfen (Jagd); Tiere: 0 äsen, 1 gehen,
