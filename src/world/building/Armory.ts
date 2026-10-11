@@ -1,10 +1,14 @@
 // Armory.ts
-// Waffenkammer - wie in Stronghold: hier kommen die Waffen hin. Der Bogner
+// Waffenkammer - wie in Stronghold: hier kommen die Waffen hin, Bögen und
+// Speere (B25), die sich den Platz teilen. Der Bogner
 // trägt jeden fertigen Bogen zur nächsten Waffenkammer, die noch Platz hat -
 // so füllen sie sich eine nach der anderen; ohne eine, oder wenn
 // alle voll sind, wartet er mit dem Bogen in der Hand. Es passen 100 hinein,
 // und alle sind zu sehen: fünf Gestelle mit je 20 stehenden Bögen im
 // Modell (Stock.0 bis 99).
+// ponytail: die Gestelle zeigen alle Waffen als Bögen (World.armoryStock zählt
+// Bögen und Speere zusammen); eigene Speer-Gestelle ins Modell, wenn man Speere
+// in der Kammer von Bögen unterscheiden soll.
 
 import { Color } from '../../functions/Color';
 import { SHAPE } from '../../gl/entityRenderer';
@@ -20,7 +24,7 @@ export class Armory extends StorageBuilding {
     model: SHAPE.armory,
     size: 1,
     cost: { wood: 50, stone: 50 },
-    storedResources: ['bows'],
+    storedResources: ['bows', 'spears'],
     weaponCapacity: 100,
     hp: 1000,
   });

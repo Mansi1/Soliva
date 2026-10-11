@@ -15,12 +15,12 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   villagers/                male, female
   buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-                            mill(_2.._4), bowyer, armory, fisher_hut, forester
+                            mill(_2.._4), bowyer, spear_maker, armory, fisher_hut, forester
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
-  props/                    axe, hoe, knife, scythe_male/_female, bow, rally_flag, marker_arrow,
-                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow (Lasten, docs/ANIMATION.md)
+  props/                    axe, hoe, knife, scythe_male/_female, bow, spear, rally_flag, marker_arrow,
+                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears (Lasten, docs/ANIMATION.md)
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
@@ -101,8 +101,8 @@ Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 | Name | Bedeutung |
 |---|---|
 | `Entry` | Eingang - dorthin gehen Dorfbewohner, wird nicht gezeichnet |
-| `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei) |
-| `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei) |
+| `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei, Speermacherei) |
+| `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei, Speermacherei) |
 | `Leg.L`, `Leg.L.Lower`, `Arm.R`, `Arm.R.Lower`, `Head` ... | Körperteile der Figuren - an ihnen hängen die Knochen |
 | `Load` (im Körper) | Anker der Lasten am Rücken - wird nicht gezeichnet |
 | `Goods…`, `Carry…` (`props/load_*`) | Ware (wächst mit der Ladung) und Behälter einer Last |
@@ -113,7 +113,7 @@ Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 | `Berry.<n>` | einzelne Beeren - verschwinden beim Pflücken |
 | `Trunk`, `Trunk.Stump` | Stamm und Stumpf - der Baum wird von oben abgesägt |
 | `Stock.<n>` | Bögen in der Waffenkammer, je Vorrat sichtbar |
-| `Craft.<n>` | Stufen des Bogens auf der Werkbank |
+| `Craft.<n>` | Stufen des Werkstücks auf der Werkbank (Bogen bzw. Speer) |
 | `Cut.Roof`, `Cut.Wall` | Dach und Wände der Waffenkammer, beim Hineinsehen weg bzw. niedrig |
 
 **Geprüft von `npm test`:** Es schlägt an, wenn einem Modell ein Name mit
@@ -185,6 +185,16 @@ aus Stämmen (`Log`, Rinde `Bark`, Stirnseiten `LogEnd`), Schindeldach, Tür mit
 `Entry` davor, Pflanzbeet mit Setzlingen, Schild in Spielerfarbe (`Paint`). Das
 Skript liegt nicht im Repo (keine Python-Dateien hier); geändert wird die `.glb`.
 Gleiche Namen tragen `#2`, `#3` ..., wie oben beschrieben.
+
+## Speermacherei und Speer
+
+`buildings/spear_maker.glb`, `props/spear.glb` und `props/load_spears.glb` (B25,
+2026-10-11) sind headless in Blender gebaut, das Skript liegt nicht im Repo. Die
+Speermacherei ist die Bognerei (`bowyer.glb` importiert) ohne Bögen und Pfeile:
+Speere an der Wand, im Fass und in der Scheibe, auf der Werkbank `Craft.0`
+(Stange mit Rinde), `Craft.1` (glatter Schaft) und `Craft.2` (fertiger Speer).
+Marker (`Entry`, `Work.*`) und Maße sind die der Bognerei. Der Speer ist 1,9 m
+lang, Schaft `WoodLight`, Bindung `Leather`, Tülle `Iron`, Spitze `Steel`.
 
 ## Felder
 

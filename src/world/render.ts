@@ -19,7 +19,7 @@ import {
   RUIN_COLLAPSE, RUIN_COLLAPSE_START, RUIN_DURATION, RUIN_FADE_START, RUIN_FLIGHT, RUIN_SHAKE,
 } from './ruin';
 import type { WorkNeed } from './unit';
-import { AFLOAT, DRAGGING, workplace } from './villagers';
+import { AFLOAT, DRAGGING, spearThrown, workplace } from './villagers';
 import { STRIDE_LENGTH, WORK_TEMPO, type ViewRect, type World } from './world';
 
 /** Höhe des Hinweispfeils in Tiles (1.5 m) und sein Abstand über dem Dach. */
@@ -103,6 +103,7 @@ export function loadLook(type: ResourceKind, kind: string | undefined): LoadOf |
     case 'stone':
     case 'gold': return { look: 'basket', accent: RESOURCE_TYPE_COLORS[type].toRGB() };
     case 'bows': return { look: 'bow' };
+    case 'spears': return { look: 'spears' };
     case 'food': return kind === undefined ? undefined : FOOD_LOAD.get(kind);
   }
 }
@@ -206,7 +207,7 @@ export function worldInstances(
       alpha: 1,
       // Jede Mühle dreht in ihrem eigenen Takt; Felder zeigen Wuchs und Rest.
       motion: def.model === SHAPE.mill ? millMotion(building.x, building.y)
-        : def.model === SHAPE.bowyer ? [BUILDING_HEADING, crafting.get(building.anchor) ?? -1, 0, 0]
+        : def.model === SHAPE.bowyer || def.model === SHAPE.spearMaker ? [BUILDING_HEADING, crafting.get(building.anchor) ?? -1, 0, 0]
         // Reuse: Fisch um Fisch, wie sie sich füllt (Stock.0-4 im Modell).
         : building instanceof FishTrap ? [BUILDING_HEADING, building.fish / FISHING.trapFish, 0, 0]
         : armory.has(building.anchor) && modelStockSlots(building.model) > 0
@@ -256,7 +257,11 @@ export function worldInstances(
     if (x < x0 || x > x1 || y < y0 || y > y1) continue;
     const phase = v.pose === POSE.walk
       ? lerp(v.prevStride, v.stride, blend) * (Math.PI * 2 / STRIDE_LENGTH)
+      // Arbeitsposen im Takt der Arbeitszeit - wie swing() und throwRelease (villagers.ts)
+      // ihre Takt-Marken rechnen. Hacke und Wurf liefen hier früher nach der Weltzeit:
+      // 6-mal zu langsam, das Loslassen nicht beim Treffer.
       : v.pose === POSE.work || v.pose === POSE.pick || v.pose === POSE.scythe || v.pose === POSE.carve
+          || v.pose === POSE.hoe || v.pose === POSE.throw
         ? lerp(v.prevWorkTime, v.workTime, blend) * WORK_TEMPO
         // Stehen: Weltzeit in Sekunden, je Figur versetzt (Leerlauf-Animation).
         : world.timeAt(blend) + v.id * 7.3;
@@ -283,6 +288,13 @@ export function worldInstances(
     };
     if (particles && particles.tileSize >= DETAIL_TILE_SIZE) workParticles(world, v, x, y, particles);
     const fishing = v.task.kind === 'fish' ? v.task : undefined;
+    // Jäger auf der Jagd (B20, B25): kein Beil - den Speer in der Hand, ohne Speer nichts.
+    // Trägt er etwas (Fleisch), zeigt figureProps die Last.
+    if (v.task.kind === 'hunt' && !carried && !(v.pose === POSE.pick)) {
+      const spear = v.inventory.weapon === 'spear' && !(v.pose === POSE.throw && spearThrown(phase));
+      out.push(figure, ...figureHolding(figure, spear ? 'spear' : null));
+      continue;
+    }
     if (!fishing) {
       // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip), und seine Last.
       out.push(figure, ...figureProps(figure, carried?.look));

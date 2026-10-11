@@ -9,7 +9,7 @@ import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { FishTrap, Forester, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
-  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, FORESTER, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, VILLAGER, type AnimalKind, type ResourceKind,
+  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, FORESTER, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, VILLAGER, WEAPONS, craftRecipe, type AnimalKind, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
 import { GROWN, type Animal, type AnimalState } from '../world/unit';
@@ -141,13 +141,13 @@ export function selectionView(world: World, selection: Selection, resources: Res
       hp: building.hp,
       maxHp: def.hp,
       storedResources: def.storedResources.length > 0 ? def.storedResources.map((r) => RESOURCE_LABEL[r]).join(', ') : undefined,
-      // Die Waffenkammer zeigt ihre Bögen eigens (weapons).
+      // Die Waffenkammer zeigt ihre Waffen eigens (weapons).
       goods: def.storedResources.length > 0 && def.weaponCapacity === 0 ? goodsText(building) : undefined,
       housing: def.housing > 0 ? def.housing : undefined,
       farm: building.isFarm() ? { ...farmView(world, [building]), plan: building.plan } : undefined,
       workshop: building.isWorkshop() ? workshopView(world, building) : undefined,
       weapons: def.weaponCapacity > 0
-        ? { bows: world.armoryStock().get(building.anchor) ?? 0, capacity: def.weaponCapacity }
+        ? { bows: Math.floor(building.stored('bows')), spears: Math.floor(building.stored('spears')), capacity: def.weaponCapacity }
         : undefined,
       trapCost: building.type === 'fisher_hut'
         ? { cost: costText(BUILDINGS.fish_trap.cost), affordable: world.affordable('fish_trap') }
@@ -230,7 +230,10 @@ export function selectionView(world: World, selection: Selection, resources: Res
       kind: 'villagers',
       female: chosen[0].female,
       single: single
-        ? { name: single.name, role: single.female ? 'Dorfbewohnerin' : VILLAGER.label, doing: world.describe(single), worker: !!workplace(single.task) }
+        ? {
+            name: single.name, role: single.female ? 'Dorfbewohnerin' : VILLAGER.label, doing: world.describe(single), worker: !!workplace(single.task),
+            inventory: single.inventory.weapon ? WEAPONS[single.inventory.weapon].label : undefined,
+          }
         : undefined,
       count: chosen.length,
       label: VILLAGER.label,
@@ -243,9 +246,9 @@ export function selectionView(world: World, selection: Selection, resources: Res
   return { kind: 'none' };
 }
 
-/** Werkstatt: wer dort arbeitet, was er tut, wie weit der Bogen ist. */
+/** Werkstatt: wer dort arbeitet, was er tut, wie weit das Stück (Bogen, Speer) ist. */
 function workshopView(world: World, building: Building): WorkshopView {
-  const role = building.type === 'fisher_hut' ? 'Fischer' : building.type === 'forester' ? 'Förster' : 'Bogner';
+  const role = building.type === 'fisher_hut' ? 'Fischer' : building.type === 'forester' ? 'Förster' : craftRecipe(building.type)?.worker ?? 'Arbeiter';
   const worker = world.villagers.find((v) => workplace(v.task) === building.anchor);
   if (!worker) return { role };
   const task = worker.task;

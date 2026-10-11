@@ -9,22 +9,22 @@
 
 import { Color } from '../functions/Color';
 import { SHAPE } from '../gl/entityRenderer';
-import { RESOURCE_KINDS } from './building/common';
+import { RESOURCE_KINDS, WEAPON_KINDS } from './building/common';
 import type { ResourceType } from '../map';
 
 /**
  * Was im Vorrat liegt. Nahrung kommt aus Beeren, Feldern und der Jagd - im
- * Vorrat ist sie eins. Bögen sammelt man nicht, sie entstehen in der Bognerei
- * und liegen in der Waffenkammer.
+ * Vorrat ist sie eins. Bögen und Speere sammelt man nicht, sie entstehen in
+ * Bognerei und Speermacherei und liegen in der Waffenkammer.
  */
-export type ResourceKind = 'food' | 'wood' | 'stone' | 'gold' | 'bows';
+export type ResourceKind = 'food' | 'wood' | 'stone' | 'gold' | 'bows' | 'spears';
 /** Eine Menge Rohstoffe: der Vorrat, Kosten, eine Ladung. */
 export type Resources = Record<ResourceKind, number>;
-export { RESOURCE_KINDS };
+export { RESOURCE_KINDS, WEAPON_KINDS };
 
 /** Namen der Rohstoffe für die Oberfläche. */
 export const RESOURCE_LABEL: Record<ResourceKind, string> = {
-  food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold', bows: 'Bögen',
+  food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold', bows: 'Bögen', spears: 'Speere',
 };
 
 /**
@@ -113,7 +113,7 @@ export const REPLOUGH_AFTER = 3;
  * Nahrung, und Nahrung sammeln nur Dorfbewohner.
  */
 export function initialResources(): Resources {
-  return { food: 200, wood: 350, stone: 120, gold: 0, bows: 0 };
+  return { food: 200, wood: 350, stone: 120, gold: 0, bows: 0, spears: 0 };
 }
 
 /** Spielerfarben zur Auswahl in den Einstellungen - wie in AoE2. */
@@ -169,8 +169,13 @@ export const MAX_GATHERERS = 6;
 // Tiere: Arten und Definitionen kommen aus den Klassen (unit/).
 export { ANIMALS, type AnimalKind, type AnimalDefinition } from './unit';
 
-/** Jagen: Wurfweite des Speers (Tiles), Sekunden zwischen zwei Würfen, Zerlegen (Nahrung je Sekunde). */
-export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0 };
+/**
+ * Jagen: Wurfweite des Speers (Tiles), Sekunden zwischen zwei Würfen, Zerlegen
+ * (Nahrung je Sekunde). Ohne Speer (B25) muss er bis `reach` ans Tier heran
+ * und gibt auf, wenn er es nicht binnen `chaseLimit` Sekunden Jagd erreichen
+ * kann (villagers.ts, hopeless).
+ */
+export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0, reach: 0.35, chaseLimit: 20 };
 
 /**
  * Bognerei, wie der Fletcher in Stronghold: ein Bogner holt so viel Holz aus
@@ -179,6 +184,47 @@ export const HUNT = { range: 2.2, reload: 1.4, butcherRate: 1.0 };
  * mit Platz.
  */
 export const BOWYER = { wood: 10, craftTime: 20 };
+
+/**
+ * Speermacherei (B25), wie die Bognerei: ein Speer kostet halb so viel Holz
+ * wie ein Bogen (Vorgabe des Spielers) und ist in halber Zeit fertig.
+ */
+export const SPEAR_MAKER = { wood: 5, craftTime: 10 };
+
+/**
+ * Was eine Werkstatt aus Holz macht (Auftrag 'craft', villagers.ts): Ware,
+ * Holz und Zeit je Stück, wie das Stück und wer es macht in der Oberfläche heißt.
+ * Ein Rezept je Werkstatt statt eigener Abläufe: Bognerei und Speermacherei
+ * teilen denselben Weg (holen, schnitzen, abliefern).
+ * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer.
+ */
+export interface CraftRecipe {
+  product: 'bows' | 'spears';
+  wood: number;
+  craftTime: number;
+  /** "einen Bogen" - für "schnitzt einen Bogen". */
+  item: string;
+  worker: string;
+}
+export const CRAFTS: Record<'bowyer' | 'spear_maker', CraftRecipe> = {
+  bowyer: { product: 'bows', ...BOWYER, item: 'einen Bogen', worker: 'Bogner' },
+  spear_maker: { product: 'spears', ...SPEAR_MAKER, item: 'einen Speer', worker: 'Speermacher' },
+};
+
+/** Das Rezept einer Werkstatt - undefined für Werkstätten ohne Waren (Fischer, Förster). */
+export function craftRecipe(type: string): CraftRecipe | undefined {
+  return CRAFTS[type as keyof typeof CRAFTS];
+}
+
+/**
+ * Was ein Dorfbewohner als Waffe bei sich tragen kann (Villager.inventory) -
+ * heute nur der Speer des Jägers (B25); der Bogen kommt mit B24 dazu.
+ */
+export type Weapon = 'spear';
+/** Je Waffe: woraus sie in der Waffenkammer kommt und wie sie im Panel heißt. */
+export const WEAPONS: Record<Weapon, { resource: ResourceKind; label: string }> = {
+  spear: { resource: 'spears', label: 'Speer' },
+};
 
 /**
  * Fischerei: Reusen füllen sich in `trapFillTime` Sekunden, geleert bringen

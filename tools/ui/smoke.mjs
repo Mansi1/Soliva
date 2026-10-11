@@ -59,15 +59,15 @@ const count = (data, type) => data.buildings.filter((b) => b.t === type).length;
  * oder Hang lassen manche Stellen nicht zu. Liefert die Stelle im Bild, an der
  * es steht, oder null.
  */
-async function placeNearCenter(type) {
-  const before = count(await saved(), type);
+async function placeNearCenter(type, seed) {
+  const before = count(await saved(seed), type);
   for (let r = 0; r < 6; r++) {
     for (let a = 0; a < 8; a++) {
       const angle = (a / 8) * Math.PI * 2;
       const at = { x: 640 + Math.cos(angle) * r * 60, y: 400 + Math.sin(angle) * r * 45 };
       await page.mouse.click(at.x, at.y);
       await wait(60);
-      if (count(await saved(), type) > before) return at;
+      if (count(await saved(seed), type) > before) return at;
     }
   }
   return null;
@@ -258,6 +258,14 @@ await newGame('demo');
 const demo = await saved('Demo');
 check('Demo geladen', (await page.title()).endsWith('Demo') && demo.villagers.length > 0,
   `${demo.buildings.length} Gebäude, ${demo.villagers.length} Dorfbewohner`);
+// Speermacherei (J, B25): in der Demo reicht das Holz dafür; das Panel zeigt sie wie die Bognerei ohne Arbeiter.
+await page.keyboard.press('j');
+const spearPoint = await placeNearCenter('spear_maker', 'Demo');
+await cancel();
+const spearPanel = spearPoint && await findNear('Speermacherei', spearPoint)
+  ? await page.$eval('#selection', (e) => e.textContent) : '';
+check('Speermacherei gebaut', !!spearPoint && spearPanel.includes('Rechtsklick mit einem Dorfbewohner'), spearPanel.slice(0, 80) || 'nicht gebaut/gefunden');
+await cancel();
 
 // Verliert die Symbol-Bühne (modelIcons.ts, 320×400, nicht auf der Seite) ihren
 // WebGL-Kontext - GPU-Neustart, Ruhezustand -, müssen neue Symbole trotzdem

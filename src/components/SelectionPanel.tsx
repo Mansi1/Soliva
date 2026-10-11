@@ -84,7 +84,7 @@ export type SelectionView =
       farm?: FarmView & { plan: CropType };
       workshop?: WorkshopView;
       /** Waffenkammer: so viele Waffen liegen darin, so viele passen hinein. */
-      weapons?: { bows: number; capacity: number };
+      weapons?: { bows: number; spears: number; capacity: number };
       /** Fischerhütte: Knopf "Reuse bauen" - Kosten und ob man sie hat. */
       trapCost?: { cost: string; affordable: boolean };
       /** Reuse: Fische darin, wie viele hineinpassen, Sekunden, bis sie voll ist (0: voll). */
@@ -141,7 +141,8 @@ export type SelectionView =
       /** Fürs Porträt: Frau oder Mann (der erste). */
       female: boolean;
       /** Genau einer: Name, Frau oder Mann, was er gerade tut. */
-      single?: { name: string; role: string; doing: string; worker: boolean };
+      /** Einer: dazu seine Habe ("Speer") - fehlt, wenn er nichts hat. */
+      single?: { name: string; role: string; doing: string; worker: boolean; inventory?: string };
       count: number;
       label: string;
       names: string;
@@ -228,7 +229,7 @@ function Buildings({ v }: { v: Extract<SelectionView, { kind: 'buildings' }> }) 
   );
 }
 
-/** Werkstatt: der Arbeiter und sein Bogen - oder wie man einen hinschickt. */
+/** Werkstatt: der Arbeiter und sein Stück (Bogen, Speer ...) - oder wie man einen hinschickt. */
 function WorkshopDetails({ workshop, label }: { workshop: WorkshopView; label: string }) {
   if (!workshop.worker) {
     return <div class="muted">Niemand arbeitet hier - Rechtsklick mit einem Dorfbewohner auf die {label}.</div>;
@@ -271,13 +272,22 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
             </>
           ) : null}
           {v.weapons ? (
-            <div class="sel-stock">
-              <span class="sel-stock-icon"><img src={stockIcon('bows')} alt="" width="34" height="34" draggable={false} /></span>
-              Bögen: <b>{v.weapons.bows} / {v.weapons.capacity}</b>
-              {v.weapons.bows >= v.weapons.capacity
-                ? <> - <span class="muted">voll</span></>
-                : <span class="muted"> - noch {v.weapons.capacity - v.weapons.bows} frei</span>}
-            </div>
+            <>
+              <div class="sel-stock">
+                <span class="sel-stock-icon"><img src={stockIcon('bows')} alt="" width="34" height="34" draggable={false} /></span>
+                Bögen: <b>{v.weapons.bows}</b>
+              </div>
+              <div class="sel-stock">
+                <span class="sel-stock-icon"><img src={stockIcon('spears')} alt="" width="34" height="34" draggable={false} /></span>
+                Speere: <b>{v.weapons.spears}</b>
+              </div>
+              {/* Bögen und Speere teilen sich den Platz (BuildingBase.room). */}
+              <div class="muted">
+                {v.weapons.bows + v.weapons.spears >= v.weapons.capacity
+                  ? `Voll (${v.weapons.capacity} Waffen)`
+                  : `${v.weapons.bows + v.weapons.spears} / ${v.weapons.capacity} Waffen - noch ${v.weapons.capacity - v.weapons.bows - v.weapons.spears} frei`}
+              </div>
+            </>
           ) : null}
           {t && t.units.length > 0 ? (
             <>
@@ -425,11 +435,11 @@ function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) 
         <div class="sel-info">
           {v.single ? null : <div class="muted">{v.names}</div>}
           {v.single
-            ? <div>{v.single.doing}</div>
+            ? <><div>{v.single.doing}</div>{v.single.inventory ? <div>Hat: <b>{v.single.inventory}</b></div> : null}</>
             : <>{v.activities.map(([text, n]) => <div>{n}× {text}</div>)}</>}
           {v.single?.worker ? <div class="muted">Nimmt keine Befehle an, solange zugeteilt - in der Werkstatt entlassen.</div> : <div class="muted">
             Rechtsklick auf Holz, Stein, Gold oder Beeren: sammeln · auf ein Tier: jagen · auf ein Feld: bestellen ·
-            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · sonst: hingehen
+            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Speermacherei: Speere machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · sonst: hingehen
           </div>}
         </div>
       </div>

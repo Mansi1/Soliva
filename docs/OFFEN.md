@@ -83,8 +83,10 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
   Vorschau. Wird ein Körper in `models/villagers/` geändert, passt die
   Vorschau nicht mehr dazu - die Clips selbst passen, die Gelenke liest das
   Spiel aus dem Körper.
-- **Weitere Werkzeuge** als Anhänge: Spitzhacke, Hacke, Speer - heute hält
-  jeder beim Hacken, Pflügen und Jagen das Beil.
+- **Weitere Werkzeuge** als Anhänge: Spitzhacke - heute hält jeder beim
+  Hacken das Beil. Hacke (Pflügen) und Speer (Jagd, B25) gibt es.
+- **Fliegender Speer:** Beim Wurf ist die Hand ab dem Loslassen leer
+  (`spearThrown`), der Speer fliegt aber nicht sichtbar zum Tier.
 - **Einsturz:** bleibt prozedural. Möglich wäre je Gebäude ein gestalteter
   Einsturz-Clip.
 

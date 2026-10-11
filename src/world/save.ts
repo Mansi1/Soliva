@@ -17,11 +17,14 @@
 // (World.absorbReserve), unbenannt als "Holz", "Nahrung" usw.
 // Gepflanzte Bäume ohne neue Version: `planted` fehlt in älteren Ständen -
 // dort steht dann nur, was das Gelände trägt.
+// Habe der Dorfbewohner ohne neue Version: `inv` fehlt in älteren Ständen und
+// ohne Habe - dann hat er nichts (B25).
 
 import type { BuildingSave } from './building';
 import type { PlantedSave } from './deposits';
 import { initialResources, RESOURCE_KINDS, type AnimalKind, type ResourceKind, type Resources } from './catalog';
 import type { Task } from './world';
+import type { Inventory } from './unit';
 
 /** Ein Dorfbewohner im Speicherstand. */
 export interface VillagerSave {
@@ -37,6 +40,8 @@ export interface VillagerSave {
   /** Name und Geschlecht - fehlen in älteren Speicherständen. */
   n?: string;
   f?: boolean;
+  /** Habe (Villager.inventory) - fehlt ohne Habe und in älteren Ständen. */
+  inv?: Partial<Inventory>;
 }
 
 /** Ein Tier im Speicherstand: Art, Lage, Trefferpunkte, Nahrung, erlegt. */

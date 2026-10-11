@@ -109,6 +109,9 @@ import loadBasketModel from '../models/props/load_basket.glb?model';
 import loadSheafModel from '../models/props/load_sheaf.glb?model';
 import loadMeatModel from '../models/props/load_meat.glb?model';
 import loadBowModel from '../models/props/load_bow.glb?model';
+import loadSpearsModel from '../models/props/load_spears.glb?model';
+import spearModel from '../models/props/spear.glb?model';
+import spearMakerModel from '../models/buildings/spear_maker.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
 import bowModel from '../models/props/bow.glb?model';
 import flowerModel from '../models/flowers/flower.glb?model';
@@ -298,6 +301,14 @@ export const SHAPE = {
   loadMeatFemale: 182,
   loadBow: 183,
   loadBowFemale: 184,
+  /** Ein Speer schräg auf dem Rücken (B25, models/props/load_spears.glb) - direkt hinter den Lasten, PROP_TEST zählt sie als einen Bereich. */
+  loadSpears: 185,
+  loadSpearsFemale: 186,
+  /** Speer in der Hand des Jägers (B25, models/props/spear.glb), wie die Werkzeuge oben. */
+  propSpear: 187,
+  propSpearFemale: 188,
+  /** Ein Speer - Symbol für den Vorrat an Speeren (models/props/spear.glb). */
+  spear: 189,
   /**
    * Weg zum Sammelpunkt, ein Stück davon: Streifen auf dem Boden von der Mitte
    * um motion[0..1] (Tiles) weiter, `size` breit. Der Shader malt Punkte in
@@ -332,6 +343,8 @@ export const SHAPE = {
   cowMale: 158,
   /** Försterhütte: Blockhütte mit Pflanzbeet und Setzlingen (models/buildings/forester.glb). 160..169 frei für den Förster. */
   forester: 160,
+  /** Speermacherei: die Bognerei mit Speeren statt Bögen (B25, models/buildings/spear_maker.glb). */
+  spearMaker: 161,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -407,10 +420,10 @@ const PROP_SHAPES: number[] = [
   SHAPE.propFish, SHAPE.propFishFemale, SHAPE.propRod, SHAPE.propRodFemale, SHAPE.propHoe, SHAPE.propHoeFemale,
   SHAPE.loadLogs, SHAPE.loadLogsFemale, SHAPE.loadCrate, SHAPE.loadCrateFemale, SHAPE.loadHotte, SHAPE.loadHotteFemale,
   SHAPE.loadBasket, SHAPE.loadBasketFemale, SHAPE.loadSheaf, SHAPE.loadSheafFemale, SHAPE.loadMeat, SHAPE.loadMeatFemale,
-  SHAPE.loadBow, SHAPE.loadBowFemale,
+  SHAPE.loadBow, SHAPE.loadBowFemale, SHAPE.loadSpears, SHAPE.loadSpearsFemale, SHAPE.propSpear, SHAPE.propSpearFemale,
 ];
 /** Im Shader: ist die Form ein Anhang? Vier Bereiche - dazwischen liegen Blumen, Stümpfe und Gebäude. */
-const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.loadBowFemale}))`;
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}))`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
 /** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
@@ -736,7 +749,10 @@ export const POSE = {
    * VERIFIED: Galerie (Mann, Frau) und Spiel 2026-10-10 - Hacke über dem Kopf, Blatt im Boden vor den Füßen.
    */
   hoe: 7,
-  /** Jäger: ausholen und werfen, ohne Werkzeug - Clip throw, clips/humanoid_tools. Eine Schleife dauert HUNT.reload. */
+  /**
+   * Jäger: ausholen und werfen - Clip throw, clips/humanoid_tools, mit dem Speer
+   * (props); ohne Speer zeigt world/render.ts die Hand leer. Eine Schleife dauert HUNT.reload.
+   */
   throw: 8,
   /**
    * Gehen mit der Last vor der Brust (Holz, Tomatenkiste) - Clip carry,
@@ -850,7 +866,7 @@ uniform float uTime;
 // (Zeilen einer 3x4-Matrix). uClipRow: erste Zeile des Clips für diese Figur,
 // -1 = nicht gebacken. uPoseClip: welcher Clip eine Pose spielt (-1: keiner,
 // die Figur steht still), Clip-Zeit = (Phase - uPoseShift) * uPoseRate. uClipProps: Bits
-// Beil 1, Sense 2, Zugmesser 4, Hacke 8 (PROP_BITS).
+// Beil 1, Sense 2, Zugmesser 4, Hacke 8, Speer 16 (PROP_BITS).
 uniform highp sampler2D uClipTex;
 uniform int   uClipRow[${MAX_CLIPS}];
 uniform int   uClipFrames[${MAX_CLIPS}];
@@ -1132,10 +1148,11 @@ void main() {
       if (clip >= 0) {
         float time = pose >= ${CLIP_POSE} ? phase : (phase - uPoseShift[pose]) * uPoseRate[pose];
         // Werkzeuge nur, wenn der Clip sie braucht (props in clips/humanoid.json).
-        // Beil und Hacke hängen beide als Tool an der Hand - welches gezeichnet
-        // wird, wählt figureProps nach denselben Bits. VERIFIED: ohne Bit 8 fehlte die Hacke in der Galerie.
+        // Beil, Hacke und Speer hängen alle als Tool an der Hand - welches gezeichnet
+        // wird, wählt figureProps nach denselben Bits. VERIFIED: ohne Bit 8 fehlte die Hacke in der Galerie,
+        // ohne Bit 16 der Speer beim Wurf (B25).
         int props = uClipProps[clip];
-        bool away = (part == P_TOOL && (props & 9) == 0) || (part == P_SCYTHE && (props & 2) == 0)
+        bool away = (part == P_TOOL && (props & ${PROP_BITS.axe | PROP_BITS.hoe | PROP_BITS.spear}) == 0) || (part == P_SCYTHE && (props & 2) == 0)
             || (part == P_KNIFE && (props & 4) == 0);
         if (away) {
           p = vec3(0.0, 0.0, uHip);
@@ -2928,6 +2945,7 @@ const FLOWER_MODEL = loadModel(flowerModel.obj, flowerModel.mtl, 'width', true);
 const PROP_KNIFE = loadModel(propKnifeModel.obj, villagerMtl, 'meters');
 const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
 const PROP_ROD = loadModel(fishingRodModel.obj, fishingRodModel.mtl, 'meters');
+const PROP_SPEAR = loadModel(spearModel.obj, spearModel.mtl, 'meters');
 const BOW_MODEL = loadModel(bowModel.obj, bowModel.mtl, 'height');
 
 /**
@@ -2984,6 +3002,8 @@ const MODELS: {
   { shape: SHAPE.townCenter, model: loadModel(townCenterModel.obj, townCenterModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.miningCamp, model: loadModel(miningCampModel.obj, miningCampModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.bowyer, model: loadModel(bowyerModel.obj, bowyerModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.spearMaker, model: loadModel(spearMakerModel.obj, spearMakerModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.spear, model: loadModel(spearModel.obj, spearModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.bow, model: BOW_MODEL, scale: 1 },
   { shape: SHAPE.armory, model: loadModel(armoryModel.obj, armoryModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.fisherHut, model: loadModel(fisherHutModel.obj, fisherHutModel.mtl, 'width'), scale: 1 },
@@ -2994,11 +3014,13 @@ const MODELS: {
   { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propRodFemale, model: PROP_ROD, scale: 1.7, body: SHAPE.villagerFemale },
+  { shape: SHAPE.propSpear, model: PROP_SPEAR, scale: 1.7, body: SHAPE.villager },
+  { shape: SHAPE.propSpearFemale, model: PROP_SPEAR, scale: 1.7, body: SHAPE.villagerFemale },
   // Lasten (B8): je Ware ein Modell, für beide Körper einmal geladen.
   ...([
     [SHAPE.loadLogs, loadLogsModel], [SHAPE.loadCrate, loadCrateModel], [SHAPE.loadHotte, loadHotteModel],
     [SHAPE.loadBasket, loadBasketModel], [SHAPE.loadSheaf, loadSheafModel], [SHAPE.loadMeat, loadMeatModel],
-    [SHAPE.loadBow, loadBowModel],
+    [SHAPE.loadBow, loadBowModel], [SHAPE.loadSpears, loadSpearsModel],
   ] as const).flatMap(([shape, file]) => {
     const model = loadModel(file.obj, file.mtl, 'meters');
     // Die Form für die Frau folgt jeweils direkt auf die des Mannes (SHAPE).
@@ -3071,6 +3093,7 @@ const FIGURE_PROPS: { bit: number; shapes: Record<number, number> }[] = [
   { bit: PROP_BITS.scythe, shapes: { [SHAPE.villager]: SHAPE.propScythe, [SHAPE.villagerFemale]: SHAPE.propScytheFemale } },
   { bit: PROP_BITS.knife, shapes: { [SHAPE.villager]: SHAPE.propKnife, [SHAPE.villagerFemale]: SHAPE.propKnifeFemale } },
   { bit: PROP_BITS.hoe, shapes: { [SHAPE.villager]: SHAPE.propHoe, [SHAPE.villagerFemale]: SHAPE.propHoeFemale } },
+  { bit: PROP_BITS.spear, shapes: { [SHAPE.villager]: SHAPE.propSpear, [SHAPE.villagerFemale]: SHAPE.propSpearFemale } },
 ];
 
 /**
@@ -3105,17 +3128,19 @@ export function figureProps(figure: EntityInstance, load?: LoadLook): EntityInst
   return shown ? [...tools, { ...figure, shape: look.shapes[figure.shape], health: undefined }] : tools;
 }
 
-/** Was der Fischer in der Hand hat - statt der Werkzeuge seines Clips (figureProps). */
+/** Was Fischer und Jäger in der Hand haben - statt der Werkzeuge ihres Clips (figureProps). */
 const HELD = {
   fish: { [SHAPE.villager]: SHAPE.propFish, [SHAPE.villagerFemale]: SHAPE.propFishFemale },
   rod: { [SHAPE.villager]: SHAPE.propRod, [SHAPE.villagerFemale]: SHAPE.propRodFemale },
+  spear: { [SHAPE.villager]: SHAPE.propSpear, [SHAPE.villagerFemale]: SHAPE.propSpearFemale },
 } as Record<string, Record<number, number>>;
+export type HeldItem = 'fish' | 'rod' | 'spear';
 
 /**
  * Wie eine Last aussieht (B8) - welche Ware zu welchem Aussehen gehört,
  * entscheidet world/render.ts (loadLook).
  */
-export const LOAD_LOOKS = ['logs', 'crate', 'hotte', 'basket', 'sheaf', 'meat', 'bow', 'fish'] as const;
+export const LOAD_LOOKS = ['logs', 'crate', 'hotte', 'basket', 'sheaf', 'meat', 'bow', 'spears', 'fish'] as const;
 export type LoadLook = (typeof LOAD_LOOKS)[number];
 
 /** Form je Körper: die der Frau folgt auf die des Mannes (SHAPE.loadLogs, loadLogsFemale ...). */
@@ -3135,6 +3160,7 @@ const LOAD_PROPS: Record<LoadLook, { shapes: Record<number, number>; arms?: bool
   sheaf: { shapes: bodies(SHAPE.loadSheaf), hand: true },
   meat: { shapes: bodies(SHAPE.loadMeat), hand: true },
   bow: { shapes: bodies(SHAPE.loadBow) },
+  spears: { shapes: bodies(SHAPE.loadSpears) },
   fish: { shapes: HELD.fish, hand: true },
 };
 
@@ -3153,8 +3179,8 @@ export function carryPose(pose: number, load?: LoadLook): number {
  */
 export const CARRY_STILL = 0.15 * Math.PI;
 
-/** Anhang eines Fischers: Hering, Angel oder nichts - das Beil der Clips steckt er weg. */
-export function figureHolding(figure: EntityInstance, item: 'fish' | 'rod' | null): EntityInstance[] {
+/** Anhang eines Fischers oder Jägers: Hering, Angel, Speer oder nichts - das Beil der Clips steckt er weg. */
+export function figureHolding(figure: EntityInstance, item: HeldItem | null): EntityInstance[] {
   const shape = item && HELD[item][figure.shape];
   return shape ? [{ ...figure, shape, health: undefined }] : [];
 }

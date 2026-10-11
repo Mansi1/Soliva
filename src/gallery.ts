@@ -23,6 +23,7 @@ import { YOUNG_SIZE, type AnimalLook } from './world/unit';
 import { FLOWER_SIZE } from './world/flowers';
 import { FLEE_STRIDE, loadLook, type LoadOf } from './world/render';
 import { STRIDE_LENGTH } from './world/world';
+import { spearThrown } from './world/villagers';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
 import { ParticleRenderer } from './gl/particleRenderer';
@@ -72,7 +73,26 @@ const LOADS: [string, Parameters<typeof loadLook>[0], string | undefined][] = [
   ['Holz', 'wood', undefined], ['Beeren', 'food', 'Himbeere'], ['Kartoffeln', 'food', CROPS.potato.label],
   ['Tomaten', 'food', CROPS.tomato.label], ['Weizen', 'food', CROPS.wheat.label], ['Stein', 'stone', undefined],
   ['Gold', 'gold', undefined], ['Fleisch', 'food', MEAT_KIND], ['Fisch', 'food', FISH_KIND], ['Bogen', 'bows', undefined],
+  ['Speer', 'spears', undefined],
 ];
+
+/**
+ * Jäger wie im Spiel (world/render.ts): kein Beil, mit Speer oder ohne. Beim
+ * Werfen ist die Hand vom Loslassen bis kurz vor dem nächsten Wurf leer (spearThrown).
+ */
+function hunter(label: string, female: boolean, pose: number, rate: number, spear: boolean): Exhibit {
+  return {
+    label,
+    draw: (t, x, y, out) => {
+      const phase = pose === POSE.stand ? t : t * rate;
+      const f: EntityInstance = {
+        x: x - 0.5, y: y - 0.5, size: VILLAGER.size * ZOOMED, color: PLAYER,
+        shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1, motion: [-Math.PI / 4, phase, pose, 0],
+      };
+      out.push(f, ...figureHolding(f, spear && !(pose === POSE.throw && spearThrown(phase)) ? 'spear' : null));
+    },
+  };
+}
 
 /** Fischer mit Angel oder Fang in der Hand, dazu nach Wunsch das Boot, das er zieht. */
 function fisher(label: string, female: boolean, pose: number, item: 'fish' | 'rod' | null, drag = false): Exhibit {
@@ -330,6 +350,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       model('Minenlager', SHAPE.miningCamp, BUILDINGS.mining_camp.size),
       model('Fischerhütte', SHAPE.fisherHut, BUILDINGS.fisher_hut.size),
       model('Bognerei', SHAPE.bowyer, BUILDINGS.bowyer.size),
+      model('Speermacherei', SHAPE.spearMaker, BUILDINGS.spear_maker.size),
       model('Försterhütte', SHAPE.forester, BUILDINGS.forester.size),
       model('Waffenkammer', SHAPE.armory, BUILDINGS.armory.size),
       model('Sammelpunkt', SHAPE.rallyFlag, 0.54),
@@ -413,6 +434,10 @@ const people = (female: boolean) => {
     figure('pflückt', female, POSE.pick, 6, 0.3),
     figure('mäht', female, POSE.scythe, 6, 0.3),
     figure('schnitzt', female, POSE.carve, 6, 0.3),
+    hunter('jagt mit Speer', female, POSE.walk, walkRate, true),
+    hunter('steht mit Speer', female, POSE.stand, 1, true),
+    hunter('wirft den Speer', female, POSE.throw, 6, true),
+    hunter('jagt ohne Speer', female, POSE.throw, 6, false),
   ], 240, 0.9);
 };
 
@@ -549,6 +574,17 @@ const SHOWCASE: Showcase[] = [
       withWorker('Bognerin wartet', SHAPE.bowyer, BUILDINGS.bowyer.size, true, POSE.sit),
     ], 200, 0.7),
     demolish: [0, 1, 2].map(() => collapse('Abriss', SHAPE.bowyer, BUILDINGS.bowyer.size)),
+    extras: ['Abriss'],
+  },
+  // Die Speermacherei (B25) mit dem Speermacher, wie die Bognerei.
+  {
+    ...showcase('Gebäude', 'Speermacherei', [
+      model('steht', SHAPE.spearMaker, BUILDINGS.spear_maker.size),
+      withWorker('mit Speermacher', SHAPE.spearMaker, BUILDINGS.spear_maker.size, false, POSE.carve),
+      withWorker('mit Speermacherin', SHAPE.spearMaker, BUILDINGS.spear_maker.size, true, POSE.carve),
+      withWorker('Speermacher wartet', SHAPE.spearMaker, BUILDINGS.spear_maker.size, false, POSE.sit),
+    ], 200, 0.7),
+    demolish: [0, 1, 2].map(() => collapse('Abriss', SHAPE.spearMaker, BUILDINGS.spear_maker.size)),
     extras: ['Abriss'],
   },
   // Wie im Spiel, wenn der Zeiger darauf steht: ohne Dach, mit Bögen gefüllt.

@@ -9,7 +9,7 @@
 // (keine statischen Felder, keine Vorgaben auf Klassenebene).
 
 import { POSE } from '../../gl/entityRenderer';
-import { VILLAGER, type DepositType, type ResourceKind } from '../catalog';
+import { VILLAGER, type DepositType, type ResourceKind, type Weapon } from '../catalog';
 import { UnitBase } from './UnitBase';
 
 /**
@@ -29,9 +29,12 @@ export type Task =
   /**
    * Jagt dieses Tier (Speerwurf aus der Nähe), zerlegt den Kadaver und bringt
    * das Fleisch zum nächsten Lager für Nahrung. `cooldown`: Sekunden bis zum
-   * nächsten Wurf.
+   * nächsten Wurf. Ohne Speer holt er erst einen aus der Waffenkammer
+   * `armory` (undefined: noch nicht gesucht, null: keine hat einen - er jagt
+   * mit bloßen Händen, B25). `chase`: Sekunden, die er ohne Speer schon
+   * hinterherläuft (VillagerWork.hopeless).
    */
-  | { kind: 'hunt'; animal: number; delivering: boolean; cooldown: number }
+  | { kind: 'hunt'; animal: number; delivering: boolean; cooldown: number; armory?: string | null; chase?: number }
   /** Bestellt und erntet das Feld, bringt die Ernte zum nächsten Lager für Nahrung. */
   | { kind: 'farm'; building: string; row: number; delivering: boolean }
   /**
@@ -74,8 +77,20 @@ export type WorkNeed = 'wood' | 'armory' | 'water';
 
 export type FishStep = 'enter' | 'choose' | 'boat' | 'launch' | 'row' | 'empty' | 'return' | 'land' | 'shore' | 'angle' | 'net';
 
+/**
+ * Was ein Dorfbewohner bei sich hat außer der Ladung - es bleibt bei jedem
+ * Auftrag und geht nie zurück ins Lager (B25: der Speer gehört dem, der ihn
+ * genommen hat). Heute ein Fach für die Waffe; Bogen (B24) und Schuhe (B31)
+ * kommen als Werte bzw. weitere Fächer dazu.
+ */
+export interface Inventory {
+  weapon: Weapon | null;
+}
+
 export class Villager extends UnitBase {
   carrying = 0;
+  /** Seine Habe (Inventory) - im Spielstand gespeichert. */
+  inventory: Inventory = { weapon: null };
   carryType: ResourceKind | null = null;
   task: Task = { kind: 'idle' };
   /** Warum er untätig ist, falls es einen Grund gibt - für die Anzeige. */

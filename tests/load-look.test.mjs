@@ -31,6 +31,7 @@ const LOADS = [
   ['stone', RESOURCE_LABEL.stone],
   ['gold', RESOURCE_LABEL.gold],
   ['bows', RESOURCE_LABEL.bows],
+  ['spears', RESOURCE_LABEL.spears],
 ];
 
 test('jede Sorte einer Ladung hat ihre eigene Last', () => {

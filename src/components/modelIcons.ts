@@ -53,6 +53,8 @@ function scene(name: IconName, player: RGB): EntityInstance[] {
     // Bogen mit Pfeil, von vorn wie ein Gebäude - so sieht man ihn gespannt.
     // Nicht über one(): motion[3] = 1 hieße bei ihm "eingestürzt".
     case 'bows': return [{ x: -0.5, y: -0.5, size: 0.5, color: [0, 0, 0], shape: SHAPE.bow, alpha: 1, motion: [BUILDING_HEADING, 0, 0, 0] }];
+    // Speer schräg liegend, wie der Bogen nicht über one().
+    case 'spears': return [{ x: -0.5, y: -0.5, size: 0.5, color: [0, 0, 0], shape: SHAPE.spear, alpha: 1, motion: [BUILDING_HEADING + Math.PI / 4, 0, 0, 0] }];
     // Frau und Mann nebeneinander.
     case 'population': return [...villager(true, -0.12, player), ...villager(false, 0.12, player)];
     case 'idle': return villager(false, 0, player);
