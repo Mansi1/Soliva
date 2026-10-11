@@ -9,12 +9,14 @@ import type { Clip } from '../gl/clips';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
-import { FishTrap, Forester, furrowFood, type Building, type Farm } from './building';
+import { ArcheryRange, FishTrap, Forester, furrowFood, type Building, type Farm } from './building';
 import {
   COBBLER, CRAFTS, CROPS, FARM_RATE, FISH_KIND, FISHING, FORESTER, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL,
   SHOES, SOW_TIME, TREE_SPECIES, VILLAGER, WEAPONS, YIELD, craftRecipe,
-  type AnimalKind, type DepositType, type ResourceKind,
+  type AnimalKind, type DepositType, type ResourceKind, type Weapon,
 } from './catalog';
+import { describeArcher, sendToRange, tickArcher } from './archery';
+import { practise, skillFactor } from './unit/skills';
 import { depositKind } from './resources';
 import { farmSpot, furrowKey, furrowNeeds, type FarmPhase } from './farming';
 import type { Animal, Task, Villager, WorkNeed } from './unit';
@@ -184,6 +186,8 @@ export class VillagerWork {
     }
 
     const target = this.world.at(x, y);
+    // Schießplatz (B24): bis zu sechs üben dort (archery.ts).
+    if (target instanceof ArcheryRange) return sendToRange(this.world, selected, target);
     if (target?.isWorkshop()) {
       // Wie in Stronghold arbeitet in einer Werkstatt genau einer.
       const anchor = target.anchor;
@@ -307,8 +311,11 @@ export class VillagerWork {
   /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
   blockedAt(x: number, y: number): boolean {
     const anchor = this.world.occupied.get(key(x, y));
-    // Über Felder geht man hinweg - Bauern arbeiten ja darauf.
-    if (anchor !== undefined) return !this.world.building(anchor)?.isFarm();
+    // Über Felder geht man hinweg - Bauern arbeiten ja darauf; ebenso über den Schießplatz (B24).
+    if (anchor !== undefined) {
+      const b = this.world.building(anchor);
+      return !(b?.isFarm() || b instanceof ArcheryRange);
+    }
     const t = this.terrainAt(x, y);
     if (t === 2) return !this.world.deposits.isExhausted(x, y) && !this.world.deposits.isFelled(x, y);
     return t === 1;
@@ -377,8 +384,8 @@ export class VillagerWork {
     return v.path.length > 0 ? v.path[0] : { x: tx, y: ty };
   }
 
-  /** Schritt zum Ziel; `afloat`: im Boot, nur über Wasser - er steht dabei im Boot. */
-  private walk(v: Villager, tx: number, ty: number, reach: number, dt: number, afloat = false): boolean {
+  /** Schritt zum Ziel; `afloat`: im Boot, nur über Wasser - er steht dabei im Boot. Auch für archery.ts. */
+  walk(v: Villager, tx: number, ty: number, reach: number, dt: number, afloat = false): boolean {
     const d = Math.hypot(tx - v.x, ty - v.y);
     // Mit etwas Spielraum - sonst bliebe nach dem letzten Schritt ein
     // Rundungsrest, und er käme nie an. Steht dort schon einer, ist er
@@ -683,18 +690,20 @@ export class VillagerWork {
 
     // Eine kürzere Furche (über weniger Tiles) ist schneller gepflügt und gesät.
     const length = building.furrowCells(task.row).length / 3;
+    // Arbeit mit Übung (B24, skills.ts) - Jäten übt nicht.
+    const work = working ? practise(v.skills, 'farming', dt) : 0;
     if (working && phase === 'plough') {
       // Pflügen: mit der Hacke, stehend - eigener Clip und dumpfer Schlag in die Erde.
       v.pose = POSE.hoe;
       this.swing(v, dt, 'soil', false);
-      f.plough = Math.min(1, f.plough + dt / (PLOUGH_TIME * length));
+      f.plough = Math.min(1, f.plough + work / (PLOUGH_TIME * length));
       return;
     }
     if (!working || phase === 'sow') {
       // Säen und jäten: kniend.
       v.pose = POSE.pick;
       this.swing(v, dt, 'berries', true);
-      if (working) f.sown = Math.min(1, f.sown + dt / (SOW_TIME * length));
+      if (working) f.sown = Math.min(1, f.sown + work / (SOW_TIME * length));
       return;
     }
     // Ernten: Weizen mit der Sense, andere Früchte von Hand.
@@ -702,7 +711,7 @@ export class VillagerWork {
     this.swing(v, dt, 'berries', true);
     this.startLoad(v, 'food', () => crop.label);
     // Cheat "speedy gonzales": der Korb sofort voll.
-    const take = Math.min(this.world.speedy ? Infinity : FARM_RATE * crop.rate * dt, f.food, VILLAGER.capacity - v.carrying);
+    const take = Math.min(this.world.speedy ? Infinity : FARM_RATE * crop.rate * work, f.food, VILLAGER.capacity - v.carrying);
     f.food -= take;
     v.carrying += take;
     if (v.carrying >= VILLAGER.capacity - 1e-6) task.delivering = true;
@@ -800,7 +809,7 @@ export class VillagerWork {
     v.heading = Math.atan2(spot.aimY - v.y, spot.aimX - v.x);
     v.pose = POSE.carve;
     this.swing(v, dt, 'berries', true);
-    task.progress += dt / recipe.craftTime;
+    task.progress += practise(v.skills, 'crafting', dt) / recipe.craftTime;
     if (task.progress >= 1) {
       task.progress = 0;
       v.pickUp(recipe.product, 1);
@@ -1105,18 +1114,22 @@ export class VillagerWork {
   }
 
   /**
-   * Ohne Speer holt der Jäger erst einen aus der nächsten Waffenkammer, die
-   * Speere hat (B25) - true, solange er damit beschäftigt ist. Hat keine
-   * einen, jagt er mit bloßen Händen (task.armory = null).
-   * VERIFIED: tests/spear.test.mjs - er nimmt genau einen und behält ihn.
+   * Holt `weapon` aus der nächsten Waffenkammer, die eine hat, und behält sie
+   * (Villager.inventory) - true, solange er damit beschäftigt ist. Der Jäger
+   * holt so seinen Speer (B25), der Schütze am Schießplatz seinen Bogen (B24).
+   * Hatte er eine andere Waffe, legt er sie dafür in die Kammer (ein Fach).
+   * Hat keine eine: false und `task.armory` null - der Aufrufer entscheidet
+   * (der Jäger jagt mit bloßen Händen, der Schütze wartet).
+   * VERIFIED: tests/spear.test.mjs, tests/archery.test.mjs - er nimmt genau eine und behält sie.
    */
-  private fetchSpear(v: Villager, task: Extract<Task, { kind: 'hunt' }>, dt: number): boolean {
-    if (task.armory === null || (v.inventory.weapon && v.inside <= 0)) return false;
-    const resource = WEAPONS.spear.resource;
+  fetchWeapon(v: Villager, task: { armory?: string | null }, weapon: Weapon, dt: number): boolean {
+    const has = v.inventory.weapon === weapon;
+    if (task.armory === null || (has && v.inside <= 0)) return false;
+    const resource = WEAPONS[weapon].resource;
     let armory = task.armory ? this.world.building(task.armory) : undefined;
-    // Noch keine gewählt, inzwischen leer oder ohne Weg: die nächste mit Speer.
-    if (!v.inventory.weapon && (!armory || v.unreachable.has(armory.anchor) || (armory.stored(resource) < 1 && v.inside <= 0))) {
-      armory = this.nearestWithSpear(v);
+    // Noch keine gewählt, inzwischen leer oder ohne Weg: die nächste mit dieser Waffe.
+    if (!has && (!armory || v.unreachable.has(armory.anchor) || (armory.stored(resource) < 1 && v.inside <= 0))) {
+      armory = this.nearestWithWeapon(v, resource);
       task.armory = armory?.anchor ?? null;
     }
     if (!armory) {
@@ -1126,19 +1139,22 @@ export class VillagerWork {
     const target = armory;
     if (!this.enter(v, target, dt, () => {
       if (target.takeGoods(resource, 1) < 1) return;
-      v.inventory.weapon = 'spear';
+      const old = v.inventory.weapon;
+      // Gerade ist ein Platz frei geworden - die alte Waffe passt hinein.
+      if (old) target.addGoods(WEAPONS[old].resource, RESOURCE_LABEL[WEAPONS[old].resource], 1);
+      v.inventory.weapon = weapon;
       this.world.markDirty();
     })) return true;
-    // Wieder draußen: mit Speer geht die Jagd los; war die Kammer inzwischen leer, sucht er weiter.
-    return !v.inventory.weapon;
+    // Wieder draußen: mit der Waffe geht es los; war die Kammer inzwischen leer, sucht er weiter.
+    return v.inventory.weapon !== weapon;
   }
 
-  /** Nächste Waffenkammer mit mindestens einem Speer, zu der er einen Weg hat. */
-  private nearestWithSpear(v: Villager): Building | undefined {
+  /** Nächste Waffenkammer mit mindestens einer Waffe dieser Art, zu der er einen Weg hat. */
+  private nearestWithWeapon(v: Villager, resource: ResourceKind): Building | undefined {
     let best: Building | undefined;
     let bestDistance = Infinity;
     for (const b of this.world.allBuildings()) {
-      if (b.stored(WEAPONS.spear.resource) < 1 || v.unreachable.has(b.anchor)) continue;
+      if (b.stored(resource) < 1 || v.unreachable.has(b.anchor)) continue;
       const d = Math.hypot(b.x + 0.5 - v.x, b.y + 0.5 - v.y);
       if (d < bestDistance) {
         bestDistance = d;
@@ -1164,9 +1180,11 @@ export class VillagerWork {
   }
 
   /**
-   * Jäger: holt sich erst einen Speer (fetchSpear), dann hinterher, bis er in
+   * Jäger: holt sich erst einen Speer (fetchWeapon), dann hinterher, bis er in
    * Wurfweite ist, und Speer um Speer, bis das Tier fällt - ohne Speer muss er
    * bis auf HUNT.reach heran und gibt auf, wenn es hoffnungslos ist (hopeless).
+   * Wer einen Bogen hat (Schießplatz, B24), jagt damit aus HUNT.bowRange.
+   * Übung (Jagen bzw. Bogen, skills.ts) lässt ihn schneller nachladen.
    * Am Kadaver zerlegt er das Fleisch und bringt es zum Lager. Ist es leer,
    * macht er beim nächsten Tier derselben Art weiter.
    */
@@ -1199,10 +1217,12 @@ export class VillagerWork {
     }
     v.problem = null;
     if (a.state !== 'dead') {
-      if (this.fetchSpear(v, task, dt)) return;
+      const bow = v.inventory.weapon === 'bow';
+      if (!bow && this.fetchWeapon(v, task, 'spear', dt)) return;
       // In Wurfweite heran - und dann werfen, auch wenn es wegläuft. Ohne Speer ganz heran.
-      const armed = v.inventory.weapon === 'spear';
-      const range = armed ? HUNT.range : HUNT.reach;
+      // VERIFIED: tests/archery.test.mjs - mit dem Bogen trifft er aus mehr als HUNT.range.
+      const armed = v.inventory.weapon !== null;
+      const range = bow ? HUNT.bowRange : armed ? HUNT.range : HUNT.reach;
       const d = Math.hypot(a.x - v.x, a.y - v.y);
       task.cooldown = Math.max(0, task.cooldown - dt);
       if (d > range) {
@@ -1217,13 +1237,15 @@ export class VillagerWork {
       }
       v.heading = Math.atan2(a.y - v.y, a.x - v.x);
       // Werfen bzw. zustoßen ohne Beil: der Clip throw dauert eine Nachladezeit (HUNT.reload),
-      // seine Clip-Zeit ist die Arbeitszeit.
-      v.pose = POSE.throw;
-      v.workTime += dt;
+      // seine Clip-Zeit ist die Arbeitszeit - mit Übung läuft beides schneller.
+      // Mit dem Bogen zielt er wie am Schießplatz (Clip carry, angehalten).
+      const skill = bow ? 'archery' : 'hunting';
+      v.pose = bow ? POSE.carry : POSE.throw;
+      v.workTime += practise(v.skills, skill, dt);
       if (task.cooldown > 0) return;
-      task.cooldown = HUNT.reload;
+      task.cooldown = HUNT.reload / skillFactor(v.skills, skill);
       // Beim Treffer steht der Arm im Clip gerade beim Loslassen.
-      v.workTime = throwRelease(v.workTime);
+      if (!bow) v.workTime = throwRelease(v.workTime);
       // Cheat "speedy gonzales": ein Treffer erlegt es.
       a.hp -= this.world.speedy ? a.hp : 1;
       this.world.onEvent?.({ kind: 'strike', resource: 'throw', x: v.x, y: v.y });
@@ -1351,6 +1373,10 @@ export class VillagerWork {
         this.tickForester(v, task, dt);
         return;
 
+      case 'archery':
+        tickArcher(this, this.world, v, task, dt);
+        return;
+
       case 'deliver': {
         const building = this.world.building(task.building);
         if (!building) {
@@ -1450,7 +1476,8 @@ export class VillagerWork {
         }
         // Cheat "speedy gonzales": Holz und Beeren sofort voll beladen.
         const fast = this.world.speedy && (task.type === 'wood' || task.type === 'berries');
-        const wanted = Math.min(fast ? Infinity : VILLAGER.gatherRate[task.type] * dt, VILLAGER.capacity - v.carrying);
+        // Übung macht schneller (B24, skills.ts) - eine Fähigkeit für alles Sammeln.
+        const wanted = Math.min(fast ? Infinity : VILLAGER.gatherRate[task.type] * practise(v.skills, 'gathering', dt), VILLAGER.capacity - v.carrying);
         v.carrying += this.world.deposits.take(task.x, task.y, wanted, this.world.now);
         this.world.markDirty();
 
@@ -1509,6 +1536,8 @@ export class VillagerWork {
           case 'land': return 'zieht das Boot an Land';
           case 'net': return 'bringt den Fisch ins Netz';
         }
+      case 'archery':
+        return describeArcher(v, v.task);
       case 'plant': {
         if (v.task.leave) return 'entlassen, geht in die Försterhütte';
         const shop = this.world.building(v.task.building);

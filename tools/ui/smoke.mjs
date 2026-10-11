@@ -274,6 +274,13 @@ const cobblerPanel = cobblerPoint && await findNear('Schusterei', cobblerPoint)
   ? await page.$eval('#selection', (e) => e.textContent) : '';
 check('Schusterei gebaut', !!cobblerPoint && cobblerPanel.includes('Rechtsklick mit einem Dorfbewohner') && cobblerPanel.includes('Vorrat: leer'),
   cobblerPanel.slice(0, 80) || 'nicht gebaut/gefunden');
+// Schießplatz (B, B24): drei mal drei Tiles; das Panel zählt die Schützen.
+await page.keyboard.press('b');
+const rangePoint = await placeNearCenter('archery_range', 'Demo');
+await cancel();
+const rangePanel = rangePoint && await findNear('Schießplatz', rangePoint)
+  ? await page.$eval('#selection', (e) => e.textContent) : '';
+check('Schießplatz gebaut', !!rangePoint && rangePanel.includes('Schützen: 0/6'), rangePanel.slice(0, 80) || 'nicht gebaut/gefunden');
 await cancel();
 
 // Verliert die Symbol-Bühne (modelIcons.ts, 320×400, nicht auf der Seite) ihren

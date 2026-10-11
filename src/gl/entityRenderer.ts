@@ -116,6 +116,8 @@ import spearMakerModel from '../models/buildings/spear_maker.glb?model';
 import cobblerModel from '../models/buildings/cobbler.glb?model';
 import clogsModel from '../models/props/clogs.glb?model';
 import loadShoesModel from '../models/props/load_shoes.glb?model';
+import archeryRangeModel from '../models/buildings/archery_range.glb?model';
+import propBowModel from '../models/props/prop_bow.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
 import bowModel from '../models/props/bow.glb?model';
 import flowerModel from '../models/flowers/flower.glb?model';
@@ -362,6 +364,14 @@ export const SHAPE = {
   spearMaker: 161,
   /** Schusterei: die Bognerei mit Holzschuhen statt Bögen (B31, models/buildings/cobbler.glb). */
   cobbler: 162,
+  /** Schießplatz: sechs Strohscheiben, Kugelfang, Zaun, Bank (B24, models/buildings/archery_range.glb). */
+  archeryRange: 163,
+  /**
+   * Bogen in der Hand des Schützen (B24, models/props/prop_bow.glb - der Bogen des
+   * Symbols ohne Pfeil), wie die Werkzeuge oben. 200..219 sind für Anhänge und Looks frei.
+   */
+  propBow: 200,
+  propBowFemale: 201,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -439,9 +449,10 @@ const PROP_SHAPES: number[] = [
   SHAPE.loadBasket, SHAPE.loadBasketFemale, SHAPE.loadSheaf, SHAPE.loadSheafFemale, SHAPE.loadMeat, SHAPE.loadMeatFemale,
   SHAPE.loadBow, SHAPE.loadBowFemale, SHAPE.loadSpears, SHAPE.loadSpearsFemale, SHAPE.propSpear, SHAPE.propSpearFemale,
   SHAPE.loadShoes, SHAPE.loadShoesFemale, SHAPE.propClogs, SHAPE.propClogsFemale,
+  SHAPE.propBow, SHAPE.propBowFemale,
 ];
-/** Im Shader: ist die Form ein Anhang? Fünf Bereiche - dazwischen liegen Blumen, Stümpfe, Gebäude und der Speer. */
-const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}) || (shape >= ${SHAPE.loadShoes} && shape <= ${SHAPE.propClogsFemale}))`;
+/** Im Shader: ist die Form ein Anhang? Sechs Bereiche - dazwischen liegen Blumen, Stümpfe, Gebäude und der Speer. */
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}) || (shape >= ${SHAPE.loadShoes} && shape <= ${SHAPE.propClogsFemale}) || shape == ${SHAPE.propBow} || shape == ${SHAPE.propBowFemale})`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
 /** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
@@ -1171,7 +1182,7 @@ void main() {
         // wird, wählt figureProps nach denselben Bits. VERIFIED: ohne Bit 8 fehlte die Hacke in der Galerie,
         // ohne Bit 16 der Speer beim Wurf (B25).
         int props = uClipProps[clip];
-        bool away = (part == P_TOOL && (props & ${PROP_BITS.axe | PROP_BITS.hoe | PROP_BITS.spear}) == 0) || (part == P_SCYTHE && (props & 2) == 0)
+        bool away = (part == P_TOOL && (props & ${PROP_BITS.axe | PROP_BITS.hoe | PROP_BITS.spear | PROP_BITS.bow}) == 0) || (part == P_SCYTHE && (props & 2) == 0)
             || (part == P_KNIFE && (props & 4) == 0);
         if (away) {
           p = vec3(0.0, 0.0, uHip);
@@ -2966,6 +2977,7 @@ const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
 const PROP_ROD = loadModel(fishingRodModel.obj, fishingRodModel.mtl, 'meters');
 const PROP_SPEAR = loadModel(spearModel.obj, spearModel.mtl, 'meters');
 const PROP_CLOGS = loadModel(clogsModel.obj, clogsModel.mtl, 'meters');
+const PROP_BOW = loadModel(propBowModel.obj, propBowModel.mtl, 'meters');
 const BOW_MODEL = loadModel(bowModel.obj, bowModel.mtl, 'height');
 
 /**
@@ -3025,6 +3037,7 @@ const MODELS: {
   { shape: SHAPE.spearMaker, model: loadModel(spearMakerModel.obj, spearMakerModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.cobbler, model: loadModel(cobblerModel.obj, cobblerModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.clogs, model: loadModel(clogsModel.obj, clogsModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.archeryRange, model: loadModel(archeryRangeModel.obj, archeryRangeModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.spear, model: loadModel(spearModel.obj, spearModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.bow, model: BOW_MODEL, scale: 1 },
   { shape: SHAPE.armory, model: loadModel(armoryModel.obj, armoryModel.mtl, 'width'), scale: 1 },
@@ -3040,6 +3053,8 @@ const MODELS: {
   { shape: SHAPE.propSpearFemale, model: PROP_SPEAR, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propClogs, model: PROP_CLOGS, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propClogsFemale, model: PROP_CLOGS, scale: 1.7, body: SHAPE.villagerFemale },
+  { shape: SHAPE.propBow, model: PROP_BOW, scale: 1.7, body: SHAPE.villager },
+  { shape: SHAPE.propBowFemale, model: PROP_BOW, scale: 1.7, body: SHAPE.villagerFemale },
   // Lasten (B8): je Ware ein Modell, für beide Körper einmal geladen.
   ...([
     [SHAPE.loadLogs, loadLogsModel], [SHAPE.loadCrate, loadCrateModel], [SHAPE.loadHotte, loadHotteModel],
@@ -3157,8 +3172,9 @@ const HELD = {
   fish: { [SHAPE.villager]: SHAPE.propFish, [SHAPE.villagerFemale]: SHAPE.propFishFemale },
   rod: { [SHAPE.villager]: SHAPE.propRod, [SHAPE.villagerFemale]: SHAPE.propRodFemale },
   spear: { [SHAPE.villager]: SHAPE.propSpear, [SHAPE.villagerFemale]: SHAPE.propSpearFemale },
+  bow: { [SHAPE.villager]: SHAPE.propBow, [SHAPE.villagerFemale]: SHAPE.propBowFemale },
 } as Record<string, Record<number, number>>;
-export type HeldItem = 'fish' | 'rod' | 'spear';
+export type HeldItem = 'fish' | 'rod' | 'spear' | 'bow';
 
 /**
  * Wie eine Last aussieht (B8) - welche Ware zu welchem Aussehen gehört,
@@ -3204,7 +3220,7 @@ export function carryPose(pose: number, load?: LoadLook): number {
  */
 export const CARRY_STILL = 0.15 * Math.PI;
 
-/** Anhang eines Fischers oder Jägers: Hering, Angel, Speer oder nichts - das Beil der Clips steckt er weg. */
+/** Anhang eines Fischers, Jägers oder Schützen: Hering, Angel, Speer, Bogen oder nichts - das Beil der Clips steckt er weg. */
 export function figureHolding(figure: EntityInstance, item: HeldItem | null): EntityInstance[] {
   const shape = item && HELD[item][figure.shape];
   return shape ? [{ ...figure, shape, health: undefined }] : [];

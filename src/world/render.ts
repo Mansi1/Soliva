@@ -272,7 +272,8 @@ export function worldInstances(
     const load = v.carryType ? Math.min(1, v.carrying / VILLAGER.capacity) : 0;
     const carried = v.carryType ? loadLook(v.carryType, world.carryKind(v)) ?? FOOD_UNKNOWN : undefined;
     const pose = carryPose(v.pose, carried?.look);
-    const still = pose === POSE.carry && v.pose === POSE.stand;
+    // Stehen mit Last in den Armen - oder der Schütze zielt (Clip carry, B24): angehalten.
+    const still = pose === POSE.carry && (v.pose === POSE.stand || v.pose === POSE.carry);
     const figure: EntityInstance = {
       // Instanzen werden um die Tile-Mitte gezeichnet, die Figur steht auf (x, y).
       x: x - 0.5,
@@ -289,11 +290,12 @@ export function worldInstances(
     };
     if (particles && particles.tileSize >= DETAIL_TILE_SIZE) workParticles(world, v, x, y, particles);
     const fishing = v.task.kind === 'fish' ? v.task : undefined;
-    // Jäger auf der Jagd (B20, B25): kein Beil - den Speer in der Hand, ohne Speer nichts.
-    // Trägt er etwas (Fleisch), zeigt figureProps die Last.
-    if (v.task.kind === 'hunt' && !carried && !(v.pose === POSE.pick)) {
-      const spear = v.inventory.weapon === 'spear' && !(v.pose === POSE.throw && spearThrown(phase));
-      out.push(figure, ...figureHolding(figure, spear ? 'spear' : null), ...figureShoes(figure, v.inventory.shoes));
+    // Jäger auf der Jagd (B20, B25) und Schützen am Schießplatz (B24): kein Beil - die Waffe
+    // in der Hand (Bogen, Speer), ohne nichts. Trägt er etwas (Fleisch), zeigt figureProps die Last.
+    if ((v.task.kind === 'hunt' || v.task.kind === 'archery') && !carried && !(v.pose === POSE.pick)) {
+      const weapon = v.inventory.weapon;
+      const held = weapon === 'bow' ? 'bow' : weapon === 'spear' && !(v.pose === POSE.throw && spearThrown(phase)) ? 'spear' : null;
+      out.push(figure, ...figureHolding(figure, held), ...figureShoes(figure, v.inventory.shoes));
       continue;
     }
     if (!fishing) {

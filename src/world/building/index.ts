@@ -11,6 +11,7 @@
 //    ├─ SpearMaker                Werkstatt: ein Speermacher macht Speere aus Holz
 //    ├─ Cobbler                   Werkstatt: ein Schuster macht Holzschuhe
 //    ├─ Forester                  Werkstatt: ein Förster pflanzt Bäume
+//    ├─ ArcheryRange              Schießplatz: bis zu sechs üben mit dem Bogen
 //    ├─ FishTrap                  Reuse im Wasser - gebaut über die Fischerhütte
 //    └─ Farm                      Feld mit Furchen
 
@@ -30,16 +31,17 @@ import { SpearMaker } from './SpearMaker';
 import { Cobbler } from './Cobbler';
 import { Armory } from './Armory';
 import { Forester } from './Forester';
+import { ArcheryRange } from './ArcheryRange';
 import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE, type Furrow } from './Farm';
 
 export {
-  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, SpearMaker, Cobbler, Armory, Forester,
+  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, SpearMaker, Cobbler, Armory, Forester, ArcheryRange,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
   type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type Goods, type TrainableUnit,
 };
 
 /** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs (ohne Taste: nicht darin). */
-export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, SpearMaker, Cobbler, Armory, FisherHut, FishTrap, Forester] as const;
+export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, SpearMaker, Cobbler, Armory, FisherHut, FishTrap, Forester, ArcheryRange] as const;
 
 /** Kennung einer Gebäudeart, z. B. 'lumber_camp'. */
 export type BuildingType = (typeof BUILDING_CLASSES)[number]['definition']['type'];

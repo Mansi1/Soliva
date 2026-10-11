@@ -199,6 +199,27 @@
    "Leg.FR",
    "Leg.FR.Hoof"
   ],
+  "buildings/archery_range": [
+   "Arrow",
+   "Arrow.Fletch",
+   "Bale",
+   "Barrel",
+   "Barrel.Hoop",
+   "Bench",
+   "Bench.Leg",
+   "Entry",
+   "Fence.Post",
+   "Fence.Rail",
+   "Ground",
+   "Line",
+   "Pennant",
+   "Pole",
+   "Target",
+   "Target.Leg",
+   "Target.Ring",
+   "Work.Aim",
+   "Work.Stand"
+  ],
   "buildings/armory": [
    "Cut.Roof",
    "Cut.Roof.Band",
@@ -2441,6 +2462,11 @@
    "Arrow.Rim",
    "Arrow.Shaft"
   ],
+  "props/prop_bow": [
+   "Arm.R.Lower.Tool.Bow",
+   "Arm.R.Lower.Tool.Bow.Grip",
+   "Arm.R.Lower.Tool.Bow.String"
+  ],
   "props/rally_flag": [
    "Base",
    "Cloth",
@@ -3404,7 +3430,9 @@
    "clips": {
     "carry": {
      "pose": 9,
-     "props": []
+     "props": [
+      "bow"
+     ]
     }
    }
   },

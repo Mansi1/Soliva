@@ -89,6 +89,8 @@ export type SelectionView =
       trapCost?: { cost: string; affordable: boolean };
       /** Reuse: Fische darin, wie viele hineinpassen, Sekunden, bis sie voll ist (0: voll). */
       trap?: { fish: number; max: number; fullIn: number };
+      /** Schießplatz (B24): wie viele üben, wie viele dürfen, worauf welche warten. */
+      range?: { trainees: number; max: number; waiting: string[] };
       /** Försterhütte: Baumart, ob ein Pflanzplatz gesetzt ist, Umkreis, ob der Schalter dafür an ist. */
       forester?: { species: TreeSpecies; spot: boolean; radius: number; rallyPicking: boolean };
       trainer?: {
@@ -143,6 +145,8 @@ export type SelectionView =
       /** Genau einer: Name, Frau oder Mann, was er gerade tut. */
       /** Einer: dazu seine Habe ("Speer · Holzschuhe") - fehlt, wenn er nichts hat - und ob er barfuß ist (B31). */
       single?: { name: string; role: string; doing: string; worker: boolean; inventory?: string; barefoot: boolean };
+      /** Einer: was er schon kann ("Bogen 40 % · Jagen 10 %", B24) - fehlt, wenn noch nichts. */
+      skills?: string;
       count: number;
       label: string;
       names: string;
@@ -269,6 +273,13 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
                   ? `Pflanzt im Umkreis von ${v.forester.radius} Tiles um die Fahne - Klick auf die Hütte holt ihn zurück.`
                   : `Pflanzt im Umkreis von ${v.forester.radius} Tiles um die Hütte - Fahne unten rechts, dann Klick: woanders pflanzen.`}
               </div>
+            </>
+          ) : null}
+          {v.range ? (
+            <>
+              <div>Schützen: <b>{v.range.trainees}/{v.range.max}</b></div>
+              {v.range.waiting.map((reason) => <div class="muted">{reason}</div>)}
+              {v.range.trainees === 0 ? <div class="muted">Niemand übt hier - Rechtsklick mit Dorfbewohnern auf den {v.label}.</div> : null}
             </>
           ) : null}
           {v.trap ? (
@@ -443,9 +454,10 @@ function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) 
           {v.single
             ? <><div>{v.single.doing}</div><Belongings inventory={v.single.inventory} barefoot={v.single.barefoot} /></>
             : <>{v.activities.map(([text, n]) => <div>{n}× {text}</div>)}</>}
+          {v.skills ? <div>Kann: <b>{v.skills}</b></div> : null}
           {v.single?.worker ? <div class="muted">Nimmt keine Befehle an, solange zugeteilt - in der Werkstatt entlassen.</div> : <div class="muted">
             Rechtsklick auf Holz, Stein, Gold oder Beeren: sammeln · auf ein Tier: jagen · auf ein Feld: bestellen ·
-            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Speermacherei: Speere machen · auf die Schusterei: Holzschuhe machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · sonst: hingehen
+            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Speermacherei: Speere machen · auf die Schusterei: Holzschuhe machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · auf den Schießplatz: üben · sonst: hingehen
           </div>}
         </div>
       </div>

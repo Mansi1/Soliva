@@ -76,6 +76,10 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
 
 ## Bewegungen (docs/ANIMATION.md)
 
+- **Bogenschütze (B24):** Er zielt mit dem Clip `carry` und dem Bogen in der
+  rechten Hand; ein eigener Clip `aim` (Bogen links, Sehne gezogen) braucht
+  mehr als `MAX_CLIPS` Clips je Figur. Pfeile fliegen nicht sichtbar.
+
 - **Weiche Haut:** Beim Mann erledigt. Er ist eine Hülle mit Knochen aus
   Blender (docs/BLENDER.md, „Knochen"). Die Frau ist noch starr in Teile
   geschnitten.
