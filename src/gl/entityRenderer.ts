@@ -98,6 +98,7 @@ import armoryModel from '../models/buildings/armory.glb?model';
 import fisherHutModel from '../models/buildings/fisher_hut.glb?model';
 import fishTrapModel from '../models/fields/fish_trap.glb?model';
 import fisherBoatModel from '../models/props/fisher_boat.glb?model';
+import foresterModel from '../models/buildings/forester.glb?model';
 import herringModel from '../models/props/herring.glb?model';
 import fishingRodModel from '../models/props/fishing_rod.glb?model';
 import markerArrowModel from '../models/props/marker_arrow.glb?model';
@@ -302,6 +303,8 @@ export const SHAPE = {
   sheepMale: 156,
   boarFemale: 157,
   cowMale: 158,
+  /** Försterhütte: Blockhütte mit Pflanzbeet und Setzlingen (models/buildings/forester.glb). 160..169 frei für den Förster. */
+  forester: 160,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -2932,6 +2935,7 @@ const MODELS: {
   { shape: SHAPE.fisherHut, model: loadModel(fisherHutModel.obj, fisherHutModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.fishTrap, model: loadModel(fishTrapModel.obj, fishTrapModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.fisherBoat, model: loadModel(fisherBoatModel.obj, fisherBoatModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.forester, model: loadModel(foresterModel.obj, foresterModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.propFish, model: PROP_FISH, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },

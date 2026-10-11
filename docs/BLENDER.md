@@ -15,7 +15,7 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   villagers/                male, female
   buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-                            mill(_2.._4), bowyer, armory, fisher_hut
+                            mill(_2.._4), bowyer, armory, fisher_hut, forester
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
@@ -173,6 +173,15 @@ Export nach OBJ und sind seit dem 25.09.2026 `.glb`. Dafür hat
 Name für Name und Farbe für Farbe gleich; 8 davon sind zur Probe einmal
 durch Blender (Import und Export mit den Vorgaben) gegangen, ebenfalls ohne
 Unterschied. Die Skripte und `.blend`-Dateien stehen in der Git-Geschichte.
+
+## Försterhütte
+
+`buildings/forester.glb` (B9, 2026-10-11) ist headless in Blender gebaut
+(`Blender -b --factory-startup --python <skript> -- <ordner>`, ohne MCP): Blockhütte
+aus Stämmen (`Log`, Rinde `Bark`, Stirnseiten `LogEnd`), Schindeldach, Tür mit
+`Entry` davor, Pflanzbeet mit Setzlingen, Schild in Spielerfarbe (`Paint`). Das
+Skript liegt nicht im Repo (keine Python-Dateien hier); geändert wird die `.glb`.
+Gleiche Namen tragen `#2`, `#3` ..., wie oben beschrieben.
 
 ## Felder
 

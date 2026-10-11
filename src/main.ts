@@ -115,7 +115,7 @@ const world = new World(terrain, seed);
 const { x: startX, y: startY } = gameUrl?.at ?? startPoint(world, terrain, seed);
 // Holzfäller arbeiten am liegenden Stamm - wie lang der ist, weiß die Darstellung.
 world.treeLength = (x, y) => resources.treeLengthAt(x, y);
-const resources = new ResourceField(terrain, mapGen);
+const resources = new ResourceField(terrain, mapGen, world.deposits);
 /** Blumen als 3D-Objekte, nah heran (world/flowers.ts). */
 const flowers = new FlowerField(terrain, mapGen);
 /** Glitzern über Gold und Stein, Insekten über der Wiese (world/particles.ts). */
@@ -151,6 +151,7 @@ const ui = new GameUi({ world, selection, placement, pointer, resources, sound, 
   demolish: () => actions.demolishSelected(),
   dismiss: () => actions.dismissWorker(),
   setFieldCrop: (crop) => actions.setFieldCrop(crop),
+  setTreeSpecies: (species) => actions.setTreeSpecies(species),
   focusSelection: () => actions.focusSelection(),
 }, player.color.toRGB());
 

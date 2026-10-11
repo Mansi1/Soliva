@@ -6,7 +6,7 @@
 import { SHAPE, animalCenter, type EntityInstance } from '../gl/entityRenderer';
 import type { IsoView } from '../gl/iso';
 import type { MiniMap } from '../map';
-import type { UnitProducer } from '../world/building';
+import type { Building } from '../world/building';
 import { modelsOf, siteVariant } from '../world/building/BuildingBase';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
 import { workplace } from '../world/villagers';
@@ -25,8 +25,8 @@ const ROUTE_REFRESH_MS = 1000;
 /** Gesuchte Wege zum Sammelpunkt je Gebäude und Fahne - nicht in jedem Bild neu suchen. */
 const routes = new Map<string, { at: number; points: { x: number; y: number }[] }>();
 
-/** Der Weg von der Tür eines ausbildenden Gebäudes zur Fahne (World.route), höchstens einmal je ROUTE_REFRESH_MS gesucht. */
-function rallyRoute(world: World, building: UnitProducer, flag: { x: number; y: number }) {
+/** Der Weg von der Tür des Gebäudes zur Fahne (World.route), höchstens einmal je ROUTE_REFRESH_MS gesucht. */
+function rallyRoute(world: World, building: Building, flag: { x: number; y: number }) {
   const key = `${building.anchor}|${flag.x},${flag.y}`;
   const now = performance.now();
   let hit = routes.get(key);
@@ -72,9 +72,9 @@ export function selectionOverlay(
         color: SELECTED, shape: SHAPE.flat, alpha: 0.35,
       });
     }
-    // Sammelpunkt: Fahne in der Spielerfarbe, nur solange das Gebäude
-    // ausgewählt ist - sonst stünden überall Fahnen herum.
-    if (building.isUnitProducer() && building.rallyPoint) {
+    // Sammelpunkt (beim Förster der Pflanzplatz): Fahne in der Spielerfarbe,
+    // nur solange das Gebäude ausgewählt ist - sonst stünden überall Fahnen herum.
+    if (building.rallyPoint) {
       const rally = building.rallyPoint;
       // Fuß der Fahne: genau, wo geklickt wurde. Ältere Stände kennen nur das
       // Tile - dann etwas zur Kamera hin, vor einem Baum oder Fels statt dahinter.

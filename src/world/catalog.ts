@@ -190,5 +190,32 @@ export const BOWYER = { wood: 10, craftTime: 20 };
  */
 export const FISHING = { trapFillTime: 180, trapFood: 5, trapFish: 5, rodTime: 60, rodFood: 1, range: 8, emptyTime: 2 };
 
+/** Baumarten, die der Förster pflanzt - wählbar in seiner Hütte. */
+export type TreeSpecies = 'oak' | 'spruce' | 'pine' | 'birch' | 'maple' | 'poplar';
+
+/**
+ * Name und Modell je Baumart. Der Name ist derselbe wie bei den Bäumen des
+ * Geländes (resources.ts, KIND_LABEL) - so kommt gepflanzte Eiche als "Eiche" ins Lager.
+ */
+export const TREE_SPECIES: Record<TreeSpecies, { label: string; shape: number }> = {
+  oak: { label: 'Eiche', shape: SHAPE.treeOak },
+  spruce: { label: 'Fichte', shape: SHAPE.tree },
+  pine: { label: 'Kiefer', shape: SHAPE.treePine },
+  birch: { label: 'Birke', shape: SHAPE.treeBirch },
+  maple: { label: 'Ahorn', shape: SHAPE.treeMaple },
+  poplar: { label: 'Pappel', shape: SHAPE.treePoplar },
+};
+
+export const TREE_SPECIES_ORDER: TreeSpecies[] = ['oak', 'spruce', 'pine', 'birch', 'maple', 'poplar'];
+
+/**
+ * Förster: pflanzt im Umkreis `radius` (Tiles) um seine Hütte oder um den
+ * Pflanzplatz einen Baum nach dem anderen - `plantTime` Sekunden Graben und
+ * Setzen, Pflanzen kostet nichts. Ein Baum wächst in `growTime` Sekunden, erst
+ * dann kann man ihn fällen; er trägt `wood` Holz (wie ein mittlerer Waldbaum,
+ * dort 50-100). `wait`: Sekunden, bis er nach einem vollen Umkreis wieder sucht.
+ */
+export const FORESTER = { radius: 6, plantTime: 6, growTime: 5 * 60, wood: 75, wait: 5 };
+
 /** Höchstens so viele Dorfbewohner stehen gleichzeitig in der Warteschlange eines Dorfzentrums. */
 export const MAX_TRAINING_QUEUE = 25;

@@ -3,7 +3,6 @@
 // Warteschlange, Ausbildung der vordersten Einheit, Sammelpunkt für frisch
 // Ausgebildete. Welche Einheit es ausbildet, sagt die Unterklasse (`unit`).
 
-import { BUILDING_HEADING, modelEntry } from '../../gl/entityRenderer';
 import { MAX_TRAINING_QUEUE, type Resources } from '../catalog';
 import { BuildingBase, type BuildingSave } from './BuildingBase';
 
@@ -28,18 +27,19 @@ export abstract class UnitProducer extends BuildingBase {
   queue: QueuedUnit[] = [];
   /** Sekunden, die die vorderste Einheit schon ausgebildet wird. */
   trainingSeconds = 0;
-  /**
-   * Sammelpunkt für frisch Ausgebildete, oder null: das Tile (es zählt wie ein
-   * Rechtsklick dorthin - auf ein Vorkommen sammeln sie) und `point`, die
-   * genaue Stelle des Klicks - dort steht die Fahne, dorthin gehen sie.
-   * Ältere Stände haben nur das Tile.
-   */
-  rallyPoint: { x: number; y: number; point?: { x: number; y: number } } | null = null;
-
   /** Die Einheit, die hier ausgebildet wird. */
   abstract get unit(): TrainableUnit;
 
   override isUnitProducer(): this is UnitProducer {
+    return true;
+  }
+
+  /**
+   * Sammelpunkt für frisch Ausgebildete: das Tile zählt wie ein Rechtsklick
+   * dorthin - auf ein Vorkommen sammeln sie -, `point` ist die genaue Stelle
+   * des Klicks, dort steht die Fahne, dorthin gehen sie.
+   */
+  override hasRallyPoint(): boolean {
     return true;
   }
 
@@ -88,30 +88,10 @@ export abstract class UnitProducer extends BuildingBase {
     return this.queue.shift()!;
   }
 
-  /**
-   * Wo Ausgebildete herauskommen (Welt, Tiles): die Tür des Modells, durch
-   * die Dorfbewohner auch abliefern - ohne Tür die Vorderkante (frontPoint).
-   */
-  spawnPoint(): { x: number; y: number } {
-    return modelEntry(this.model, this.x, this.y, this.definition.size, BUILDING_HEADING) ?? this.frontPoint();
-  }
-
-  /** Vor der Vorderkante des Gebäudes, zur Kamera hin - dort warten Ausgebildete ohne Sammelpunkt. */
-  frontPoint(): { x: number; y: number } {
-    const r = this.definition.footprint / 2 + 0.4;
-    return { x: this.x + 0.5 + r, y: this.y + 0.5 + r };
-  }
-
-  /** Sammelpunkt setzen, oder mit null aufheben. */
-  setRallyPoint(rally: UnitProducer['rallyPoint']) {
-    this.rallyPoint = rally;
-  }
-
   override toSave(): BuildingSave {
     return {
       ...super.toSave(),
       q: this.queue.map((u) => (u.female ? 1 : 0)),
-      ...(this.rallyPoint ? { r: rallySave(this.rallyPoint) } : {}),
     };
   }
 
@@ -122,14 +102,5 @@ export abstract class UnitProducer extends BuildingBase {
     this.queue = typeof q === 'number'
       ? Array.from({ length: q }, () => ({ female: randomFemale() }))
       : q.map((f) => ({ female: f === 1 }));
-    const r = save.r;
-    this.rallyPoint = r
-      ? { x: r[0] * scale, y: r[1] * scale, point: r.length === 4 ? { x: r[2] * scale, y: r[3] * scale } : undefined }
-      : null;
   }
-}
-
-/** Sammelpunkt im Spielstand: [Tile x, y] und, wenn bekannt, die genaue Stelle dazu. */
-function rallySave(rally: NonNullable<UnitProducer['rallyPoint']>): NonNullable<BuildingSave['r']> {
-  return rally.point ? [rally.x, rally.y, rally.point.x, rally.point.y] : [rally.x, rally.y];
 }

@@ -11,7 +11,8 @@ import './SelectionPanel.css';
 import './buttons.css';
 import { formatDuration } from '../format';
 import {
-  CROP_ORDER, CROPS, FARMERS_PER_FIELD, player, type AnimalKind, type BuildingType, type CropType, type DepositType,
+  CROP_ORDER, CROPS, FARMERS_PER_FIELD, FORESTER, TREE_SPECIES, TREE_SPECIES_ORDER, player,
+  type AnimalKind, type BuildingType, type CropType, type DepositType, type TreeSpecies,
 } from '../world/catalog';
 import { animalIcon, buildingIcon, populationIcon, rallyIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
@@ -88,6 +89,8 @@ export type SelectionView =
       trapCost?: { cost: string; affordable: boolean };
       /** Reuse: Fische darin, wie viele hineinpassen, Sekunden, bis sie voll ist (0: voll). */
       trap?: { fish: number; max: number; fullIn: number };
+      /** Försterhütte: Baumart, ob ein Pflanzplatz gesetzt ist, Umkreis, ob der Schalter dafür an ist. */
+      forester?: { species: TreeSpecies; spot: boolean; radius: number; rallyPicking: boolean };
       trainer?: {
         /** Die Warteschlange, vorderste zuerst: true = Dorfbewohnerin. */
         units: boolean[];
@@ -109,7 +112,8 @@ export type SelectionView =
       left: number;
       total: number;
       percent: number;
-      regrow?: { empty: boolean; seconds: number };
+      /** Beerenstrauch: wächst nach; `sapling`: gepflanzter Baum, der noch wächst. */
+      regrow?: { empty: boolean; seconds: number; sapling?: boolean };
       gatherers: number;
       max: number;
     }
@@ -250,6 +254,16 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
           {v.housing ? <div class="muted">+{v.housing} Bevölkerung</div> : null}
           {v.farm ? <FarmDetails farm={v.farm} /> : null}
           {v.workshop ? <WorkshopDetails workshop={v.workshop} label={v.label} /> : null}
+          {v.forester ? (
+            <>
+              <div>Pflanzt <b>{TREE_SPECIES[v.forester.species].label}</b> - wächst in {formatDuration(FORESTER.growTime)}</div>
+              <div class="muted">
+                {v.forester.spot
+                  ? `Pflanzt im Umkreis von ${v.forester.radius} Tiles um die Fahne - Klick auf die Hütte holt ihn zurück.`
+                  : `Pflanzt im Umkreis von ${v.forester.radius} Tiles um die Hütte - Fahne unten rechts, dann Klick: woanders pflanzen.`}
+              </div>
+            </>
+          ) : null}
           {v.trap ? (
             <>
               <div>Fische: <b>{v.trap.fish}/{v.trap.max}</b></div>
@@ -324,7 +338,9 @@ function Resource({ v }: { v: Extract<SelectionView, { kind: 'resource' }> }) {
           <div>Übrig <b>{v.left}/{v.total}</b></div>
           <Bar percent={v.percent} />
           {/* Beerensträucher wachsen nach - wie lange noch, bis er wieder voll ist. */}
-          {v.regrow ? (
+          {v.regrow?.sapling ? (
+            <div class="muted">Gepflanzt - wächst noch, fällen in {formatDuration(v.regrow.seconds)}</div>
+          ) : v.regrow ? (
             <div class="muted">
               {v.regrow.empty ? 'Leer gepflückt - wächst nach' : 'Wächst nach'} · voll in {formatDuration(v.regrow.seconds)}
             </div>
@@ -413,7 +429,7 @@ function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) 
             : <>{v.activities.map(([text, n]) => <div>{n}× {text}</div>)}</>}
           {v.single?.worker ? <div class="muted">Nimmt keine Befehle an, solange zugeteilt - in der Werkstatt entlassen.</div> : <div class="muted">
             Rechtsklick auf Holz, Stein, Gold oder Beeren: sammeln · auf ein Tier: jagen · auf ein Feld: bestellen ·
-            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Fischerhütte: fischen · sonst: hingehen
+            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · sonst: hingehen
           </div>}
         </div>
       </div>
@@ -439,12 +455,13 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
 
 /** Ein Befehlsknopf: Bild, Taste, Tooltip und was er in main.ts auslöst. */
 interface Command {
-  action: 'train' | 'rally' | 'crop' | 'demolish' | 'trap' | 'dismiss';
+  action: 'train' | 'rally' | 'crop' | 'species' | 'demolish' | 'trap' | 'dismiss';
   title: string;
   /** Bild-URL - oder das Abriss-Symbol. */
   icon: string | 'demolish';
   key?: string;
   crop?: CropType;
+  species?: TreeSpecies;
   /** Zahl unten rechts: so viele löst ein Klick aus (Ausbilden: 1, mit Umschalt 5). */
   count?: number;
   disabled?: boolean;
@@ -467,6 +484,20 @@ function rallyCommand(train: TrainView): Command {
   };
 }
 
+/** Försterhütte: je Baumart ein Knopf - wie die Früchte beim Feld - und der Pflanzplatz wie ein Sammelpunkt. */
+function foresterCommands(forester: { species: TreeSpecies; rallyPicking: boolean }): Command[] {
+  return [
+    ...TREE_SPECIES_ORDER.map((s): Command => ({
+      action: 'species', species: s, pressed: s === forester.species, icon: resourceIcon('wood', TREE_SPECIES[s].shape),
+      title: `${TREE_SPECIES[s].label} pflanzen - wächst in ${formatDuration(FORESTER.growTime)}, kostet nichts`,
+    })),
+    {
+      action: 'rally', icon: rallyIcon(rgb()), pressed: forester.rallyPicking,
+      title: 'Pflanzplatz setzen - dann auf die Karte klicken: dort pflanzt der Förster.\nKlick auf die Hütte: wieder um die Hütte, Esc bricht ab.\nGenügt auch ein Rechtsklick auf die Karte',
+    },
+  ];
+}
+
 function cropCommands(current: CropType | null): Command[] {
   return CROP_ORDER.map((c) => ({
     action: 'crop', crop: c, pressed: c === current, icon: cropIcon(c),
@@ -484,6 +515,7 @@ export function commandsFor(view: SelectionView): Command[] {
     case 'building':
       return [
         ...(view.farm ? cropCommands(view.farm.plan) : []),
+        ...(view.forester ? foresterCommands(view.forester) : []),
         ...(view.trainer ? [trainCommand(view.trainer.train), rallyCommand(view.trainer.train)] : []),
         ...(view.trapCost ? [{
           action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
@@ -535,7 +567,7 @@ function DismissIcon({ src }: { src: string }) {
 
 function CommandButton({ c }: { c: Command }) {
   return (
-    <button type="button" class="cmd-btn" data-action={c.action} data-crop={c.crop} title={c.title}
+    <button type="button" class="cmd-btn" data-action={c.action} data-crop={c.crop} data-species={c.species} title={c.title}
       disabled={c.disabled} aria-pressed={c.pressed === undefined ? undefined : String(c.pressed)}>
       {c.icon === 'demolish' ? <DemolishIcon />
         : c.action === 'dismiss' ? <DismissIcon src={c.icon} />

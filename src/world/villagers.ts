@@ -9,9 +9,10 @@ import type { Clip } from '../gl/clips';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
-import { FishTrap, furrowFood, type Building, type Farm } from './building';
+import { FishTrap, Forester, furrowFood, type Building, type Farm } from './building';
 import {
-  BOWYER, CROPS, FARM_RATE, FISH_KIND, FISHING, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL, SOW_TIME, VILLAGER, YIELD,
+  BOWYER, CROPS, FARM_RATE, FISH_KIND, FISHING, FORESTER, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL, SOW_TIME,
+  TREE_SPECIES, VILLAGER, YIELD,
   type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
 import { depositKind } from './resources';
@@ -84,9 +85,9 @@ export function strikesBetween(clip: Clip, fromPhase: number, toPhase: number): 
   return count;
 }
 
-/** Die Werkstatt, in der er arbeitet (Bognerei, Fischerhütte) - oder keine. */
+/** Die Werkstatt, in der er arbeitet (Bognerei, Fischerhütte, Försterhütte) - oder keine. */
 export function workplace(task: Task): string | undefined {
-  return task.kind === 'craft' || task.kind === 'fish' ? task.building : undefined;
+  return task.kind === 'craft' || task.kind === 'fish' || task.kind === 'plant' ? task.building : undefined;
 }
 
 /** Schritte des Fischers, in denen das Boot auf dem Wasser ist bzw. gezogen wird. */
@@ -166,8 +167,8 @@ export class VillagerWork {
       const taken = this.world.villagers.some((v) => !ids.has(v.id) && workplace(v.task) === anchor);
       if (taken) return `In der ${target.label} arbeitet schon jemand`;
       const [worker, ...rest] = selected;
-      worker.assign(target.type === 'fisher_hut'
-        ? { kind: 'fish', building: anchor, step: 'enter', progress: 0, fish: 0 }
+      worker.assign(target.type === 'fisher_hut' ? { kind: 'fish', building: anchor, step: 'enter', progress: 0, fish: 0 }
+        : target.type === 'forester' ? { kind: 'plant', building: anchor, step: 'enter', progress: 0 }
         : { kind: 'craft', building: anchor, step: 'enter', progress: 0 });
       return rest.length > 0 ? `In der ${target.label} arbeitet nur einer` : null;
     }
@@ -293,18 +294,24 @@ export class VillagerWork {
     return this.terrainAt(x, y) !== 1;
   }
 
-  /** Gelände eines Tiles, gemerkt (terrainBlock): 0 frei, 1 Wasser, 2 Baum/Fels. */
+  /** Gelände eines Tiles, gemerkt (terrainBlock): 0 frei, 1 Wasser, 2 Baum/Fels - auch gepflanzt. */
   private terrainAt(x: number, y: number): number {
     const k = key(x, y);
     let t = this.terrainBlock.get(k);
     if (t === undefined) {
-      const found = this.world.terrain.resourceAt(x, y);
-      t = found.tileType === 'water' || found.tileType === 'deep_water' ? 1
-        : found.type === 'wood' || found.type === 'stone' || found.type === 'gold' ? 2 : 0;
+      const tileType = this.world.terrain.resourceAt(x, y).tileType;
+      const type = this.world.deposits.base(x, y).type;
+      t = tileType === 'water' || tileType === 'deep_water' ? 1
+        : type === 'wood' || type === 'stone' || type === 'gold' ? 2 : 0;
       if (this.terrainBlock.size > 200_000) this.terrainBlock.clear();
       this.terrainBlock.set(k, t);
     }
     return t;
+  }
+
+  /** Ein Baum wurde gepflanzt: das gemerkte Gelände des Tiles gilt nicht mehr. */
+  forgetTile(x: number, y: number) {
+    this.terrainBlock.delete(key(x, y));
   }
 
   /**
@@ -915,6 +922,102 @@ export class VillagerWork {
     return best;
   }
 
+  /**
+   * Förster: holt in der Hütte einen Setzling, sucht im Umkreis
+   * FORESTER.radius um den Pflanzplatz (sonst um die Hütte) ein freies Tile
+   * (World.canPlant), geht hin, gräbt mit der Hacke und setzt ihn - dann
+   * zurück in die Hütte. Ist alles bepflanzt, wartet er und sucht wieder.
+   */
+  private tickForester(v: Villager, task: Extract<Task, { kind: 'plant' }>, dt: number) {
+    const hut = this.world.building(task.building);
+    if (!(hut instanceof Forester)) {
+      v.task = { kind: 'idle' };
+      return;
+    }
+    if (task.leave) {
+      if (this.enter(v, hut, dt)) v.assign({ kind: 'idle' });
+      return;
+    }
+    switch (task.step) {
+      case 'enter':
+        if (this.enter(v, hut, dt)) Object.assign(task, { step: 'choose', progress: 0 });
+        return;
+      case 'choose': {
+        v.problem = null;
+        // Nach einem vollen Umkreis erst nach einer Weile wieder suchen - die Suche kostet.
+        if (task.progress > 0) {
+          task.progress -= dt;
+          return;
+        }
+        const spot = this.plantSpot(v, hut);
+        if (!spot) {
+          task.progress = FORESTER.wait;
+          return;
+        }
+        Object.assign(task, { step: 'walk', x: spot.x, y: spot.y, progress: 0 });
+        return;
+      }
+      case 'walk': {
+        const [x, y] = [task.x!, task.y!];
+        // Der Pflanzplatz wurde versetzt: dort weitersuchen.
+        const center = hut.plantCenter();
+        if (Math.hypot(x - center.x, y - center.y) > FORESTER.radius) {
+          Object.assign(task, { step: 'choose', progress: 0 });
+          return;
+        }
+        // Neben das Tile, nicht darauf - dort steht gleich der Baum.
+        if (!this.walk(v, x + 0.5, y + 0.5, 0.55, dt)) {
+          if (v.problem === UNREACHABLE) {
+            v.problem = null;
+            v.unreachable.add(`plant:${x},${y}`);
+            Object.assign(task, { step: 'choose', progress: 0 });
+          }
+          return;
+        }
+        // Inzwischen belegt (Gebäude, Feld): ein anderes suchen.
+        Object.assign(task, this.world.canPlant(x, y) ? { step: 'dig', progress: 0 } : { step: 'choose', progress: 0 });
+        return;
+      }
+      case 'dig': {
+        const [x, y] = [task.x!, task.y!];
+        v.heading = Math.atan2(y + 0.5 - v.y, x + 0.5 - v.x);
+        v.pose = POSE.hoe;
+        this.swing(v, dt, 'soil', false);
+        task.progress += dt / FORESTER.plantTime;
+        if (task.progress >= 1) {
+          this.world.plant(x, y, hut.species);
+          Object.assign(task, { step: 'enter', progress: 0, x: undefined, y: undefined });
+        }
+        this.world.markDirty();
+        return;
+      }
+    }
+  }
+
+  /**
+   * Freies Tile für den nächsten Baum im Umkreis FORESTER.radius um den
+   * Pflanzplatz: von der Mitte nach außen, etwas gestreut - so wächst ein Wald
+   * von innen. Übergangen wird, wohin er keinen Weg fand.
+   */
+  private plantSpot(v: Villager, hut: Forester): { x: number; y: number } | null {
+    const center = hut.plantCenter();
+    const r = FORESTER.radius;
+    let best: { x: number; y: number } | null = null;
+    let bestScore = Infinity;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const d = Math.hypot(dx, dy);
+        if (d > r) continue;
+        const [x, y] = [center.x + dx, center.y + dy];
+        const score = d + Math.random() * 2;
+        if (score >= bestScore || v.unreachable.has(`plant:${x},${y}`) || !this.world.canPlant(x, y)) continue;
+        best = { x, y };
+        bestScore = score;
+      }
+    }
+    return best;
+  }
+
   /** Keine Arbeit in der Werkstatt: er setzt sich auf den Hocker und wartet - auf `need`. */
   private sitDown(v: Villager, shop: Building, dt: number, need: WorkNeed) {
     v.need = need;
@@ -945,7 +1048,7 @@ export class VillagerWork {
    */
   dismiss(anchor: string): Villager | undefined {
     const worker = this.world.villagers.find((v) => workplace(v.task) === anchor);
-    if (worker?.task.kind !== 'craft' && worker?.task.kind !== 'fish') return worker;
+    if (worker?.task.kind !== 'craft' && worker?.task.kind !== 'fish' && worker?.task.kind !== 'plant') return worker;
     if (worker.task.step === 'enter') worker.assign({ kind: 'idle' });
     else worker.task.leave = true;
     return worker;
@@ -1068,6 +1171,10 @@ export class VillagerWork {
         this.tickFisher(v, task, dt);
         return;
 
+      case 'plant':
+        this.tickForester(v, task, dt);
+        return;
+
       case 'deliver': {
         const building = this.world.building(task.building);
         if (!building) {
@@ -1131,7 +1238,7 @@ export class VillagerWork {
         const fellDir = task.type === 'wood' ? this.world.deposits.fellDirection(task.x, task.y) : undefined;
         const length = fellDir !== undefined ? this.world.treeLength?.(task.x, task.y) : undefined;
         if (fellDir !== undefined && length) {
-          const total = this.world.terrain.getTile(task.x, task.y).resourceAmount;
+          const total = this.world.deposits.base(task.x, task.y).amount;
           const share = Math.max(0, Math.min(1, found.amount / total));
           // In Sprüngen von STEP Tiles: so geht er ab und zu ein paar Schritte
           // weiter, statt dem kürzer werdenden Stamm hinterherzurutschen.
@@ -1155,7 +1262,7 @@ export class VillagerWork {
 
         // Wechselt er die Ressource, lässt er die alte Ladung fallen - wie in AoE2.
         // Die Sorte: Baum- oder Beerenart, bei Fels und Gold der Rohstoff.
-        this.startLoad(v, YIELD[task.type], () => depositKind(this.world.terrain, task.x, task.y) ?? RESOURCE_LABEL[YIELD[task.type]]);
+        this.startLoad(v, YIELD[task.type], () => depositKind(this.world.deposits, task.x, task.y) ?? RESOURCE_LABEL[YIELD[task.type]]);
         // Der erste Hieb fällt den Baum - grob weg vom Holzfäller, aber nie
         // ganz genau: bis zu 35° daneben.
         if (task.type === 'wood') {
@@ -1219,6 +1326,17 @@ export class VillagerWork {
           case 'land': return 'zieht das Boot an Land';
           case 'net': return 'bringt den Fisch ins Netz';
         }
+      case 'plant': {
+        if (v.task.leave) return 'entlassen, geht in die Försterhütte';
+        const shop = this.world.building(v.task.building);
+        const species = shop instanceof Forester ? TREE_SPECIES[shop.species].label : 'Baum';
+        switch (v.task.step) {
+          case 'enter': return 'geht in die Försterhütte';
+          case 'choose': return v.task.progress > 0 ? 'wartet - kein freier Platz zum Pflanzen' : 'sucht einen Platz';
+          case 'walk': return `bringt einen Setzling (${species}) zum Pflanzplatz`;
+          case 'dig': return `pflanzt ${species} (${Math.floor(v.task.progress * 100)} %)`;
+        }
+      }
       case 'farm': {
         const building = this.world.building(v.task.building);
         const f = building?.isFarm() ? building.furrows[v.task.row] : undefined;

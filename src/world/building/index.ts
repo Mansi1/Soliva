@@ -8,6 +8,7 @@
 //    ├─ StorageBuilding (abstr.)  nimmt Rohstoffe an   ── LumberCamp, MiningCamp, Mill, FisherHut, Armory
 //    ├─ House                     Wohnraum
 //    ├─ Bowyer                    Werkstatt: ein Bogner macht Bögen aus Holz
+//    ├─ Forester                  Werkstatt: ein Förster pflanzt Bäume
 //    ├─ FishTrap                  Reuse im Wasser - gebaut über die Fischerhütte
 //    └─ Farm                      Feld mit Furchen
 
@@ -24,16 +25,17 @@ import { FisherHut } from './FisherHut';
 import { FishTrap } from './FishTrap';
 import { Bowyer } from './Bowyer';
 import { Armory } from './Armory';
+import { Forester } from './Forester';
 import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE, type Furrow } from './Farm';
 
 export {
-  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, Armory,
+  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, Armory, Forester,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
   type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type Goods, type TrainableUnit,
 };
 
 /** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs (ohne Taste: nicht darin). */
-export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, Armory, FisherHut, FishTrap] as const;
+export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, Armory, FisherHut, FishTrap, Forester] as const;
 
 /** Kennung einer Gebäudeart, z. B. 'lumber_camp'. */
 export type BuildingType = (typeof BUILDING_CLASSES)[number]['definition']['type'];
