@@ -15,16 +15,17 @@ import type { ResourceType } from '../map';
 /**
  * Was im Vorrat liegt. Nahrung kommt aus Beeren, Feldern und der Jagd - im
  * Vorrat ist sie eins. Bögen und Speere sammelt man nicht, sie entstehen in
- * Bognerei und Speermacherei und liegen in der Waffenkammer.
+ * Bognerei und Speermacherei und liegen in der Waffenkammer. Schuhe (B31)
+ * macht der Schuster, sie bleiben in der Schusterei, bis einer sie holt.
  */
-export type ResourceKind = 'food' | 'wood' | 'stone' | 'gold' | 'bows' | 'spears';
+export type ResourceKind = 'food' | 'wood' | 'stone' | 'gold' | 'bows' | 'spears' | 'shoes';
 /** Eine Menge Rohstoffe: der Vorrat, Kosten, eine Ladung. */
 export type Resources = Record<ResourceKind, number>;
 export { RESOURCE_KINDS, WEAPON_KINDS };
 
 /** Namen der Rohstoffe für die Oberfläche. */
 export const RESOURCE_LABEL: Record<ResourceKind, string> = {
-  food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold', bows: 'Bögen', spears: 'Speere',
+  food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold', bows: 'Bögen', spears: 'Speere', shoes: 'Schuhe',
 };
 
 /**
@@ -113,7 +114,7 @@ export const REPLOUGH_AFTER = 3;
  * Nahrung, und Nahrung sammeln nur Dorfbewohner.
  */
 export function initialResources(): Resources {
-  return { food: 200, wood: 350, stone: 120, gold: 0, bows: 0, spears: 0 };
+  return { food: 200, wood: 350, stone: 120, gold: 0, bows: 0, spears: 0, shoes: 0 };
 }
 
 /** Spielerfarben zur Auswahl in den Einstellungen - wie in AoE2. */
@@ -192,23 +193,39 @@ export const BOWYER = { wood: 10, craftTime: 20 };
 export const SPEAR_MAKER = { wood: 5, craftTime: 10 };
 
 /**
+ * Schusterei (B31): ein Paar Holzschuhe (Klompen) aus einem Klotz Pappelholz -
+ * weniger Holz als ein Speer (5), in derselben Zeit geschnitzt. Barfüßige
+ * holen sich ein Paar, wenn sie untätig sind oder auf ihrem Weg näher als
+ * `detour` Tiles an einer Schusterei mit Schuhen vorbeikommen (villagers.ts, lookForShoes).
+ */
+export const COBBLER = { wood: 3, craftTime: 10, detour: 3 };
+
+/**
  * Was eine Werkstatt aus Holz macht (Auftrag 'craft', villagers.ts): Ware,
  * Holz und Zeit je Stück, wie das Stück und wer es macht in der Oberfläche heißt.
- * Ein Rezept je Werkstatt statt eigener Abläufe: Bognerei und Speermacherei
- * teilen denselben Weg (holen, schnitzen, abliefern).
- * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer.
+ * Ein Rezept je Werkstatt statt eigener Abläufe: Bognerei, Speermacherei und
+ * Schusterei teilen denselben Weg (holen, schnitzen, abliefern). Abgeliefert
+ * wird in die Werkstatt selbst, wenn sie die Ware lagert (Schuhe), sonst in
+ * die nächste Waffenkammer.
+ * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer;
+ * tests/shoes.test.mjs - 3 Holz werden ein Paar Holzschuhe in der Schusterei.
  */
 export interface CraftRecipe {
-  product: 'bows' | 'spears';
+  product: 'bows' | 'spears' | 'shoes';
   wood: number;
   craftTime: number;
   /** "einen Bogen" - für "schnitzt einen Bogen". */
   item: string;
+  /** "Bogen" - für "10 Holz je Bogen". */
+  unit: string;
   worker: string;
+  /** Sorte im Lager (BuildingBase.goods) - ohne Angabe RESOURCE_LABEL der Ware. */
+  kind?: string;
 }
-export const CRAFTS: Record<'bowyer' | 'spear_maker', CraftRecipe> = {
-  bowyer: { product: 'bows', ...BOWYER, item: 'einen Bogen', worker: 'Bogner' },
-  spear_maker: { product: 'spears', ...SPEAR_MAKER, item: 'einen Speer', worker: 'Speermacher' },
+export const CRAFTS: Record<'bowyer' | 'spear_maker' | 'cobbler', CraftRecipe> = {
+  bowyer: { product: 'bows', ...BOWYER, item: 'einen Bogen', unit: 'Bogen', worker: 'Bogner' },
+  spear_maker: { product: 'spears', ...SPEAR_MAKER, item: 'einen Speer', unit: 'Speer', worker: 'Speermacher' },
+  cobbler: { product: 'shoes', wood: COBBLER.wood, craftTime: COBBLER.craftTime, item: 'ein Paar Holzschuhe', unit: 'Paar', worker: 'Schuster', kind: 'Holzschuhe' },
 };
 
 /** Das Rezept einer Werkstatt - undefined für Werkstätten ohne Waren (Fischer, Förster). */
@@ -224,6 +241,17 @@ export type Weapon = 'spear';
 /** Je Waffe: woraus sie in der Waffenkammer kommt und wie sie im Panel heißt. */
 export const WEAPONS: Record<Weapon, { resource: ResourceKind; label: string }> = {
   spear: { resource: 'spears', label: 'Speer' },
+};
+
+/**
+ * Schuhe an den Füßen (Villager.inventory, B31): zu Beginn ist jeder barfuß
+ * (VILLAGER.speed), Holzschuhe aus der Schusterei machen ihn 10 % schneller.
+ * Lederschuhe (+20 %, brauchen Leder und Forschung) kommen als weiterer
+ * Eintrag dazu - mit eigener Sorte im Lager (`kind`, BuildingBase.goods).
+ */
+export type Shoes = 'wood';
+export const SHOES: Record<Shoes, { kind: string; label: string; speed: number }> = {
+  wood: { kind: CRAFTS.cobbler.kind!, label: 'Holzschuhe', speed: 1.1 },
 };
 
 /**

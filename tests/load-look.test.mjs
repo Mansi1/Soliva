@@ -11,7 +11,7 @@ import { after, test } from 'node:test';
 import { loadModules } from './worldFixture.mjs';
 
 const {
-  modules: [{ loadLook }, { CROPS, FISH_KIND, MEAT_KIND, RESOURCE_LABEL }, { KIND_LABEL }, { SHAPE, POSE, LOAD_LOOKS, carryPose, figureProps }],
+  modules: [{ loadLook }, { CRAFTS, CROPS, FISH_KIND, MEAT_KIND, RESOURCE_LABEL }, { KIND_LABEL }, { SHAPE, POSE, LOAD_LOOKS, carryPose, figureProps }],
   close,
 } = await loadModules('/src/world/render.ts', '/src/world/catalog.ts', '/src/world/resources.ts', '/src/gl/entityRenderer.ts');
 after(close);
@@ -32,6 +32,7 @@ const LOADS = [
   ['gold', RESOURCE_LABEL.gold],
   ['bows', RESOURCE_LABEL.bows],
   ['spears', RESOURCE_LABEL.spears],
+  ['shoes', CRAFTS.cobbler.kind],
 ];
 
 test('jede Sorte einer Ladung hat ihre eigene Last', () => {

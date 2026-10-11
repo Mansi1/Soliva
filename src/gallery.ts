@@ -11,7 +11,7 @@
 
 import {
   ANIMAL_CLIPS, ANIMAL_POSE, BUILDING_HEADING, CLIPS, CLIP_POSE, EntityRenderer, FALL_LYING, FIELDS, FLOWERS, POSE, SHAPE, animationTime, setAnimationTime, setAnimationsPaused,
-  buildingHeading, carryPose, figureHolding, figureProps, frozenMillMotion, millMotion, modelWorkSpot,
+  buildingHeading, carryPose, figureHolding, figureProps, figureShoes, frozenMillMotion, millMotion, modelWorkSpot,
   type EntityInstance,
 } from './gl/entityRenderer';
 import {
@@ -54,7 +54,8 @@ const loop = (t: number, period: number) => (t % period) / period;
 const ZOOMED = 3;
 
 /** Figur: Dorfbewohner(in) in einer Pose, `rate` = Phase je Sekunde - mit Last voll beladen. */
-function figure(label: string, female: boolean, pose: number, rate: number, heading: number, load?: LoadOf): Exhibit {
+/** Eine Figur in Spielerfarbe - barfuß wie zu Beginn des Spiels, mit `shoes` in Holzschuhen (B31). */
+function figure(label: string, female: boolean, pose: number, rate: number, heading: number, load?: LoadOf, shoes = false): Exhibit {
   return {
     label,
     draw: (t, x, y, out) => {
@@ -63,7 +64,7 @@ function figure(label: string, female: boolean, pose: number, rate: number, head
         shape: female ? SHAPE.villagerFemale : SHAPE.villager, alpha: 1,
         motion: [heading, pose === POSE.stand ? t : t * rate, carryPose(pose, load?.look), load ? 1 : 0], accent: load?.accent ?? WOOD,
       };
-      out.push(f, ...figureProps(f, load?.look));
+      out.push(f, ...figureProps(f, load?.look), ...figureShoes(f, shoes ? 'wood' : null));
     },
   };
 }
@@ -73,7 +74,7 @@ const LOADS: [string, Parameters<typeof loadLook>[0], string | undefined][] = [
   ['Holz', 'wood', undefined], ['Beeren', 'food', 'Himbeere'], ['Kartoffeln', 'food', CROPS.potato.label],
   ['Tomaten', 'food', CROPS.tomato.label], ['Weizen', 'food', CROPS.wheat.label], ['Stein', 'stone', undefined],
   ['Gold', 'gold', undefined], ['Fleisch', 'food', MEAT_KIND], ['Fisch', 'food', FISH_KIND], ['Bogen', 'bows', undefined],
-  ['Speer', 'spears', undefined],
+  ['Speer', 'spears', undefined], ['Holzschuhe', 'shoes', undefined],
 ];
 
 /**
@@ -351,6 +352,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       model('Fischerhütte', SHAPE.fisherHut, BUILDINGS.fisher_hut.size),
       model('Bognerei', SHAPE.bowyer, BUILDINGS.bowyer.size),
       model('Speermacherei', SHAPE.spearMaker, BUILDINGS.spear_maker.size),
+      model('Schusterei', SHAPE.cobbler, BUILDINGS.cobbler.size),
       model('Försterhütte', SHAPE.forester, BUILDINGS.forester.size),
       model('Waffenkammer', SHAPE.armory, BUILDINGS.armory.size),
       model('Sammelpunkt', SHAPE.rallyFlag, 0.54),
@@ -438,6 +440,10 @@ const people = (female: boolean) => {
     hunter('steht mit Speer', female, POSE.stand, 1, true),
     hunter('wirft den Speer', female, POSE.throw, 6, true),
     hunter('jagt ohne Speer', female, POSE.throw, 6, false),
+    figure('steht in Holzschuhen', female, POSE.stand, 1, Math.PI * 0.25, undefined, true),
+    figure('geht in Holzschuhen', female, POSE.walk, walkRate, -Math.PI / 4, undefined, true),
+    figure('pflückt in Holzschuhen', female, POSE.pick, 6, 0.3, undefined, true),
+    figure('hackt in Holzschuhen', female, POSE.work, 6, 0.3, undefined, true),
   ], 240, 0.9);
 };
 
@@ -585,6 +591,17 @@ const SHOWCASE: Showcase[] = [
       withWorker('Speermacher wartet', SHAPE.spearMaker, BUILDINGS.spear_maker.size, false, POSE.sit),
     ], 200, 0.7),
     demolish: [0, 1, 2].map(() => collapse('Abriss', SHAPE.spearMaker, BUILDINGS.spear_maker.size)),
+    extras: ['Abriss'],
+  },
+  // Die Schusterei (B31) mit dem Schuster, wie die Bognerei.
+  {
+    ...showcase('Gebäude', 'Schusterei', [
+      model('steht', SHAPE.cobbler, BUILDINGS.cobbler.size),
+      withWorker('mit Schuster', SHAPE.cobbler, BUILDINGS.cobbler.size, false, POSE.carve),
+      withWorker('mit Schusterin', SHAPE.cobbler, BUILDINGS.cobbler.size, true, POSE.carve),
+      withWorker('Schuster wartet', SHAPE.cobbler, BUILDINGS.cobbler.size, false, POSE.sit),
+    ], 200, 0.7),
+    demolish: [0, 1, 2].map(() => collapse('Abriss', SHAPE.cobbler, BUILDINGS.cobbler.size)),
     extras: ['Abriss'],
   },
   // Wie im Spiel, wenn der Zeiger darauf steht: ohne Dach, mit Bögen gefüllt.

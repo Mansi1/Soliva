@@ -223,6 +223,14 @@ läuft seitdem wie bei den anderen Arbeitsposen nach der Arbeitszeit
 (`world/render.ts`); vorher spielten beide 6-mal zu langsam.
 VERIFIED: Galerie, Mann → „wirft den Speer", „jagt mit Speer" (2026-10-11).
 
+**Holzschuhe (B31):** `props/clogs.glb` ist ein Anhang wie das Beil, aber seine
+Teile heißen `Leg.L.Lower…`/`Leg.R.Lower…` und hängen darum an den
+Unterschenkeln (Knochen `shin.L`/`shin.R`). Gebaut ist er in Metern um die
+Mitte der Figur am Boden, nicht um die Hand: Der Shader setzt Unterschenkel-Teile
+eines Anhangs nicht an `uSocket` (eine Zeile GLSL). `figureShoes` gibt die
+Instanz, solange der Dorfbewohner Schuhe hat. Ohne sie ist er barfuß.
+VERIFIED: Galerie, Mann und Frau → „steht/geht/pflückt/hackt in Holzschuhen" (2026-10-12).
+
 ## Lasten
 
 Seit B8 (2026-10-11) trägt kein Dorfbewohner mehr den einen Rucksack. Er trägt
@@ -236,7 +244,8 @@ Die Last ist ein Anhang wie ein Werkzeug (`figureProps(figure, load)`).
   Schulter (`sheaf`), Fleisch als Keule über der Schulter (`meat`). Ein
   Bogen hängt schräg auf dem Rücken (`bow`, aus `props/bow.glb` ohne Pfeil),
   ebenso ein Speer (`spears`, `props/load_spears.glb`, nur `Carry…`: er trägt
-  immer einen).
+  immer einen). Ein Paar Holzschuhe hängt an einer Schnur am Rücken (`shoes`,
+  `props/load_shoes.glb`, nur `Carry…`) - so trägt der Schuster es ins Regal.
   Fisch hängt in der Hand (der Hering der Fischer). Die Farbe der Ware
   (Material `Load`) kommt als `accent` der Instanz.
   VERIFIED: `tests/load-look.test.mjs` prüft, dass jede Sorte des Spiels eine

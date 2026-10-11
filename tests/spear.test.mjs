@@ -107,7 +107,7 @@ test('Spielstand: die Habe bleibt, ältere Stände laden ohne', () => {
   world.villagers[0].inventory.weapon = 'spear';
   world.save();
   const loaded = new World(terrain(() => 'grass'), 'habe');
-  assert.deepEqual(loaded.villagers.map((x) => x.inventory), [{ weapon: 'spear' }]);
+  assert.deepEqual(loaded.villagers.map((x) => x.inventory), [{ weapon: 'spear', shoes: null }]);
   storage.set('pgm.world.alt-habe', JSON.stringify({
     version: 3,
     stock: { food: 0, wood: 0, stone: 0, gold: 0, bows: 0 },
@@ -116,7 +116,7 @@ test('Spielstand: die Habe bleibt, ältere Stände laden ohne', () => {
     harvested: {},
   }));
   const old = new World(terrain(() => 'grass'), 'alt-habe');
-  assert.deepEqual(old.villagers.map((x) => x.inventory), [{ weapon: null }, { weapon: null }]);
+  assert.deepEqual(old.villagers.map((x) => x.inventory), [{ weapon: null, shoes: null }, { weapon: null, shoes: null }]);
   assert.equal(old.stock.spears, 0);
 });
 

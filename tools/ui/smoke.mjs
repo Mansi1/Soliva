@@ -266,6 +266,15 @@ const spearPanel = spearPoint && await findNear('Speermacherei', spearPoint)
   ? await page.$eval('#selection', (e) => e.textContent) : '';
 check('Speermacherei gebaut', !!spearPoint && spearPanel.includes('Rechtsklick mit einem Dorfbewohner'), spearPanel.slice(0, 80) || 'nicht gebaut/gefunden');
 await cancel();
+// Schusterei (K, B31): wie die Speermacherei, das Panel zeigt dazu ihr leeres Regal.
+await page.keyboard.press('k');
+const cobblerPoint = await placeNearCenter('cobbler', 'Demo');
+await cancel();
+const cobblerPanel = cobblerPoint && await findNear('Schusterei', cobblerPoint)
+  ? await page.$eval('#selection', (e) => e.textContent) : '';
+check('Schusterei gebaut', !!cobblerPoint && cobblerPanel.includes('Rechtsklick mit einem Dorfbewohner') && cobblerPanel.includes('Vorrat: leer'),
+  cobblerPanel.slice(0, 80) || 'nicht gebaut/gefunden');
+await cancel();
 
 // Verliert die Symbol-Bühne (modelIcons.ts, 320×400, nicht auf der Seite) ihren
 // WebGL-Kontext - GPU-Neustart, Ruhezustand -, müssen neue Symbole trotzdem

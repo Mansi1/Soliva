@@ -65,7 +65,7 @@ export const CONTROLS: readonly Control[] = [
   },
   { label: [MOUSE_RIGHT], what: 'Befehl: sammeln, jagen, bauen, gehen; mit einem Dorfzentrum: Sammelpunkt', short: 'Befehl' },
   {
-    label: [BUILDING_KEYS[0], BUILDING_KEYS[BUILDING_KEYS.length - 1]], sep: '-', what: 'Gebäude bauen (Speermacherei: J)', short: 'bauen',
+    label: [BUILDING_KEYS[0], BUILDING_KEYS[BUILDING_KEYS.length - 1]], sep: '-', what: 'Gebäude bauen (Speermacherei: J, Schusterei: K)', short: 'bauen',
     keys: BUILDING_KEYS, run: (c, e) => c.build(BUILDING_ORDER[BUILDING_KEYS.indexOf(e.key)]),
   },
   {

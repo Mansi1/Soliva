@@ -118,7 +118,7 @@ test('Alter Spielstand mit einem Vorrat: er kommt unbenannt ins Dorfzentrum, Bö
   assert.deepEqual(world.building('0,0').goods, { food: { Nahrung: 77 }, wood: { Holz: 100 }, stone: { Stein: 3 } });
   assert.deepEqual(world.armoryStock(), new Map([['5,0', 100], ['8,0', 50]]));
   assert.equal(world.carryKind(world.villagers[0]), undefined);
-  assert.deepEqual(world.toSave().stock, { food: 0, wood: 0, stone: 0, gold: 0, bows: 0, spears: 0 });
+  assert.deepEqual(world.toSave().stock, { food: 0, wood: 0, stone: 0, gold: 0, bows: 0, spears: 0, shoes: 0 });
   assert.equal(panel(world, world.building('0,0')).goods, 'Nahrung 77, Holz 100, Stein 3');
 });
 

@@ -5,7 +5,7 @@
 // gelesen.
 
 import {
-  ANIMAL_POSE, BUILDING_HEADING, CARRY_STILL, POSE, SHAPE, animalJoints, buildingHeading, carryPose, figureHolding, figureProps, frozenMillMotion, millMotion,
+  ANIMAL_POSE, BUILDING_HEADING, CARRY_STILL, POSE, SHAPE, animalJoints, buildingHeading, carryPose, figureHolding, figureProps, figureShoes, frozenMillMotion, millMotion,
   modelSize, modelStockSlots, animationTime, modelWorkSpot,
   type EntityInstance, type LoadLook,
 } from '../gl/entityRenderer';
@@ -104,6 +104,7 @@ export function loadLook(type: ResourceKind, kind: string | undefined): LoadOf |
     case 'gold': return { look: 'basket', accent: RESOURCE_TYPE_COLORS[type].toRGB() };
     case 'bows': return { look: 'bow' };
     case 'spears': return { look: 'spears' };
+    case 'shoes': return { look: 'shoes' };
     case 'food': return kind === undefined ? undefined : FOOD_LOAD.get(kind);
   }
 }
@@ -207,7 +208,7 @@ export function worldInstances(
       alpha: 1,
       // Jede Mühle dreht in ihrem eigenen Takt; Felder zeigen Wuchs und Rest.
       motion: def.model === SHAPE.mill ? millMotion(building.x, building.y)
-        : def.model === SHAPE.bowyer || def.model === SHAPE.spearMaker ? [BUILDING_HEADING, crafting.get(building.anchor) ?? -1, 0, 0]
+        : def.model === SHAPE.bowyer || def.model === SHAPE.spearMaker || def.model === SHAPE.cobbler ? [BUILDING_HEADING, crafting.get(building.anchor) ?? -1, 0, 0]
         // Reuse: Fisch um Fisch, wie sie sich füllt (Stock.0-4 im Modell).
         : building instanceof FishTrap ? [BUILDING_HEADING, building.fish / FISHING.trapFish, 0, 0]
         : armory.has(building.anchor) && modelStockSlots(building.model) > 0
@@ -292,12 +293,12 @@ export function worldInstances(
     // Trägt er etwas (Fleisch), zeigt figureProps die Last.
     if (v.task.kind === 'hunt' && !carried && !(v.pose === POSE.pick)) {
       const spear = v.inventory.weapon === 'spear' && !(v.pose === POSE.throw && spearThrown(phase));
-      out.push(figure, ...figureHolding(figure, spear ? 'spear' : null));
+      out.push(figure, ...figureHolding(figure, spear ? 'spear' : null), ...figureShoes(figure, v.inventory.shoes));
       continue;
     }
     if (!fishing) {
       // Dazu, was er in der Hand hat (Beil, Sense, Zugmesser - je nach Clip), und seine Last.
-      out.push(figure, ...figureProps(figure, carried?.look));
+      out.push(figure, ...figureProps(figure, carried?.look), ...figureShoes(figure, v.inventory.shoes));
       continue;
     }
     // Fischer: im Boot steht er auf dessen Boden; an Land zieht er es mit der
@@ -311,7 +312,7 @@ export function worldInstances(
       out.push(boatAt(bx, by, h, world.groundAt?.(bx, by)));
     }
     const rod = fishing.step === 'shore' || fishing.step === 'angle';
-    out.push(figure, ...figureHolding(figure, rod ? 'rod' : fishing.fish > 0 ? 'fish' : null));
+    out.push(figure, ...figureHolding(figure, rod ? 'rod' : fishing.fish > 0 ? 'fish' : null), ...figureShoes(figure, v.inventory.shoes));
   }
   for (const a of world.wildlife.animals) {
     if (hideAnimal(a.definition.type)) continue;
