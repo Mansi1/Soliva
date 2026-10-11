@@ -104,3 +104,8 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T14:09:11Z s=560a6297 FINDING make e2e port 4173 learn=memory: memory.md Umgebung entry 2026-10-11.
 2026-10-11T14:09:11Z s=560a6297 FINDING src/world/render.ts:loadLook learn=test: tests/load-look.test.mjs
 2026-10-11T14:09:11Z s=560a6297 FINDING src/gl/entityRenderer.ts:CARRY_STILL learn=none: Visual stand-in; a real stand-with-load clip needs larger uniform arrays.
+2026-10-11T14:01:39Z s=560a6297 FAIL tests.e2e.1
+2026-10-11T14:04:13Z s=560a6297 DONE fp=25f10ca3e639 cov=80.4% paths=docs/BLENDER.md,memory.md,src/components/SelectionPanel.tsx,src/gallery.ts(+22)
+2026-10-11T14:04:13Z s=560a6297 FINDING make e2e / make start (port 4173) learn=memory: Parallel worktrees share the fixed preview port; run make verify in worktrees one after another. Recorded in memory.md.
+2026-10-11T14:04:13Z s=560a6297 FINDING src/world/world.ts:canPlant learn=none: Not observed in Testseed; the condition is named in the ponytail comment.
+2026-10-11T14:04:13Z s=560a6297 FINDING src/world/deposits.ts:restore/plantedSave learn=test: tests/forester.test.mjs

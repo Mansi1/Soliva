@@ -330,6 +330,7 @@ const ROWS: { title: string; gap: number; depth: number; items: Exhibit[] }[] = 
       model('Minenlager', SHAPE.miningCamp, BUILDINGS.mining_camp.size),
       model('Fischerhütte', SHAPE.fisherHut, BUILDINGS.fisher_hut.size),
       model('Bognerei', SHAPE.bowyer, BUILDINGS.bowyer.size),
+      model('Försterhütte', SHAPE.forester, BUILDINGS.forester.size),
       model('Waffenkammer', SHAPE.armory, BUILDINGS.armory.size),
       model('Sammelpunkt', SHAPE.rallyFlag, 0.54),
       collapse('Abriss', SHAPE.house, BUILDINGS.house.size),
@@ -528,6 +529,7 @@ const SHOWCASE: Showcase[] = [
   building('Holzlager', BUILDINGS.lumber_camp.models!, BUILDINGS.lumber_camp.size, 220, 0.6),
   building('Minenlager', [SHAPE.miningCamp], BUILDINGS.mining_camp.size, 200, 0.7),
   building('Fischerhütte', [SHAPE.fisherHut], BUILDINGS.fisher_hut.size, 200, 0.7),
+  building('Försterhütte', [SHAPE.forester], BUILDINGS.forester.size, 200, 0.7),
   showcase('Partikel', 'Partikel', PARTICLE_EXHIBITS, 300, 0.4),
   showcase('Gebäude', 'Fischerei', [
     model('Boot', SHAPE.fisherBoat, (1.73 / 5) * ZOOMED),

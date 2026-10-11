@@ -48,7 +48,7 @@ const panel = (world, building) => {
 
 test('Abgeliefertes bleibt im Lager, in das es kam - mit der Baumart; die Ladung kennt sie unterwegs', () => {
   const { world, tc, camp, v } = lumberWorld();
-  const kind = depositKind(world.terrain, 0, 0);
+  const kind = depositKind(world.deposits, 0, 0);
   assert.ok(kind && kind !== 'Holz', `tree kind ${kind}`);
   const tcWood = tc.stored('wood');
   const total = world.stock.wood;
@@ -94,7 +94,7 @@ test('Abriss: der Vorrat des Lagers ist weg, die halben Kosten kommen ins Dorfze
 
 test('Spielstand: Vorrat je Lager samt Sorten und Sorte der Ladung bleiben erhalten', () => {
   const { world, camp, v } = lumberWorld('speichern');
-  const kind = depositKind(world.terrain, 0, 0);
+  const kind = depositKind(world.deposits, 0, 0);
   // Eine Ladung abgeliefert, die nächste unterwegs.
   for (let t = 0; t < 60 && !(camp.stored('wood') > 0 && v.carrying > 0); t += 0.1) world.tick(0.1);
   assert.ok(camp.stored('wood') > 0 && v.carrying > 0, 'delivered once and carries again');

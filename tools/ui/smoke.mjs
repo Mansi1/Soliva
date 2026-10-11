@@ -126,6 +126,19 @@ await page.keyboard.press('2');
 const housePoint = await placeNearCenter('house');
 check('Haus gebaut', !!housePoint);
 await cancel();
+// Försterhütte (0): Baumart im Panel wählen wie die Frucht beim Feld, Pflanzplatz-Knopf wie der Sammelpunkt (B9).
+await page.keyboard.press('0');
+const foresterPoint = await placeNearCenter('forester');
+check('Försterhütte gebaut', !!foresterPoint);
+await cancel();
+if (foresterPoint && await findNear('Försterhütte', foresterPoint)) {
+  await page.click('#actions .cmd-btn[data-action=species][data-species=birch]');
+  const forester = (await saved()).buildings.find((b) => b.t === 'forester');
+  const spotButton = !!(await page.$('#actions .cmd-btn[data-action=rally]'));
+  check('Försterhütte: Baumart gewählt, Knopf für den Pflanzplatz', forester?.ts === 'birch' && spotButton,
+    `ts=${forester?.ts}, Pflanzplatz-Knopf ${spotButton}`);
+} else check('Försterhütte: Baumart gewählt, Knopf für den Pflanzplatz', false, 'Hütte nicht gefunden');
+await cancel();
 
 // Sammelpunkt: Ein Rechtsklick setzt ihn nur, wenn genau ein ausbildendes
 // Gebäude ausgewählt ist. Hier sind es zwei (Dorfzentrum und Haus, nahe der

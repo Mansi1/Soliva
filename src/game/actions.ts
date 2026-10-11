@@ -6,7 +6,7 @@
 // über die Rückrufe in ActionUi.
 
 import type { Sound } from '../audio';
-import { CROPS, type BuildingType, type CropType } from '../world/catalog';
+import { CROPS, type BuildingType, type CropType, type TreeSpecies } from '../world/catalog';
 import type { UnitProducer } from '../world/building';
 import { workplace } from '../world/villagers';
 import type { Villager, World } from '../world/world';
@@ -186,7 +186,7 @@ export class PlayerActions {
     const at = this.picker.point(p.x, p.y);
     let reason: string | null = null;
     for (const b of this.selection.chosenBuildings()) {
-      if (b.isUnitProducer()) reason = this.world.setRally(b, x, y, at) ?? reason;
+      if (b.hasRallyPoint()) reason = this.world.setRally(b, x, y, at) ?? reason;
     }
     if (reason) this.ui.hint(reason);
     else this.sound.play('click');
@@ -209,7 +209,7 @@ export class PlayerActions {
     // Nur bei einem einzelnen: bei mehreren bliebe sonst unklar, ob ein
     // Rechtsklick alle Fahnen auf einen Fleck setzen soll - dafür gibt es den Schalter.
     const buildings = this.selection.chosenBuildings();
-    if (buildings.length === 1 && buildings[0].isUnitProducer()) {
+    if (buildings.length === 1 && buildings[0].hasRallyPoint()) {
       this.setRallyAt(p);
       return;
     }
@@ -387,6 +387,13 @@ export class PlayerActions {
     const chosen = this.selection.chosenBuildings();
     const fields = chosen.length === 1 ? this.world.farmGroup(chosen[0]) : chosen;
     for (const field of fields) this.world.setCrop(field, crop);
+    this.sound.play('click');
+    this.ui.refreshSelection();
+  }
+
+  /** Baumart der ausgewählten Försterhütten wählen - gilt ab dem nächsten Baum. */
+  setTreeSpecies(species: TreeSpecies) {
+    for (const b of this.selection.chosenBuildings()) this.world.setTreeSpecies(b, species);
     this.sound.play('click');
     this.ui.refreshSelection();
   }
