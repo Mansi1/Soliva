@@ -9,12 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T22:17:06Z s=560a6297 DONE fp=d213a3a0b8e4 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:21:07Z s=560a6297 DONE fp=2fcc3cdd1717 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:24:06Z s=560a6297 DONE fp=78ffa8041904 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:25:07Z s=560a6297 DONE fp=38eb13b54595 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:26:02Z s=560a6297 DONE fp=f99a8442ffd5 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:27:57Z s=560a6297 DONE fp=7a36b2cb5c0e cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:31:10Z s=560a6297 DONE fp=5d566554a4b6 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:31:59Z s=560a6297 DONE fp=74d795794954 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:32:25Z s=560a6297 DONE fp=04045174f49a cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T23:37:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:SHAPE.clogs icon learn=test: smoke checks research buttons have an image.
 2026-10-11T23:37:49Z s=560a6297 FINDING src/world/research.ts:blocker learn=none: Depends on B26 merge; will be handled there.
 2026-10-11T23:37:49Z s=560a6297 FINDING src/world/villagers.ts:hunt leather learn=test: tests/research.test.mjs hunted sheep gives 4 leather + meat.
+2026-10-11T23:55:10Z s=560a6297 DONE fp=670c1141e8ce cov=80.6% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+19)
+2026-10-11T23:55:10Z s=560a6297 FINDING src/world/world.ts:startResearch learn=test: tests/construction.test.mjs asserts startResearch on a town center site is refused.
+2026-10-11T23:55:10Z s=560a6297 FINDING src/world/building/BuildingBase.ts:built / stores / isUnitProducer learn=test: tests/construction.test.mjs: site does not store, house, train or work.
+2026-10-11T23:55:10Z s=560a6297 FINDING src/gl/entityRenderer.ts:gCut for sites learn=none: Screenshot comparison within noise.
+2026-10-11T23:55:10Z s=560a6297 FINDING tools/ui/smoke.mjs learn=test: Smoke covers site and finished workshop.
+2026-10-11T23:55:10Z s=560a6297 FINDING src/world/construction.ts:hasTownCenter learn=none: No observed failure; noted in docs/OFFEN.md.

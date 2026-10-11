@@ -21,7 +21,7 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   animals/                  deer, hare, cow, sheep, goat, boar
   props/                    axe, hoe, knife, scythe_male/_female, bow, prop_bow, spear, clogs, rally_flag, marker_arrow,
                             load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears/_shoes/_milk/_wool/_leather (Lasten, docs/ANIMATION.md)
-                            pasture_fence
+                            pasture_fence, site_edge, scaffold (Baustelle, B26: Pflock und Schnur je Tile-Kante, Gerüst)
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails

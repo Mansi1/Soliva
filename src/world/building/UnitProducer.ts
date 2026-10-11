@@ -30,8 +30,9 @@ export abstract class UnitProducer extends BuildingBase {
   /** Die Einheit, die hier ausgebildet wird. */
   abstract get unit(): TrainableUnit;
 
+  /** Eine Baustelle bildet nicht aus (B26). */
   override isUnitProducer(): this is UnitProducer {
-    return true;
+    return this.built;
   }
 
   /**

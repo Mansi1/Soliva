@@ -37,6 +37,7 @@ export function hoverDescription(world: World, resources: ResourceField, target:
     };
   }
   const building = tile ? world.at(tile.x, tile.y) : undefined;
+  if (building && !building.built) return { label: 'Baustelle', text: `${building.label} | ${Math.floor(building.progress * 100)} %` };
   if (building) return { label: 'Gebäude', text: `${building.label} | Leben ${Math.ceil(building.hp)}/${building.maxHp}` };
   const found = tile ? world.resourceInfo(tile.x, tile.y) : null;
   if (!tile || !found) return { label: 'Ressource', text: '-' };

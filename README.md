@@ -70,7 +70,7 @@ gewählte Welt unter `pgm.seed`.
 | `W` `A` `S` `D` / Pfeiltasten, rechte Maustaste halten und ziehen | Karte verschieben |
 | Mausrad, `Q` / `E` | zoomen |
 | Linksklick / Ziehen | auswählen (Doppelklick: alle gleichartigen im Bild) |
-| Rechtsklick | Befehl: sammeln, jagen, Feld bestellen, abliefern, hingehen; mit genau einem Dorfzentrum: Sammelpunkt setzen (aufs Gebäude: aufheben) |
+| Rechtsklick | Befehl: sammeln, jagen, Feld bestellen, Baustelle bauen, abliefern, hingehen; mit genau einem Dorfzentrum: Sammelpunkt setzen (aufs Gebäude: aufheben) |
 | `1`-`6` | bauen: Dorfzentrum, Haus, Holzlager, Minenlager, Mühle, Feld |
 | `V` (mit Umschalt: 5) | Dorfbewohner ausbilden |
 | `H` / `.` | zum Dorfzentrum / untätige Dorfbewohner |
@@ -84,6 +84,19 @@ gewählte Welt unter `pgm.seed`.
 
 `Alt` ist auf dem Mac die Option-Taste; unter Windows geht auch `AltGr`. Der
 Blickwinkel bleibt wie die Blickrichtung beim Neuladen erhalten.
+
+## Bauen
+
+Ein Gebäude setzen steckt eine Baustelle ab (Pflöcke mit Schnur), bezahlt
+wird sofort. Bauen müssen Dorfbewohner: auswählen, Rechtsklick auf die
+Baustelle, bis zu vier zugleich. Allein dauert ein Haus 30 s, Werkstätten
+und Lager 45 s, die Waffenkammer 60 s, ein weiteres Dorfzentrum 120 s; jeder
+weitere Bauende hilft weniger (1 + 0,7 + 0,5 + 0,35). Solange gebaut wird,
+lagert die Baustelle nichts, gibt keinen Wohnraum und bildet nicht aus.
+Abgerissen kommen die Kosten ganz zurück. Fertig, sammeln die Bauenden am
+neuen Lager, einer übernimmt die Werkstatt, oder sie bauen an der nächsten
+Baustelle weiter. Felder, Weiden, Reusen und das erste Dorfzentrum stehen
+sofort. Regeln und Zahlen: `src/world/construction.ts`.
 
 ## Cheats
 
@@ -105,6 +118,7 @@ aus. Solange es an ist:
 - Dorfbewohner kommen ohne Ausbildungszeit aus dem Dorfzentrum.
 - Ein ganzes Feldstück wird auf einmal gepflügt und gesät und ist sofort reif.
 - Jedes Tier fällt mit einem Treffer.
+- Eine Baustelle steht, sobald ein Dorfbewohner dort zu bauen beginnt.
 - Beim Ernten, Holzfällen, Beerenpflücken und Zerlegen ist die Ladung sofort
   voll; abgeliefert wird wie sonst.
 

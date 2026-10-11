@@ -25,6 +25,7 @@ import { DIG_DURATION, RUIN_DURATION, type Ruin } from './ruin';
 import { addRenderStats } from '../renderStats';
 import { penSurroundings, tickPastures } from './pasture';
 import { Research, type ResearchId } from './research';
+import { needsBuilders } from './construction';
 
 // Gebäude sind Klassen (building/) - hier weiter unter diesen Namen erreichbar.
 export type { Building, FarmPhase, Task };
@@ -200,7 +201,8 @@ export class World {
     let cap = this.bonusHousing;
     let training = 0;
     for (const b of this.buildings.values()) {
-      cap += b.definition.housing;
+      // Eine Baustelle gibt noch keinen Wohnraum (B26).
+      if (b.built) cap += b.definition.housing;
       if (b.isUnitProducer()) training += b.queuedUnits;
     }
     return { used: this.villagers.length, cap, training };
@@ -232,7 +234,7 @@ export class World {
   /** So viele Waffen passen in alle Waffenkammern zusammen. */
   weaponCapacity(): number {
     let total = 0;
-    for (const b of this.allBuildings()) total += b.definition.weaponCapacity;
+    for (const b of this.allBuildings()) if (b.built) total += b.definition.weaponCapacity;
     return total;
   }
 
@@ -599,6 +601,9 @@ export class World {
     this.pay(BUILDINGS[type].cost);
     // Ein Feld bekommt die Frucht fürs nächste Feld und die Tiles, die hier frei sind.
     const building = createBuilding(type, x, y, type === 'farm' ? { crop: this.nextFarmCrop, tiles: this.farmTiles(x, y) } : {});
+    // Abgesteckt wird eine Baustelle, die Dorfbewohner bauen (construction.ts) - nur
+    // das erste Dorfzentrum steht sofort: ohne es gibt es niemanden, der baut.
+    if (needsBuilders(type) && (type !== 'town_center' || this.hasTownCenter())) building.progress = 0;
     this.buildings.set(building.anchor, building);
     this.buildingsRevision++;
     for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
@@ -614,7 +619,8 @@ export class World {
 
   /**
    * Abriss. Die Hälfte der Kosten kommt zurück - sonst bestraft ein Fehlklick
-   * zu hart. Was im Lager lag (BuildingBase.goods), ist mit ihm verloren.
+   * zu hart -, bei einer Baustelle alles (B26, VERIFIED: tests/construction.test.mjs).
+   * Was im Lager lag (BuildingBase.goods), ist mit ihm verloren.
    */
   remove(building: Building) {
     const def = building.definition;
@@ -622,7 +628,7 @@ export class World {
     const anchor = building.anchor;
     // Erst weg, dann erstatten - sonst landete die Erstattung im abgerissenen Lager.
     this.buildings.delete(anchor);
-    this.pay(def.cost, -0.5);
+    this.pay(def.cost, building.built ? -0.5 : -1);
     // Wer noch in Ausbildung war, wird voll erstattet - er hat ja nie gearbeitet.
     if (building.isUnitProducer()) this.pay(VILLAGER.cost, -building.queuedUnits);
     this.buildingsRevision++;
@@ -633,8 +639,19 @@ export class World {
     // ein anderes Lager oder bleibt mit seiner Ladung stehen.
     for (const v of this.villagers) {
       const t = v.task;
-      if ((t.kind === 'deliver' || t.kind === 'farm' || t.kind === 'craft' || t.kind === 'fish' || t.kind === 'plant') && t.building === anchor) v.task = { kind: 'idle' };
+      if ((t.kind === 'deliver' || t.kind === 'farm' || t.kind === 'craft' || t.kind === 'fish' || t.kind === 'plant' || t.kind === 'build') && t.building === anchor) v.task = { kind: 'idle' };
     }
+    this.dirty = true;
+  }
+
+  /**
+   * Eine Baustelle ist fertig (construction.ts): von jetzt an lagert sie,
+   * gibt Wohnraum, bildet aus - Vorrat ohne Lager kommt hinein.
+   */
+  finishConstruction(building: Building) {
+    building.progress = 1;
+    this.buildingsRevision++;
+    this.absorbReserve();
     this.dirty = true;
   }
 
@@ -676,6 +693,7 @@ export class World {
 
   /** Stellt einen Dorfbewohner in die Warteschlange. Kosten werden sofort fällig. */
   train(building: Building): string | null {
+    if (!building.built) return 'Die Baustelle ist noch nicht fertig';
     if (!building.isUnitProducer()) return 'Nur das Dorfzentrum bildet Dorfbewohner aus';
     if (building.isQueueFull) return 'Die Warteschlange ist voll';
     if (!this.canAffordVillager()) return 'Zu wenig Nahrung';
@@ -701,6 +719,8 @@ export class World {
   /** Beginnt im Dorfzentrum eine Forschung (research.ts) und bezahlt sie - sonst der Grund. */
   startResearch(building: Building, id: ResearchId): string | null {
     if (building.type !== 'town_center') return 'Nur im Dorfzentrum wird geforscht';
+    // Eine Baustelle (B26) forscht noch nicht - erst das fertige Dorfzentrum.
+    if (!building.built) return 'Das Dorfzentrum ist noch im Bau';
     const reason = this.research.start(this, building.anchor, id);
     if (!reason) this.dirty = true;
     return reason;

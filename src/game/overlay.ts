@@ -214,7 +214,8 @@ export function minimapDots(world: World, minimap: MiniMap, current: IsoView, ou
     if (!inside(b.x, b.y)) continue;
     const fp = b.definition.footprint;
     // Größer von beidem: echte Fläche oder Mindestgröße in Pixeln.
-    dot(b.x, b.y, Math.max(fp * ppt, b.isFarm() ? 4 : 6), color, b.isFarm() ? 0.55 : 1);
+    // Felder und Baustellen (B26) blasser.
+    dot(b.x, b.y, Math.max(fp * ppt, b.isFarm() ? 4 : 6), color, b.isFarm() || !b.built ? 0.55 : 1);
   }
   for (const v of world.villagers) {
     if (v.inside > 0 || !inside(v.x, v.y)) continue;

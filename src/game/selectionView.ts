@@ -19,6 +19,7 @@ import { rangeView } from '../world/archery';
 import { skillsText } from '../world/unit/skills';
 import { pastureText } from '../world/pasture';
 import { RESEARCH, RESEARCH_ORDER, craftTaskRecipe } from '../world/research';
+import { builders, siteTitle } from '../world/construction';
 import type { Selection } from './Selection';
 
 /**
@@ -164,6 +165,13 @@ export function selectionView(world: World, selection: Selection, resources: Res
       farms: farms.length === many.length
         ? { ...farmView(world, farms), plan: plan ?? null }
         : undefined,
+    };
+  }
+  if (building && !building.built) {
+    // Baustelle (B26): nur Fortschritt und wer baut - lagern, ausbilden ... kann sie noch nicht.
+    return {
+      kind: 'building', type: building.type, label: siteTitle(world, building), hp: building.hp, maxHp: building.maxHp,
+      site: builders(world, building).length === 0 ? 'Rechtsklick mit Dorfbewohnern auf die Baustelle - sie bauen sie.' : undefined,
     };
   }
   if (building) {

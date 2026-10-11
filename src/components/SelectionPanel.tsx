@@ -90,6 +90,8 @@ export type SelectionView =
       hp: number;
       maxHp: number;
       storedResources?: string;
+      /** Baustelle (B26): Hinweis, solange niemand baut. */
+      site?: string;
       /** Lager: was darin liegt, Sorte für Sorte - "Eiche 40, Weizen 120" oder "leer". */
       goods?: string;
       housing?: number;
@@ -274,6 +276,7 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
       <div class="sel-body">
         <Portrait src={buildingIcon(v.type, rgb())} hp={v.hp} maxHp={v.maxHp} />
         <div class="sel-info">
+          {v.site ? <div class="muted">{v.site}</div> : null}
           {v.storedResources ? <div class="muted">Lager für {v.storedResources}</div> : null}
           {v.goods ? <div class="sel-goods">Vorrat: <b>{v.goods}</b></div> : null}
           {v.housing ? <div class="muted">+{v.housing} Bevölkerung</div> : null}

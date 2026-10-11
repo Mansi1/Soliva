@@ -19,9 +19,11 @@
 //   crafting   Bögen und Speere schnitzen (Bognerei, Speermacherei)
 //   hunting    Speerwurf bzw. Zustoßen: schneller nachladen
 //   archery    am Schießplatz üben; mit dem Bogen jagen: schneller nachladen
+//   building   an Baustellen bauen (B26, construction.ts) - eigene Fähigkeit
+//              statt crafting: Bauen und Schnitzen sind verschiedene Arbeit
 
 /** Die Fähigkeiten - Reihenfolge wie im Panel. */
-export const SKILL_KINDS = ['archery', 'hunting', 'gathering', 'farming', 'crafting'] as const;
+export const SKILL_KINDS = ['archery', 'hunting', 'gathering', 'farming', 'crafting', 'building'] as const;
 export type Skill = (typeof SKILL_KINDS)[number];
 
 /** Sekunden Übung je Fähigkeit; was fehlt, ist 0. */
@@ -29,7 +31,7 @@ export type Skills = Partial<Record<Skill, number>>;
 
 /** Namen für die Oberfläche. */
 export const SKILL_LABEL: Record<Skill, string> = {
-  archery: 'Bogen', hunting: 'Jagen', gathering: 'Sammeln', farming: 'Ackerbau', crafting: 'Handwerk',
+  archery: 'Bogen', hunting: 'Jagen', gathering: 'Sammeln', farming: 'Ackerbau', crafting: 'Handwerk', building: 'Bauen',
 };
 
 /** `mastery`: Sekunden Übung bis Stufe 1; `bonus`: so viel schneller arbeitet ein Meister (0,5 = +50 %). */

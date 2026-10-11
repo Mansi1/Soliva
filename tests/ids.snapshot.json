@@ -2501,6 +2501,11 @@
    "Cloth",
    "Pole"
   ],
+  "props/scaffold": [
+   "Scaffold.Ledger",
+   "Scaffold.Plank",
+   "Scaffold.Pole"
+  ],
   "props/scythe_female": [
    "Arm.R.Lower.Scythe.Blade",
    "Arm.R.Lower.Scythe.Snath"
@@ -2508,6 +2513,11 @@
   "props/scythe_male": [
    "Arm.R.Lower.Scythe.Blade",
    "Arm.R.Lower.Scythe.Snath"
+  ],
+  "props/site_edge": [
+   "Site.Cord",
+   "Site.Flag",
+   "Site.Post"
   ],
   "props/spear": [
    "Arm.R.Lower.Tool.Spear",

@@ -26,6 +26,9 @@ import { STRIDE_LENGTH } from './world/world';
 import { spearThrown } from './world/villagers';
 import { ARCHERY, rangeSpot } from './world/archery';
 import { fenceInstances } from './world/pasture';
+import { builderSpot, siteInstances } from './world/construction';
+import { createBuilding } from './world/building';
+import type { BuildingType } from './world/catalog';
 import { FLOWER_KINDS } from './gl/flowerModel';
 import { GIZMO_RING_FRACTION } from './gl/gizmoModel';
 import { ParticleRenderer } from './gl/particleRenderer';
@@ -495,6 +498,27 @@ function building(label: string, shapes: number[], size: number, zoom: number, l
   };
 }
 
+/**
+ * Baustelle (B26) wie im Spiel (world/construction.ts): `progress` 0..1, ohne
+ * wächst sie in 12 s bis fertig und steht dann kurz; `crew` Bauende an ihren
+ * Plätzen, mit dem Beil (Clip work).
+ */
+function construction(label: string, type: BuildingType, progress?: number, crew = 0): Exhibit {
+  return {
+    label,
+    draw: (t, x, y, out) => {
+      const site = createBuilding(type, x - 0.5, y - 0.5);
+      site.progress = progress ?? Math.min(1, loop(t, 15) * 1.25);
+      if (site.built) out.push({ x: site.x, y: site.y, size: site.definition.size, color: PLAYER, shape: site.model, alpha: 1 });
+      else siteInstances(site, () => undefined, out);
+      for (let slot = 0; slot < crew && !site.built; slot++) {
+        const s = builderSpot(site, slot);
+        worker(s.x, s.y, t, Math.atan2(s.aimY - s.y, s.aimX - s.x), POSE.work, out);
+      }
+    },
+  };
+}
+
 const people = (female: boolean) => {
   const who = female ? 'Frau' : 'Mann';
   return showcase('Dorfbewohner', who, [
@@ -640,6 +664,14 @@ const SHOWCASE: Showcase[] = [
     model('Gatter', SHAPE.pasture, BUILDINGS.pasture.size),
     model('Zaun', SHAPE.pastureFence, 0.5),
   ], 160, 0.4),
+  showcase('Gebäude', 'Baustelle', [
+    construction('abgesteckt', 'house', 0),
+    construction('Haus 30 %', 'house', 0.3, 2),
+    construction('Haus 70 %', 'house', 0.7, 4),
+    construction('Haus wächst', 'house', undefined, 4),
+    construction('Dorfzentrum 50 %', 'town_center', 0.5, 4),
+    construction('Mühle wächst', 'mill', undefined, 3),
+  ], 200, 0.7),
   showcase('Partikel', 'Partikel', PARTICLE_EXHIBITS, 300, 0.4),
   showcase('Gebäude', 'Fischerei', [
     model('Boot', SHAPE.fisherBoat, (1.73 / 5) * ZOOMED),

@@ -34,6 +34,8 @@ export interface BuildingSave {
   g?: Goods;
   /** Förster: Baumart, die er pflanzt. */
   ts?: TreeSpecies;
+  /** Baustelle (B26): wie weit gebaut, 0..1 - fehlt, wenn fertig (auch in älteren Ständen). */
+  bp?: number;
 }
 
 /**
@@ -91,6 +93,11 @@ export abstract class BuildingBase {
    * des Klicks - dort steht die Fahne. Ältere Stände haben nur das Tile.
    */
   rallyPoint: { x: number; y: number; point?: { x: number; y: number } } | null = null;
+  /**
+   * Wie weit gebaut, 0..1 (B26, world/construction.ts): unter 1 ist es eine
+   * Baustelle - sie lagert nichts, gibt keinen Wohnraum und bildet nicht aus.
+   */
+  progress = 1;
 
   /** @param x, y Ankerpunkt: die Mitte des Grundrisses */
   constructor(readonly x: number, readonly y: number, options: BuildingOptions = {}) {
@@ -138,9 +145,14 @@ export abstract class BuildingBase {
     return this.models[this.variant];
   }
 
-  /** Können Dorfbewohner hier diesen Rohstoff abliefern? */
+  /** Fertig gebaut - keine Baustelle (B26)? */
+  get built(): boolean {
+    return this.progress >= 1;
+  }
+
+  /** Können Dorfbewohner hier diesen Rohstoff abliefern? Eine Baustelle nimmt nichts an. */
   stores(resource: ResourceKind): boolean {
-    return this.definition.storedResources.includes(resource);
+    return this.built && this.definition.storedResources.includes(resource);
   }
 
   /** So viel von `resource` liegt hier, alle Sorten zusammen. */
@@ -253,6 +265,7 @@ export abstract class BuildingBase {
       ...(this.models.length > 1 ? { v: this.variant } : {}),
       ...(Object.keys(this.goods).length > 0 ? { g: this.goods } : {}),
       ...(this.rallyPoint ? { r: rallySave(this.rallyPoint) } : {}),
+      ...(this.built ? {} : { bp: this.progress }),
     };
   }
 
@@ -263,6 +276,9 @@ export abstract class BuildingBase {
   restore(save: BuildingSave, scale: number) {
     // Ältere Speicherstände kennen keine Trefferpunkte - dann unbeschädigt.
     this.hp = Math.min(save.hp ?? this.maxHp, this.maxHp);
+    // Ältere Stände kennen keine Baustellen - dann fertig.
+    const bp = save.bp;
+    this.progress = typeof bp === 'number' && Number.isFinite(bp) ? Math.max(0, Math.min(1, bp)) : 1;
     // Ältere Speicherstände kennen keinen Vorrat je Lager - World.applySave verteilt ihren.
     if (save.g) this.goods = structuredClone(save.g);
     const r = this.hasRallyPoint() ? save.r : undefined;

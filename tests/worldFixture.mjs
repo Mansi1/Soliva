@@ -47,11 +47,25 @@ export function makeWorld(World, kind) {
   return world;
 }
 
-/** Baut und meldet, wenn es nicht geht - sonst rätselt der Test später. */
-export function build(world, x, y, type) {
+/**
+ * Steckt eine Baustelle ab (B26, world/construction.ts) und meldet, wenn es
+ * nicht geht - sonst rätselt der Test später. Felder, Weiden, Reusen und das
+ * erste Dorfzentrum stehen dabei gleich.
+ */
+export function stake(world, x, y, type) {
   const reason = world.place(x, y, type);
   if (reason) throw new Error(`${type} at ${x},${y} not placed: ${reason}`);
   return world.at(x, y);
+}
+
+/**
+ * Baut fertig, als hätten Dorfbewohner die Baustelle schon gebaut - für Tests,
+ * in denen es um das Gebäude geht, nicht ums Bauen.
+ */
+export function build(world, x, y, type) {
+  const building = stake(world, x, y, type);
+  if (!building.built) world.finishConstruction(building);
+  return building;
 }
 
 /** Lässt die Welt `seconds` Sekunden in Ticks von 0,1 s laufen; `each` nach jedem Tick. */

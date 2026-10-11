@@ -127,6 +127,9 @@ import pastureFenceModel from '../models/props/pasture_fence.glb?model';
 import loadMilkModel from '../models/props/load_milk.glb?model';
 import loadWoolModel from '../models/props/load_wool.glb?model';
 import loadLeatherModel from '../models/props/load_leather.glb?model';
+// Baustelle (B26): Absteckung je Tile-Kante und Gerüst (world/construction.ts).
+import siteEdgeModel from '../models/props/site_edge.glb?model';
+import scaffoldModel from '../models/props/scaffold.glb?model';
 
 /** Materialien der Dorfbewohner und ihrer Werkzeuge - jedes Modell bringt seine mit. */
 const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propHoeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
@@ -392,6 +395,10 @@ export const SHAPE = {
   /** Lederschuhe an den Füßen (B31): die Holzschuhe aus Leder (PROP_LEATHER_SHOES) - ein eigener Bereich in PROP_TEST. */
   propLeatherShoes: 260,
   propLeatherShoesFemale: 261,
+  /** Baustelle (B26, world/construction.ts): Pflock und Schnur je Tile-Kante (models/props/site_edge.glb), motion[0] = nach außen. */
+  siteEdge: 240,
+  /** Gerüst um eine Baustelle (models/props/scaffold.glb), wie das Gebäude von unten abgeschnitten (motion[3] < 0). */
+  scaffold: 241,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -1383,6 +1390,15 @@ void main() {
       // Der Haufen sackt schief zusammen.
       p.z += c * 0.12 * (p.x - 0.4 * p.y);
     }
+    // Baustelle (B26, aMotion.w < 0): steht erst bis -aMotion.w seiner Höhe -
+    // darüber schneidet der Fragment-Shader ab (vCut, wie beim Absägen der Bäume).
+    // Die Flügel einer Mühle kommen erst ganz zum Schluss: gedreht ragten sie über den Schnitt.
+    if (!figure && !natural && !field && !beast && aMotion.w < 0.0) {
+      gCut = -aMotion.w * uModelTop;
+      // Keine Schnittfläche wie beim Stamm: man sieht in den offenen Bau hinein.
+      gCapNormal = vec3(0.0);
+      if (part == P_SAILS) p = vec3(0.0);
+    }
 
     // Hinweispfeil und was fehlt: aMotion.y Tiles über dem Boden (übers Dach), wippt.
     if (shape == ${SHAPE.markerArrow} || ${NEED_TEST}) p.z += (aMotion.y + 0.05 * sin(uTime * 3.0)) / scale;
@@ -2156,7 +2172,7 @@ void main() {
   // außen (loadModel) - sieht man ihre Rückseite, blickt man durch den
   // Schnitt in den Stamm und sieht dort die Schnittfläche.
   if (vLocal.z > vCut) discard;
-  bool cutFace = vCut < 1e8 && gl_FrontFacing;
+  bool cutFace = vCut < 1e8 && gl_FrontFacing && vCapNormal != vec3(0.0);
   if (cutFace) normal = normalize(vCapNormal);
   if (dot(normal, uToCamera) < 0.0) normal = -normal;
 
@@ -3079,6 +3095,8 @@ const MODELS: {
   { shape: SHAPE.forester, model: loadModel(foresterModel.obj, foresterModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.pasture, model: loadModel(pastureGateModel.obj, pastureGateModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.pastureFence, model: loadModel(pastureFenceModel.obj, pastureFenceModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.siteEdge, model: loadModel(siteEdgeModel.obj, siteEdgeModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.scaffold, model: loadModel(scaffoldModel.obj, scaffoldModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.propFish, model: PROP_FISH, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },

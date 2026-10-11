@@ -100,6 +100,12 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
   ohne sichtbaren Strick. Milch, Wolle und Leder nimmt nur das Dorfzentrum
   an; Leder braucht die Gerberei und der Schuster, Milch und Wolle noch nichts. Ein Reh holt man zu Fuß nur
   ein, wenn es nah ist (Regel der Jagd ohne Speer).
+- **Baustelle (B26):** Die Bauenden zimmern mit dem Beil im Clip `work`
+  (Holzfällen) - ein eigener Clip mit Hammer braucht mehr als `MAX_CLIPS`.
+  Das Gebäude wächst, indem der Shader es auf Höhe abschneidet; Innenwände
+  sieht man dabei von hinten. Eine Mühle bekommt ihre Flügel erst fertig.
+  Trefferpunkte wachsen nicht mit dem Bau. Ist eine Seite der Baustelle
+  versperrt (Baum, Wasser), bauen dort weniger als vier.
 - **Fliegender Speer:** Beim Wurf ist die Hand ab dem Loslassen leer
   (`spearThrown`), der Speer fliegt aber nicht sichtbar zum Tier.
 - **Forschung im Dorfzentrum** (`world/research.ts`): ein Platz je
