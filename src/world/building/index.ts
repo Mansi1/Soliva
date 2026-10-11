@@ -9,6 +9,7 @@
 //    ├─ House                     Wohnraum
 //    ├─ Bowyer                    Werkstatt: ein Bogner macht Bögen aus Holz
 //    ├─ SpearMaker                Werkstatt: ein Speermacher macht Speere aus Holz
+//    ├─ Cobbler                   Werkstatt: ein Schuster macht Holzschuhe
 //    ├─ Forester                  Werkstatt: ein Förster pflanzt Bäume
 //    ├─ FishTrap                  Reuse im Wasser - gebaut über die Fischerhütte
 //    └─ Farm                      Feld mit Furchen
@@ -26,18 +27,19 @@ import { FisherHut } from './FisherHut';
 import { FishTrap } from './FishTrap';
 import { Bowyer } from './Bowyer';
 import { SpearMaker } from './SpearMaker';
+import { Cobbler } from './Cobbler';
 import { Armory } from './Armory';
 import { Forester } from './Forester';
 import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE, type Furrow } from './Farm';
 
 export {
-  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, SpearMaker, Armory, Forester,
+  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, SpearMaker, Cobbler, Armory, Forester,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
   type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type Goods, type TrainableUnit,
 };
 
 /** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs (ohne Taste: nicht darin). */
-export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, SpearMaker, Armory, FisherHut, FishTrap, Forester] as const;
+export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Bowyer, SpearMaker, Cobbler, Armory, FisherHut, FishTrap, Forester] as const;
 
 /** Kennung einer Gebäudeart, z. B. 'lumber_camp'. */
 export type BuildingType = (typeof BUILDING_CLASSES)[number]['definition']['type'];

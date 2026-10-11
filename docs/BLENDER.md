@@ -15,12 +15,12 @@ Blender. Die Bewegungen stecken in eigenen Clip-Bibliotheken, ebenfalls
 src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   villagers/                male, female
   buildings/                town_center, house(_2.._4), lumber_camp(_2.._4), mining_camp,
-                            mill(_2.._4), bowyer, spear_maker, armory, fisher_hut, forester
+                            mill(_2.._4), bowyer, spear_maker, cobbler, armory, fisher_hut, forester
   trees/                    spruce, pine, oak(_young, _old), birch(_2, _3), maple, poplar
   resources/                berry_bush_1..4, stone_1..3, gold_1..3
   animals/                  deer, hare, cow, sheep, goat, boar
-  props/                    axe, hoe, knife, scythe_male/_female, bow, spear, rally_flag, marker_arrow,
-                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears (Lasten, docs/ANIMATION.md)
+  props/                    axe, hoe, knife, scythe_male/_female, bow, spear, clogs, rally_flag, marker_arrow,
+                            load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears/_shoes (Lasten, docs/ANIMATION.md)
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
@@ -92,7 +92,7 @@ Höhe - wird ein Gebäude breiter, wirkt es im Spiel also kleiner.
   `thigh.L`, Knie = `shin.L`, Schulter = `upperArm.L`, Ellbogen =
   `forearm.L`, Kopf von `hand.R` = Halterung der Werkzeuge. Je Eckpunkt
   zählen die zwei stärksten Gewichte (Weight Paint). Starre Teile wie
-  `Head…` und die Stiefel `Leg.*.Lower.*` hängen weiter über ihren
+  `Head…` und die nackten Füße `Leg.*.Lower.*` hängen weiter über ihren
   Namen an einem Knochen. Export mit "Skinning" an und dem Skelett
   ausgewählt.
 
@@ -101,13 +101,14 @@ Namen mit Bedeutung (nicht umbenennen, beim Kopieren mitnehmen):
 | Name | Bedeutung |
 |---|---|
 | `Entry` | Eingang - dorthin gehen Dorfbewohner, wird nicht gezeichnet |
-| `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei, Speermacherei) |
-| `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei, Speermacherei) |
+| `Work.Stand`, `Work.Aim` | Platz an der Werkbank und Blickrichtung (Bognerei, Speermacherei, Schusterei) |
+| `Work.Seat`, `Work.Face` | Hocker, auf dem der Arbeiter ohne Arbeit sitzt, und Blickrichtung (Bognerei, Speermacherei, Schusterei) |
 | `Leg.L`, `Leg.L.Lower`, `Arm.R`, `Arm.R.Lower`, `Head` ... | Körperteile der Figuren - an ihnen hängen die Knochen |
 | `Load` (im Körper) | Anker der Lasten am Rücken - wird nicht gezeichnet |
 | `Goods…`, `Carry…` (`props/load_*`) | Ware (wächst mit der Ladung) und Behälter einer Last |
 | `Leg.FL/FR/BL/BR`, `Head` | Beine und Kopf der Tiere |
 | `Arm.R.Lower.Tool…`, `…Scythe…`, `Knife…` | Werkzeuge an der Hand |
+| `Leg.L.Lower…`, `Leg.R.Lower…` (`props/clogs`) | Holzschuhe an den Unterschenkeln, in Metern um die Mitte am Boden |
 | `Sails` | Flügel der Mühle (drehen sich) |
 | `Cloth` | Fahnentuch (weht) |
 | `Berry.<n>` | einzelne Beeren - verschwinden beim Pflücken |
@@ -195,6 +196,27 @@ Speere an der Wand, im Fass und in der Scheibe, auf der Werkbank `Craft.0`
 (Stange mit Rinde), `Craft.1` (glatter Schaft) und `Craft.2` (fertiger Speer).
 Marker (`Entry`, `Work.*`) und Maße sind die der Bognerei. Der Speer ist 1,9 m
 lang, Schaft `WoodLight`, Bindung `Leather`, Tülle `Iron`, Spitze `Steel`.
+
+## Barfuß, Holzschuhe und Schusterei
+
+Seit B31 (2026-10-12) sind alle Dorfbewohner barfuß. In `villagers/male.glb`
+wurden die Stiefel zu `Leg.*.Lower.Foot` (Haut, schmaler und flacher), der
+Schaft zur Wade `Leg.*.Lower.Calf` (Haut) und die Stulpe zum umgeschlagenen
+Hosensaum `Leg.*.Lower.Hem` (`Tunic`). Alle drei zeigen auf ein unbemaltes
+Pixel des Detail-Bilds, sonst läge die gemalte Sohle auf dem Fuß. In
+`villagers/female.glb` ist der Schuh jetzt der Fuß `Leg.*.Lower.Foot` (Haut),
+der Riemen ist weg. VERIFIED: alle übrigen Objekte, Knochen und Gewichte
+lesen sich nach Import und Export durch Blender Dreieck für Dreieck gleich.
+
+`props/clogs.glb` ist ein Paar Holzschuhe (Klompen) wie getragen: in Metern um
+die Mitte der Figur am Boden, Fersen bei y +0,10 m, Teile `Leg.L.Lower.Clog`
+und `Leg.R.Lower.Clog`, dunkle Öffnung `…Clog.Opening`, Holz `WoodLight`. Es
+passt an Mann und Frau. `props/load_shoes.glb` ist ein Paar am Rücken,
+nur `Carry…`. `buildings/cobbler.glb` ist die Bognerei ohne Bögen, Pfeile und
+Scheibe. Dazu kommen ein Paar am Pflock, ein Regal mit sechs Paaren und auf
+der Werkbank `Craft.0` (Klotz mit Rinde), `Craft.1` (grob behauen) und
+`Craft.2` (fertiges Paar). Marker und Maße sind die der Bognerei. Gebaut ist
+alles headless in Blender, das Skript liegt nicht im Repo.
 
 ## Felder
 

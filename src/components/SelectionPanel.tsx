@@ -141,8 +141,8 @@ export type SelectionView =
       /** Fürs Porträt: Frau oder Mann (der erste). */
       female: boolean;
       /** Genau einer: Name, Frau oder Mann, was er gerade tut. */
-      /** Einer: dazu seine Habe ("Speer") - fehlt, wenn er nichts hat. */
-      single?: { name: string; role: string; doing: string; worker: boolean; inventory?: string };
+      /** Einer: dazu seine Habe ("Speer · Holzschuhe") - fehlt, wenn er nichts hat - und ob er barfuß ist (B31). */
+      single?: { name: string; role: string; doing: string; worker: boolean; inventory?: string; barefoot: boolean };
       count: number;
       label: string;
       names: string;
@@ -227,6 +227,12 @@ function Buildings({ v }: { v: Extract<SelectionView, { kind: 'buildings' }> }) 
       </div>
     </>
   );
+}
+
+/** Was er bei sich hat: "Hat: Speer · Holzschuhe", "Hat: Speer · barfuß" oder nur "barfuß". */
+function Belongings({ inventory, barefoot }: { inventory?: string; barefoot: boolean }) {
+  if (!inventory) return barefoot ? <div class="muted">barfuß</div> : null;
+  return <div>Hat: <b>{inventory}</b>{barefoot ? <span class="muted"> · barfuß</span> : null}</div>;
 }
 
 /** Werkstatt: der Arbeiter und sein Stück (Bogen, Speer ...) - oder wie man einen hinschickt. */
@@ -435,11 +441,11 @@ function Villagers({ v }: { v: Extract<SelectionView, { kind: 'villagers' }> }) 
         <div class="sel-info">
           {v.single ? null : <div class="muted">{v.names}</div>}
           {v.single
-            ? <><div>{v.single.doing}</div>{v.single.inventory ? <div>Hat: <b>{v.single.inventory}</b></div> : null}</>
+            ? <><div>{v.single.doing}</div><Belongings inventory={v.single.inventory} barefoot={v.single.barefoot} /></>
             : <>{v.activities.map(([text, n]) => <div>{n}× {text}</div>)}</>}
           {v.single?.worker ? <div class="muted">Nimmt keine Befehle an, solange zugeteilt - in der Werkstatt entlassen.</div> : <div class="muted">
             Rechtsklick auf Holz, Stein, Gold oder Beeren: sammeln · auf ein Tier: jagen · auf ein Feld: bestellen ·
-            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Speermacherei: Speere machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · sonst: hingehen
+            auf ein Lager: abliefern · auf die Bognerei: Bögen machen · auf die Speermacherei: Speere machen · auf die Schusterei: Holzschuhe machen · auf die Fischerhütte: fischen · auf die Försterhütte: Bäume pflanzen · sonst: hingehen
           </div>}
         </div>
       </div>

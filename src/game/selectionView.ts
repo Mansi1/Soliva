@@ -9,10 +9,10 @@ import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
 import { FishTrap, Forester, type Building, type Farm, type UnitProducer } from '../world/building';
 import {
-  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, FORESTER, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, VILLAGER, WEAPONS, craftRecipe, type AnimalKind, type ResourceKind,
+  BUILDINGS, CROPS, FARMERS_PER_FIELD, FISHING, FORESTER, MAX_GATHERERS, MAX_TRAINING_QUEUE, RESOURCE_KINDS, RESOURCE_LABEL, SHOES, VILLAGER, WEAPONS, craftRecipe, type AnimalKind, type ResourceKind,
 } from '../world/catalog';
 import type { ResourceField } from '../world/resources';
-import { GROWN, type Animal, type AnimalState } from '../world/unit';
+import { GROWN, type Animal, type AnimalState, type Inventory } from '../world/unit';
 import type { FarmPhase, World } from '../world/world';
 import { workplace } from '../world/villagers';
 import type { Selection } from './Selection';
@@ -29,6 +29,15 @@ function goodsText(building: Building): string {
     }
   }
   return parts.length > 0 ? parts.join(', ') : 'leer';
+}
+
+/** Habe eines Dorfbewohners fürs Panel: "Speer · Holzschuhe" - und ob er barfuß ist (B31). */
+export function inventoryView(inventory: Inventory): { inventory?: string; barefoot: boolean } {
+  const items = [
+    inventory.weapon ? WEAPONS[inventory.weapon].label : null,
+    inventory.shoes ? SHOES[inventory.shoes].label : null,
+  ].filter((x) => x !== null);
+  return { inventory: items.length > 0 ? items.join(' · ') : undefined, barefoot: !inventory.shoes };
 }
 
 /** Name nach Geschlecht (B11): Weibchen, Männchen - der Hase heißt für beide gleich. */
@@ -232,7 +241,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       single: single
         ? {
             name: single.name, role: single.female ? 'Dorfbewohnerin' : VILLAGER.label, doing: world.describe(single), worker: !!workplace(single.task),
-            inventory: single.inventory.weapon ? WEAPONS[single.inventory.weapon].label : undefined,
+            ...inventoryView(single.inventory),
           }
         : undefined,
       count: chosen.length,

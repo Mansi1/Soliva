@@ -9,7 +9,7 @@
 // (keine statischen Felder, keine Vorgaben auf Klassenebene).
 
 import { POSE } from '../../gl/entityRenderer';
-import { VILLAGER, type DepositType, type ResourceKind, type Weapon } from '../catalog';
+import { SHOES, VILLAGER, type DepositType, type ResourceKind, type Shoes, type Weapon } from '../catalog';
 import { UnitBase } from './UnitBase';
 
 /**
@@ -80,17 +80,18 @@ export type FishStep = 'enter' | 'choose' | 'boat' | 'launch' | 'row' | 'empty' 
 /**
  * Was ein Dorfbewohner bei sich hat außer der Ladung - es bleibt bei jedem
  * Auftrag und geht nie zurück ins Lager (B25: der Speer gehört dem, der ihn
- * genommen hat). Heute ein Fach für die Waffe; Bogen (B24) und Schuhe (B31)
- * kommen als Werte bzw. weitere Fächer dazu.
+ * genommen hat). Ein Fach für die Waffe (der Bogen, B24, kommt als Wert
+ * dazu) und eins für die Schuhe (B31): null heißt barfuß.
  */
 export interface Inventory {
   weapon: Weapon | null;
+  shoes: Shoes | null;
 }
 
 export class Villager extends UnitBase {
   carrying = 0;
   /** Seine Habe (Inventory) - im Spielstand gespeichert. */
-  inventory: Inventory = { weapon: null };
+  inventory: Inventory = { weapon: null, shoes: null };
   carryType: ResourceKind | null = null;
   task: Task = { kind: 'idle' };
   /** Warum er untätig ist, falls es einen Grund gibt - für die Anzeige. */
@@ -146,6 +147,14 @@ export class Villager extends UnitBase {
 
   get isIdle(): boolean {
     return this.task.kind === 'idle';
+  }
+
+  /**
+   * Tiles je Sekunde: barfuß VILLAGER.speed, mit Schuhen schneller (SHOES).
+   * VERIFIED: tests/shoes.test.mjs - mit Holzschuhen 10 % weiter in derselben Zeit.
+   */
+  get speed(): number {
+    return VILLAGER.speed * (this.inventory.shoes ? SHOES[this.inventory.shoes].speed : 1);
   }
 
   get isFull(): boolean {

@@ -18,7 +18,7 @@
 // Gepflanzte Bäume ohne neue Version: `planted` fehlt in älteren Ständen -
 // dort steht dann nur, was das Gelände trägt.
 // Habe der Dorfbewohner ohne neue Version: `inv` fehlt in älteren Ständen und
-// ohne Habe - dann hat er nichts (B25).
+// ohne Habe - dann hat er nichts (B25) und ist barfuß (`inv.shoes` fehlt, B31).
 
 import type { BuildingSave } from './building';
 import type { PlantedSave } from './deposits';

@@ -9,11 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T21:36:02Z s=560a6297 FINDING src/trackTags.ts:readTrackTags link learn=test: tests/track-tags.test.mjs: no link for WCOM only, other description, javascript: URL.
-2026-10-09T21:38:33Z s=560a6297 DONE fp=b164b6cf31da cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+24)
-2026-10-09T21:38:33Z s=560a6297 FINDING assets/music/*.mp3 WCOM; tests/track-tags.test.mjs no-link cases learn=test: No-link cases stay in tests/track-tags.test.mjs.
-2026-10-09T21:50:45Z s=560a6297 DONE fp=b7f55f1c3459 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T21:53:37Z s=560a6297 DONE fp=e27769bcddf2 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T21:55:27Z s=560a6297 DONE fp=16639f7cd7cc cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T21:57:58Z s=560a6297 DONE fp=485f83e6dde1 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T21:59:00Z s=560a6297 DONE fp=882598d1dc84 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +99,8 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T21:55:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask learn=none: Shader constant; covered visually only.
 2026-10-11T21:55:49Z s=560a6297 FINDING src/world/villagers.ts:hopeless learn=test: tests/spear.test.mjs gives up on the hare.
 2026-10-11T21:55:49Z s=560a6297 FINDING src/world/save.ts:inv learn=test: tests/spear.test.mjs save round-trip and old save.
+2026-10-11T22:31:17Z s=560a6297 DONE fp=c0a7c323a884 cov=80.5% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+22)
+2026-10-11T22:31:17Z s=560a6297 FINDING src/world/villagers.ts:lookForShoes learn=test: tests/shoes.test.mjs idle fetch, detour near, no detour far.
+2026-10-11T22:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:shin anchor learn=none: Visual-only shader change.
+2026-10-11T22:31:17Z s=560a6297 FINDING src/models/villagers/{male,female}.glb learn=test: tests/ids + check-models.
+2026-10-11T22:31:17Z s=560a6297 FINDING src/world/save.ts:inv.shoes learn=test: tests/shoes.test.mjs save round-trip.

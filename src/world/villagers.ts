@@ -11,8 +11,8 @@ import { findPath, lineOfSight, type Blocked } from './pathfinding';
 import { CROWDED_ARRIVAL, freeSpot, occupied, separate, steer, type Point } from './crowd';
 import { FishTrap, Forester, furrowFood, type Building, type Farm } from './building';
 import {
-  CROPS, FARM_RATE, FISH_KIND, FISHING, FORESTER, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL, SOW_TIME,
-  TREE_SPECIES, VILLAGER, WEAPONS, WEAPON_KINDS, YIELD, craftRecipe,
+  COBBLER, CRAFTS, CROPS, FARM_RATE, FISH_KIND, FISHING, FORESTER, HUNT, MAX_GATHERERS, MEAT_KIND, PLOUGH_TIME, REPLOUGH_AFTER, RESEED_COST, RESOURCE_LABEL,
+  SHOES, SOW_TIME, TREE_SPECIES, VILLAGER, WEAPONS, YIELD, craftRecipe,
   type AnimalKind, type DepositType, type ResourceKind,
 } from './catalog';
 import { depositKind } from './resources';
@@ -136,6 +136,13 @@ export class VillagerWork {
    * wird; nach Villager.carryKind ziehen, wenn unit/Villager.ts ohnehin angefasst wird.
    */
   private carryKinds = new WeakMap<Villager, string>();
+  /**
+   * Barfüßige auf dem Umweg zur Schusterei (B31, lookForShoes): Dorfbewohner →
+   * Anker der Schusterei. Nicht gespeichert - nach dem Laden sucht er neu.
+   */
+  private shoeTrips = new WeakMap<Villager, string>();
+  /** Schustereien mit mindestens einem Paar Schuhe - einmal je Tick gesucht (beginTick). */
+  private shoeShops: Building[] = [];
 
   constructor(private world: World) {}
 
@@ -173,6 +180,7 @@ export class VillagerWork {
     for (const v of selected) {
       v.inside = 0;
       v.unreachable.clear();
+      this.shoeTrips.delete(v);
     }
 
     const target = this.world.at(x, y);
@@ -264,6 +272,8 @@ export class VillagerWork {
 
   /** Vor den Ticks aller Dorfbewohner: wer auf welcher Furche arbeitet. */
   beginTick() {
+    this.shoeShops = [];
+    for (const b of this.world.allBuildings()) if (b.goods.shoes && b.stored('shoes') >= 1) this.shoeShops.push(b);
     this.farmRows.clear();
     for (const v of this.world.villagers) {
       if (v.task.kind === 'farm') this.addFarmer(v, `${v.task.building}#${v.task.row}`);
@@ -389,7 +399,7 @@ export class VillagerWork {
     const dx = next.x - v.x;
     const dy = next.y - v.y;
     const dn = Math.hypot(dx, dy) || 1e-6;
-    const step = Math.min(VILLAGER.speed * dt, final ? d - reach : dn);
+    const step = Math.min(v.speed * dt, final ? d - reach : dn);
     let [ux, uy] = [dx / dn, dy / dn];
     // Anderen ausweichen (crowd.ts) - aber nicht in einen Baum oder ins Wasser.
     if (!afloat) {
@@ -712,18 +722,21 @@ export class VillagerWork {
   }
 
   /**
-   * Bogner und Speermacher: holt Holz vom nächsten Lager, das Holz annimmt,
+   * Bogner, Speermacher und Schuster: holt Holz vom nächsten Lager, das Holz annimmt,
    * schnitzt daraus an der Werkbank ein Stück (Rezept der Werkstatt, CRAFTS)
-   * und trägt es zur nächsten Waffenkammer - immer wieder, solange Holz im Vorrat ist.
-   * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer.
+   * und trägt es zur nächsten Waffenkammer - Schuhe in die eigene Werkstatt -,
+   * immer wieder, solange Holz im Vorrat ist.
+   * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer;
+   * tests/shoes.test.mjs - 3 Holz werden ein Paar Holzschuhe in der Schusterei.
    */
   private tickCrafter(v: Villager, task: Extract<Task, { kind: 'craft' }>, dt: number) {
     v.need = null;
     const shop = this.world.building(task.building);
     const recipe = shop && craftRecipe(shop.type);
     if (!shop?.isWorkshop() || !recipe) {
-      // Die Werkstatt ist weg - eine fertige Waffe bringt er trotzdem zur Waffenkammer.
-      const armory = v.carryType && WEAPON_KINDS.includes(v.carryType) ? this.nearestDropSite(v, v.carryType) : undefined;
+      // Die Werkstatt ist weg - ein fertiges Stück bringt er trotzdem zu einem Lager dafür.
+      const product = Object.values(CRAFTS).some((r) => r.product === v.carryType);
+      const armory = v.carryType && product ? this.nearestDropSite(v, v.carryType) : undefined;
       v.task = armory ? { kind: 'deliver', building: armory.anchor } : { kind: 'idle' };
       return;
     }
@@ -739,9 +752,10 @@ export class VillagerWork {
       return;
     }
     if (task.step === 'deliver') {
-      // Zur nächsten Waffenkammer, die noch Platz hat - so füllen sie sich eine
+      // Lagert die Werkstatt ihre Ware selbst (Schuhe), ins eigene Regal. Sonst
+      // zur nächsten Waffenkammer, die noch Platz hat - so füllen sie sich eine
       // nach der anderen. Alle voll: er wartet mit dem Bogen, bis Platz ist.
-      const armory = this.nearestDropSite(v, recipe.product);
+      const armory = shop.stores(recipe.product) ? shop : this.nearestDropSite(v, recipe.product);
       if (!armory) {
         v.problem = this.world.weaponCapacity() > 0
           ? 'Alle Waffenkammern sind voll - baue noch eine'
@@ -762,7 +776,7 @@ export class VillagerWork {
       }
       // Erst losgehen, wenn es genug gibt - sonst wartet er an der Werkbank.
       if (v.inside <= 0 && !this.world.canPay({ wood: recipe.wood })) {
-        v.problem = `Zu wenig Holz im Vorrat (${recipe.wood} je ${recipe.product === 'bows' ? 'Bogen' : 'Speer'})`;
+        v.problem = `Zu wenig Holz im Vorrat (${recipe.wood} je ${recipe.unit})`;
         this.sitDown(v, shop, dt, 'wood');
         return;
       }
@@ -790,7 +804,7 @@ export class VillagerWork {
     if (task.progress >= 1) {
       task.progress = 0;
       v.pickUp(recipe.product, 1);
-      this.carryKinds.set(v, RESOURCE_LABEL[recipe.product]);
+      this.carryKinds.set(v, recipe.kind ?? RESOURCE_LABEL[recipe.product]);
       task.step = 'deliver';
     }
     this.world.markDirty();
@@ -1047,7 +1061,10 @@ export class VillagerWork {
   /** Rechtsklick auf ein Tier: die Ausgewählten jagen es bzw. zerlegen den Kadaver. */
   hunt(ids: ReadonlySet<number>, animal: Animal): string | null {
     const chosen = this.controllable(ids);
-    for (const v of chosen) v.assign({ kind: 'hunt', animal: animal.id, delivering: false, cooldown: 0 });
+    for (const v of chosen) {
+      v.assign({ kind: 'hunt', animal: animal.id, delivering: false, cooldown: 0 });
+      this.shoeTrips.delete(v);
+    }
     return chosen.length === 0 && ids.size > 0 ? WORKER_BUSY : null;
   }
 
@@ -1139,10 +1156,10 @@ export class VillagerWork {
    * er oder schneller, sofort. So läuft er nie endlos hinterher.
    * VERIFIED: tests/spear.test.mjs - den Hasen (flee 0.79) gibt er auf, das Schaf holt er ein.
    */
-  private hopeless(task: Extract<Task, { kind: 'hunt' }>, a: Animal, gap: number): boolean {
+  private hopeless(v: Villager, task: Extract<Task, { kind: 'hunt' }>, a: Animal, gap: number): boolean {
     const def = a.definition;
     const speed = a.state === 'flee' ? def.flee : a.state === 'walk' ? def.walk : 0;
-    const closing = VILLAGER.speed - speed;
+    const closing = v.speed - speed;
     return closing <= 1e-6 || (task.chase ?? 0) + gap / closing > HUNT.chaseLimit;
   }
 
@@ -1189,7 +1206,7 @@ export class VillagerWork {
       const d = Math.hypot(a.x - v.x, a.y - v.y);
       task.cooldown = Math.max(0, task.cooldown - dt);
       if (d > range) {
-        if (!armed && this.hopeless(task, a, d - range)) {
+        if (!armed && this.hopeless(v, task, a, d - range)) {
           v.assign({ kind: 'idle' });
           v.problem = `Ohne Speer zu langsam - ${a.label} entkommt`;
           return;
@@ -1231,8 +1248,79 @@ export class VillagerWork {
     if (v.carrying >= VILLAGER.capacity - 1e-6 || a.food <= 1e-6) task.delivering = true;
   }
 
-  /** Ein Tick für einen Dorfbewohner: seinen Auftrag ein Stück weiter ausführen. */
+  /**
+   * Ein Tick für einen Dorfbewohner: seinen Auftrag ein Stück weiter ausführen -
+   * es sei denn, er holt sich gerade Schuhe (B31, fetchShoes); danach sieht er,
+   * ob er sich welche holt (lookForShoes).
+   */
   tick(v: Villager, dt: number) {
+    if (this.fetchShoes(v, dt)) return;
+    this.tickTask(v, dt);
+    this.lookForShoes(v);
+  }
+
+  /**
+   * Barfuß (B31): ist er untätig, geht er zur nächsten Schusterei mit Schuhen;
+   * geht er gerade (Pose walk, egal wohin) näher als COBBLER.detour Tiles an
+   * einer vorbei, macht er den Umweg. Danach weiter mit seinem Auftrag
+   * (fetchShoes). Nicht im Boot, nicht im Gebäude und nicht dorthin, wo er
+   * schon keinen Weg fand (v.unreachable).
+   * ponytail: "auf dem Weg" ist der Abstand von seiner Stelle zur Schusterei, nicht
+   * der ganze Weg; den Weg (v.path) prüfen, wenn Umwege über Hindernisse stören.
+   * VERIFIED: tests/shoes.test.mjs - untätig holt er sie, im Vorbeigehen auch, weiter weg nicht.
+   */
+  private lookForShoes(v: Villager) {
+    if (v.inventory.shoes || this.shoeShops.length === 0 || v.inside > 0 || inBoat(v)) return;
+    const idle = v.task.kind === 'idle';
+    if (!idle && v.pose !== POSE.walk) return;
+    let best: Building | undefined;
+    let bestDistance: number = idle ? Infinity : COBBLER.detour;
+    for (const b of this.shoeShops) {
+      if (b.stored('shoes') < 1 || v.unreachable.has(b.anchor)) continue;
+      const d = Math.hypot(b.x + 0.5 - v.x, b.y + 0.5 - v.y);
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = b;
+      }
+    }
+    if (best) this.shoeTrips.set(v, best.anchor);
+  }
+
+  /**
+   * Auf dem Umweg zur Schusterei (lookForShoes): hingehen, hinein, ein Paar
+   * anziehen, wieder heraus - true, solange er damit beschäftigt ist. Ist sie
+   * inzwischen leer oder weg oder gibt es keinen Weg, lässt er es.
+   * ponytail: er nimmt irgendein Paar und trägt Holzschuhe; die Sorte im Lager
+   * (SHOES[..].kind) auswerten, wenn es Lederschuhe gibt.
+   * VERIFIED: tests/shoes.test.mjs - er nimmt genau ein Paar.
+   */
+  private fetchShoes(v: Villager, dt: number): boolean {
+    const anchor = this.shoeTrips.get(v);
+    if (anchor === undefined) return false;
+    const shop = this.world.building(anchor);
+    if (!shop || (v.inside <= 0 && (v.inventory.shoes || shop.stored('shoes') < 1))) {
+      this.shoeTrips.delete(v);
+      return false;
+    }
+    // Ein alter Grund aus seinem Auftrag zählt hier nicht.
+    if (v.problem === UNREACHABLE) v.problem = null;
+    const done = this.enter(v, shop, dt, () => {
+      if (v.inventory.shoes || shop.takeGoods('shoes', 1) < 1) return;
+      v.inventory.shoes = 'wood';
+      this.world.markDirty();
+    });
+    if (v.problem === UNREACHABLE) {
+      // Kein Weg dorthin - enter hat sie in v.unreachable gemerkt.
+      v.problem = null;
+      this.shoeTrips.delete(v);
+      return false;
+    }
+    if (done) this.shoeTrips.delete(v);
+    return true;
+  }
+
+  /** Der Auftrag, ein Stück weiter. */
+  private tickTask(v: Villager, dt: number) {
     const task = v.task;
     switch (task.kind) {
       case 'idle':
@@ -1376,6 +1464,7 @@ export class VillagerWork {
   describe(v: Villager): string {
     if (v.problem) return v.problem;
     const load = v.carrying > 0 && v.carryType ? ` (${Math.floor(v.carrying)})` : '';
+    if (this.shoeTrips.has(v)) return `holt sich ${SHOES.wood.label}` + load;
     switch (v.task.kind) {
       case 'idle': return 'untätig' + load;
       case 'move': return 'unterwegs' + load;
@@ -1397,7 +1486,9 @@ export class VillagerWork {
         switch (v.task.step) {
           case 'enter': return `geht in die ${label}`;
           case 'fetch': return `holt Holz für die ${label}` + load;
-          case 'deliver': return `bringt ${item} zur Waffenkammer`;
+          case 'deliver': return shop?.stores(craftRecipe(shop.type)?.product ?? 'bows')
+            ? `bringt ${item} ins Regal`
+            : `bringt ${item} zur Waffenkammer`;
           case 'carve': return v.carryType === 'wood'
             ? 'bringt Holz zur Werkbank' + load
             : `schnitzt ${item} (${Math.floor(v.task.progress * 100)} %)`;

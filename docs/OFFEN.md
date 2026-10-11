@@ -85,6 +85,11 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
   Spiel aus dem Körper.
 - **Weitere Werkzeuge** als Anhänge: Spitzhacke - heute hält jeder beim
   Hacken das Beil. Hacke (Pflügen) und Speer (Jagd, B25) gibt es.
+- **Schuhe (B31):** Lederschuhe (+20 %) brauchen Leder aus der Schlachtung und
+  eine Forschung; der Platz dafür ist da (`SHOES`, Sorte im Lager). Das Regal
+  der Schusterei zeigt immer sechs Paare, nicht den Vorrat. Die Symbole der
+  Rohstoffleiste (`src/icons`, `npm run gen:ui`) zeigen die Dorfbewohner noch
+  mit Stiefeln.
 - **Fliegender Speer:** Beim Wurf ist die Hand ab dem Loslassen leer
   (`spearThrown`), der Speer fliegt aber nicht sichtbar zum Tier.
 - **Einsturz:** bleibt prozedural. Möglich wäre je Gebäude ein gestalteter
