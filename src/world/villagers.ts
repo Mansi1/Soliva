@@ -17,6 +17,7 @@ import {
 } from './catalog';
 import { craftTaskRecipe } from './research';
 import { describeArcher, sendToRange, tickArcher } from './archery';
+import { describeBuilder, sendToSite, tickBuilder } from './construction';
 import { practise, skillFactor } from './unit/skills';
 import { depositKind } from './resources';
 import { PastureWork, TAME } from './pasture';
@@ -211,6 +212,8 @@ export class VillagerWork {
     }
 
     const target = this.world.at(x, y);
+    // Baustelle (B26): bis zu vier bauen dort (construction.ts).
+    if (target && !target.built) return sendToSite(this.world, this, selected, target);
     // Schießplatz (B24): bis zu sechs üben dort (archery.ts).
     if (target instanceof ArcheryRange) return sendToRange(this.world, selected, target);
     if (target?.isWorkshop()) {
@@ -558,7 +561,7 @@ export class VillagerWork {
    * Nächstes nicht leeres Feld derselben Art um (x, y), auf dem noch Platz
    * ist (höchstens MAX_GATHERERS).
    */
-  private nextDeposit(
+  nextDeposit(
       type: DepositType, x: number, y: number,
       occupancy: Map<string, number> = this.occupancy(),
   ): { x: number; y: number } | null {
@@ -1437,6 +1440,9 @@ export class VillagerWork {
       case 'tend':
         this.pastures.tick(v, task, dt);
         return;
+      case 'build':
+        tickBuilder(this, this.world, v, task, dt);
+        return;
 
       case 'deliver': {
         const building = this.world.building(task.building);
@@ -1616,6 +1622,8 @@ export class VillagerWork {
       }
       case 'tend':
         return this.pastures.describe(v, v.task);
+      case 'build':
+        return describeBuilder(this.world, v.task);
       case 'farm': {
         const building = this.world.building(v.task.building);
         const f = building?.isFarm() ? building.furrows[v.task.row] : undefined;

@@ -45,6 +45,9 @@ const RULES = [
   { match: /^props\/scythe_/, needs: ['Arm.R.Lower.Scythe'], why: 'Sense an der Hand' },
   { match: /^props\/knife$/, needs: ['Knife'], why: 'Zugmesser in beiden Händen' },
   // Andere Namen hingen an der Hand statt am Rücken, "Load" wäre ein unsichtbarer Marker.
+  // Baustelle (B26, world/construction.ts): ein Stück Absteckung je Tile-Kante, Gerüst.
+  { match: /^props\/site_edge$/, needs: ['Site.Post', 'Site.Cord'], why: 'Pflock und Schnur der Baustelle' },
+  { match: /^props\/scaffold$/, only: ['Scaffold'], why: 'Gerüst der Baustelle' },
   { match: /^props\/load_/, only: ['Goods', 'Carry'], why: 'Last am Oberkörper: Ware (Goods) wächst, Behälter (Carry) bleibt' },
 ];
 

@@ -1,6 +1,6 @@
 // Rauchtest im Browser: spielt die wichtigsten Wege einmal durch - Hauptmenü,
 // neues Spiel, bauen, ausbilden, Feld über das Untermenü, Weide, speichern und neu
-// laden, Demo, alter Spielstand, Galerie, Clips aus Blender. Bricht mit Exit-Code 1 ab, wenn
+// laden, Demo, alter Spielstand, Galerie, Baustellen (B26), Clips aus Blender. Bricht mit Exit-Code 1 ab, wenn
 // etwas fehlt oder die Seite einen Fehler wirft.
 //
 // Aufruf: erst `npm run dev`, dann `npm run smoke` bzw.
@@ -53,6 +53,15 @@ async function saved(seed = SEED) {
   return JSON.parse(await page.evaluate((key) => localStorage.getItem(key), `pgm.world.${seed}`));
 }
 const count = (data, type) => data.buildings.filter((b) => b.t === type).length;
+/** Cheat eingeben wie ein Spieler: Enter, Text, Enter (main.ts, CHEATS). */
+async function cheat(code) {
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(code);
+  await page.keyboard.press('Enter');
+  await wait(150);
+}
+/** Ist die Baustelle dieser Art fertig gebaut (B26: im Spielstand ohne `bp`)? */
+const finished = async (type) => (await saved()).buildings.some((b) => b.t === type && b.bp === undefined);
 
 /**
  * Im Baumodus Punkte rund um die Bildmitte anklicken, bis eines steht - Wasser
@@ -124,12 +133,46 @@ check('Dorfzentrum gebaut', !!tcPoint);
 await cancel();
 await page.keyboard.press('2');
 const housePoint = await placeNearCenter('house');
-check('Haus gebaut', !!housePoint);
+// B26: gesetzt wird eine Baustelle - bezahlt, aber erst Dorfbewohner bauen sie.
+const houseSite = (await saved()).buildings.find((b) => b.t === 'house');
+check('Haus abgesteckt (Baustelle)', !!housePoint && houseSite?.bp === 0, `bp=${houseSite?.bp}`);
+await cancel();
+const sitePanel = housePoint && await findNear('Baustelle: Haus', housePoint)
+  ? await page.$eval('#selection', (e) => e.textContent) : '';
+check('Panel der Baustelle', sitePanel.includes('0 % · Bauende 0/4'), sitePanel.slice(0, 80) || 'nicht gefunden');
 await cancel();
 // Försterhütte (0): Baumart im Panel wählen wie die Frucht beim Feld, Pflanzplatz-Knopf wie der Sammelpunkt (B9).
 await page.keyboard.press('0');
 const foresterPoint = await placeNearCenter('forester');
-check('Försterhütte gebaut', !!foresterPoint);
+check('Försterhütte abgesteckt', !!foresterPoint);
+await cancel();
+// Bauen (B26): 20 Helfer per Cheat neben der Hütte, per Rahmen wählen (nicht bis an den Bildrand -
+// dort scrollt die Kamera), Rechtsklick auf die Baustelle.
+// Mit "speedy gonzales" steht sie, sobald einer dort arbeitet; danach bauen sie das Haus nebenan.
+await cheat('speedygonzales');
+let helpers = null;
+for (const [dx, dy] of [[0, 140], [0, -140], [180, 0], [-180, 0], [180, 140], [-180, -140]]) {
+  if (!foresterPoint) break;
+  const at = { x: foresterPoint.x + dx, y: foresterPoint.y + dy };
+  const before = (await saved()).villagers.length;
+  await page.mouse.move(at.x, at.y);
+  await cheat('ineedhelp');
+  if ((await saved()).villagers.length > before) {
+    helpers = at;
+    break;
+  }
+}
+if (helpers) {
+  await page.mouse.move(Math.max(345, helpers.x - 200), Math.max(70, helpers.y - 150));
+  await page.mouse.down();
+  await page.mouse.move(Math.min(940, helpers.x + 200), Math.min(760, helpers.y + 150), { steps: 8 });
+  await page.mouse.up();
+  await page.mouse.click(foresterPoint.x, foresterPoint.y, { button: 'right' });
+}
+for (let i = 0; i < 40 && !(await finished('forester') && await finished('house')); i++) await wait(500);
+check('Dorfbewohner bauen Försterhütte und Haus', await finished('forester') && await finished('house'),
+  helpers ? JSON.stringify((await saved()).buildings.map((b) => [b.t, b.bp ?? 1])) : 'keine Helfer erschienen');
+await cheat('speedygonzales');
 await cancel();
 if (foresterPoint && await findNear('Försterhütte', foresterPoint)) {
   await page.click('#actions .cmd-btn[data-action=species][data-species=birch]');
@@ -282,25 +325,28 @@ check('Demo geladen', (await page.title()).endsWith('Demo') && demo.villagers.le
 await page.keyboard.press('j');
 const spearPoint = await placeNearCenter('spear_maker', 'Demo');
 await cancel();
-const spearPanel = spearPoint && await findNear('Speermacherei', spearPoint)
+// B26: eine Baustelle - ihr Panel sagt, wie weit und wer baut.
+const spearPanel = spearPoint && await findNear('Baustelle: Speermacherei', spearPoint)
   ? await page.$eval('#selection', (e) => e.textContent) : '';
-check('Speermacherei gebaut', !!spearPoint && spearPanel.includes('Rechtsklick mit einem Dorfbewohner'), spearPanel.slice(0, 80) || 'nicht gebaut/gefunden');
+check('Speermacherei abgesteckt', !!spearPoint && spearPanel.includes('Bauende 0/4') && spearPanel.includes('Rechtsklick mit Dorfbewohnern'),
+  spearPanel.slice(0, 80) || 'nicht gebaut/gefunden');
 await cancel();
 // Schusterei (K, B31): wie die Speermacherei, das Panel zeigt dazu ihr leeres Regal.
 await page.keyboard.press('k');
 const cobblerPoint = await placeNearCenter('cobbler', 'Demo');
 await cancel();
-const cobblerPanel = cobblerPoint && await findNear('Schusterei', cobblerPoint)
+const cobblerPanel = cobblerPoint && await findNear('Baustelle: Schusterei', cobblerPoint)
   ? await page.$eval('#selection', (e) => e.textContent) : '';
-check('Schusterei gebaut', !!cobblerPoint && cobblerPanel.includes('Rechtsklick mit einem Dorfbewohner') && cobblerPanel.includes('Vorrat: leer'),
+// Eine Baustelle lagert noch nichts - kein Regal im Panel.
+check('Schusterei abgesteckt', !!cobblerPoint && cobblerPanel.includes('Bauende 0/4') && !cobblerPanel.includes('Vorrat'),
   cobblerPanel.slice(0, 80) || 'nicht gebaut/gefunden');
 // Schießplatz (B, B24): drei mal drei Tiles; das Panel zählt die Schützen.
 await page.keyboard.press('b');
 const rangePoint = await placeNearCenter('archery_range', 'Demo');
 await cancel();
-const rangePanel = rangePoint && await findNear('Schießplatz', rangePoint)
+const rangePanel = rangePoint && await findNear('Baustelle: Schießplatz', rangePoint)
   ? await page.$eval('#selection', (e) => e.textContent) : '';
-check('Schießplatz gebaut', !!rangePoint && rangePanel.includes('Schützen: 0/6'), rangePanel.slice(0, 80) || 'nicht gebaut/gefunden');
+check('Schießplatz abgesteckt', !!rangePoint && rangePanel.includes('Bauende 0/4') && !rangePanel.includes('Schützen'), rangePanel.slice(0, 80) || 'nicht gebaut/gefunden');
 await cancel();
 
 // Verliert die Symbol-Bühne (modelIcons.ts, 320×400, nicht auf der Seite) ihren

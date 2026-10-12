@@ -14,6 +14,7 @@ import { reliefZ } from '../noise';
 import { DETAIL_TILE_SIZE, PARTICLE, type ParticleSources } from '../particles';
 import { FishTrap, furrowPosition } from './building';
 import { pastureInstances } from './pasture';
+import { siteInstances } from './construction';
 import { KIND_LABEL, hash } from './resources';
 import { BUILDINGS, CROPS, FISH_KIND, FISHING, MEAT_KIND, VILLAGER, player, type CropType, type ResourceKind } from './catalog';
 import {
@@ -178,6 +179,11 @@ export function worldInstances(
   for (const building of world.allBuildings()) {
     if (building.x < x0 || building.x > x1 || building.y < y0 || building.y > y1) continue;
     const def = building.definition;
+    // Baustelle (B26): Absteckung, das halbe Gebäude, Gerüst (construction.ts).
+    if (!building.built) {
+      siteInstances(building, (x, y) => world.groundAt?.(x, y), out, !!selection?.buildings.has(building.anchor));
+      continue;
+    }
     // Weide (B27): Zaun an den Außenkanten, ein Gatter je Weide (pasture.ts).
     if (building.type === 'pasture') {
       pastureInstances(world, building, out);
@@ -414,7 +420,8 @@ function workParticles(world: World, v: World['villagers'][number], x: number, y
   const t = v.task;
   const [fx, fy] = [Math.cos(v.heading), Math.sin(v.heading)];
   const ground = (px: number, py: number) => world.groundAt?.(px, py) ?? 0;
-  if (t.kind === 'gather' && t.type === 'wood' && v.pose === POSE.work) {
+  // Späne auch beim Bauen (B26) - er zimmert mit dem Beil.
+  if (((t.kind === 'gather' && t.type === 'wood') || t.kind === 'build') && v.pose === POSE.work) {
     const [px, py] = [x + fx * 0.12, y + fy * 0.12];
     out.push(PARTICLE.chips, px, py, ground(px, py), 0.1, fx, fy, 0, 1, v.id, 0, 6);
   } else if (t.kind === 'farm' && v.pose === POSE.work) {

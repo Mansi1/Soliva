@@ -82,7 +82,12 @@ export type Task =
    * Wegstück), hütet (`tend`: Milch und Wolle holen), schlachtet (`slaughter`)
    * und bringt die Ladung zum Lager (`deliver`).
    */
-  | { kind: 'tend'; pasture: string; step: TendStep; animal?: number; progress: number; chase?: number };
+  | { kind: 'tend'; pasture: string; step: TendStep; animal?: number; progress: number; chase?: number }
+  /**
+   * Baut an der Baustelle `building` auf Platz `slot` (0..3, B26,
+   * world/construction.ts): geht hin (`walk`) und baut (`work`).
+   */
+  | { kind: 'build'; building: string; slot: number; step: 'walk' | 'work' };
 
 export type TendStep = 'catch' | 'lead' | 'tend' | 'slaughter' | 'deliver';
 

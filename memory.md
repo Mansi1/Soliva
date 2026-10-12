@@ -43,6 +43,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 
 - 2026-09-27: Partikel (`gl/particleRenderer.ts`) sind Punkte ohne Zustand - ihre Lage rechnet der Shader aus Quelle, Partikelnummer und `animationTime()`. Ein Standbild zeigt deshalb nur einen Augenblick; Seltenes wie Gold- und Steinblitze fehlt oft darin. Zum Prüfen die Galerie (`/galerie?zeige=Partikel&animation=...`) oder `particleSources` in den Render-Stats. `Terrain.resourceAt().height` ist die grobe Höhe - im Gebirge Tiles unter dem sichtbaren Relief. Was auf dem Boden sitzen soll, nimmt `world.groundAt`.
 
+- 2026-10-12, `feat/bau`: Der Schnitt `vCut` (Absägen) färbte bei Gebäuden alle Außenwände als Schnittfläche (`gl_FrontFacing` ist dort die Außenseite, anders als beim Stamm) - Baustellen setzen darum `vCapNormal` 0. Im Rauchtest scrollt ein Auswahlrahmen bis y > 792 (8 px Rand) die Kamera; danach trifft ein Rechtsklick an alter Stelle ein anderes Tile.
+
 ## Messen
 
 - 2026-09-26: Die erste Sekunde nach dem Laden hat eine lange Long Task - nie mitmessen. Zählwerte je Bench-Szene (Draw-Calls, Eckpunkte) stehen in `tools/perf/baseline.json`.
