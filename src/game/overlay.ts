@@ -10,6 +10,8 @@ import type { Building } from '../world/building';
 import { modelsOf, siteVariant } from '../world/building/BuildingBase';
 import { BUILDINGS, CROPS, FIELD_ROWS, VILLAGER, player, type BuildingType } from '../world/catalog';
 import { workplace } from '../world/villagers';
+import { isWallType, wallPreview } from '../world/walls';
+import type { LineTile } from './Placement';
 import type { World } from '../world/world';
 import type { Selection } from './Selection';
 
@@ -139,12 +141,17 @@ export function selectionOverlay(
  * wenn es hier nicht geht (nicht in der Spielerfarbe: die kann selbst rot
  * sein). Das Modell ist die Variante, die hier gebaut würde. Felder zeigen
  * rundum, wo gesät werden kann, und die Frucht Furche für Furche auf den
- * Tiles, die sie bekämen.
+ * Tiles, die sie bekämen. Mauern (B34) zeigen beim Ziehen ihre ganze Linie (`line`).
  */
 // VERIFIED: tests/build-preview.test.mjs - Vorschau und gebautes Haus haben an 9 Bauplätzen dasselbe Modell.
-export function placementOverlay(world: World, type: BuildingType, tileX: number, tileY: number, blocked: boolean, out: EntityInstance[]) {
+export function placementOverlay(world: World, type: BuildingType, tileX: number, tileY: number, blocked: boolean, out: EntityInstance[],
+                                 line?: readonly LineTile[]) {
   const def = BUILDINGS[type];
   const color = blocked ? BLOCKED : SELECTED;
+  if (isWallType(type)) {
+    wallPreview(world, type, line?.length ? line : [{ x: tileX, y: tileY, ok: !blocked }], { ok: SELECTED, blocked: BLOCKED }, out);
+    return;
+  }
 
   // Felder: rund um den Zeiger zeigen, wo gesät werden kann.
   if (type === 'farm') {

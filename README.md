@@ -98,6 +98,13 @@ neuen Lager, einer übernimmt die Werkstatt, oder sie bauen an der nächsten
 Baustelle weiter. Felder, Weiden, Reusen und das erste Dorfzentrum stehen
 sofort. Regeln und Zahlen: `src/world/construction.ts`.
 
+Mauern (`L` Palisade, `U` Steinmauer): klicken, ziehen, loslassen - je Tile
+ein Stück, als Treppe auch schräg. Jedes Stück ist eine kleine Baustelle
+(Palisade 3 Holz, 5 s; Steinmauer 8 Stein, 10 s). Die Steinmauer gibt es erst
+nach der Forschung „Steinmauer" im Dorfzentrum. Im Panel eines Stücks wird es
+zum Tor: eigene Dorfbewohner gehen hindurch, Tiere nicht; abgeschlossen kommt
+niemand durch. Regeln: `src/world/walls.ts`, `src/world/building/Wall.ts`.
+
 ## Cheats
 
 `Enter` öffnet unten in der Mitte ein Eingabefeld: Cheat eintippen, mit

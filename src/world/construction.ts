@@ -11,6 +11,8 @@
 // Lager 45 s, Waffenkammer 60 s, Dorfzentrum 120 s (BUILD_TIME). Jeder weitere
 // baut mit, aber weniger (BUILDER_SPEED): 1 + 0,7 + 0,5 + 0,35 - zu viert
 // 2,55-mal so schnell. Übung im Bauen macht schneller (unit/skills.ts).
+// Mauern (B34) je Tile: Palisade 5 s, Steinmauer 10 s - eine Linie baut sich
+// Stück für Stück, wer fertig ist, geht zum nächsten (followUp).
 // Felder, Weiden und Reusen stehen sofort (BUILD_TIME 0), ebenso das erste
 // Dorfzentrum einer Welt - ohne es gibt es keine Dorfbewohner.
 //
@@ -43,6 +45,7 @@ export const BUILD_TIME: Record<BuildingType, number> = {
   lumber_camp: 45, mining_camp: 45, mill: 45,
   bowyer: 45, spear_maker: 45, cobbler: 45, fisher_hut: 45, forester: 45, archery_range: 45,
   armory: 60,
+  palisade: 5, stone_wall: 10,
   farm: 0, pasture: 0, fish_trap: 0,
 };
 
@@ -95,8 +98,11 @@ function freeSlot(work: VillagerWork, site: Building, used: ReadonlySet<number>)
 
 /**
  * Rechtsklick auf eine Baustelle: jeder Ausgewählte bekommt den kleinsten
- * freien Platz. Ist keiner mehr frei, bleibt er stehen und sagt es.
- * VERIFIED: tests/construction.test.mjs - von fünf bauen vier, der fünfte nicht.
+ * freien Platz. Ist keiner mehr frei, geht er zur nächsten Baustelle in der
+ * Nähe mit freiem Platz (eine Mauer sind viele kleine, B34) - gibt es keine,
+ * bleibt er stehen und sagt es.
+ * VERIFIED: tests/construction.test.mjs - von fünf bauen vier, der fünfte nicht;
+ * tests/walls.test.mjs - an einer Mauer verteilen sie sich auf die Stücke.
  */
 export function sendToSite(world: World, work: VillagerWork, selected: readonly Villager[], site: Building): string | null {
   const chosen = new Set(selected);
@@ -106,6 +112,11 @@ export function sendToSite(world: World, work: VillagerWork, selected: readonly 
     const slot = freeSlot(work, site, used);
     if (slot < 0) {
       v.assign({ kind: 'idle' });
+      const next = nearestSite(world, work, site, v);
+      if (next) {
+        sendToSite(world, work, [v], next);
+        continue;
+      }
       v.problem = 'An der Baustelle ist kein Platz mehr';
       refused++;
       continue;

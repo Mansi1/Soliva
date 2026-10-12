@@ -9,6 +9,7 @@
 import { ANIMAL_POSE, BUILDING_HEADING, EntityRenderer, POSE, SHAPE, figureProps, type EntityInstance } from '../gl/entityRenderer';
 import { groundToWorld, snapCamera } from '../gl/iso';
 import { ANIMALS, BUILDINGS, type AnimalKind, type BuildingType, type DepositType, type ResourceKind } from '../world/catalog';
+import { isWallType, wallPieceInstances, type WallLook } from '../world/walls';
 import { cropIcon } from './cropIcons';
 
 export type IconName = ResourceKind | 'population' | 'idle';
@@ -176,8 +177,18 @@ function cached(key: string, player: RGB, instances: () => EntityInstance[]): st
 /** Gebäude in Spielerfarbe - das Feld als Weizengarbe (siehe cropIcons.ts). */
 export function buildingIcon(type: BuildingType, player: RGB): string {
   if (type === 'farm') return cropIcon('wheat');
+  if (isWallType(type)) return wallIcon({ type }, player);
   return cached(`building:${type}`, player, () =>
     [{ x: -0.5, y: -0.5, size: BUILDINGS[type].size, color: player, shape: BUILDINGS[type].model, alpha: 1 }]);
+}
+
+/** Ein gerades Stück Mauer (B34) - oder Tor, zu bzw. verriegelt - wie auf der Karte. */
+export function wallIcon(look: WallLook, player: RGB): string {
+  return cached(`wall:${look.type}:${look.gate ?? ''}`, player, () => {
+    const out: EntityInstance[] = [];
+    wallPieceInstances(-0.5, -0.5, 0, look, () => undefined, player, 1, out);
+    return out;
+  });
 }
 
 /** Dorfbewohner(in) in Spielerfarbe. */

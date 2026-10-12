@@ -48,6 +48,9 @@ const RULES = [
   // Baustelle (B26, world/construction.ts): ein Stück Absteckung je Tile-Kante, Gerüst.
   { match: /^props\/site_edge$/, needs: ['Site.Post', 'Site.Cord'], why: 'Pflock und Schnur der Baustelle' },
   { match: /^props\/scaffold$/, only: ['Scaffold'], why: 'Gerüst der Baustelle' },
+  // Mauern (B34, world/walls.ts): das Tor zu, offen und abgeschlossen - nur das letzte mit Riegel.
+  { match: /^props\/wall_gate(_open)?$/, needs: ['Gate.Leaf', 'Gate.Post'], forbids: ['Gate.Bar'], why: 'Torflügel und Pfosten; den Riegel trägt nur das abgeschlossene Tor' },
+  { match: /^props\/wall_gate_locked$/, needs: ['Gate.Leaf', 'Gate.Post', 'Gate.Bar'], why: 'abgeschlossenes Tor mit Riegel' },
   { match: /^props\/load_/, only: ['Goods', 'Carry'], why: 'Last am Oberkörper: Ware (Goods) wächst, Behälter (Carry) bleibt' },
 ];
 

@@ -130,6 +130,13 @@ import loadLeatherModel from '../models/props/load_leather.glb?model';
 // Baustelle (B26): Absteckung je Tile-Kante und Gerüst (world/construction.ts).
 import siteEdgeModel from '../models/props/site_edge.glb?model';
 import scaffoldModel from '../models/props/scaffold.glb?model';
+import wallPalisadeModel from '../models/props/wall_palisade.glb?model';
+import wallPalisadePostModel from '../models/props/wall_palisade_post.glb?model';
+import wallStoneModel from '../models/props/wall_stone.glb?model';
+import wallStonePostModel from '../models/props/wall_stone_post.glb?model';
+import wallGateModel from '../models/props/wall_gate.glb?model';
+import wallGateOpenModel from '../models/props/wall_gate_open.glb?model';
+import wallGateLockedModel from '../models/props/wall_gate_locked.glb?model';
 
 /** Materialien der Dorfbewohner und ihrer Werkzeuge - jedes Modell bringt seine mit. */
 const villagerMtl = [villagerMaleModel, villagerFemaleModel, propAxeModel, propHoeModel, propKnifeModel, propScytheMaleModel, propScytheFemaleModel]
@@ -399,6 +406,19 @@ export const SHAPE = {
   siteEdge: 240,
   /** Gerüst um eine Baustelle (models/props/scaffold.glb), wie das Gebäude von unten abgeschnitten (motion[3] < 0). */
   scaffold: 241,
+  /**
+   * Mauern (B34, world/walls.ts): ein halbes Tile Mauer entlang Modell-y
+   * (models/props/wall_palisade|wall_stone.glb), der Pfosten bzw. Pfeiler in
+   * der Mitte jedes Tiles, das Tor über ein Tile - zu, offen, verriegelt.
+   * motion[0] = Blickrichtung, motion[3] < 0 schneidet die Baustelle ab. 280..299 für Mauern.
+   */
+  wallPalisade: 280,
+  wallPalisadePost: 281,
+  wallStone: 282,
+  wallStonePost: 283,
+  wallGate: 284,
+  wallGateOpen: 285,
+  wallGateLocked: 286,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -3097,6 +3117,13 @@ const MODELS: {
   { shape: SHAPE.pastureFence, model: loadModel(pastureFenceModel.obj, pastureFenceModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.siteEdge, model: loadModel(siteEdgeModel.obj, siteEdgeModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.scaffold, model: loadModel(scaffoldModel.obj, scaffoldModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallPalisade, model: loadModel(wallPalisadeModel.obj, wallPalisadeModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallPalisadePost, model: loadModel(wallPalisadePostModel.obj, wallPalisadePostModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallStone, model: loadModel(wallStoneModel.obj, wallStoneModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallStonePost, model: loadModel(wallStonePostModel.obj, wallStonePostModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallGate, model: loadModel(wallGateModel.obj, wallGateModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallGateOpen, model: loadModel(wallGateOpenModel.obj, wallGateOpenModel.mtl, 'width'), scale: 1 },
+  { shape: SHAPE.wallGateLocked, model: loadModel(wallGateLockedModel.obj, wallGateLockedModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.propFish, model: PROP_FISH, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propFishFemale, model: PROP_FISH, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propRod, model: PROP_ROD, scale: 1.7, body: SHAPE.villager },

@@ -109,9 +109,13 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
 - **Fliegender Speer:** Beim Wurf ist die Hand ab dem Loslassen leer
   (`spearThrown`), der Speer fliegt aber nicht sichtbar zum Tier.
 - **Forschung im Dorfzentrum** (`world/research.ts`): ein Platz je
-  Dorfzentrum, keine Warteschlange. Die Steinmauer setzt nur den Schalter -
-  Mauern bauen kommt mit B34. Ein Dorfzentrum im Bau (B26) sollte noch nicht
+  Dorfzentrum, keine Warteschlange. Ein Dorfzentrum im Bau (B26) sollte noch nicht
   forschen können.
+- **Mauern** (B34, `world/walls.ts`): man trifft ein Stück an seinem Tile,
+  nicht am Modell; ein abgerissenes Stück ist ohne Einsturz weg. Tore kosten
+  nichts extra und öffnen sich für jeden Dorfbewohner in der Nähe - Feinde
+  (B24) gibt es noch nicht, Trefferpunkte haben die Stücke schon (Palisade
+  250, Steinmauer 1800). Kein Wehrgang, keine Türme.
 - **Einsturz:** bleibt prozedural. Möglich wäre je Gebäude ein gestalteter
   Einsturz-Clip.
 

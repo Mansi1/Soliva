@@ -22,6 +22,7 @@ src/models/                 Modelle - je Objekt eine .glb, eingecheckt
   props/                    axe, hoe, knife, scythe_male/_female, bow, prop_bow, spear, clogs, rally_flag, marker_arrow,
                             load_logs/_crate/_hotte/_basket/_sheaf/_meat/_bow/_spears/_shoes/_milk/_wool/_leather (Lasten, docs/ANIMATION.md)
                             pasture_fence, site_edge, scaffold (Baustelle, B26: Pflock und Schnur je Tile-Kante, Gerüst)
+                            wall_palisade(_post), wall_stone(_post), wall_gate(_open, _locked) (Mauern, B34)
   fields/                   stake, cord; <feld>_card, _card_1, _card_2 (Bildkarten
                             der Feldpflanzen in drei Wachstumsstufen)
   foliage/                  meadow_grass, wild_grass_seedheads, reed, cattails
@@ -245,6 +246,19 @@ stellt je Außenkante eines Weide-Tiles zwei Zaunstücke auf, jedes auf seinem
 Boden, und je Weide ein Gatter (`world/pasture.ts`, `fenceInstances`). Die
 Lasten tragen den Riemen der Hotte (`Carry.Strap`) und die Ware (`Goods…`):
 Eimer mit Milch, Wollbündel, gerollte Häute.
+
+## Mauern
+
+`props/wall_palisade|wall_stone.glb` (halbes Stück, 2,5 m entlang X),
+`props/wall_palisade_post|wall_stone_post.glb` (Pfosten bzw. Pfeiler in der
+Tile-Mitte) und `props/wall_gate|wall_gate_open|wall_gate_locked.glb` (Tor
+über ein Tile, 5 m: zu, Flügel nach hinten offen, mit Riegel `Gate.Bar`) sind
+B34 (2026-10-12) headless in Blender gebaut, das Skript liegt nicht im Repo.
+Das Spiel setzt die Stücke je Tile nach den Nachbarn zusammen
+(`world/walls.ts`) und bringt jedes Modell auf seine Breite - die Breiten
+sind darum Teil des Vertrags. VERIFIED: `tests/walls.test.mjs` misst sie nach
+(Pfosten 0,51 m, Pfeiler 1,46 m, `WALL_LOOK`). Vorderseite -Y zeigt im Spiel
+zur Kamera.
 
 ## Felder
 

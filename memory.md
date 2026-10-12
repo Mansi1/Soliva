@@ -86,6 +86,7 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-10-11: `makeWorld` (tests/worldFixture.mjs) liest und schreibt immer den Stand `pgm.world.test`. Ruft ein Test darauf `world.save()` (mit dem localStorage-Ersatz), laden alle späteren Tests der Datei diesen Stand - für Speicher-Tests eine eigene Welt `new World(terrain(...), '<seed>')` nehmen.
 - 2026-10-12, `feat/forschung`: `migrate` in `world/save.ts` baut `data` Feld für Feld neu - ein neues Feld im Spielstand (z. B. `research`) muss dort durchgereicht werden, sonst fällt es beim Laden still weg (`toSave` sah richtig aus).
 - 2026-10-12, `feat/forschung`: Objekte, die wie Glieder heißen (`Leg.L.Lower...`, PARTS in `entityRenderer.ts`), bewegt der Shader als Beine - ohne Figur blieb das Symbol `SHAPE.clogs` darum leer. Als eigenständiges Modell die Namen beim Laden kürzen.
+- 2026-10-12, `feat/mauer`: `?animation=` der Galerie sucht den Knopftext (Label hinter dem letzten `·`) - zwei gleiche Knopftexte in einer Vitrine (z. B. zweimal "Ecke") treffen immer den ersten. Knopftexte eindeutig halten.
 - 2026-10-11: In der Galerie überschreibt das automatische Einpassen `?zoom=`; Bildschirmfotos zeigen das Stück ganz, ein langer Speer macht die Figur darum klein.
 
 ## Offen

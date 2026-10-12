@@ -81,8 +81,8 @@ export class Ground {
     const zones: FlatZone[] = [];
     for (const b of this.world.allBuildings()) {
       // Felder bleiben, wie das Gelände ist - Pflanzen wachsen auch am Hang.
-      // Reusen liegen im Wasser, der Boden darunter bleibt.
-      if (b.isOpenGround() || b.type === 'fish_trap') continue;
+      // Reusen liegen im Wasser, der Boden darunter bleibt. Mauern folgen dem Hang (B34).
+      if (b.isOpenGround() || b.isWall() || b.type === 'fish_trap') continue;
       const footprint = b.definition.footprint;
       const k = `${b.type}:${b.x},${b.y}`;
       let z = this.flatHeights.get(k);

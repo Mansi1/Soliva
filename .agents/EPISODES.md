@@ -9,12 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T22:31:10Z s=560a6297 DONE fp=5d566554a4b6 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:31:59Z s=560a6297 DONE fp=74d795794954 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:32:25Z s=560a6297 DONE fp=04045174f49a cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:34:05Z s=560a6297 DONE fp=2c73f9a59cc7 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:35:12Z s=560a6297 DONE fp=597d212e7b97 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:35:54Z s=560a6297 DONE fp=df6dfa4f878d cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:37:31Z s=560a6297 DONE fp=a2ea696215ee cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:37:54Z s=560a6297 DONE fp=66578b0a5f70 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:39:58Z s=560a6297 DONE fp=5e8fc8a8d6d4 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T23:55:10Z s=560a6297 FINDING src/gl/entityRenderer.ts:gCut for sites learn=none: Screenshot comparison within noise.
 2026-10-11T23:55:10Z s=560a6297 FINDING tools/ui/smoke.mjs learn=test: Smoke covers site and finished workshop.
 2026-10-11T23:55:10Z s=560a6297 FINDING src/world/construction.ts:hasTownCenter learn=none: No observed failure; noted in docs/OFFEN.md.
+2026-10-12T00:38:25Z s=560a6297 DONE fp=483bcf8f0b59 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+28)
+2026-10-12T00:38:25Z s=560a6297 FINDING src/world/walls.ts:wallLine learn=test: tests/walls.test.mjs every step shares an edge; ring without gate has no route out.
+2026-10-12T00:38:25Z s=560a6297 FINDING src/world/building/BuildingBase.ts:passable learn=test: tests/walls.test.mjs gate lets villager out, locked gate not, cows stay in 60 s.
+2026-10-12T00:38:25Z s=560a6297 FINDING src/world/construction.ts:sendToSite learn=test: tests/walls.test.mjs builders spread; tests/construction.test.mjs fifth refused.
+2026-10-12T00:38:25Z s=560a6297 FINDING tests/keys.test.mjs learn=test: tests/keys.test.mjs
+2026-10-12T00:38:25Z s=560a6297 FINDING src/world/render.ts:gate open check learn=none: Not measured (no benchmarks by user rule).

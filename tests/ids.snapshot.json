@@ -2525,6 +2525,55 @@
    "Arm.R.Lower.Tool.Spear.Head",
    "Arm.R.Lower.Tool.Spear.Socket"
   ],
+  "props/wall_gate": [
+   "Gate.Brace",
+   "Gate.Hinge",
+   "Gate.Leaf",
+   "Gate.Lintel",
+   "Gate.Post",
+   "Gate.Sign"
+  ],
+  "props/wall_gate_locked": [
+   "Gate.Bar",
+   "Gate.Bar.Hook",
+   "Gate.Brace",
+   "Gate.Hinge",
+   "Gate.Leaf",
+   "Gate.Lintel",
+   "Gate.Post",
+   "Gate.Sign"
+  ],
+  "props/wall_gate_open": [
+   "Gate.Brace",
+   "Gate.Hinge",
+   "Gate.Leaf",
+   "Gate.Lintel",
+   "Gate.Post",
+   "Gate.Sign"
+  ],
+  "props/wall_palisade": [
+   "Rail",
+   "Stake",
+   "Stake.Tip"
+  ],
+  "props/wall_palisade_post": [
+   "Post",
+   "Post.Band",
+   "Post.Tip"
+  ],
+  "props/wall_stone": [
+   "Merlon",
+   "Wall",
+   "Wall.Cap",
+   "Wall.Course",
+   "Wall.Plinth"
+  ],
+  "props/wall_stone_post": [
+   "Merlon",
+   "Pillar",
+   "Pillar.Cap",
+   "Pillar.Plinth"
+  ],
   "resources/berry_bush_1": [
    "Berry.0",
    "Berry.0.Shine",
