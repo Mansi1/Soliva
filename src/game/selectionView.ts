@@ -3,7 +3,7 @@
 // (components/SelectionPanel.tsx): Gebäude mit Feld oder Ausbildung, ein
 // Vorkommen, Dorfbewohner mit ihren Tätigkeiten - oder nichts.
 
-import type { FarmView, SelectionView, TrainView, WorkshopView } from '../components/SelectionPanel';
+import type { FarmView, ResearchView, SelectionView, TrainView, WorkshopView } from '../components/SelectionPanel';
 import { FLOWERS } from '../gl/entityRenderer';
 import { FLOWER_KINDS, flowerPhoto } from '../gl/flowerModel';
 import { RESOURCE_TYPE_LABEL } from '../map';
@@ -18,6 +18,7 @@ import { workplace } from '../world/villagers';
 import { rangeView } from '../world/archery';
 import { skillsText } from '../world/unit/skills';
 import { pastureText } from '../world/pasture';
+import { RESEARCH, RESEARCH_ORDER, craftTaskRecipe } from '../world/research';
 import type { Selection } from './Selection';
 
 /**
@@ -108,6 +109,28 @@ function trainView(world: World, rallyPicking: boolean, batch: number): TrainVie
   };
 }
 
+/**
+ * Forschung im Dorfzentrum fürs Panel: offene mit Kosten und Grund, die laufende, die erforschten.
+ * VERIFIED: tests/research.test.mjs - Knöpfe mit Grund, Fortschritt, erforscht.
+ */
+export function researchView(world: World, building: Building): ResearchView {
+  const running = world.research.running.get(building.anchor);
+  return {
+    options: RESEARCH_ORDER.filter((id) => !world.research.has(id)).map((id) => {
+      const reason = world.research.blocker(world, building.anchor, id);
+      return {
+        id, label: RESEARCH[id].label, info: RESEARCH[id].info, cost: costText(RESEARCH[id].cost), time: RESEARCH[id].time,
+        // Was hier gerade läuft, zeigt der Fortschritt - als Knopf nur gesperrt.
+        ...(reason ? { reason: running?.id === id ? 'Wird gerade erforscht' : reason } : {}),
+      };
+    }),
+    running: running
+      ? { label: RESEARCH[running.id].label, percent: Math.floor(world.research.progress(building.anchor) * 100), cost: costText(RESEARCH[running.id].cost) }
+      : undefined,
+    done: RESEARCH_ORDER.filter((id) => world.research.has(id)).map((id) => RESEARCH[id].label),
+  };
+}
+
 /** Was das Auswahl-Panel zeigt - als reine Daten, gezeichnet von SelectionPanel. */
 /**
  * Was das Auswahl-Panel zeigt - als reine Daten, gezeichnet von
@@ -181,6 +204,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
             train: trainView(world, rallyPicking, trainBatch),
           }
         : undefined,
+      research: building.type === 'town_center' ? researchView(world, building) : undefined,
     };
   }
   if (selection.resource) {
@@ -266,7 +290,7 @@ function workshopView(world: World, building: Building): WorkshopView {
   const worker = world.villagers.find((v) => workplace(v.task) === building.anchor);
   if (!worker) return { role };
   const task = worker.task;
-  const busy = (task.kind === 'craft' && task.step === 'carve' && worker.carryType !== 'wood')
+  const busy = (task.kind === 'craft' && task.step === 'carve' && worker.carryType !== craftTaskRecipe(building.type, task)?.material)
     || (task.kind === 'fish' && (task.step === 'angle' || task.step === 'empty'))
     || (task.kind === 'plant' && task.step === 'dig');
   return {

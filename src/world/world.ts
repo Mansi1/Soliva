@@ -24,6 +24,7 @@ import { Farming, FIELD_INNER, METERS_PER_TILE, type FarmPhase } from './farming
 import { DIG_DURATION, RUIN_DURATION, type Ruin } from './ruin';
 import { addRenderStats } from '../renderStats';
 import { penSurroundings, tickPastures } from './pasture';
+import { Research, type ResearchId } from './research';
 
 // Gebäude sind Klassen (building/) - hier weiter unter diesen Namen erreichbar.
 export type { Building, FarmPhase, Task };
@@ -110,6 +111,8 @@ export class World {
   /** Das Wild: Tiere und wo schon welche entstanden sind (wildlife.ts). */
   readonly wildlife: Wildlife;
   /** Stücke (ANIMAL_CHUNK), in denen schon Tiere entstanden sind - erlegte kommen nicht wieder. */
+  /** Forschung in den Dorfzentren und was erforscht ist (research.ts). */
+  readonly research = new Research();
   /** Was auf neu angelegten Feldern gesät wird - die zuletzt gewählte Frucht. */
   nextFarmCrop: CropType = 'wheat';
   onEvent: ((event: WorldEvent) => void) | null = null;
@@ -695,6 +698,21 @@ export class World {
     return null;
   }
 
+  /** Beginnt im Dorfzentrum eine Forschung (research.ts) und bezahlt sie - sonst der Grund. */
+  startResearch(building: Building, id: ResearchId): string | null {
+    if (building.type !== 'town_center') return 'Nur im Dorfzentrum wird geforscht';
+    const reason = this.research.start(this, building.anchor, id);
+    if (!reason) this.dirty = true;
+    return reason;
+  }
+
+  /** Bricht die Forschung des Dorfzentrums ab - Kosten voll zurück. */
+  cancelResearch(building: Building): string | null {
+    const reason = this.research.cancel(this, building.anchor);
+    if (!reason) this.dirty = true;
+    return reason;
+  }
+
   /**
    * Befehl an ausgewählte Dorfbewohner für das Tile (x, y), wie ein Rechtsklick
    * in AoE2 (villagers.ts) - hingehen zum genauen Punkt `point`, falls
@@ -748,6 +766,7 @@ export class World {
         if (b.isFull) this.dirty = true;
       }
     }
+    if (this.research.running.size > 0 && this.research.tick(this.speedy ? Infinity : dt, (a) => this.buildings.has(a))) this.dirty = true;
     if (this.deposits.regrow(dt, this.time)) this.dirty = true;
     if (this.farming.grow(this.speedy ? Infinity : dt)) this.dirty = true;
     const t0 = performance.now();
@@ -983,6 +1002,7 @@ export class World {
       planted: this.deposits.plantedSave(this.time),
       animals: this.wildlife.toSave(),
       spawned: [...this.wildlife.spawnedChunks],
+      research: this.research.toSave(),
     };
   }
 
@@ -1004,6 +1024,7 @@ export class World {
 
     for (const k of data.spawned ?? []) this.wildlife.spawnedChunks.add(k);
     this.wildlife.restore(data.animals ?? []);
+    this.research.restore(data.research);
 
     for (const s of data.villagers) {
       // Ältere Speicherstände kennen weder Namen noch Geschlecht.
@@ -1039,6 +1060,7 @@ export class World {
     this.deposits.clear();
     this.villagers = [];
     this.wildlife.clear();
+    this.research.restore(undefined);
     this.reserve = initialResources();
     this.dirty = true;
     this.save();

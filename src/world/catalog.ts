@@ -205,7 +205,7 @@ export const COBBLER = { wood: 3, craftTime: 10, detour: 3 };
 
 /**
  * Was eine Werkstatt aus Holz macht (Auftrag 'craft', villagers.ts): Ware,
- * Holz und Zeit je Stück, wie das Stück und wer es macht in der Oberfläche heißt.
+ * Stoff (Holz, Leder) und Zeit je Stück, wie das Stück und wer es macht in der Oberfläche heißt.
  * Ein Rezept je Werkstatt statt eigener Abläufe: Bognerei, Speermacherei und
  * Schusterei teilen denselben Weg (holen, schnitzen, abliefern). Abgeliefert
  * wird in die Werkstatt selbst, wenn sie die Ware lagert (Schuhe), sonst in
@@ -215,7 +215,9 @@ export const COBBLER = { wood: 3, craftTime: 10, detour: 3 };
  */
 export interface CraftRecipe {
   product: 'bows' | 'spears' | 'shoes';
-  wood: number;
+  /** Woraus es gemacht wird und wie viel davon je Stück - Holz, für Lederschuhe Leder. */
+  material: 'wood' | 'leather';
+  amount: number;
   craftTime: number;
   /** "einen Bogen" - für "schnitzt einen Bogen". */
   item: string;
@@ -226,9 +228,18 @@ export interface CraftRecipe {
   kind?: string;
 }
 export const CRAFTS: Record<'bowyer' | 'spear_maker' | 'cobbler', CraftRecipe> = {
-  bowyer: { product: 'bows', ...BOWYER, item: 'einen Bogen', unit: 'Bogen', worker: 'Bogner' },
-  spear_maker: { product: 'spears', ...SPEAR_MAKER, item: 'einen Speer', unit: 'Speer', worker: 'Speermacher' },
-  cobbler: { product: 'shoes', wood: COBBLER.wood, craftTime: COBBLER.craftTime, item: 'ein Paar Holzschuhe', unit: 'Paar', worker: 'Schuster', kind: 'Holzschuhe' },
+  bowyer: { product: 'bows', material: 'wood', amount: BOWYER.wood, craftTime: BOWYER.craftTime, item: 'einen Bogen', unit: 'Bogen', worker: 'Bogner' },
+  spear_maker: { product: 'spears', material: 'wood', amount: SPEAR_MAKER.wood, craftTime: SPEAR_MAKER.craftTime, item: 'einen Speer', unit: 'Speer', worker: 'Speermacher' },
+  cobbler: { product: 'shoes', material: 'wood', amount: COBBLER.wood, craftTime: COBBLER.craftTime, item: 'ein Paar Holzschuhe', unit: 'Paar', worker: 'Schuster', kind: 'Holzschuhe' },
+};
+
+/**
+ * Lederschuhe (B31) - das zweite Rezept der Schusterei, erst nach der
+ * Forschung "Gerberei" im Dorfzentrum (research.ts). Ein Paar aus 2 Leder
+ * (ein Reh gibt 5, eine Kuh 8), genäht dauert es länger als geschnitzt.
+ */
+export const LEATHER_SHOES: CraftRecipe = {
+  product: 'shoes', material: 'leather', amount: 2, craftTime: 15, item: 'ein Paar Lederschuhe', unit: 'Paar', worker: 'Schuster', kind: 'Lederschuhe',
 };
 
 /** Das Rezept einer Werkstatt - undefined für Werkstätten ohne Waren (Fischer, Förster). */
@@ -249,13 +260,14 @@ export const WEAPONS: Record<Weapon, { resource: ResourceKind; label: string }> 
 
 /**
  * Schuhe an den Füßen (Villager.inventory, B31): zu Beginn ist jeder barfuß
- * (VILLAGER.speed), Holzschuhe aus der Schusterei machen ihn 10 % schneller.
- * Lederschuhe (+20 %, brauchen Leder und Forschung) kommen als weiterer
- * Eintrag dazu - mit eigener Sorte im Lager (`kind`, BuildingBase.goods).
+ * (VILLAGER.speed), Holzschuhe aus der Schusterei machen ihn 10 % schneller,
+ * Lederschuhe (Forschung "Gerberei", Leder) 20 %. Je Art eine eigene Sorte im
+ * Lager (`kind`, BuildingBase.goods) - so sieht man, welches Paar wo liegt.
  */
-export type Shoes = 'wood';
+export type Shoes = 'wood' | 'leather';
 export const SHOES: Record<Shoes, { kind: string; label: string; speed: number }> = {
   wood: { kind: CRAFTS.cobbler.kind!, label: 'Holzschuhe', speed: 1.1 },
+  leather: { kind: LEATHER_SHOES.kind!, label: 'Lederschuhe', speed: 1.2 },
 };
 
 /**

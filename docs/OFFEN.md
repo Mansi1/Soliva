@@ -89,18 +89,23 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
   Spiel aus dem Körper.
 - **Weitere Werkzeuge** als Anhänge: Spitzhacke - heute hält jeder beim
   Hacken das Beil. Hacke (Pflügen) und Speer (Jagd, B25) gibt es.
-- **Schuhe (B31):** Lederschuhe (+20 %) brauchen Leder aus der Schlachtung und
-  eine Forschung; der Platz dafür ist da (`SHOES`, Sorte im Lager). Das Regal
+- **Schuhe (B31):** Lederschuhe haben dieselbe Form wie die Holzschuhe, nur
+  aus Leder (`PROP_LEATHER_SHOES`); ein eigenes Modell, wenn man sie im Spiel
+  nicht unterscheiden kann. Das Regal
   der Schusterei zeigt immer sechs Paare, nicht den Vorrat. Die Symbole der
   Rohstoffleiste (`src/icons`, `npm run gen:ui`) zeigen die Dorfbewohner noch
   mit Stiefeln.
 - **Weide (B27):** Dorfbewohner gehen über Weide-Tiles wie über Felder,
   auch durch den Zaun - nur die Tiere bleiben drin. Am Strick folgt das Tier
   ohne sichtbaren Strick. Milch, Wolle und Leder nimmt nur das Dorfzentrum
-  an, und noch braucht sie nichts (Schuhe: B31). Ein Reh holt man zu Fuß nur
+  an; Leder braucht die Gerberei und der Schuster, Milch und Wolle noch nichts. Ein Reh holt man zu Fuß nur
   ein, wenn es nah ist (Regel der Jagd ohne Speer).
 - **Fliegender Speer:** Beim Wurf ist die Hand ab dem Loslassen leer
   (`spearThrown`), der Speer fliegt aber nicht sichtbar zum Tier.
+- **Forschung im Dorfzentrum** (`world/research.ts`): ein Platz je
+  Dorfzentrum, keine Warteschlange. Die Steinmauer setzt nur den Schalter -
+  Mauern bauen kommt mit B34. Ein Dorfzentrum im Bau (B26) sollte noch nicht
+  forschen können.
 - **Einsturz:** bleibt prozedural. Möglich wäre je Gebäude ein gestalteter
   Einsturz-Clip.
 

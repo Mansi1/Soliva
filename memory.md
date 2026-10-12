@@ -82,6 +82,8 @@ Veraltetes löschen, Geändertes an Ort und Stelle korrigieren.
 - 2026-10-12, `feat/weide`: Wo in `Testseed` gesät oder eine Weide gebaut werden kann, zeigt Node ohne Browser: `loadModules('/src/world/world.ts', '/src/map.ts', '/src/noise.ts')`, `new World(new Terrain(new MapGenerator('Testseed'), 'Testseed'), 'Testseed')`, dann `world.sowable(x, y)` über ein Raster. Die Lichtung bei 12,-43 ist frei für x 12..17, y -43..-40; ganz im Bild nur steiler: `lat=-42&lng=13&zoom=5&tilt=60` (bei Tilt 30 verdeckt der Wald davor sie).
 - 2026-10-12, `feat/weide`: `VillagerWork.deliverTo` braucht nach dem Abladen weitere Aufrufe, bis es true gibt (es zählt `inside` herunter). Wer schon bei `carrying == 0` aufhört, lässt den Dorfbewohner mit `inside > 0` weiterlaufen - unsichtbar.
 - 2026-10-11: `makeWorld` (tests/worldFixture.mjs) liest und schreibt immer den Stand `pgm.world.test`. Ruft ein Test darauf `world.save()` (mit dem localStorage-Ersatz), laden alle späteren Tests der Datei diesen Stand - für Speicher-Tests eine eigene Welt `new World(terrain(...), '<seed>')` nehmen.
+- 2026-10-12, `feat/forschung`: `migrate` in `world/save.ts` baut `data` Feld für Feld neu - ein neues Feld im Spielstand (z. B. `research`) muss dort durchgereicht werden, sonst fällt es beim Laden still weg (`toSave` sah richtig aus).
+- 2026-10-12, `feat/forschung`: Objekte, die wie Glieder heißen (`Leg.L.Lower...`, PARTS in `entityRenderer.ts`), bewegt der Shader als Beine - ohne Figur blieb das Symbol `SHAPE.clogs` darum leer. Als eigenständiges Modell die Namen beim Laden kürzen.
 - 2026-10-11: In der Galerie überschreibt das automatische Einpassen `?zoom=`; Bildschirmfotos zeigen das Stück ganz, ein langer Speer macht die Figur darum klein.
 
 ## Offen

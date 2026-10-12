@@ -284,9 +284,13 @@
   top: 0;
   box-shadow: -2px 0 3px rgba(0, 0, 0, 0.45);
 }
-/* Klick bricht die Ausbildung dieser Einheit ab. */
-#selection [data-action='cancel-train'] {
+/* Klick bricht die Ausbildung dieser Einheit bzw. die Forschung ab. */
+#selection [data-action='cancel-train'],
+#selection [data-action='cancel-research'] {
   cursor: pointer;
+}
+#selection [data-action='cancel-research']:hover {
+  color: #d8322a;
 }
 #selection [data-action='cancel-train']:hover {
   border-color: #d8322a;

@@ -389,6 +389,9 @@ export const SHAPE = {
   loadLeatherFemale: 225,
   /** Zaun der Weide, ein halbes Tile lang (models/props/pasture_fence.glb): motion[0] = Blickrichtung (world/pasture.ts). */
   pastureFence: 226,
+  /** Lederschuhe an den Füßen (B31): die Holzschuhe aus Leder (PROP_LEATHER_SHOES) - ein eigener Bereich in PROP_TEST. */
+  propLeatherShoes: 260,
+  propLeatherShoesFemale: 261,
 } as const;
 
 /** Die Blumen-Formen, in der Reihenfolge von FLOWER_KINDS. */
@@ -468,9 +471,10 @@ const PROP_SHAPES: number[] = [
   SHAPE.loadShoes, SHAPE.loadShoesFemale, SHAPE.propClogs, SHAPE.propClogsFemale,
   SHAPE.propBow, SHAPE.propBowFemale,
   SHAPE.loadMilk, SHAPE.loadMilkFemale, SHAPE.loadWool, SHAPE.loadWoolFemale, SHAPE.loadLeather, SHAPE.loadLeatherFemale,
+  SHAPE.propLeatherShoes, SHAPE.propLeatherShoesFemale,
 ];
-/** Im Shader: ist die Form ein Anhang? Sieben Bereiche - dazwischen liegen Blumen, Stümpfe, Gebäude und der Speer. */
-const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}) || (shape >= ${SHAPE.loadShoes} && shape <= ${SHAPE.propClogsFemale}) || shape == ${SHAPE.propBow} || shape == ${SHAPE.propBowFemale} || (shape >= ${SHAPE.loadMilk} && shape <= ${SHAPE.loadLeatherFemale}))`;
+/** Im Shader: ist die Form ein Anhang? Acht Bereiche - dazwischen liegen Blumen, Stümpfe, Gebäude und der Speer. */
+const PROP_TEST = `((shape >= ${SHAPE.propAxe} && shape <= ${SHAPE.propKnifeFemale}) || (shape >= ${SHAPE.propFish} && shape <= ${SHAPE.propRodFemale}) || shape == ${SHAPE.propHoe} || shape == ${SHAPE.propHoeFemale} || (shape >= ${SHAPE.loadLogs} && shape <= ${SHAPE.propSpearFemale}) || (shape >= ${SHAPE.loadShoes} && shape <= ${SHAPE.propClogsFemale}) || shape == ${SHAPE.propBow} || shape == ${SHAPE.propBowFemale} || (shape >= ${SHAPE.loadMilk} && shape <= ${SHAPE.loadLeatherFemale}) || shape == ${SHAPE.propLeatherShoes} || shape == ${SHAPE.propLeatherShoesFemale})`;
 const FIGURES: number[] = [SHAPE.villager, SHAPE.villagerFemale, ...PROP_SHAPES];
 /** Im Shader: ist die Form eine Figur (Dorfbewohner oder ihr Anhang)? */
 /** Was einem Arbeiter fehlt, durchgestrichen (SHAPE.needWood..needStrike). */
@@ -2995,6 +2999,14 @@ const PROP_FISH = loadModel(herringModel.obj, herringModel.mtl, 'meters');
 const PROP_ROD = loadModel(fishingRodModel.obj, fishingRodModel.mtl, 'meters');
 const PROP_SPEAR = loadModel(spearModel.obj, spearModel.mtl, 'meters');
 const PROP_CLOGS = loadModel(clogsModel.obj, clogsModel.mtl, 'meters');
+/**
+ * Lederschuhe (B31): die Form der Holzschuhe, aber aus Leder - Materialien der
+ * Figur (Leather, BootsDark), so bekommen sie deren Narbung (figureTexture).
+ * ponytail: dieselbe Form wie die Klompen; ein eigenes Modell (props/leather_shoes.glb), wenn man sie im Spiel nicht unterscheiden kann.
+ */
+const PROP_LEATHER_SHOES = loadModel(
+  clogsModel.obj.replace(/usemtl WoodLight/g, 'usemtl Leather').replace(/usemtl WoodDark/g, 'usemtl BootsDark'),
+  'newmtl Leather\nKd 0.36 0.22 0.12\nnewmtl BootsDark\nKd 0.14 0.08 0.04', 'meters');
 const PROP_BOW = loadModel(propBowModel.obj, propBowModel.mtl, 'meters');
 const BOW_MODEL = loadModel(bowModel.obj, bowModel.mtl, 'height');
 
@@ -3054,7 +3066,9 @@ const MODELS: {
   { shape: SHAPE.bowyer, model: loadModel(bowyerModel.obj, bowyerModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.spearMaker, model: loadModel(spearMakerModel.obj, spearMakerModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.cobbler, model: loadModel(cobblerModel.obj, cobblerModel.mtl, 'width'), scale: 1 },
-  { shape: SHAPE.clogs, model: loadModel(clogsModel.obj, clogsModel.mtl, 'width'), scale: 1 },
+  // Als Symbol ohne Figur: die Teile heißen nach den Unterschenkeln (Leg.L.Lower.Clog) und
+  // würden wie Beine bewegt - ohne Namen der Glieder stehen sie still und sind zu sehen.
+  { shape: SHAPE.clogs, model: loadModel(clogsModel.obj.replace(/^o Leg\.[LR]\.Lower\./gm, 'o '), clogsModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.archeryRange, model: loadModel(archeryRangeModel.obj, archeryRangeModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.spear, model: loadModel(spearModel.obj, spearModel.mtl, 'width'), scale: 1 },
   { shape: SHAPE.bow, model: BOW_MODEL, scale: 1 },
@@ -3073,6 +3087,8 @@ const MODELS: {
   { shape: SHAPE.propSpearFemale, model: PROP_SPEAR, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propClogs, model: PROP_CLOGS, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propClogsFemale, model: PROP_CLOGS, scale: 1.7, body: SHAPE.villagerFemale },
+  { shape: SHAPE.propLeatherShoes, model: PROP_LEATHER_SHOES, scale: 1.7, body: SHAPE.villager },
+  { shape: SHAPE.propLeatherShoesFemale, model: PROP_LEATHER_SHOES, scale: 1.7, body: SHAPE.villagerFemale },
   { shape: SHAPE.propBow, model: PROP_BOW, scale: 1.7, body: SHAPE.villager },
   { shape: SHAPE.propBowFemale, model: PROP_BOW, scale: 1.7, body: SHAPE.villagerFemale },
   // Lasten (B8): je Ware ein Modell, für beide Körper einmal geladen.
@@ -3250,12 +3266,9 @@ export function figureHolding(figure: EntityInstance, item: HeldItem | null): En
   return shape ? [{ ...figure, shape, health: undefined }] : [];
 }
 
-/**
- * Schuhe an den Füßen (B31) - leer, wenn er barfuß ist oder keine Figur.
- * ponytail: jede Sorte zeigt die Holzschuhe; eigenes Modell je Sorte (SHOES), wenn Lederschuhe kommen.
- */
+/** Schuhe an den Füßen (B31) - leer, wenn er barfuß ist oder keine Figur. */
 export function figureShoes(figure: EntityInstance, shoes: Shoes | null): EntityInstance[] {
-  const shape = shoes && (bodies(SHAPE.propClogs) as Record<number, number>)[figure.shape];
+  const shape = shoes && (bodies(shoes === 'leather' ? SHAPE.propLeatherShoes : SHAPE.propClogs) as Record<number, number>)[figure.shape];
   return shape ? [{ ...figure, shape, health: undefined }] : [];
 }
 

@@ -16,6 +16,7 @@ import {
 } from '../world/catalog';
 import { animalIcon, buildingIcon, populationIcon, rallyIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
 import { cropIcon } from './cropIcons';
+import type { ResearchId } from '../world/research';
 
 /** Werkstatt fürs Panel: wer dort arbeitet (fehlt, wenn niemand), was er tut, Fortschritt des Bogens. */
 export interface WorkshopView {
@@ -45,6 +46,17 @@ export interface FarmView {
   farmers: string[];
   /** So viele Bauern finden Platz - je Feldstück FARMERS_PER_FIELD, höchstens eine je Furche. */
   maxFarmers: number;
+}
+
+/**
+ * Forschung im Dorfzentrum (world/research.ts): je offene Forschung ein Knopf
+ * mit Kosten, Zeit und dem Grund, warum sie gerade nicht geht; die laufende
+ * mit Fortschritt; was schon erforscht ist.
+ */
+export interface ResearchView {
+  options: { id: ResearchId; label: string; info: string; cost: string; time: number; reason?: string }[];
+  running?: { label: string; percent: number; cost: string };
+  done: string[];
 }
 
 /** Ausbildung von Dorfbewohnern: Knopf und seine Kosten. */
@@ -103,6 +115,8 @@ export type SelectionView =
         rally: boolean;
         train: TrainView;
       };
+      /** Dorfzentrum: Forschung. */
+      research?: ResearchView;
     }
   | {
       kind: 'resource';
@@ -339,6 +353,14 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
               ) : null}
             </>
           ) : null}
+          {v.research?.running ? (
+            // Ein Klick auf die laufende Forschung bricht sie ab (ui.ts), die Kosten kommen voll zurück.
+            <div class="sel-research" data-action="cancel-research" title={`${v.research.running.label} - Klick: abbrechen, ${v.research.running.cost} zurück`}>
+              <div>Forschung: <b>{v.research.running.label}</b> - <b>{v.research.running.percent} %</b></div>
+              <Bar percent={v.research.running.percent} />
+            </div>
+          ) : null}
+          {v.research && v.research.done.length > 0 ? <div class="muted">Erforscht: {v.research.done.join(', ')}</div> : null}
           {t ? (
             <div class="muted">
               {t.rally
@@ -483,13 +505,14 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
 
 /** Ein Befehlsknopf: Bild, Taste, Tooltip und was er in main.ts auslöst. */
 interface Command {
-  action: 'train' | 'rally' | 'crop' | 'species' | 'demolish' | 'trap' | 'dismiss';
+  action: 'train' | 'rally' | 'crop' | 'species' | 'demolish' | 'trap' | 'dismiss' | 'research';
   title: string;
   /** Bild-URL - oder das Abriss-Symbol. */
   icon: string | 'demolish';
   key?: string;
   crop?: CropType;
   species?: TreeSpecies;
+  research?: ResearchId;
   /** Zahl unten rechts: so viele löst ein Klick aus (Ausbilden: 1, mit Umschalt 5). */
   count?: number;
   disabled?: boolean;
@@ -510,6 +533,20 @@ function rallyCommand(train: TrainView): Command {
     action: 'rally', icon: rallyIcon(rgb()), pressed: train.rallyPicking,
     title: 'Sammelpunkt setzen - dann auf die Karte klicken: dorthin gehen neue Dorfbewohner.\nKlick auf das Gebäude hebt ihn auf, Esc bricht ab.\nIst nur ein Gebäude ausgewählt, genügt ein Rechtsklick auf die Karte',
   };
+}
+
+/** Bild je Forschung: das Paar Schuhe bzw. Stein für die Mauer. */
+const RESEARCH_ICON: Record<ResearchId, () => string> = {
+  leather_shoes: () => stockIcon('shoes'),
+  stone_walls: () => resourceIcon('stone'),
+};
+
+/** Je offene Forschung ein Knopf - gesperrt mit dem Grund im Tooltip. */
+function researchCommands(research: ResearchView): Command[] {
+  return research.options.map((r): Command => ({
+    action: 'research', research: r.id, icon: RESEARCH_ICON[r.id](), disabled: r.reason !== undefined,
+    title: `${r.label} erforschen - ${r.cost}, ${formatDuration(r.time)}\n${r.info}${r.reason ? `\n${r.reason}` : ''}`,
+  }));
 }
 
 /** Försterhütte: je Baumart ein Knopf - wie die Früchte beim Feld - und der Pflanzplatz wie ein Sammelpunkt. */
@@ -545,6 +582,7 @@ export function commandsFor(view: SelectionView): Command[] {
         ...(view.farm ? cropCommands(view.farm.plan) : []),
         ...(view.forester ? foresterCommands(view.forester) : []),
         ...(view.trainer ? [trainCommand(view.trainer.train), rallyCommand(view.trainer.train)] : []),
+        ...(view.research ? researchCommands(view.research) : []),
         ...(view.trapCost ? [{
           action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
           title: `Reuse bauen - ${view.trapCost.cost}\nIns Wasser nahe der Hütte; der Fischer leert sie mit dem Boot`,
@@ -595,7 +633,7 @@ function DismissIcon({ src }: { src: string }) {
 
 function CommandButton({ c }: { c: Command }) {
   return (
-    <button type="button" class="cmd-btn" data-action={c.action} data-crop={c.crop} data-species={c.species} title={c.title}
+    <button type="button" class="cmd-btn" data-action={c.action} data-crop={c.crop} data-species={c.species} data-research={c.research} title={c.title}
       disabled={c.disabled} aria-pressed={c.pressed === undefined ? undefined : String(c.pressed)}>
       {c.icon === 'demolish' ? <DemolishIcon />
         : c.action === 'dismiss' ? <DismissIcon src={c.icon} />
@@ -622,7 +660,7 @@ let lastCommands = '';
 export function renderSelection(details: HTMLElement, commands: HTMLElement, view: SelectionView): boolean {
   render(<SelectionPanel view={view} />, details);
   const list = commandsFor(view);
-  const key = JSON.stringify(list.map((c) => [c.action, c.crop, c.count, c.disabled, c.pressed, c.icon.length]));
+  const key = JSON.stringify(list.map((c) => [c.action, c.crop, c.count, c.disabled, c.pressed, c.icon.length, c.research, c.research && c.title]));
   // Neu aufbauen statt abgleichen: sonst blieben disabled und aria-pressed an
   // Knöpfen hängen, die an dieser Stelle vorher etwas anderes waren.
   if (key !== lastCommands) {

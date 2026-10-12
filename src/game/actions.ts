@@ -8,6 +8,7 @@
 import type { Sound } from '../audio';
 import { CROPS, type BuildingType, type CropType, type TreeSpecies } from '../world/catalog';
 import type { UnitProducer } from '../world/building';
+import type { ResearchId } from '../world/research';
 import { workplace } from '../world/villagers';
 import type { Villager, World } from '../world/world';
 import type { Camera } from './Camera';
@@ -265,6 +266,26 @@ export class PlayerActions {
     const building = this.selection.focused();
     if (!building) return;
     const reason = this.world.cancelTraining(building, index);
+    if (reason) this.ui.hint(reason);
+    else this.sound.play('click', 0.5);
+    this.ui.refreshResources();
+  }
+
+  /** Forschung im ausgewählten Dorfzentrum beginnen (world/research.ts). */
+  research(id: ResearchId) {
+    const building = this.selection.focused();
+    if (!building) return;
+    const reason = this.world.startResearch(building, id);
+    if (reason) this.ui.hint(reason);
+    else this.sound.play('click', 0.5);
+    this.ui.refreshResources();
+  }
+
+  /** Klick auf die laufende Forschung: abbrechen, Kosten zurück. */
+  cancelResearch() {
+    const building = this.selection.focused();
+    if (!building) return;
+    const reason = this.world.cancelResearch(building);
     if (reason) this.ui.hint(reason);
     else this.sound.play('click', 0.5);
     this.ui.refreshResources();
