@@ -288,6 +288,22 @@ const pasturesAfter = count(await saved(), 'pasture');
 check('Weide abgesteckt', pasturesAfter > pasturesBefore, `${pasturesBefore} → ${pasturesAfter} Weide-Tiles`);
 await cancel();
 
+// Mauern (B34): L, dann eine Linie ziehen - beim Loslassen je Tile ein Stück Palisade
+// (mindestens zwei: ein Klick gäbe eins; Felder und Weiden von eben lassen Lücken).
+// Die Steinmauer ist ohne Forschung gesperrt, der Grund steht im Tooltip.
+const stoneButton = await page.$eval('#build .cmd-btn[title^="Steinmauer"]', (b) => ({ disabled: b.disabled, title: b.title }));
+check('Steinmauer gesperrt bis zur Forschung', stoneButton.disabled && /erforschen/.test(stoneButton.title), stoneButton.title);
+await page.keyboard.press('l');
+const wallsBefore = count(await saved(), 'palisade');
+await page.mouse.move(300, 300);
+await page.mouse.down();
+await page.mouse.move(900, 300, { steps: 20 });
+await page.mouse.up();
+await wait(200);
+const wallsAfter = count(await saved(), 'palisade');
+check('Palisade als Linie abgesteckt', wallsAfter >= wallsBefore + 2, `${wallsBefore} → ${wallsAfter} Stücke`);
+await cancel();
+
 // Ist nichts mehr abzubrechen, öffnet Esc das Menü, ein weiteres Esc schließt es.
 for (let i = 0; i < 4 && !(await menuOpen()); i++) await page.keyboard.press('Escape');
 check('Esc öffnet zuletzt das Menü', await menuOpen());

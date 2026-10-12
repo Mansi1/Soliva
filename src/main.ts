@@ -29,6 +29,7 @@ import {
 } from './world/catalog';
 import { World } from './world/world';
 import { worldInstances } from './world/render';
+import { isWallType } from './world/walls';
 import { Selection } from './game/Selection';
 import { Camera, MAX_ZOOM, ZOOM_LEVELS } from './game/Camera';
 import { GameUi } from './game/ui';
@@ -154,6 +155,8 @@ const ui = new GameUi({ world, selection, placement, pointer, resources, sound, 
   dismiss: () => actions.dismissWorker(),
   setFieldCrop: (crop) => actions.setFieldCrop(crop),
   setTreeSpecies: (species) => actions.setTreeSpecies(species),
+  toggleGate: () => actions.toggleGate(),
+  toggleLock: () => actions.toggleLock(),
   focusSelection: () => actions.focusSelection(),
 }, player.color.toRGB());
 
@@ -442,6 +445,11 @@ const mouse = new MouseInput(canvas, boxEl, {
     }
     if (!placement.isActive) return false;
     const { x, y } = picker.tile(p.x, p.y);
+    // Mauern (B34): Klick, ziehen, loslassen - gebaut wird beim Loslassen.
+    if (isWallType(placement.placingType!)) {
+      placement.line = { x0: x, y0: y, x1: x, y1: y };
+      return true;
+    }
     // Felder und Weiden (B27) steckt man ab, indem man über die Wiese zieht.
     placement.sowing = placement.placingType === 'farm' || placement.placingType === 'pasture';
     actions.placeAt(x, y);
@@ -449,6 +457,7 @@ const mouse = new MouseInput(canvas, boxEl, {
   },
   release: () => {
     placement.sowing = false;
+    if (placement.line) actions.placeLine();
   },
   click: (p, add, double) => actions.clickSelect(p.x, p.y, add, double),
   box: (a, b, add) => actions.boxSelect(a.x, a.y, b.x, b.y, add),
@@ -462,6 +471,7 @@ const mouse = new MouseInput(canvas, boxEl, {
     const tileChanged = updateHoveredTile(p.x, p.y);
     // Felder markieren: jedes überstrichene Tile, auf dem gesät werden kann.
     const tile = pointer.tile;
+    if (tileChanged && tile && placement.line) [placement.line.x1, placement.line.y1] = [tile.x, tile.y];
     if (tileChanged && tile && placement.sowing && (buttons & 1) && world.sowable(tile.x, tile.y)) {
       actions.placeAt(tile.x, tile.y, true);
     }
@@ -1004,7 +1014,7 @@ function collectOverlay(blend: number) {
   const tile = pointer.tile;
   if (placement.placingType !== null && tile) {
     const blocked = placement.check(tile.x, tile.y, placement.placingType) !== null;
-    placementOverlay(world, placement.placingType, tile.x, tile.y, blocked, overlay);
+    placementOverlay(world, placement.placingType, tile.x, tile.y, blocked, overlay, placement.lineTiles());
   }
 }
 

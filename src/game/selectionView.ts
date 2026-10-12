@@ -20,6 +20,7 @@ import { skillsText } from '../world/unit/skills';
 import { pastureText } from '../world/pasture';
 import { RESEARCH, RESEARCH_ORDER, craftTaskRecipe } from '../world/research';
 import { builders, siteTitle } from '../world/construction';
+import type { WallType } from '../world/walls';
 import type { Selection } from './Selection';
 
 /**
@@ -180,7 +181,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     return {
       kind: 'building',
       type: building.type,
-      label: def.label,
+      label: building.label,
       hp: building.hp,
       maxHp: def.hp,
       storedResources: def.storedResources.length > 0 ? def.storedResources.map((r) => RESOURCE_LABEL[r]).join(', ') : undefined,
@@ -190,6 +191,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
       farm: building.isFarm() ? { ...farmView(world, [building]), plan: building.plan } : undefined,
       workshop: building.isWorkshop() ? workshopView(world, building) : undefined,
       range: building instanceof ArcheryRange ? rangeView(world, building) : undefined,
+      wall: building.isWall() ? { type: building.type as WallType, gate: building.gate, locked: building.locked } : undefined,
       weapons: def.weaponCapacity > 0
         ? { bows: Math.floor(building.stored('bows')), spears: Math.floor(building.stored('spears')), capacity: def.weaponCapacity }
         : undefined,

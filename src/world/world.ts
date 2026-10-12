@@ -26,6 +26,7 @@ import { addRenderStats } from '../renderStats';
 import { penSurroundings, tickPastures } from './pasture';
 import { Research, type ResearchId } from './research';
 import { needsBuilders } from './construction';
+import { isWallType, wallLine } from './walls';
 
 // Gebäude sind Klassen (building/) - hier weiter unter diesen Namen erreichbar.
 export type { Building, FarmPhase, Task };
@@ -376,6 +377,21 @@ export class World {
     return this.canPay(BUILDINGS[type].cost);
   }
 
+  /** Für so viele Gebäude dieser Art reicht der Vorrat - für die Vorschau einer Mauer-Linie. */
+  affordableCount(type: BuildingType): number {
+    const cost = BUILDINGS[type].cost;
+    return Math.min(...(Object.keys(cost) as ResourceKind[]).map((r) => Math.floor(this.total(r) / (cost[r] || 1))));
+  }
+
+  /**
+   * Warum diese Art noch gar nicht gebaut werden kann - null, wenn sie kann:
+   * die Steinmauer erst nach ihrer Forschung im Dorfzentrum (B34). Für den
+   * gesperrten Knopf im Baumenü und den Bauplatz (canPlace).
+   */
+  buildLock(type: BuildingType): string | null {
+    return type === 'stone_wall' && !this.research.has('stone_walls') ? 'Erst im Dorfzentrum die Steinmauer erforschen' : null;
+  }
+
   canAffordVillager(): boolean {
     return this.canPay(VILLAGER.cost);
   }
@@ -506,6 +522,8 @@ export class World {
     if (type !== 'town_center' && !this.hasTownCenter()) {
       return 'Baue zuerst ein Dorfzentrum';
     }
+    const lock = this.buildLock(type);
+    if (lock) return lock;
 
     // Felder: ein Tile, auf dem gesät werden kann.
     if (type === 'farm') {
@@ -533,8 +551,8 @@ export class World {
       return 'Eine Reuse gehört in die Nähe einer Fischerhütte';
     }
 
-    // Felder (oben) folgen dem Gelände - nur Gebäude brauchen ebenen Boden.
-    if (this.slopeUnder(x, y, type) > MAX_BUILD_SLOPE * def.footprint) {
+    // Felder (oben) und Mauern folgen dem Gelände - nur Gebäude brauchen ebenen Boden.
+    if (!isWallType(type) && this.slopeUnder(x, y, type) > MAX_BUILD_SLOPE * def.footprint) {
       return 'Der Boden ist hier zu steil';
     }
 
@@ -653,6 +671,47 @@ export class World {
     this.buildingsRevision++;
     this.absorbReserve();
     this.dirty = true;
+  }
+
+  // --- Mauern (B34) ------------------------------------------------------------
+
+  /**
+   * Steckt eine Mauer-Linie von (x0, y0) bis (x1, y1) ab (walls.ts, wallLine):
+   * je Tile ein Stück als Baustelle, jedes einzeln bezahlt. Wo schon Mauer
+   * steht, bleibt sie; wo es nicht geht (Baum, Haus, Wasser), bleibt eine
+   * Lücke; reicht der Vorrat nicht mehr, hört die Linie dort auf.
+   * `placed`: so viele neue Stücke; `reason`: warum eins nicht ging.
+   * VERIFIED: tests/walls.test.mjs - Stücke und Kosten je Stück.
+   */
+  placeWall(type: BuildingType, x0: number, y0: number, x1: number, y1: number): { placed: number; reason: string | null } {
+    let placed = 0;
+    let reason: string | null = null;
+    for (const { x, y } of wallLine(x0, y0, x1, y1)) {
+      if (this.at(x, y)?.isWall()) continue;
+      const why = this.place(x, y, type);
+      if (!why) placed++;
+      else reason ??= why;
+      if (why && !this.affordable(type)) break;
+    }
+    return { placed, reason };
+  }
+
+  /** Macht ein fertiges Mauerstück zum Tor (`on`) oder wieder zur Mauer - ein Tor ist danach offen. */
+  setGate(building: Building, on: boolean): string | null {
+    if (!building.isWall()) return 'Nur ein Mauerstück wird zum Tor';
+    if (!building.built) return 'Die Baustelle ist noch nicht fertig';
+    building.gate = on;
+    building.locked = false;
+    this.dirty = true;
+    return null;
+  }
+
+  /** Schließt ein Tor ab (für alle zu) oder auf (eigene Dorfbewohner gehen durch). */
+  setLocked(building: Building, locked: boolean): string | null {
+    if (!building.isWall() || !building.gate) return 'Nur ein Tor lässt sich abschließen';
+    building.locked = locked;
+    this.dirty = true;
+    return null;
   }
 
   /** Legt den Einsturz an - Staub und Schutt zeichnet render.ts (der Schutt als Partikel). */

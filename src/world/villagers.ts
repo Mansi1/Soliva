@@ -249,7 +249,8 @@ export class VillagerWork {
       }
       return null;
     }
-    if (target) {
+    // Mauer und Tor (B34) sind kein Ziel: hingehen, so nah es geht.
+    if (target && !target.isWall()) {
       const def = target.definition;
       if (def.storedResources.length === 0) return `${def.label} ist kein Lager`;
       const anchor = key(target.x, target.y);
@@ -341,14 +342,16 @@ export class VillagerWork {
   }
 
 
-  /** Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, stehende Bäume, Felsen. */
+  /**
+   * Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, Mauern, stehende
+   * Bäume, Felsen. Über Felder und Weiden geht man hinweg - Bauern und Hirten
+   * arbeiten ja darauf -, ebenso über den Schießplatz (B24) und durch offene
+   * Tore (B34): Building.passable.
+   * VERIFIED: tests/walls.test.mjs - Mauer sperrt, Tor lässt durch, abgeschlossen nicht.
+   */
   blockedAt(x: number, y: number): boolean {
     const anchor = this.world.occupied.get(key(x, y));
-    // Über Felder und Weiden geht man hinweg - Bauern und Hirten arbeiten ja darauf; ebenso über den Schießplatz (B24).
-    if (anchor !== undefined) {
-      const b = this.world.building(anchor);
-      return !(b?.isOpenGround() || b instanceof ArcheryRange);
-    }
+    if (anchor !== undefined) return !this.world.building(anchor)?.passable();
     const t = this.terrainAt(x, y);
     if (t === 2) return !this.world.deposits.isExhausted(x, y) && !this.world.deposits.isFelled(x, y);
     return t === 1;

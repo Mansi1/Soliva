@@ -27,6 +27,7 @@ import { spearThrown } from './world/villagers';
 import { ARCHERY, rangeSpot } from './world/archery';
 import { fenceInstances } from './world/pasture';
 import { builderSpot, siteInstances } from './world/construction';
+import { neighbourMask, wallPieceInstances, type WallLook, type WallType } from './world/walls';
 import { createBuilding } from './world/building';
 import type { BuildingType } from './world/catalog';
 import { FLOWER_KINDS } from './gl/flowerModel';
@@ -519,6 +520,29 @@ function construction(label: string, type: BuildingType, progress?: number, crew
   };
 }
 
+/**
+ * Mauer (B34) wie im Spiel (world/walls.ts): Stücke auf `tiles` (um die
+ * Mitte), verbunden untereinander; `gate`: das Stück Nummer `at` ist ein Tor.
+ * `progress`: als Baustelle so weit gebaut.
+ */
+function wallExhibit(label: string, type: WallType, tiles: [number, number][], gate?: { at: number; state: WallLook['gate'] }, progress?: number): Exhibit {
+  return {
+    label,
+    draw: (_t, x, y, out) => {
+      const [x0, y0] = [Math.floor(x), Math.floor(y)];
+      const set = new Set(tiles.map(([dx, dy]) => `${x0 + dx},${y0 + dy}`));
+      tiles.forEach(([dx, dy], i) => {
+        const [tx, ty] = [x0 + dx, y0 + dy];
+        const mask = neighbourMask(tx, ty, (a, b) => set.has(`${a},${b}`));
+        wallPieceInstances(tx, ty, mask, { type, gate: gate?.at === i ? gate.state : undefined, progress }, () => undefined, PLAYER, 1, out);
+      });
+    },
+  };
+}
+
+const STRAIGHT: [number, number][] = [[-1, 0], [0, 0], [1, 0]];
+const CORNER: [number, number][] = [[-1, 0], [0, 0], [0, -1]];
+
 const people = (female: boolean) => {
   const who = female ? 'Frau' : 'Mann';
   return showcase('Dorfbewohner', who, [
@@ -664,6 +688,17 @@ const SHOWCASE: Showcase[] = [
     model('Gatter', SHAPE.pasture, BUILDINGS.pasture.size),
     model('Zaun', SHAPE.pastureFence, 0.5),
   ], 160, 0.4),
+  showcase('Gebäude', 'Mauern', [
+    wallExhibit('Palisade', 'palisade', STRAIGHT),
+    wallExhibit('Palisade · Ecke', 'palisade', CORNER),
+    wallExhibit('Tor · zu', 'palisade', STRAIGHT, { at: 1, state: 'closed' }),
+    wallExhibit('Tor · offen', 'palisade', STRAIGHT, { at: 1, state: 'open' }),
+    wallExhibit('Tor · abgeschlossen', 'palisade', STRAIGHT, { at: 1, state: 'locked' }),
+    wallExhibit('Palisade · Baustelle 40 %', 'palisade', STRAIGHT, undefined, 0.4),
+    wallExhibit('Steinmauer', 'stone_wall', STRAIGHT),
+    wallExhibit('Steinecke', 'stone_wall', CORNER),
+    wallExhibit('Steintor', 'stone_wall', STRAIGHT, { at: 1, state: 'open' }),
+  ], 110, 0.4),
   showcase('Gebäude', 'Baustelle', [
     construction('abgesteckt', 'house', 0),
     construction('Haus 30 %', 'house', 0.3, 2),

@@ -29,7 +29,8 @@ function describe(type: BuildingType): string {
     ? `+${def.housing} Platz`
     : def.storedResources.length > 0
       ? `Lager: ${def.storedResources.map((r) => RESOURCE_LABEL[r]).join('/')}`
-      : type === 'farm' ? 'Nahrung' : '';
+      : type === 'farm' ? 'Nahrung'
+      : type === 'palisade' || type === 'stone_wall' ? 'je Tile - als Linie ziehen, im Panel ein Tor' : '';
   return [cost || 'kostenlos', use].filter(Boolean).join(' · ');
 }
 
@@ -135,9 +136,18 @@ export class BuildMenu {
     }
   }
 
-  /** Welche Knöpfe gehen - die übrigen sind ausgegraut. */
-  setEnabled(enabled: (type: BuildingType) => boolean) {
-    for (const [type, refs] of this.buttons) refs.button.current.disabled = !enabled(type);
+  /**
+   * Welche Knöpfe gehen - die übrigen sind ausgegraut. `lock`: warum eine Art
+   * noch gesperrt ist (Steinmauer vor der Forschung) - steht dann im Tooltip.
+   */
+  setEnabled(enabled: (type: BuildingType) => boolean, lock: (type: BuildingType) => string | null = () => null) {
+    for (const [type, refs] of this.buttons) {
+      const reason = lock(type);
+      const button = refs.button.current;
+      button.disabled = reason !== null || !enabled(type);
+      const title = `${BUILDINGS[type].label} (${BUILDINGS[type].key})\n${describe(type)}${reason ? `\n${reason}` : ''}`;
+      if (button.title !== title) button.title = title;
+    }
     for (const refs of this.crops.values()) refs.button.current.disabled = !enabled('farm');
   }
 

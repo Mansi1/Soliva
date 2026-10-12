@@ -11,6 +11,7 @@ import { WEAPON_KINDS } from './common';
 import type { Farm } from './Farm';
 import type { StorageBuilding } from './StorageBuilding';
 import type { UnitProducer } from './UnitProducer';
+import type { Wall } from './Wall';
 
 /** Ein Gebäude im Speicherstand - kurze Schlüssel, damit die Datei klein bleibt. */
 export interface BuildingSave {
@@ -36,6 +37,9 @@ export interface BuildingSave {
   ts?: TreeSpecies;
   /** Baustelle (B26): wie weit gebaut, 0..1 - fehlt, wenn fertig (auch in älteren Ständen). */
   bp?: number;
+  /** Mauer (B34): 1 = Tor, und ob es abgeschlossen ist - fehlen bei Mauer bzw. offen. */
+  gt?: 1;
+  lk?: 1;
 }
 
 /**
@@ -227,6 +231,19 @@ export abstract class BuildingBase {
    */
   isOpenGround(): boolean {
     return this.isFarm();
+  }
+
+  /** Mauerstück oder Tor (B34)? Folgt dem Gelände, geklickt wird das Tile. */
+  isWall(): this is Wall {
+    return false;
+  }
+
+  /**
+   * Gehen Dorfbewohner über sein Tile (VillagerWork.blockedAt - die eine
+   * Stelle dafür)? Über Felder und Weiden, den Schießplatz und offene Tore.
+   */
+  passable(): boolean {
+    return this.isOpenGround();
   }
 
   /** Setzt man ihm einen Punkt auf der Karte (Fahne, Knopf im Panel)? Siehe rallyPoint. */

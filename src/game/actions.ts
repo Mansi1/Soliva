@@ -174,6 +174,20 @@ export class PlayerActions {
     return true;
   }
 
+  /** Maustaste los nach dem Ziehen einer Mauer (B34): die Linie abstecken, Stück für Stück bezahlt. */
+  placeLine() {
+    const { line, placingType } = this.placement;
+    this.placement.line = null;
+    if (!line || !placingType) return;
+    const { placed, reason } = this.world.placeWall(placingType, line.x0, line.y0, line.x1, line.y1);
+    this.placement.invalidate();
+    if (reason) this.ui.hint(placed > 0 ? `${placed} Stück abgesteckt - ${reason}` : reason);
+    if (placed === 0) return;
+    this.sound.play('place');
+    this.ui.refreshResources();
+    if (!this.placement.canAffordAnother()) this.ui.setPlacing(null);
+  }
+
 
   /**
    * Sammelpunkt-Schalter an: setzt den Punkt der ausgewählten ausbildenden
@@ -416,6 +430,26 @@ export class PlayerActions {
   /** Baumart der ausgewählten Försterhütten wählen - gilt ab dem nächsten Baum. */
   setTreeSpecies(species: TreeSpecies) {
     for (const b of this.selection.chosenBuildings()) this.world.setTreeSpecies(b, species);
+    this.sound.play('click');
+    this.ui.refreshSelection();
+  }
+
+  /** Mauerstück zum Tor machen bzw. wieder zur Mauer - für jedes ausgewählte (B34). */
+  toggleGate() {
+    const walls = this.selection.chosenBuildings().filter((b) => b.isWall());
+    const on = !walls.every((b) => b.isWall() && b.gate);
+    let reason: string | null = null;
+    for (const b of walls) reason = this.world.setGate(b, on) ?? reason;
+    if (reason) this.ui.hint(reason);
+    else this.sound.play('click');
+    this.ui.refreshSelection();
+  }
+
+  /** Ausgewählte Tore ab- bzw. aufschließen. */
+  toggleLock() {
+    const gates = this.selection.chosenBuildings().filter((b) => b.isWall() && b.gate);
+    const locked = !gates.every((b) => b.isWall() && b.locked);
+    for (const b of gates) this.world.setLocked(b, locked);
     this.sound.play('click');
     this.ui.refreshSelection();
   }

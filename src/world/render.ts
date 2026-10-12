@@ -15,6 +15,7 @@ import { DETAIL_TILE_SIZE, PARTICLE, type ParticleSources } from '../particles';
 import { FishTrap, furrowPosition } from './building';
 import { pastureInstances } from './pasture';
 import { siteInstances } from './construction';
+import { isWallType, wallInstances } from './walls';
 import { KIND_LABEL, hash } from './resources';
 import { BUILDINGS, CROPS, FISH_KIND, FISHING, MEAT_KIND, VILLAGER, player, type CropType, type ResourceKind } from './catalog';
 import {
@@ -179,6 +180,11 @@ export function worldInstances(
   for (const building of world.allBuildings()) {
     if (building.x < x0 || building.x > x1 || building.y < y0 || building.y > y1) continue;
     const def = building.definition;
+    // Mauer und Tor (B34), auch als Baustelle: verbunden mit den Nachbarn (walls.ts).
+    if (building.isWall()) {
+      wallInstances(world, building, out, !!selection?.buildings.has(building.anchor));
+      continue;
+    }
     // Baustelle (B26): Absteckung, das halbe Gebäude, Gerüst (construction.ts).
     if (!building.built) {
       siteInstances(building, (x, y) => world.groundAt?.(x, y), out, !!selection?.buildings.has(building.anchor));
@@ -478,7 +484,9 @@ function ruinInstances(world: World, x0: number, y0: number, x1: number, y1: num
     if (ruin.x < x0 || ruin.x > x1 || ruin.y < y0 || ruin.y > y1) continue;
     const def = BUILDINGS[ruin.type];
     // Ein aufgegebenes Feld stürzt nicht ein - es ist einfach weg.
-    if (ruin.type === 'farm' || ruin.type === 'pasture') continue;
+    // ponytail: ein Mauerstück ist einfach weg (sein Modell ist nur ein halbes Stück);
+    // einstürzen lassen, wenn Mauern im Kampf fallen (B24 Feinde).
+    if (ruin.type === 'farm' || ruin.type === 'pasture' || isWallType(ruin.type)) continue;
     const t = now - ruin.at;
     const fade = t < RUIN_FADE_START ? 1 : Math.max(0, 1 - (t - RUIN_FADE_START) / (RUIN_DURATION - RUIN_FADE_START));
     const collapse = ease(Math.min(1, Math.max(0, (t - RUIN_COLLAPSE_START) / RUIN_COLLAPSE)));

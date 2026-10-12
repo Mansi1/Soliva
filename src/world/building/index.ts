@@ -14,7 +14,8 @@
 //    ├─ ArcheryRange              Schießplatz: bis zu sechs üben mit dem Bogen
 //    ├─ FishTrap                  Reuse im Wasser - gebaut über die Fischerhütte
 //    ├─ Farm                      Feld mit Furchen
-//    └─ Pasture                   Weide mit Zaun, Tile für Tile (B27)
+//    ├─ Pasture                   Weide mit Zaun, Tile für Tile (B27)
+//    └─ Wall (abstrakt)           Mauerstück oder Tor, als Linie gelegt (B34) ── Palisade, StoneWall
 
 import type { BuildingDefinition } from './definition';
 import { BuildingBase, type BuildingClass, type BuildingOptions, type BuildingSave, type Goods } from './BuildingBase';
@@ -34,16 +35,17 @@ import { Armory } from './Armory';
 import { Forester } from './Forester';
 import { ArcheryRange } from './ArcheryRange';
 import { Pasture } from './Pasture';
+import { Palisade, StoneWall, Wall } from './Wall';
 import { Farm, furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE, type Furrow } from './Farm';
 
 export {
-  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, SpearMaker, Cobbler, Armory, Forester, ArcheryRange, Pasture,
+  BuildingBase, UnitProducer, randomFemale, StorageBuilding, TownCenter, House, LumberCamp, MiningCamp, Mill, FisherHut, FishTrap, Farm, Bowyer, SpearMaker, Cobbler, Armory, Forester, ArcheryRange, Pasture, Wall, Palisade, StoneWall,
   furrowCells, furrowFood, furrowPosition, maskCovers, ALL_TILES, CENTER_TILE,
   type BuildingClass, type BuildingDefinition, type BuildingOptions, type BuildingSave, type Furrow, type Goods, type TrainableUnit,
 };
 
 /** Alle Gebäudeklassen - in der Reihenfolge des Baumenüs (ohne Taste: nicht darin). */
-export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Pasture, Bowyer, SpearMaker, Cobbler, Armory, FisherHut, FishTrap, Forester, ArcheryRange] as const;
+export const BUILDING_CLASSES = [TownCenter, House, LumberCamp, MiningCamp, Mill, Farm, Pasture, Bowyer, SpearMaker, Cobbler, Armory, FisherHut, FishTrap, Forester, ArcheryRange, Palisade, StoneWall] as const;
 
 /** Kennung einer Gebäudeart, z. B. 'lumber_camp'. */
 export type BuildingType = (typeof BUILDING_CLASSES)[number]['definition']['type'];

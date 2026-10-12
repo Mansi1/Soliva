@@ -29,4 +29,8 @@ export class ArcheryRange extends BuildingBase {
     cost: { wood: 100 },
     hp: 600,
   });
+
+  override passable(): boolean {
+    return true;
+  }
 }

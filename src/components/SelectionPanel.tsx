@@ -14,7 +14,8 @@ import {
   CROP_ORDER, CROPS, FARMERS_PER_FIELD, FORESTER, TREE_SPECIES, TREE_SPECIES_ORDER, player,
   type AnimalKind, type BuildingType, type CropType, type DepositType, type TreeSpecies,
 } from '../world/catalog';
-import { animalIcon, buildingIcon, populationIcon, rallyIcon, resourceIcon, stockIcon, villagerIcon } from './modelIcons';
+import { animalIcon, buildingIcon, populationIcon, rallyIcon, resourceIcon, stockIcon, villagerIcon, wallIcon } from './modelIcons';
+import type { WallType } from '../world/walls';
 import { cropIcon } from './cropIcons';
 import type { ResearchId } from '../world/research';
 
@@ -105,6 +106,8 @@ export type SelectionView =
       trap?: { fish: number; max: number; fullIn: number };
       /** Schießplatz (B24): wie viele üben, wie viele dürfen, worauf welche warten. */
       range?: { trainees: number; max: number; waiting: string[] };
+      /** Mauerstück (B34): Art, ob es ein Tor ist und ob abgeschlossen. */
+      wall?: { type: WallType; gate: boolean; locked: boolean };
       /** Försterhütte: Baumart, ob ein Pflanzplatz gesetzt ist, Umkreis, ob der Schalter dafür an ist. */
       forester?: { species: TreeSpecies; spot: boolean; radius: number; rallyPicking: boolean };
       trainer?: {
@@ -298,6 +301,13 @@ function Building({ v }: { v: Extract<SelectionView, { kind: 'building' }> }) {
               {v.range.waiting.map((reason) => <div class="muted">{reason}</div>)}
               {v.range.trainees === 0 ? <div class="muted">Niemand übt hier - Rechtsklick mit Dorfbewohnern auf den {v.label}.</div> : null}
             </>
+          ) : null}
+          {v.wall ? (
+            <div class="muted">
+              {!v.wall.gate ? 'Sperrt Dorfbewohner und Tiere - unten zum Tor machen.'
+                : v.wall.locked ? 'Abgeschlossen: niemand kommt durch.'
+                : 'Öffnet sich für eigene Dorfbewohner - Tiere kommen nicht durch.'}
+            </div>
           ) : null}
           {v.trap ? (
             <>
@@ -508,7 +518,7 @@ export function SelectionPanel({ view }: { view: SelectionView }) {
 
 /** Ein Befehlsknopf: Bild, Taste, Tooltip und was er in main.ts auslöst. */
 interface Command {
-  action: 'train' | 'rally' | 'crop' | 'species' | 'demolish' | 'trap' | 'dismiss' | 'research';
+  action: 'train' | 'rally' | 'crop' | 'species' | 'demolish' | 'trap' | 'dismiss' | 'research' | 'gate' | 'lock';
   title: string;
   /** Bild-URL - oder das Abriss-Symbol. */
   icon: string | 'demolish';
@@ -566,6 +576,19 @@ function foresterCommands(forester: { species: TreeSpecies; rallyPicking: boolea
   ];
 }
 
+/** Mauerstück (B34): zum Tor bzw. wieder zur Mauer; ein Tor ab- und aufschließen. */
+function wallCommands(wall: { type: WallType; gate: boolean; locked: boolean }): Command[] {
+  const gate: Command = {
+    action: 'gate', pressed: wall.gate, icon: wallIcon({ type: wall.type, gate: 'closed' }, rgb()),
+    title: wall.gate ? 'Wieder Mauer statt Tor' : 'Zum Tor machen - kostet nichts\nEigene Dorfbewohner gehen hindurch, Tiere nicht',
+  };
+  if (!wall.gate) return [gate];
+  return [gate, {
+    action: 'lock', pressed: wall.locked, icon: wallIcon({ type: wall.type, gate: 'locked' }, rgb()),
+    title: wall.locked ? 'Aufschließen - eigene Dorfbewohner gehen wieder hindurch' : 'Abschließen - dann kommt niemand mehr durch',
+  }];
+}
+
 function cropCommands(current: CropType | null): Command[] {
   return CROP_ORDER.map((c) => ({
     action: 'crop', crop: c, pressed: c === current, icon: cropIcon(c),
@@ -586,6 +609,7 @@ export function commandsFor(view: SelectionView): Command[] {
         ...(view.forester ? foresterCommands(view.forester) : []),
         ...(view.trainer ? [trainCommand(view.trainer.train), rallyCommand(view.trainer.train)] : []),
         ...(view.research ? researchCommands(view.research) : []),
+        ...(view.wall ? wallCommands(view.wall) : []),
         ...(view.trapCost ? [{
           action: 'trap', icon: buildingIcon('fish_trap', rgb()), disabled: !view.trapCost.affordable,
           title: `Reuse bauen - ${view.trapCost.cost}\nIns Wasser nahe der Hütte; der Fischer leert sie mit dem Boot`,

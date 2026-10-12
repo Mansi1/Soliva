@@ -46,6 +46,9 @@ export interface UiHooks {
   setFieldCrop(crop: CropType): void;
   /** Försterhütte: Baumart wählen. */
   setTreeSpecies(species: TreeSpecies): void;
+  /** Mauerstück: zum Tor bzw. wieder zur Mauer; Tor ab- bzw. aufschließen (B34). */
+  toggleGate(): void;
+  toggleLock(): void;
   /** Bild im Auswahl-Panel: zum Ausgewählten springen. */
   focusSelection(): void;
 }
@@ -139,6 +142,8 @@ export class GameUi {
       if (action === 'demolish') hooks.demolish();
       if (action === 'trap') this.setPlacing('fish_trap');
       if (action === 'dismiss') hooks.dismiss();
+      if (action === 'gate') hooks.toggleGate();
+      if (action === 'lock') hooks.toggleLock();
       if (action === 'crop' && button?.dataset.crop) hooks.setFieldCrop(button.dataset.crop as CropType);
       if (action === 'species' && button?.dataset.species) hooks.setTreeSpecies(button.dataset.species as TreeSpecies);
       if (action === 'research' && button?.dataset.research) hooks.research(button.dataset.research as ResearchId);
@@ -186,6 +191,7 @@ export class GameUi {
   setPlacing(type: BuildingType | null) {
     const { placement, world } = this.state;
     placement.placingType = type;
+    placement.line = null;
     // Wer baut, wählt nicht gleichzeitig aus - sonst tut ein Klick zwei Dinge.
     if (type) this.clearSelection();
     // Kein Feld mehr: zurück vom Untermenü der Felder zum Baumenü.
@@ -228,7 +234,8 @@ export class GameUi {
       idle,
       villagerLabel: VILLAGER.label,
     });
-    this.buildMenu.setEnabled((type) => world.affordable(type) && (type === 'town_center' || world.hasTownCenter()));
+    // Gesperrt (Steinmauer vor der Forschung): mit dem Grund im Tooltip.
+    this.buildMenu.setEnabled((type) => world.affordable(type) && (type === 'town_center' || world.hasTownCenter()), (type) => world.buildLock(type));
     this.refreshSelection();
     // Der Vorrat wächst von allein: was eben noch zu teuer war, ist es jetzt
     // vielleicht nicht mehr - die gemerkte Bauplatz-Prüfung muss also mit.
