@@ -30,7 +30,7 @@ import type { Building } from './building';
 import { VILLAGER, YIELD, player, type BuildingType, type DepositType } from './catalog';
 import type { Task, Villager } from './unit';
 import { practise } from './unit/skills';
-import type { VillagerWork } from './villagers';
+import { UNREACHABLE, type VillagerWork } from './villagers';
 import type { World } from './world';
 
 /**
@@ -86,12 +86,21 @@ export function builderSpot(site: Pick<Building, 'x' | 'y' | 'definition'>, slot
   return { x: cx + dx * r, y: cy + dy * r, aimX: cx, aimY: cy };
 }
 
-/** Kleinster freier Platz, dessen Stelle begehbar ist - oder -1. */
-function freeSlot(work: VillagerWork, site: Building, used: ReadonlySet<number>): number {
+/** Platz `slot` an der Baustelle in v.unreachable. */
+const slotKey = (site: Building, slot: number) => `build:${site.anchor}#${slot}`;
+
+/**
+ * Kleinster freier Platz, dessen Stelle begehbar ist - oder -1. Nicht auf
+ * einer anderen Baustelle, auch wenn man über sie noch gehen kann (B39): dort
+ * stünde er im Weg, sobald sie gebaut wird, und an einer Mauer verteilen sich
+ * die Bauenden so auf die Stücke (VERIFIED: tests/walls.test.mjs).
+ */
+function freeSlot(world: World, work: VillagerWork, site: Building, used: ReadonlySet<number>): number {
   for (let slot = 0; slot < MAX_BUILDERS; slot++) {
     if (used.has(slot)) continue;
     const spot = builderSpot(site, slot);
-    if (!work.blockedAt(Math.floor(spot.x), Math.floor(spot.y))) return slot;
+    const [tx, ty] = [Math.floor(spot.x), Math.floor(spot.y)];
+    if (!work.blockedAt(tx, ty) && world.at(tx, ty)?.built !== false) return slot;
   }
   return -1;
 }
@@ -109,7 +118,7 @@ export function sendToSite(world: World, work: VillagerWork, selected: readonly 
   const used = new Set(builders(world, site).filter((v) => !chosen.has(v)).map((v) => (v.task as BuildTask).slot));
   let refused = 0;
   for (const v of selected) {
-    const slot = freeSlot(work, site, used);
+    const slot = freeSlot(world, work, site, used);
     if (slot < 0) {
       v.assign({ kind: 'idle' });
       const next = nearestSite(world, work, site, v);
@@ -143,6 +152,21 @@ export function tickBuilder(work: VillagerWork, world: World, v: Villager, task:
   if (!work.walk(v, spot.x, spot.y, 0.05, dt)) {
     // Weggeschoben (oder noch unterwegs): erst wieder hin.
     task.step = 'walk';
+    // Kein Weg zu seinem Platz (B35: frei, aber eingeschlossen): ein anderer
+    // freier Platz, zu dem er noch nicht vergeblich gesucht hat - sonst bleibt er mit dem Grund stehen.
+    // VERIFIED: tests/construction.test.mjs - eingeschlossene Seite.
+    if (v.problem === UNREACHABLE) {
+      v.unreachable.add(slotKey(site, task.slot));
+      const used = new Set(builders(world, site).filter((u) => u !== v).map((u) => (u.task as BuildTask).slot));
+      for (let slot = 0; slot < MAX_BUILDERS; slot++) if (v.unreachable.has(slotKey(site, slot))) used.add(slot);
+      const slot = freeSlot(world, work, site, used);
+      if (slot >= 0) {
+        task.slot = slot;
+        v.problem = null;
+      } else {
+        v.task = { kind: 'idle' };
+      }
+    }
     return;
   }
   if (task.step === 'walk') {
@@ -224,7 +248,7 @@ function nearestSite(world: World, work: VillagerWork, from: Building, v: Villag
     const d = Math.hypot(b.x - from.x, b.y - from.y);
     if (d > bestDistance) continue;
     const used = new Set(builders(world, b).filter((u) => u !== v).map((u) => (u.task as BuildTask).slot));
-    if (freeSlot(work, b, used) < 0) continue;
+    if (freeSlot(world, work, b, used) < 0) continue;
     best = b;
     bestDistance = d;
   }

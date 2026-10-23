@@ -9,7 +9,8 @@ import assert from 'node:assert/strict';
 import { after, beforeEach, test } from 'node:test';
 import { loadModules, makeWorld, run } from './worldFixture.mjs';
 
-const { modules: [worldModule, unit], close } = await loadModules('/src/world/world.ts', '/src/world/unit/index.ts');
+const { modules: [worldModule, unit, { selectionView }, { Selection }, { hoverDescription }], close } = await loadModules(
+  '/src/world/world.ts', '/src/world/unit/index.ts', '/src/game/selectionView.ts', '/src/game/Selection.ts', '/src/game/hoverInfo.ts');
 after(close);
 
 // Die Tiere würfeln (Wege, Plätze im Rudel) - fest gesät, damit jeder Lauf gleich ist.
@@ -164,4 +165,24 @@ test('Spielstand: Geschlecht, Alter und Rudel bleiben; alte Stände laden fest e
     return w.wildlife.animals.map((a) => a.female);
   };
   assert.deepEqual(sexes(), sexes(), 'Geschlecht fest, nicht zufällig');
+});
+
+// B38 (Vorgabe des Spielers, 2026-10-12): bei Tieren steht, ob männlich oder weiblich - auch beim Hasen,
+// dessen Name für beide gleich ist.
+test('B38: Panel und Hinweis sagen männlich oder weiblich, auch erlegt', () => {
+  const world = makeWorld(worldModule.World, () => 'grass');
+  const doe = world.wildlife.add('hare', 10.5, 10.5, { female: true }, null);
+  const buck = world.wildlife.add('hare', 14.5, 10.5, { female: false }, null);
+  const dead = world.wildlife.add('hare', 18.5, 10.5, { female: false, dead: true }, null);
+  const selection = new Selection(world);
+  const view = (a) => {
+    selection.animal = a.id;
+    return selectionView(world, selection, null);
+  };
+  assert.match(view(doe).herd, /^weiblich · /);
+  assert.match(view(buck).herd, /^männlich · /);
+  assert.ok(dead.isDead);
+  assert.equal(view(dead).herd, 'männlich');
+  assert.match(hoverDescription(world, null, { animal: doe }).text, /^Hase \(weiblich\) \| Leben/);
+  assert.match(hoverDescription(world, null, { animal: dead }).text, /^Hase \(männlich, erlegt\) \| Nahrung/);
 });

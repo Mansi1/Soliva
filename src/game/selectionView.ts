@@ -57,11 +57,16 @@ export function animalName(animal: Animal): string {
   return ANIMAL_SEX_NAME[animal.kind][animal.female ? 0 : 1];
 }
 
+/** "weiblich" oder "männlich" (B38) - der Name allein sagt es nicht jedem, beim Hasen gar nicht. */
+export function animalSex(animal: Animal): string {
+  return animal.female ? 'weiblich' : 'männlich';
+}
+
 /** Was auf einem Feldstück gerade dran ist - fürs Panel. */
 const FARM_PHASE_TEXT: Record<FarmPhase, string> = {
   plough: 'Wird umgepflügt',
   sow: 'Wird gesät',
-  wood: 'Zu wenig Holz zum Säen - die Bauern jäten',
+  wood: 'Zu wenig Holz zum Säen - die Bauern geben auf',
   grow: 'Wächst - die Bauern jäten',
   harvest: 'Wird geerntet',
   done: 'Abgeerntet - wird neu gesät',
@@ -255,7 +260,7 @@ export function selectionView(world: World, selection: Selection, resources: Res
     return {
       kind: 'animal', type: animal.kind, label: animalName(animal), info: def.info, dead: animal.isDead, doing: ANIMAL_DOING[animal.state],
       hp: animal.hp, maxHp: def.hp, food: animal.food, maxFood: animal.maxFood,
-      herd: animal.isDead ? undefined : `${young}${animal.tamed ? pastureText(animal) : `Herde: ${animal.herd.size} Tiere`}`,
+      herd: animal.isDead ? animalSex(animal) : `${animalSex(animal)} · ${young}${animal.tamed ? pastureText(animal) : `Herde: ${animal.herd.size} Tiere`}`,
     };
   }
   if (selection.flower) {

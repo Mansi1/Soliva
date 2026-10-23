@@ -96,7 +96,8 @@ lagert die Baustelle nichts, gibt keinen Wohnraum und bildet nicht aus.
 Abgerissen kommen die Kosten ganz zurück. Fertig, sammeln die Bauenden am
 neuen Lager, einer übernimmt die Werkstatt, oder sie bauen an der nächsten
 Baustelle weiter. Felder, Weiden, Reusen und das erste Dorfzentrum stehen
-sofort. Regeln und Zahlen: `src/world/construction.ts`.
+sofort. Über eine Baustelle, an der noch keiner gebaut hat, gehen
+Dorfbewohner hinweg. Regeln und Zahlen: `src/world/construction.ts`.
 
 Mauern (`L` Palisade, `U` Steinmauer): klicken, ziehen, loslassen - je Tile
 ein Stück, als Treppe auch schräg. Jedes Stück ist eine kleine Baustelle
