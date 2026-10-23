@@ -9,12 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T22:52:18Z s=560a6297 DONE fp=c7344339edea cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:55:01Z s=560a6297 DONE fp=09abe0671e01 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:56:51Z s=560a6297 DONE fp=49c30d7b4be1 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T23:01:20Z s=560a6297 DONE fp=e2fe88c3dfcc cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T23:37:49Z s=560a6297 DONE fp=0b35d81ee4eb cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T23:39:29Z s=560a6297 DONE fp=20ede49c5ee5 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-10T00:14:16Z s=560a6297 FAIL prose
 2026-10-10T00:20:02Z s=560a6297 DONE fp=32e92ff7e523 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+56)
 2026-10-10T00:20:02Z s=560a6297 FINDING src/world/villagers.ts:enter/nearestDropSite learn=test: Regression test in tests/water-path.test.mjs.
@@ -104,3 +98,9 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-23T16:37:52Z s=9d3ed845 FINDING src/world/villagers.ts:blockedAt learn=test: tests/construction.test.mjs B39 x2 fail on old code
 2026-10-23T16:37:52Z s=9d3ed845 FINDING src/game/selectionView.ts:animalSex learn=test: tests/herd.test.mjs B38 fails on old code
 2026-10-23T16:37:52Z s=9d3ed845 FINDING README.md:Bauen learn=none: doc only
+2026-10-23T17:20:36Z s=9d3ed845 DONE fp=617cd2d56756 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,plans/2026-10-09_21-50_bugs-sammlung.md(+17)
+2026-10-23T17:20:36Z s=9d3ed845 FINDING src/world/villagers.ts:deliverTo learn=test: tests/shoes.test.mjs and tests/research.test.mjs: pickup on delivery, prefer leather, no trips when idle or passing
+2026-10-23T17:20:36Z s=9d3ed845 FINDING src/world/villagers.ts:tickCrafter deliver learn=test: tests/shoes.test.mjs: first pair delivered and worn, second lies in the town center
+2026-10-23T17:20:36Z s=9d3ed845 FINDING src/world/world.ts:applySave learn=test: tests/shoes.test.mjs: old save moves wood and leather pairs with their kinds
+2026-10-23T17:20:36Z s=9d3ed845 FINDING src/models/buildings/cobbler.glb learn=test: tests/check-models.test.mjs and tests/ids.test.mjs
+2026-10-23T17:20:36Z s=9d3ed845 FINDING src/world/villagers.ts:tickTask gather; src/world/construction.ts:tickBuilder; tickFarmer; blockedAt; selectionView.animalSex learn=test: tests/water-path, construction, fields, herd B35-B39 tests

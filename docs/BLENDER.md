@@ -214,11 +214,21 @@ lesen sich nach Import und Export durch Blender Dreieck für Dreieck gleich.
 die Mitte der Figur am Boden, Fersen bei y +0,10 m, Teile `Leg.L.Lower.Clog`
 und `Leg.R.Lower.Clog`, dunkle Öffnung `…Clog.Opening`, Holz `WoodLight`. Es
 passt an Mann und Frau. `props/load_shoes.glb` ist ein Paar am Rücken,
-nur `Carry…`. `buildings/cobbler.glb` ist die Bognerei ohne Bögen, Pfeile und
-Scheibe. Dazu kommen ein Paar am Pflock, ein Regal mit sechs Paaren und auf
-der Werkbank `Craft.0` (Klotz mit Rinde), `Craft.1` (grob behauen) und
-`Craft.2` (fertiges Paar). Marker und Maße sind die der Bognerei. Gebaut ist
-alles headless in Blender, das Skript liegt nicht im Repo.
+nur `Carry…`. `buildings/cobbler.glb` (B37, 2026-10-23) ist ein eigenes Haus:
+Erdgeschoss aus Stein (`StoneWarm`), Fachwerk-Obergeschoss, Giebel aus
+Brettern nach vorn, steiles Schindeldach mit Kamin, Band in Spielerfarbe. Über
+der Tür hängt als Zunftzeichen ein großer Holzschuh (`Sign.Clog`, der rechte
+Schuh aus `props/clogs.glb`, 2,2-fach). Die Werkbank steht im Hof unter einem
+Vordach (`Lean.*`) mit Hammer, Leisten (`Last`, `Rack.Last` im Regal an der
+Wand) und dem Werkstück `Craft.0` (Klotz mit Rinde), `Craft.1` (grob
+behauen), `Craft.2` (fertiges Paar, der linke Schuh aus `clogs.glb`); dazu
+Pappelklötze (`Billet`), Späne, ein Fass und Häute (`Hide`, `Leather`) an
+einer Stange. Marker (`Entry`, `Work.*`) und Grundfläche (4,9 × 4,4 m) sind
+die der Bognerei. Gebaut headless in Blender (Quader und Zylinder aus
+`bpy.ops.mesh.primitive_*`, Materialfarben aus den vorhandenen Modellen), das
+Skript liegt nicht im Repo. Beim Import von `clogs.glb` stellt Blender die
+Objekte auf Quaternionen (`rotation_mode`) und hängt `.001` an gleichnamige
+Materialien - beides vor dem Export zurückstellen.
 
 ## Schießplatz und Bogen in der Hand
 

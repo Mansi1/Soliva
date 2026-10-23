@@ -378,7 +378,7 @@ export const SHAPE = {
   forester: 160,
   /** Speermacherei: die Bognerei mit Speeren statt Bögen (B25, models/buildings/spear_maker.glb). */
   spearMaker: 161,
-  /** Schusterei: die Bognerei mit Holzschuhen statt Bögen (B31, models/buildings/cobbler.glb). */
+  /** Schusterei (B31, B37): Fachwerkhaus mit Holzschuh als Zunftzeichen, Werkbank unterm Vordach (models/buildings/cobbler.glb). VERIFIED: npm run check:models. */
   cobbler: 162,
   /** Schießplatz: sechs Strohscheiben, Kugelfang, Zaun, Bank (B24, models/buildings/archery_range.glb). */
   archeryRange: 163,

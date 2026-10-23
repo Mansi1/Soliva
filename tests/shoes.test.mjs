@@ -1,12 +1,11 @@
-// Schuhe (B31) - Vorgaben des Spielers vom 2026-10-12:
+// Schuhe (B31, B37) - Vorgaben des Spielers vom 2026-10-12:
 // - Zu Beginn sind alle Dorfbewohner barfuß, auch in älteren Spielständen.
 // - Ein Schuster (eigene Werkstatt "Schusterei", ein Arbeiter wie die Bognerei)
-//   macht Holzschuhe aus Holz.
+//   macht Holzschuhe aus Holz und bringt sie ins Dorfzentrum (B37).
 // - Barfuß geht er wie bisher (VILLAGER.speed), mit Holzschuhen 10 % schneller.
-// - Barfüßige holen sich ihre Schuhe selbst beim Schuster: wenn sie untätig
-//   sind oder die Schusterei auf ihrem Weg liegt.
-// Gewählt (B31): die fertigen Paare bleiben in der Schusterei; "auf dem Weg"
-// heißt näher als COBBLER.detour Tiles an ihr vorbei. Echte Module über Vite.
+// - Wer im Dorfzentrum Ware abgibt, nimmt dabei ein Paar mit (B37). Eigens
+//   hin geht dafür keiner - auch nicht untätig oder im Vorbeigehen.
+// Echte Module über Vite.
 
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
@@ -23,45 +22,51 @@ globalThis.localStorage ??= {
   setItem: (k, v) => storage.set(k, String(v)),
 };
 
-/** Dorfzentrum und Schusterei mit `pairs` fertigen Paaren. */
-function shopWorld(pairs) {
-  const world = makeWorld(World, () => 'grass');
-  build(world, 0, 0, 'town_center');
+/** Dorfzentrum mit `pairs` fertigen Paaren, Schusterei bei 6,0, ein Baum bei 3,6 zum Holzholen. */
+function shoeWorld(pairs) {
+  const world = makeWorld(World, (x, y) => (x === 3 && y === 6 ? 'tree' : 'grass'));
+  const center = build(world, 0, 0, 'town_center');
   const shop = build(world, 6, 0, 'cobbler');
-  if (pairs > 0) world.addStock('shoes', pairs, SHOES.wood.kind, shop);
-  return { world, shop };
+  if (pairs > 0) world.addStock('shoes', pairs, SHOES.wood.kind, center);
+  return { world, center, shop };
 }
 
-test('Schuster: aus 3 Holz wird ein Paar Holzschuhe in der Schusterei', () => {
-  const { world, shop } = shopWorld(0);
+/** Ein Dorfbewohner bei 2,6, der Holz am Baum holt und im Dorfzentrum abgibt. */
+function woodcutter(world) {
+  world.spawnAround('villager', 2, 6, 1);
+  const v = world.villagers.at(-1);
+  assert.equal(world.command(new Set([v.id]), 3, 6), null);
+  return v;
+}
+
+test('Schuster: aus 3 Holz wird ein Paar Holzschuhe - er bringt es ins Dorfzentrum und zieht es dort an', () => {
+  const { world, center, shop } = shoeWorld(0);
   world.spawnAround('villager', 3, 3, 1);
   const v = world.villagers[0];
   assert.equal(v.inventory.shoes, null, 'starts barefoot');
   assert.equal(world.command(new Set([v.id]), shop.x, shop.y), null);
   const wood = world.stock.wood;
-  for (let t = 0; t < 120 && shop.stored('shoes') < 1; t += 0.1) world.tick(0.1);
-  assert.equal(shop.stored('shoes'), 1);
-  assert.deepEqual(Object.keys(shop.goods.shoes), [SHOES.wood.kind]);
-  const spent = wood - world.stock.wood;
-  assert.ok(spent === COBBLER.wood || spent === 2 * COBBLER.wood, `wood spent: ${spent}`);
-  // Auf dem nächsten Gang zum Holz kommt er an seiner Schusterei vorbei und zieht das Paar selbst an.
-  for (let t = 0; t < 40 && !v.inventory.shoes; t += 0.1) world.tick(0.1);
-  assert.equal(v.inventory.shoes, 'wood', 'the cobbler wears a pair himself');
+  // Das erste Paar gibt er im Dorfzentrum ab und nimmt es gleich selbst mit.
+  for (let t = 0; t < 120 && !v.inventory.shoes; t += 0.1) world.tick(0.1);
+  assert.equal(v.inventory.shoes, 'wood', 'the cobbler wears the first pair himself');
+  assert.equal(shop.stored('shoes'), 0, 'nothing stays in the workshop');
+  assert.ok(wood - world.stock.wood >= COBBLER.wood, `wood spent: ${wood - world.stock.wood}`);
+  // Das zweite bleibt im Dorfzentrum, mit seiner Sorte.
+  for (let t = 0; t < 120 && center.stored('shoes') < 1; t += 0.1) world.tick(0.1);
+  assert.equal(center.stored('shoes'), 1);
+  assert.deepEqual(Object.keys(center.goods.shoes), [SHOES.wood.kind]);
   assert.equal(world.gatherers().counts.shoes, 1);
 });
 
-test('Barfuß und untätig: er holt sich ein Paar und geht dann 10 % schneller', () => {
-  const { world, shop } = shopWorld(2);
-  world.spawnAround('villager', 2, 6, 1);
-  const v = world.villagers[0];
-  // Untätig: zur Schusterei, genau ein Paar.
-  for (let t = 0; t < 30 && !v.inventory.shoes; t += 0.1) world.tick(0.1);
+test('Beim Abgeben von Holz im Dorfzentrum nimmt er ein Paar mit und geht dann 10 % schneller', () => {
+  const { world, center } = shoeWorld(2);
+  const v = woodcutter(world);
+  for (let t = 0; t < 120 && !v.inventory.shoes; t += 0.1) world.tick(0.1);
   assert.equal(v.inventory.shoes, 'wood');
-  run(world, 3);
-  assert.equal(shop.stored('shoes'), 1, 'took exactly one pair');
-  // Gleiche Strecke wie ein Barfüßiger (ohne Schusterei): in derselben Zeit 10 % weiter.
+  assert.equal(center.stored('shoes'), 1, 'took exactly one pair');
   assert.ok(Math.abs(v.speed - VILLAGER.speed * 1.1) < 1e-9, `speed ${v.speed}`);
-  const other = shopWorld(0).world;
+  // Gleiche Strecke wie ein Barfüßiger: in derselben Zeit 10 % weiter.
+  const other = shoeWorld(0).world;
   other.spawnAround('villager', v.x, v.y, 1);
   const bare = other.villagers[0];
   [bare.x, bare.y] = [v.x, v.y];
@@ -79,43 +84,30 @@ function walked(world, u) {
   return Math.hypot(u.x - x0, u.y - y0);
 }
 
-test('Wer schon Schuhe hat, nimmt keine weiteren', () => {
-  const { world, shop } = shopWorld(3);
-  world.spawnAround('villager', 2, 6, 1);
-  const v = world.villagers[0];
-  v.inventory.shoes = 'wood';
-  // Untätig und auch im Vorbeigehen.
-  run(world, 10);
-  world.command(new Set([v.id]), 8, 4);
-  run(world, 15);
-  assert.equal(shop.stored('shoes'), 3);
-});
-
-test('Auf dem Weg: nah an der Schusterei vorbei macht er den Umweg, weiter weg nicht', () => {
-  const { world, shop } = shopWorld(2);
+test('Untätig oder im Vorbeigehen holt sich keiner Schuhe', () => {
+  const { world, center } = shoeWorld(2);
   world.spawnAround('villager', 2, 2, 2);
-  const [near, far] = world.villagers;
-  far.x = 2.5;
-  far.y = 14.5;
-  // near geht dicht an der Schusterei (6,0) vorbei nach (12, 2), far weit unten nach (12, 14).
-  world.command(new Set([near.id]), 12, 2);
-  world.command(new Set([far.id]), 12, 14);
-  // Bis far angekommen ist: er ist nicht abgebogen.
-  for (let t = 0; t < 30 && far.task.kind !== 'idle'; t += 0.1) world.tick(0.1);
-  assert.equal(far.inventory.shoes, null);
-  assert.ok(Math.hypot(far.x - 12.5, far.y - 14.5) < 0.5, `far at ${far.x.toFixed(2)},${far.y.toFixed(2)}`);
-  run(world, 5);
-  assert.equal(near.inventory.shoes, 'wood', world.describe(near));
-  assert.equal(near.task.kind, 'idle');
-  assert.ok(Math.hypot(near.x - 12.5, near.y - 2.5) < 0.5, 'and still arrives where he was sent');
-  assert.equal(shop.stored('shoes'), 1);
-  // Untätig holt sich far das letzte Paar.
+  const [idle, passer] = world.villagers;
+  // passer geht dicht am Dorfzentrum (0,0) vorbei, idle bleibt stehen.
+  world.command(new Set([passer.id]), -2, 2);
   run(world, 30);
-  assert.equal(far.inventory.shoes, 'wood');
-  assert.equal(shop.stored('shoes'), 0);
+  assert.equal(passer.task.kind, 'idle');
+  assert.equal(idle.inventory.shoes, null);
+  assert.equal(passer.inventory.shoes, null);
+  assert.equal(center.stored('shoes'), 2);
 });
 
-test('Spielstand: Schuhe bleiben, ältere Stände laden barfuß', () => {
+test('Wer schon Schuhe hat, nimmt beim Abgeben keine weiteren', () => {
+  const { world, center } = shoeWorld(3);
+  const v = woodcutter(world);
+  v.inventory.shoes = 'wood';
+  const wood = world.stock.wood;
+  for (let t = 0; t < 120 && world.stock.wood <= wood; t += 0.1) world.tick(0.1);
+  assert.ok(world.stock.wood > wood, 'delivered wood');
+  assert.equal(center.stored('shoes'), 3);
+});
+
+test('Spielstand: Schuhe bleiben, ältere Stände laden barfuß, Paare aus der Schusterei ziehen ins Dorfzentrum', () => {
   // Eigene Welt (Seed "schuhe") - makeWorld läse sonst diesen Stand in den anderen Tests.
   const world = new World(terrain(() => 'grass'), 'schuhe');
   world.spawnAround('villager', 3, 3, 2);
@@ -133,6 +125,18 @@ test('Spielstand: Schuhe bleiben, ältere Stände laden barfuß', () => {
   const old = new World(terrain(() => 'grass'), 'alt-schuhe');
   assert.deepEqual(old.villagers.map((x) => x.inventory), [{ weapon: 'spear', shoes: null }, { weapon: null, shoes: null }]);
   assert.equal(old.stock.shoes, 0);
+  // Vor B37 lagen die Paare in der Schusterei - geladen liegen sie im Dorfzentrum, Sorte für Sorte.
+  const shelf = new World(terrain(() => 'grass'), 'regal');
+  build(shelf, 0, 0, 'town_center');
+  build(shelf, 6, 0, 'cobbler');
+  shelf.save();
+  const saved = JSON.parse(storage.get('pgm.world.regal'));
+  saved.buildings.find((b) => b.t === 'cobbler').g = { shoes: { [SHOES.wood.kind]: 2, [SHOES.leather.kind]: 1 } };
+  storage.set('pgm.world.regal', JSON.stringify(saved));
+  const moved = new World(terrain(() => 'grass'), 'regal');
+  assert.deepEqual(moved.at(0, 0).goods.shoes, { [SHOES.wood.kind]: 2, [SHOES.leather.kind]: 1 });
+  assert.equal(moved.at(6, 0).goods.shoes, undefined);
+  assert.equal(moved.stock.shoes, 3);
 });
 
 test('Panel: "Hat: Speer · Holzschuhe" oder barfuß', () => {
