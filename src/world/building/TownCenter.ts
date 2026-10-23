@@ -22,7 +22,9 @@ export class TownCenter extends UnitProducer {
     footprint: 3,
     cost: { wood: 200, stone: 100 },
     housing: 10,
-    storedResources: GATHERED_KINDS,
+    // Dazu die Schuhe aus der Schusterei (B37) - wer hier Ware abgibt, nimmt ein Paar mit.
+    // VERIFIED: tests/shoes.test.mjs.
+    storedResources: [...GATHERED_KINDS, 'shoes'],
     hp: 2400,
   });
 

@@ -197,21 +197,21 @@ export const SPEAR_MAKER = { wood: 5, craftTime: 10 };
 
 /**
  * Schusterei (B31): ein Paar Holzschuhe (Klompen) aus einem Klotz Pappelholz -
- * weniger Holz als ein Speer (5), in derselben Zeit geschnitzt. Barfüßige
- * holen sich ein Paar, wenn sie untätig sind oder auf ihrem Weg näher als
- * `detour` Tiles an einer Schusterei mit Schuhen vorbeikommen (villagers.ts, lookForShoes).
+ * weniger Holz als ein Speer (5), in derselben Zeit geschnitzt. Die Paare
+ * liegen im Dorfzentrum; wer dort Ware abgibt, nimmt ein Paar mit (B37,
+ * villagers.ts deliverTo). VERIFIED: tests/shoes.test.mjs.
  */
-export const COBBLER = { wood: 3, craftTime: 10, detour: 3 };
+export const COBBLER = { wood: 3, craftTime: 10 };
 
 /**
  * Was eine Werkstatt aus Holz macht (Auftrag 'craft', villagers.ts): Ware,
  * Stoff (Holz, Leder) und Zeit je Stück, wie das Stück und wer es macht in der Oberfläche heißt.
  * Ein Rezept je Werkstatt statt eigener Abläufe: Bognerei, Speermacherei und
  * Schusterei teilen denselben Weg (holen, schnitzen, abliefern). Abgeliefert
- * wird in die Werkstatt selbst, wenn sie die Ware lagert (Schuhe), sonst in
- * die nächste Waffenkammer.
+ * wird ins nächste Lager für die Ware: Waffen in die Waffenkammer, Schuhe ins
+ * Dorfzentrum (B37).
  * VERIFIED: tests/spear.test.mjs - 5 Holz werden ein Speer in der Waffenkammer;
- * tests/shoes.test.mjs - 3 Holz werden ein Paar Holzschuhe in der Schusterei.
+ * tests/shoes.test.mjs - 3 Holz werden ein Paar Holzschuhe im Dorfzentrum.
  */
 export interface CraftRecipe {
   product: 'bows' | 'spears' | 'shoes';

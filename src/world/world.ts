@@ -1098,6 +1098,18 @@ export class World {
       for (const [tx, ty] of building.footprintTiles()) this.occupied.set(key(tx, ty), building.anchor);
     }
     this.buildingsRevision++;
+    // Ware, die ein Gebäude nicht mehr lagert (Schuhe in der Schusterei vor
+    // B37), zieht mit ihrer Sorte in ein Lager dafür um. Gibt es keins, bleibt
+    // sie liegen - im Vorrat ohne Lager ginge die Sorte verloren.
+    // VERIFIED: tests/shoes.test.mjs - alter Stand, die Paare liegen danach im Dorfzentrum.
+    for (const b of this.buildings.values()) {
+      if (!b.built) continue;
+      for (const r of Object.keys(b.goods) as ResourceKind[]) {
+        if (b.stores(r) || this.storages(r).length === 0) continue;
+        for (const [kind, amount] of Object.entries(b.goods[r] ?? {})) this.addStock(r, amount, kind);
+        delete b.goods[r];
+      }
+    }
     // Ältere Spielstände hatten nur den einen Vorrat - er kommt in ihre Lager.
     this.absorbReserve();
 

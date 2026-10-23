@@ -140,27 +140,32 @@ test('Panel: Knöpfe mit Kosten und Grund, die laufende mit Fortschritt, erforsc
   assert.equal(view.running, undefined);
 });
 
-/** Dorfzentrum mit `leather` Leder, Schusterei bei 6,0, ein Schuster bei der Arbeit. */
+/**
+ * Dorfzentrum mit `leather` Leder, Schusterei bei 6,0, ein Schuster bei der
+ * Arbeit - bis sein erstes Paar im Dorfzentrum liegt (B37; das erste nimmt
+ * er beim Abgeben selbst mit).
+ */
 function cobblerWorld(leather, researched) {
-  const { world } = centerWorld(leather);
+  const { world, center } = centerWorld(leather);
   if (researched) world.research.done.add('leather_shoes');
   const shop = build(world, 6, 0, 'cobbler');
   world.spawnAround('villager', 3, 3, 1);
   const v = world.villagers[0];
   world.command(new Set([v.id]), shop.x, shop.y);
-  for (let t = 0; t < 120 && shop.stored('shoes') < 1; t += 0.1) world.tick(0.1);
-  return { world, shop, v };
+  for (let t = 0; t < 240 && center.stored('shoes') < 1; t += 0.1) world.tick(0.1);
+  return { world, center, v };
 }
 
 test('Schuster: Lederschuhe erst nach der Gerberei und nur mit Leder - sonst Holzschuhe', () => {
   const before = cobblerWorld(10, false);
-  assert.deepEqual(Object.keys(before.shop.goods.shoes), [SHOES.wood.kind], 'not researched: wood');
+  assert.deepEqual(Object.keys(before.center.goods.shoes), [SHOES.wood.kind], 'not researched: wood');
   assert.equal(before.world.stock.leather, 10);
   const without = cobblerWorld(0, true);
-  assert.deepEqual(Object.keys(without.shop.goods.shoes), [SHOES.wood.kind], 'no leather: wood');
+  assert.deepEqual(Object.keys(without.center.goods.shoes), [SHOES.wood.kind], 'no leather: wood');
   const leather = cobblerWorld(10, true);
-  assert.deepEqual(Object.keys(leather.shop.goods.shoes), [SHOES.leather.kind]);
-  assert.equal(leather.world.stock.leather, 10 - LEATHER_SHOES.amount);
+  assert.deepEqual(Object.keys(leather.center.goods.shoes), [SHOES.leather.kind]);
+  // Zwei Paare genäht: eins trägt der Schuster, eins liegt im Dorfzentrum.
+  assert.equal(leather.world.stock.leather, 10 - 2 * LEATHER_SHOES.amount);
 });
 
 test('Lederschuhe: 20 % schneller als barfuß', () => {
@@ -180,36 +185,42 @@ test('Lederschuhe: 20 % schneller als barfuß', () => {
   assert.ok(Math.abs(ratio - 1.2) < 0.01, `ratio ${ratio.toFixed(3)}`);
 });
 
-/** Schusterei mit je einem Paar Holz- und Lederschuhe, ein Dorfbewohner mit `shoes`. */
+/** Dorfzentrum mit je einem Paar Holz- und Lederschuhe, ein Dorfbewohner mit `shoes` und 5 Holz auf dem Rücken. */
 function shelfWorld(shoes) {
   const world = makeWorld(World, () => 'grass');
-  build(world, 0, 0, 'town_center');
-  const shop = build(world, 6, 0, 'cobbler');
-  world.addStock('shoes', 1, SHOES.wood.kind, shop);
-  world.addStock('shoes', 1, SHOES.leather.kind, shop);
+  const center = build(world, 0, 0, 'town_center');
+  world.addStock('shoes', 1, SHOES.wood.kind, center);
+  world.addStock('shoes', 1, SHOES.leather.kind, center);
   world.spawnAround('villager', 2, 6, 1);
   const v = world.villagers[0];
   v.inventory.shoes = shoes;
-  return { world, shop, v };
+  v.pickUp('wood', 5);
+  return { world, center, v };
 }
 
-test('Barfuß: er nimmt lieber die Lederschuhe', () => {
-  const { world, shop, v } = shelfWorld(null);
-  for (let t = 0; t < 30 && !v.inventory.shoes; t += 0.1) world.tick(0.1);
+/** Er gibt seine Ladung im Dorfzentrum ab (B37: dabei nimmt er Schuhe mit). */
+function deliver(world, center, v) {
+  assert.equal(world.command(new Set([v.id]), center.x, center.y), null);
+  for (let t = 0; t < 30 && v.task.kind !== 'idle'; t += 0.1) world.tick(0.1);
+  assert.equal(v.carrying, 0, 'delivered');
+}
+
+test('Barfuß: beim Abgeben nimmt er lieber die Lederschuhe', () => {
+  const { world, center, v } = shelfWorld(null);
+  deliver(world, center, v);
   assert.equal(v.inventory.shoes, 'leather');
-  run(world, 5);
-  assert.deepEqual(shop.goods.shoes, { [SHOES.wood.kind]: 1 });
+  assert.deepEqual(center.goods.shoes, { [SHOES.wood.kind]: 1 });
 });
 
-test('Mit Holzschuhen: untätig tauscht er sie gegen Lederschuhe, die Holzschuhe bleiben im Regal', () => {
-  const { world, shop, v } = shelfWorld('wood');
-  for (let t = 0; t < 30 && v.inventory.shoes !== 'leather'; t += 0.1) world.tick(0.1);
+test('Mit Holzschuhen: beim Abgeben tauscht er sie gegen Lederschuhe, die Holzschuhe bleiben im Lager', () => {
+  const { world, center, v } = shelfWorld('wood');
+  deliver(world, center, v);
   assert.equal(v.inventory.shoes, 'leather');
-  run(world, 5);
-  assert.deepEqual(shop.goods.shoes, { [SHOES.wood.kind]: 2 });
+  assert.deepEqual(center.goods.shoes, { [SHOES.wood.kind]: 2 });
   // Mit Lederschuhen nimmt er nichts mehr.
-  run(world, 10);
-  assert.deepEqual(shop.goods.shoes, { [SHOES.wood.kind]: 2 });
+  v.pickUp('wood', 5);
+  deliver(world, center, v);
+  assert.deepEqual(center.goods.shoes, { [SHOES.wood.kind]: 2 });
 });
 
 test('Jagd: ein erlegtes Schaf gibt Leder (wie beim Schlachten) und Fleisch', () => {

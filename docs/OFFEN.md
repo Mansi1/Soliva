@@ -23,9 +23,6 @@ Was danach noch zu tun bleibt, grob nach Wichtigkeit.
   Optimierung der Keyframes), bei denen `npm run check:anim` gleich bleibt,
   und in docs/ANIMATION.md festhalten. Bis dahin Clips nicht über Blender
   speichern.
-- **Tests automatisch laufen lassen.** `npm test` und `npm run smoke` laufen
-  nur von Hand. Eine CI (z. B. GitHub Actions) würde bei jedem Push prüfen.
-  Blender braucht keiner der Tests.
 
 ## Prüfen
 
@@ -91,8 +88,8 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
   Hacken das Beil. Hacke (Pflügen) und Speer (Jagd, B25) gibt es.
 - **Schuhe (B31):** Lederschuhe haben dieselbe Form wie die Holzschuhe, nur
   aus Leder (`PROP_LEATHER_SHOES`); ein eigenes Modell, wenn man sie im Spiel
-  nicht unterscheiden kann. Das Regal
-  der Schusterei zeigt immer sechs Paare, nicht den Vorrat. Die Symbole der
+  nicht unterscheiden kann. Die Paare liegen im Dorfzentrum (B37); am
+  Gebäude sieht man den Vorrat nicht. Die Symbole der
   Rohstoffleiste (`src/icons`, `npm run gen:ui`) zeigen die Dorfbewohner noch
   mit Stiefeln.
 - **Weide (B27):** Dorfbewohner gehen über Weide-Tiles wie über Felder,
@@ -109,8 +106,7 @@ Jede Änderung am Rendering wird mit Bench und Screenshots belegt (AGENTS.md).
 - **Fliegender Speer:** Beim Wurf ist die Hand ab dem Loslassen leer
   (`spearThrown`), der Speer fliegt aber nicht sichtbar zum Tier.
 - **Forschung im Dorfzentrum** (`world/research.ts`): ein Platz je
-  Dorfzentrum, keine Warteschlange. Ein Dorfzentrum im Bau (B26) sollte noch nicht
-  forschen können.
+  Dorfzentrum, keine Warteschlange.
 - **Mauern** (B34, `world/walls.ts`): man trifft ein Stück an seinem Tile,
   nicht am Modell; ein abgerissenes Stück ist ohne Einsturz weg. Tore kosten
   nichts extra und öffnen sich für jeden Dorfbewohner in der Nähe - Feinde
