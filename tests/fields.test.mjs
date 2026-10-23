@@ -1,6 +1,6 @@
 // Felder (src/world/farming.ts, Villagers.tickFarmer): jedes Feldstück
 // arbeitet für sich - eigene Phase, bis zu 3 Bauern, die dort bleiben (B1).
-// Ohne Holz zum Säen wird Reifes geerntet und sonst gejätet (B2). Das Panel
+// Ohne Holz zum Säen wird Reifes geerntet, dann geben die Bauern auf (B2, B36). Das Panel
 // zählt nur die markierten Feldstücke (B3), der Fruchtwechsel gilt für
 // angrenzende Stücke mit derselben Frucht (B4), nach 3 Ernten wird neu
 // gepflügt (B5). Echte Module über Vite (worldFixture.mjs).
@@ -53,7 +53,8 @@ test('B1: je Feldstück höchstens 3 Bauern, eigene Phase, sie bleiben auf ihrem
   assert.ok(world.farming.furrows(b).some(({ f }) => f.plough > 0));
 });
 
-test('B2: ohne Holz zum Säen wird Reifes geerntet, sonst gejätet - kein Stillstand', () => {
+// B36 (Vorgabe des Spielers, 2026-10-12) ersetzt das Jäten aus B2: ohne Holz zum Säen geben die Bauern auf.
+test('B2/B36: ohne Holz zum Säen wird Reifes geerntet, dann gibt der Bauer auf und ist untätig', () => {
   const { world, farms: [a] } = fields(1);
   const [first, ...rest] = world.farming.furrows(a);
   ripen(world, a);
@@ -63,14 +64,30 @@ test('B2: ohne Holz zum Säen wird Reifes geerntet, sonst gejätet - kein Stills
   const [v] = farmers(world, a, 1);
   run(world, 30);
   assert.ok(first.f.food < a.fullFood(first.row), 'die reife Furche wird geerntet');
-  // Nichts Reifes mehr: er jätet und meldet das fehlende Holz.
+  // Nichts Reifes mehr: er bringt den Korb weg, dann gibt er auf und meldet das fehlende Holz.
   first.f.food = 0;
   assert.equal(world.farmPhase(a), 'wood');
-  run(world, 20);
-  assert.equal(v.task.kind, 'farm');
+  run(world, 60);
+  assert.equal(v.task.kind, 'idle');
+  assert.equal(v.carrying, 0, 'delivered the harvest first');
   assert.match(v.problem ?? '', /Holz/);
   world.addStock('wood', 100);
   assert.equal(world.farmPhase(a), 'sow');
+});
+
+test('B36: ohne Holz sät er die schon bezahlte Furche zu Ende, bevor er aufgibt', () => {
+  const { world, farms: [a] } = fields(1);
+  const rows = world.farming.furrows(a);
+  for (const { f } of rows) Object.assign(f, { plough: 1, sown: 0, growth: 0, paid: false });
+  // Eine Furche ist bezahlt und halb gesät - der Bauer dort wurde weggeschickt.
+  Object.assign(rows[2].f, { paid: true, sown: 0.5 });
+  world.pay({ wood: world.stock.wood });
+  const [v] = farmers(world, a, 1);
+  assert.equal(v.task.row, rows[2].row, 'takes the paid furrow');
+  run(world, 60);
+  assert.equal(rows[2].f.sown, 1, 'sowed it to the end');
+  assert.equal(v.task.kind, 'idle');
+  assert.match(v.problem ?? '', /Holz/);
 });
 
 test('B3: das Panel zählt nur die markierten Feldstücke - eins allein, mehrere zusammen', () => {

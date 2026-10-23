@@ -83,3 +83,31 @@ test('Umweg aus einer Bucht von der Größe des Suchradius wird gefunden', () =>
   const bay = (x, y) => (x >= 5 && x <= 7 && Math.abs(y) <= R + 2) || (x >= -R && x <= 7 && Math.abs(y) >= R && Math.abs(y) <= R + 2);
   assert.ok(findPath(1.5, 0.5, 12.5, 0.5, 0.05, bay), 'maxNodes too small for a detour of searchRadius size');
 });
+
+// B35 (Meldung des Spielers, 2026-10-12): befohlen ist ein Baum, an den er nicht herankommt.
+// Früher stand er dann für immer mit "Dort kommt er nicht hin" am Waldrand.
+test('B35: Klick mitten in dichten Wald - er nimmt den nächsten Baum, an den er herankommt', () => {
+  const forest = (x, y) => (x >= 0 && x <= 8 && Math.abs(y) <= 4 ? 'tree' : 'grass');
+  const world = makeWorld(World, forest);
+  build(world, -8, 0, 'town_center');
+  world.spawnAround('villager', -3, 0, 1);
+  const v = world.villagers[0];
+  assert.equal(world.command(new Set([v.id]), 4, 0), null);
+  run(world, 30);
+  assert.equal(v.task.kind, 'gather');
+  assert.equal(v.problem, null);
+  assert.ok(v.carrying > 0, `chops wood, task=${JSON.stringify(v.task)}`);
+});
+
+test('B35: Wald auf einer Insel - nach allen Bäumen ohne Weg ist er untätig und sagt warum', () => {
+  const kind = (x, y) => (Math.max(Math.abs(x - 10), Math.abs(y)) <= 1 ? 'tree'
+    : Math.max(Math.abs(x - 10), Math.abs(y)) <= 3 ? 'water' : 'grass');
+  const world = makeWorld(World, kind);
+  build(world, -8, 0, 'town_center');
+  world.spawnAround('villager', 2, 0, 1);
+  const v = world.villagers[0];
+  world.command(new Set([v.id]), 10, 0);
+  run(world, 30);
+  assert.equal(v.task.kind, 'idle');
+  assert.equal(v.problem, 'Dort kommt er nicht hin');
+});

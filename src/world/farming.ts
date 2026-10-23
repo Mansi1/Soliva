@@ -12,7 +12,7 @@ import { CROPS, FARMERS_PER_FIELD, FIELD_ROWS, RESEED_COST, VILLAGER, type CropT
 
 /**
  * Was auf einem Feldstück gerade dran ist. `wood`: es müsste gesät werden,
- * aber das Holz fehlt und nichts ist reif - die Bauern jäten.
+ * aber das Holz fehlt und nichts ist reif - die Bauern geben auf (B36).
  */
 export type FarmPhase = 'plough' | 'sow' | 'wood' | 'grow' | 'harvest' | 'done';
 
@@ -109,8 +109,8 @@ export class Farming {
 
   /**
    * Was auf dem Feldstück gerade dran ist. Fehlt beim Säen das Holz, wird
-   * geerntet, was schon reif ist, sonst gejätet (`wood`) - die Bauern stehen
-   * nicht still.
+   * geerntet, was schon reif ist, sonst `wood`: die Bauern geben auf und
+   * sind untätig (B36, villagers.ts tickFarmer).
    * VERIFIED: tests/fields.test.mjs - Phase je Feldstück; ohne Holz erst Reifes ernten, dann `wood`.
    */
   phase(building: Building): FarmPhase {
@@ -131,6 +131,17 @@ export class Farming {
   }
 
   /**
+   * Hat diese Furche Arbeit, die ein Bauer jetzt tun kann? Wie furrowNeeds -
+   * beim Säen nur, was schon bezahlt ist oder bezahlbar: auf einer unbezahlten
+   * Furche ohne Holz gäbe er auf (B36, villagers.ts tickFarmer), während eine
+   * bezahlte liegen bliebe.
+   * VERIFIED: tests/fields.test.mjs - ohne Holz sät er die bezahlte Furche zu Ende.
+   */
+  workable(f: Furrow, phase: FarmPhase): boolean {
+    return furrowNeeds(f, phase) && (phase !== 'sow' || f.paid || this.world.canPay(RESEED_COST));
+  }
+
+  /**
    * Eine freie Furche auf dem Feldstück `near` - lieber eine mit Arbeit in
    * der aktuellen Phase -, solange dort weniger als FARMERS_PER_FIELD
    * arbeiten; sonst auf dem nächsten anderen Feldstück.
@@ -142,7 +153,7 @@ export class Farming {
       const open = rows.filter((r) => !busy.has(furrowKey(r.building, r.row)));
       if (rows.length - open.length >= FARMERS_PER_FIELD) return undefined;
       const phase = this.phase(building);
-      const pick = open.find(({ f }) => furrowNeeds(f, phase)) ?? open[0];
+      const pick = open.find(({ f }) => this.workable(f, phase)) ?? open[0];
       return pick && { building: pick.building.anchor, row: pick.row };
     };
     const own = near.isFarm() ? free(near) : undefined;

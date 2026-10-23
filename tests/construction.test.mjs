@@ -213,3 +213,53 @@ test('Spielstand: Fortschritt und Bauende bleiben, ältere Stände laden fertig'
   writeSave(seed, data);
   assert.equal(new World(ground, seed).at(6, 0).built, true);
 });
+
+// B35 (2026-10-12): ein freier, aber eingeschlossener Platz - früher stand der Bauende dort für immer.
+test('B35: Platz an der Baustelle ohne Weg - er nimmt einen anderen freien Platz', () => {
+  // Wald um das Haus bei 8,0: frei sind nur die Tasche bei 9,0 (Platz 0, +x) und ein Gang von Süden zu 8,1 (Platz 1).
+  const open = (x, y) => (y === 0 && (x === 8 || x === 9)) || (x === 8 && y >= 1);
+  const { world } = siteWorld((x, y) => x >= 4 && x <= 12 && Math.abs(y) <= 4 && !open(x, y));
+  const house = stake(world, 8, 0, 'house');
+  // Der Bau hat begonnen - die Baustelle versperrt ihr Feld, die Tasche ist zu (B39).
+  house.progress = 0.1;
+  world.spawnAround('villager', 8, 7, 1);
+  const v = world.villagers.at(-1);
+  assert.equal(world.command(ids([v]), 8, 0), null);
+  assert.equal(v.task.slot, 0, 'smallest free slot first');
+  run(world, 30);
+  assert.equal(v.task.kind, 'build');
+  assert.equal(v.task.slot, 1);
+  assert.equal(v.problem, null);
+  assert.ok(house.progress > 0.1, `builds, progress=${house.progress}`);
+});
+
+// B39 (Vorgabe des Spielers, 2026-10-12): wurde mit dem Bauen nicht begonnen, kann man über die Baustelle gehen.
+test('B39: über eine Baustelle bei 0 % geht man hindurch, nach Baubeginn nicht mehr', () => {
+  // Ein Waldstreifen ohne Ende mit einem Gang bei y = 0, das Haus mitten im Gang.
+  const { world } = siteWorld((x, y) => x >= 4 && x <= 12 && y !== 0);
+  const house = stake(world, 8, 0, 'house');
+  world.spawnAround('villager', 2, 0, 1);
+  const v = world.villagers.at(-1);
+  world.command(ids([v]), 15, 0);
+  run(world, 20);
+  assert.equal(v.problem, null);
+  assert.ok(Math.hypot(v.x - 15.5, v.y - 0.5) < 0.3, `went through the site, at ${v.x},${v.y}`);
+  house.progress = 0.1;
+  world.command(ids([v]), 1, 0);
+  run(world, 5);
+  assert.equal(v.problem, 'Dort kommt er nicht hin');
+});
+
+test('B39: wer auf der Baustelle steht, wenn der Bau beginnt, geht normal hinaus', () => {
+  const { world } = siteWorld();
+  const house = stake(world, 8, 0, 'house');
+  world.spawnAround('villager', 8, 0, 1);
+  const v = world.villagers.at(-1);
+  v.x = 8.5;
+  v.y = 0.5;
+  house.progress = 0.1;
+  world.command(ids([v]), 14, 0);
+  run(world, 15);
+  assert.equal(v.problem, null);
+  assert.ok(Math.hypot(v.x - 14.5, v.y - 0.5) < 0.3, `left the site, at ${v.x},${v.y}`);
+});

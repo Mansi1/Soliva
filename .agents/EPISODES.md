@@ -9,17 +9,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-09T22:37:31Z s=560a6297 DONE fp=a2ea696215ee cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:37:54Z s=560a6297 DONE fp=66578b0a5f70 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:39:58Z s=560a6297 DONE fp=5e8fc8a8d6d4 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:40:16Z s=560a6297 DONE fp=3fa82435768f cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:41:32Z s=560a6297 DONE fp=4da0007e2643 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:44:27Z s=560a6297 DONE fp=56c26402f7b9 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:46:02Z s=560a6297 DONE fp=219045582e11 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:48:03Z s=560a6297 DONE fp=09ab7bbdfcc6 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:49:31Z s=560a6297 DONE fp=d2be38b77042 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:50:03Z s=560a6297 DONE fp=dd9a270caa36 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
-2026-10-09T22:51:16Z s=560a6297 DONE fp=83f7bc20233f cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:52:18Z s=560a6297 DONE fp=c7344339edea cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:55:01Z s=560a6297 DONE fp=09abe0671e01 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
 2026-10-09T22:56:51Z s=560a6297 DONE fp=49c30d7b4be1 cov=79.2% paths=.github/workflows/verify.yml,AGENTS.md,bun.lock,docs/OPTIMIZATION_PLAN.md(+25)
@@ -104,3 +93,14 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-12T00:38:25Z s=560a6297 FINDING src/world/construction.ts:sendToSite learn=test: tests/walls.test.mjs builders spread; tests/construction.test.mjs fifth refused.
 2026-10-12T00:38:25Z s=560a6297 FINDING tests/keys.test.mjs learn=test: tests/keys.test.mjs
 2026-10-12T00:38:25Z s=560a6297 FINDING src/world/render.ts:gate open check learn=none: Not measured (no benchmarks by user rule).
+2026-10-12T00:45:24Z s=9d3ed845 DONE fp=125eadaec3e4 cov=80.6% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+20)
+2026-10-12T00:45:24Z s=9d3ed845 FINDING src/world/construction.ts:nearestDeposit learn=test: B35 plan requires a test in tests/water-path.test.mjs: an unreachable tree leads to the next reachable tree.
+2026-10-12T00:45:24Z s=9d3ed845 FINDING src/world/construction.ts:freeSlot learn=test: B35 plan requires a test in tests/construction.test.mjs for the enclosed site side.
+2026-10-12T00:46:23Z s=9d3ed845 DONE fp=231997e1b4b1 cov=80.6% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+20)
+2026-10-23T16:37:52Z s=9d3ed845 DONE fp=15d1ffc385ff cov=80.7% paths=README.md,plans/2026-10-09_21-50_bugs-sammlung.md,src/game/hoverInfo.ts,src/game/selectionView.ts(+7)
+2026-10-23T16:37:52Z s=9d3ed845 FINDING src/world/villagers.ts:tickTask gather learn=test: tests/water-path.test.mjs B35 x2 fail on old code, pass now
+2026-10-23T16:37:52Z s=9d3ed845 FINDING src/world/construction.ts:tickBuilder learn=test: tests/construction.test.mjs B35 fails on old code; tests/walls.test.mjs spread test guards freeSlot
+2026-10-23T16:37:52Z s=9d3ed845 FINDING src/world/villagers.ts:tickFarmer learn=test: tests/fields.test.mjs B2/B36 and B36 paid-furrow tests fail on old code
+2026-10-23T16:37:52Z s=9d3ed845 FINDING src/world/villagers.ts:blockedAt learn=test: tests/construction.test.mjs B39 x2 fail on old code
+2026-10-23T16:37:52Z s=9d3ed845 FINDING src/game/selectionView.ts:animalSex learn=test: tests/herd.test.mjs B38 fails on old code
+2026-10-23T16:37:52Z s=9d3ed845 FINDING README.md:Bauen learn=none: doc only

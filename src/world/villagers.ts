@@ -38,7 +38,7 @@ const INSIDE_TIME = 1.2;
 const WORKER_BUSY = 'Arbeitet in einer Werkstatt - dort erst entlassen';
 /** Grund, wenn es zu Fuß keinen Weg zum Ziel gibt (walk). */
 export const UNREACHABLE = 'Dort kommt er nicht hin';
-/** Grund, wenn ein Bauer säen müsste und das Holz fehlt - er jätet derweil (tickFarmer). */
+/** Grund, wenn ein Bauer säen müsste und das Holz fehlt - er gibt auf und ist untätig (tickFarmer, B36). */
 const NO_SEED_WOOD = 'Zu wenig Holz, um neu zu säen';
 /**
  * Arbeitszeit, zu der die Hand im Clip throw den Wurf loslässt (seine
@@ -72,6 +72,8 @@ export function spearThrown(phase: number): boolean {
 }
 
 const key = (x: number, y: number) => `${x},${y}`;
+/** Ein Vorkommen in v.unreachable - neben den Ankern der Gebäude. */
+const depositKey = (x: number, y: number) => `deposit:${x},${y}`;
 
 /** Wegpunkte zum Ziel: keine, wenn die Sichtlinie frei ist, sonst die Suche - null, wenn es keinen Weg gibt. */
 function searchPath(fx: number, fy: number, tx: number, ty: number, reach: number, blocked: Blocked) {
@@ -289,7 +291,8 @@ export class VillagerWork {
     const taken: Point[] = this.world.villagers
       .filter((v) => !ids.has(v.id) && v.isVisible)
       .map((v) => (v.task.kind === 'move' ? { x: v.task.x, y: v.task.y } : { x: v.x, y: v.y }));
-    const blocked = (tx: number, ty: number) => this.blockedAt(tx, ty);
+    // Nicht auf eine Baustelle stellen, auch wenn man über sie gehen kann (B39) - dort stünde er im Bau.
+    const blocked = (tx: number, ty: number) => this.blockedAt(tx, ty) || this.world.at(tx, ty)?.built === false;
     let placed = 0;
     for (const v of [...selected].sort((a, b) => a.distanceTo(at.x, at.y) - b.distanceTo(at.x, at.y))) {
       const spot = freeSpot(at.x, at.y, taken, blocked);
@@ -346,12 +349,16 @@ export class VillagerWork {
    * Kann man Tile (x, y) nicht betreten? Wasser, Gebäude, Mauern, stehende
    * Bäume, Felsen. Über Felder und Weiden geht man hinweg - Bauern und Hirten
    * arbeiten ja darauf -, ebenso über den Schießplatz (B24) und durch offene
-   * Tore (B34): Building.passable.
+   * Tore (B34): Building.passable. Über eine Baustelle, an der noch keiner
+   * gebaut hat (progress 0), geht man auch (B39) - erst der Bau versperrt sie.
    * VERIFIED: tests/walls.test.mjs - Mauer sperrt, Tor lässt durch, abgeschlossen nicht.
    */
   blockedAt(x: number, y: number): boolean {
     const anchor = this.world.occupied.get(key(x, y));
-    if (anchor !== undefined) return !this.world.building(anchor)?.passable();
+    if (anchor !== undefined) {
+      const b = this.world.building(anchor);
+      return !(b && (b.progress <= 0 || b.passable()));
+    }
     const t = this.terrainAt(x, y);
     if (t === 2) return !this.world.deposits.isExhausted(x, y) && !this.world.deposits.isFelled(x, y);
     return t === 1;
@@ -562,11 +569,13 @@ export class VillagerWork {
 
   /**
    * Nächstes nicht leeres Feld derselben Art um (x, y), auf dem noch Platz
-   * ist (höchstens MAX_GATHERERS).
+   * ist (höchstens MAX_GATHERERS) - ohne die Felder in `skip`, zu denen er
+   * keinen Weg fand (v.unreachable, depositKey).
    */
   nextDeposit(
       type: DepositType, x: number, y: number,
       occupancy: Map<string, number> = this.occupancy(),
+      skip?: ReadonlySet<string>,
   ): { x: number; y: number } | null {
     let best: { x: number; y: number } | null = null;
     let bestDistance = Infinity;
@@ -576,6 +585,7 @@ export class VillagerWork {
         const d = dx * dx + dy * dy;
         if (d >= bestDistance || d > r * r) continue;
         if ((occupancy.get(key(x + dx, y + dy)) ?? 0) >= MAX_GATHERERS) continue;
+        if (skip?.has(depositKey(x + dx, y + dy))) continue;
         const found = this.world.remainingAt(x + dx, y + dy);
         if (found.type === type && found.amount > 0) {
           best = { x: x + dx, y: y + dy };
@@ -595,7 +605,7 @@ export class VillagerWork {
     if (phase === 'grow' || phase === 'wood') return undefined;
     let best: { building: Farm; row: number; distance: number } | undefined;
     for (const { building, row, f } of this.world.farming.furrows(farm)) {
-      if (!furrowNeeds(f, phase) || this.farmerOn(furrowKey(building, row), v)) continue;
+      if (!this.world.farming.workable(f, phase) || this.farmerOn(furrowKey(building, row), v)) continue;
       const spot = this.farmSpot(building, row, v);
       const distance = Math.hypot(spot.x - v.x, spot.y - v.y);
       if (!best || distance < best.distance) best = { building, row, distance };
@@ -677,10 +687,18 @@ export class VillagerWork {
       this.world.markDirty();
       phase = this.world.farmPhase(building);
     }
+    // Säen müsste er, aber das Holz fehlt und nichts ist reif (B36): er gibt
+    // auf und zählt als untätig - Holz allein holt ihn nicht zurück.
+    // VERIFIED: tests/fields.test.mjs - erst Reifes ernten, dann untätig.
+    if (phase === 'wood') {
+      v.task = { kind: 'idle' };
+      v.problem = NO_SEED_WOOD;
+      return;
+    }
     // In der eigenen Furche nichts mehr zu tun: die nächste mit Arbeit. Beim
     // Ernten geht er immer zum nächsten reifen Getreide, auch in einer fremden
     // Furche - seine eigene behält er nur, solange sie kaum weiter weg ist.
-    const ownNeeds = furrowNeeds(building.furrows[task.row], phase);
+    const ownNeeds = this.world.farming.workable(building.furrows[task.row], phase);
     if (!ownNeeds || phase === 'harvest') {
       const next = this.nextFurrow(v, building, phase);
       const own = this.farmSpot(building, task.row, v);
@@ -699,19 +717,18 @@ export class VillagerWork {
       }
     }
     const f = building.furrows[task.row];
-    let working = furrowNeeds(f, phase);
-    // Ohne Holz zum Säen jätet er, statt stillzustehen - Reifes erntet er (Phase).
-    let problem: string | null = phase === 'wood' ? NO_SEED_WOOD : null;
+    const working = furrowNeeds(f, phase);
     if (working && phase === 'sow' && !f.paid) {
-      if (this.world.canPay(RESEED_COST)) {
-        this.world.pay(RESEED_COST);
-        f.paid = true;
-      } else {
-        working = false;
-        problem = NO_SEED_WOOD;
+      // Seine Furche ist nicht bezahlt und das Holz fehlt: wie oben, er gibt auf (B36).
+      if (!this.world.canPay(RESEED_COST)) {
+        v.task = { kind: 'idle' };
+        v.problem = NO_SEED_WOOD;
+        return;
       }
+      this.world.pay(RESEED_COST);
+      f.paid = true;
     }
-    v.problem = problem;
+    v.problem = null;
     const crop = CROPS[f.crop];
     // Ohne eigene Arbeit (es wächst, oder die übrigen Furchen haben andere)
     // geht er seine Furche ab und jätet.
@@ -1479,7 +1496,7 @@ export class VillagerWork {
           const occupancy = this.occupancy();
           const own = key(task.x, task.y);
           occupancy.set(own, (occupancy.get(own) ?? 1) - 1);
-          const next = this.nextDeposit(task.type, task.x, task.y, occupancy);
+          const next = this.nextDeposit(task.type, task.x, task.y, occupancy, v.unreachable);
           if (next) {
             task.x = next.x;
             task.y = next.y;
@@ -1526,7 +1543,26 @@ export class VillagerWork {
           spotX = aimX - dy * side - dx * row * 0.2;
           spotY = aimY + dx * side - dy * row * 0.2;
         }
-        if (!this.walk(v, spotX, spotY, 0.05, dt)) return;
+        if (!this.walk(v, spotX, spotY, 0.05, dt)) {
+          // Kein Weg zum Platz (B35, etwa ein Baum mitten im Wald): das
+          // nächste Vorkommen derselben Art, zu dem er noch nicht vergeblich
+          // gesucht hat - je Tick eine Suche. Gibt es keins, bleibt er mit dem Grund stehen.
+          // VERIFIED: tests/water-path.test.mjs - Klick in den Wald, er fällt einen Randbaum.
+          // ponytail: bis zum ersten erreichbaren Baum je Tick eine vergebliche Suche (bis 6000 Knoten);
+          // erreichbare Waldränder vorab bestimmen, wenn simVillagersMs beim Klick in großen Wald sichtbar steigt.
+          if (v.problem !== UNREACHABLE) return;
+          v.unreachable.add(depositKey(task.x, task.y));
+          const next = this.nextDeposit(task.type, task.x, task.y, undefined, v.unreachable);
+          if (next) {
+            task.x = next.x;
+            task.y = next.y;
+            task.slot = undefined;
+            v.problem = null;
+          } else {
+            v.task = { kind: 'idle' };
+          }
+          return;
+        }
         // Am Platz: zum Vorkommen drehen und arbeiten - Beeren kniend pflücken.
         v.heading = Math.atan2(aimY - v.y, aimX - v.x);
         v.pose = task.type === 'berries' ? POSE.pick : POSE.work;
@@ -1636,7 +1672,7 @@ export class VillagerWork {
         switch (this.world.farmPhase(building)) {
           case 'plough': return 'pflügt' + load;
           case 'sow': return `sät ${crop}` + load;
-          case 'wood': return 'jätet (kein Holz zum Säen)' + load;
+          case 'wood': return 'gibt auf (kein Holz zum Säen)' + load;
           case 'grow': return `jätet (${crop} wächst)` + load;
           case 'harvest': return `erntet ${crop}` + load;
           case 'done': return 'sät neu' + load;
