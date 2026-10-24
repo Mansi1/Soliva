@@ -120,6 +120,7 @@ export class StartScreen {
             <StartButton label="Mehrspieler" hint="bald" disabled />
             <StartButton label="Einstellungen" onClick={() => h.openSettings()} />
             <StartButton label="Galerie" hint="alle Modelle" onClick={() => window.location.assign(`${import.meta.env.BASE_URL}galerie`)} />
+            <StartButton label="Kartengenerator" hint="Regler ausprobieren" onClick={() => window.location.assign(`${import.meta.env.BASE_URL}generator`)} />
             <StartButton label="L-System" hint={'Bäume & Pflanzen'} onClick={() => window.location.assign(`${import.meta.env.BASE_URL}tools/lsystem/`)} />
           </nav>
         ) : page === 'single' ? (

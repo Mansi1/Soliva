@@ -14,6 +14,7 @@ import {
   viewRotation, viewZScreen, worldToGround, type GpuCamera,
 } from './iso';
 import { link, uploadTerrainParams } from './terrainRenderer';
+import type { TerrainParams } from '../noise';
 // Beim Bauen gelesen (vite.config.ts, glbClips) - hier nur ausgepackt.
 import humanoidClips from '../models/clips/humanoid.glb?clips';
 import sitClips from '../models/clips/humanoid_sit.glb?clips';
@@ -1159,7 +1160,9 @@ void main() {
     vec2 off = (box.xy + aCorner.xy * box.zw) * aParams.z * uPixelsPerTile;
     float base = aGround > ${GROUND_UNKNOWN / 10}.0 ? aGround * uReliefScale : groundZ(center);
     vec4 foot = project(center, base);
-    vec4 clip = project(center, base + max(0.0, -off.y) / (uPixelsPerTile * uZScreen));
+    // Auch unter dem Fuß so nah wie der Boden dort: von oben (/generator) liegt
+    // die Krone halb unter dem Fuß und verschwände sonst im Gelände.
+    vec4 clip = project(center, base + abs(off.y) / (uPixelsPerTile * uZScreen));
     clip.xy = foot.xy + vec2(off.x, -off.y) * 2.0 / uResolution;
     gl_Position = clip;
     vec4 r = uBillboardRect[h];
@@ -4040,6 +4043,12 @@ export class EntityRenderer {
       this.uniforms.set(name, this.gl.getUniformLocation(this.program, name));
     }
     return this.uniforms.get(name)!;
+  }
+
+  /** Andere Regler für die Bodenhöhe (Generator-Seite /generator) - wie TerrainRenderer.regenerate (VERIFIED: einziger Aufrufer generator.ts). */
+  setTerrainParams(params: TerrainParams) {
+    this.gl.useProgram(this.program);
+    uploadTerrainParams(this.gl, (name) => this.location(name), params);
   }
 
   /**

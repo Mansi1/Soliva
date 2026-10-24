@@ -8,7 +8,7 @@ ACM-Zertifikat, weil CloudFront Zertifikate allein aus us-east-1 annimmt.
 |---|---|
 | S3-Bucket + CloudFront (Prod) | `soliva.mannseicher.com` mit ACM-Zertifikat (`game.mannseicher.com` folgt, siehe unten) |
 | S3-Bucket + CloudFront (Preview) | ein Build je Pull Request unter `https://<id>.cloudfront.net/pr-<n>/`, gelöscht, sobald der PR zu ist (sonst nach 30 Tagen ohne Push) |
-| CloudFront Function `spa-fallback.js` | `/game/<seed>`, `/galerie` → `index.html` (200), fehlende Dateien → 404 |
+| CloudFront Function `spa-fallback.js` | `/game/<seed>`, `/galerie`, `/generator` → `index.html` (200), fehlende Dateien → 404 |
 | Budget | Mail, wenn das AWS-Konto im Monat über 5 $ kostet oder laut Prognose kosten wird |
 | OIDC-Rolle `soliva-github-deploy` | GitHub Actions auf `main` darf in beide Buckets schreiben, sonst nichts |
 

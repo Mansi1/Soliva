@@ -66,7 +66,9 @@ function glbClips(): Plugin {
  */
 function saveBillboards(): Plugin {
   const dir = join(import.meta.dirname, 'tools/export/out/billboards');
-  rmSync(dir, { recursive: true, force: true })
+  // Erst beim ersten Bild leeren: jeder Vite-Start lädt diese Datei (build,
+  // Tests über tests/worldFixture.mjs) und hätte die Bilder sonst gelöscht.
+  let cleared = false;
   return {
     name: 'save-billboards',
     apply: 'serve',
@@ -81,6 +83,8 @@ function saveBillboards(): Plugin {
         const chunks: Buffer[] = [];
         req.on('data', (chunk: Buffer) => chunks.push(chunk));
         req.on('end', () => {
+          if (!cleared) rmSync(dir, { recursive: true, force: true });
+          cleared = true;
           mkdirSync(dir, { recursive: true });
 
           writeFileSync(join(dir, name), Buffer.concat(chunks));

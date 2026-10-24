@@ -355,6 +355,9 @@ export const TERRAIN_PARAMS = {
   tundraTemperature: TUNDRA_TEMPERATURE,
 } as const;
 
+/** Dieselben Regler mit anderen Werten - die Generator-Seite (/generator) schraubt daran (VERIFIED: tests/generator.test.mjs). */
+export type TerrainParams = { -readonly [K in keyof typeof TERRAIN_PARAMS]: number };
+
 /**
  * Reihenfolge der Rausch-Ebenen in der Permutations-Textur. Shader und
  * Uploader müssen sich hier einig sein.
@@ -384,13 +387,13 @@ export const TERRAIN_LEVELS = {
 
 /**
  * Höhe über dem Meeresspiegel in Tiles, aus der Geländehöhe -1..1. Wasser ist
- * flach. Gegenstück zu reliefZ() im Shader.
+ * flach. Gegenstück zu reliefZ() im Shader; `p` wie MapGenerator.params (VERIFIED: tests/generator.test.mjs).
  */
-export function reliefZ(height: number): number {
-  if (height <= SEA_LEVEL) return 0;
-  const low = Math.min(1, (height - SEA_LEVEL) / (MOUNTAIN_FOOT - SEA_LEVEL));
-  const high = Math.max(0, (height - MOUNTAIN_FOOT) / (1 - MOUNTAIN_FOOT));
-  return LOWLAND_RELIEF * low + (RELIEF_HEIGHT - LOWLAND_RELIEF) * Math.pow(high, RELIEF_EXPONENT);
+export function reliefZ(height: number, p: TerrainParams = TERRAIN_PARAMS): number {
+  if (height <= p.seaLevel) return 0;
+  const low = Math.min(1, (height - p.seaLevel) / (p.mountainFoot - p.seaLevel));
+  const high = Math.max(0, (height - p.mountainFoot) / (1 - p.mountainFoot));
+  return p.lowlandRelief * low + (p.reliefHeight - p.lowlandRelief) * Math.pow(high, p.reliefExponent);
 }
 
 export class MapGenerator {
@@ -404,7 +407,8 @@ export class MapGenerator {
   private ridgeNoise: RidgedNoise;
   private detailNoise: SimplexNoise;
 
-  constructor(seed: string) {
+  /** @param params die Regler - die Generator-Seite (/generator) gibt eigene, damit Wald und Ufer zum Bild passen (VERIFIED: tests/generator.test.mjs). */
+  constructor(seed: string, readonly params: TerrainParams = TERRAIN_PARAMS) {
     this.heightNoise = new FractalNoise(new SimplexNoise(seed + "_height"), 4, 0.5, 2);
     this.reliefNoise = new FractalNoise(new SimplexNoise(seed + "_relief"), 4, 0.5, 2);
     this.microNoise = new SimplexNoise(seed + "_micro");
@@ -424,8 +428,8 @@ export class MapGenerator {
   private elevation(nx: number, ny: number, step: number = 1): number {
     const wx = this.warpNoise.raw(nx + 5.2, ny + 1.3);
     const wy = this.warpNoise.raw(nx - 3.7, ny + 8.1);
-    const x = nx + wx * WARP_STRENGTH;
-    const y = ny + wy * WARP_STRENGTH;
+    const x = nx + wx * this.params.warpStrength;
+    const y = ny + wy * this.params.warpStrength;
 
     // Nur die großen Formen werden verzerrt. Das Feindetail bleibt unverzerrt -
     // sonst zieht der Warp-Gradient es zu gerichteten Schlieren lang.
@@ -434,20 +438,20 @@ export class MapGenerator {
 
     // Unter Wasser wird das Feindetail ausgeblendet. Becken sind mit Sediment
     // gefüllt - und sichtbar wäre es ohnehin nur als Flecken im Meer.
-    const submerged = (coarse - DEEP_WATER_LEVEL) / (SHORE_LEVEL - DEEP_WATER_LEVEL);
+    const submerged = (coarse - this.params.deepWaterLevel) / (this.params.shoreLevel - this.params.deepWaterLevel);
     const weight = submerged <= 0 ? 0 : submerged >= 1 ? 1 : submerged * submerged * (3 - 2 * submerged);
 
-    let fine = this.reliefNoise.raw(nx * DETAIL_FREQUENCY, ny * DETAIL_FREQUENCY) * DETAIL_STRENGTH;
+    let fine = this.reliefNoise.raw(nx * this.params.detailFrequency, ny * this.params.detailFrequency) * this.params.detailStrength;
 
     fine += this.microDetail(nx, ny, step);
 
     const land = Math.tanh((base + fine * weight) * 0.85);
-    if (land <= RIDGE_START) return land;
+    if (land <= this.params.ridgeStart) return land;
 
     // Weich einblenden, damit an der Gratgrenze keine sichtbare Kante entsteht
-    const t = (land - RIDGE_START) / (1 - RIDGE_START);
+    const t = (land - this.params.ridgeStart) / (1 - this.params.ridgeStart);
     const ridge = this.ridgeNoise.noise2D(x * 2.2, y * 2.2);
-    return Math.min(1, land + t * t * (ridge - 0.35) * RIDGE_STRENGTH);
+    return Math.min(1, land + t * t * (ridge - 0.35) * this.params.ridgeStrength);
   }
 
   /**
@@ -459,35 +463,35 @@ export class MapGenerator {
    */
   private microDetail(nx: number, ny: number, step: number): number {
     let total = 0;
-    let frequency = MICRO_FREQUENCY;
-    let amplitude = MICRO_STRENGTH;
+    let frequency = this.params.microFrequency;
+    let amplitude = this.params.microStrength;
 
-    for (let i = 0; i < MICRO_OCTAVES; i++) {
+    for (let i = 0; i < this.params.microOctaves; i++) {
       // Merkmalsbreite dieser Oktave, gemessen in Abtastzellen
-      const samples = 1 / (frequency * MAP_SCALE * step);
-      if (samples < MICRO_MIN_SAMPLES) break;
+      const samples = 1 / (frequency * this.params.mapScale * step);
+      if (samples < this.params.microMinSamples) break;
 
-      const fade = Math.min(1, (samples - MICRO_MIN_SAMPLES) / MICRO_MIN_SAMPLES);
+      const fade = Math.min(1, (samples - this.params.microMinSamples) / this.params.microMinSamples);
       total += this.microNoise.noise2D(nx * frequency, ny * frequency) * amplitude * fade;
 
       frequency *= 2;
-      amplitude *= MICRO_PERSISTENCE;
+      amplitude *= this.params.microPersistence;
     }
     return total;
   }
 
   private classify(height: number, moisture: number, temperature: number): TileType {
-    if (height < DEEP_WATER_LEVEL) return "deep_water";
-    if (height < SEA_LEVEL) return "water";
-    if (height < SHORE_LEVEL) return "beach";
+    if (height < this.params.deepWaterLevel) return "deep_water";
+    if (height < this.params.seaLevel) return "water";
+    if (height < this.params.shoreLevel) return "beach";
 
-    if (height > PEAK_LEVEL) {
-      return temperature < SNOW_TEMPERATURE ? "snow" : "mountain";
+    if (height > this.params.peakLevel) {
+      return temperature < this.params.snowTemperature ? "snow" : "mountain";
     }
-    if (height > HILL_LEVEL) return "mountain";
+    if (height > this.params.hillLevel) return "mountain";
 
     // Flachland nach Klima - AoE2 ähnliche Biom-Logik
-    if (temperature < TUNDRA_TEMPERATURE) return "snow";
+    if (temperature < this.params.tundraTemperature) return "snow";
     if (temperature > 0.25 && moisture < -0.1) return "desert";
     if (moisture > 0.1) return "forest";
     return "grass";
@@ -495,20 +499,20 @@ export class MapGenerator {
 
   /** Klima an einer skalierten Position. Höhe kühlt ab -> Schnee auf Gipfeln. */
   private climate(nx: number, ny: number, height: number) {
-    const fringeX = this.fringeNoise.raw(nx * CLIMATE_FRINGE_FREQUENCY, ny * CLIMATE_FRINGE_FREQUENCY);
+    const fringeX = this.fringeNoise.raw(nx * this.params.fringeFrequency, ny * this.params.fringeFrequency);
     const fringeY = this.fringeNoise.raw(
-      nx * CLIMATE_FRINGE_FREQUENCY + 31.7,
-      ny * CLIMATE_FRINGE_FREQUENCY - 12.4,
+      nx * this.params.fringeFrequency + 31.7,
+      ny * this.params.fringeFrequency - 12.4,
     );
 
     const moisture =
       this.moistureNoise.noise2D(nx * 0.6 + 1000, ny * 0.6 + 1000) +
-      fringeX * CLIMATE_FRINGE_STRENGTH;
+      fringeX * this.params.fringeStrength;
     const raw =
       this.tempNoise.noise2D(nx * 0.35 - 1000, ny * 0.35 - 1000) +
-      fringeY * CLIMATE_FRINGE_STRENGTH;
+      fringeY * this.params.fringeStrength;
 
-    const temperature = raw - Math.max(0, height) * LAPSE_RATE;
+    const temperature = raw - Math.max(0, height) * this.params.lapseRate;
     return { moisture, temperature };
   }
 
@@ -519,7 +523,7 @@ export class MapGenerator {
    * Schattierung auf jeder Auflösung gleich stark wirkt.
    */
   private shadeFrom(here: number, right: number, down: number, step: number): number {
-    return Math.tanh(((here - right + (here - down)) * SHADE_GAIN) / step);
+    return Math.tanh(((here - right + (here - down)) * this.params.shadeGain) / step);
   }
 
   /**
@@ -535,8 +539,8 @@ export class MapGenerator {
    * der Arbeit von getTile(), für Abfragen über viele Tiles.
    */
   terrainAt(x: number, y: number): { height: number; tileType: TileType } {
-    const nx = x * MAP_SCALE;
-    const ny = y * MAP_SCALE;
+    const nx = x * this.params.mapScale;
+    const ny = y * this.params.mapScale;
     const height = this.elevation(nx, ny);
     const { moisture, temperature } = this.climate(nx, ny, height);
     return { height, tileType: this.classify(height, moisture, temperature) };
@@ -548,8 +552,8 @@ export class MapGenerator {
    * hin keine. Ohne die Fransen des Shaders, die Dichte braucht sie nicht.
    */
   bloomAt(x: number, y: number): number {
-    const nx = x * MAP_SCALE;
-    const ny = y * MAP_SCALE;
+    const nx = x * this.params.mapScale;
+    const ny = y * this.params.mapScale;
     const height = this.elevation(nx, ny);
     const { moisture, temperature } = this.climate(nx, ny, height);
     if (this.classify(height, moisture, temperature) === "snow") return 0;
@@ -559,9 +563,9 @@ export class MapGenerator {
     };
     const wood = smooth(0.02, 0.18, moisture);
     const desert = Math.min(smooth(0.15, 0.35, temperature), 1 - smooth(-0.2, 0, moisture));
-    const shoreBand = (SHORE_LEVEL - SEA_LEVEL) * 0.6;
-    const beach = 1 - smooth(SHORE_LEVEL - shoreBand, SHORE_LEVEL + shoreBand, height);
-    const rock = smooth(HILL_LEVEL - 0.05, HILL_LEVEL + 0.05, height);
+    const shoreBand = (this.params.shoreLevel - this.params.seaLevel) * 0.6;
+    const beach = 1 - smooth(this.params.shoreLevel - shoreBand, this.params.shoreLevel + shoreBand, height);
+    const rock = smooth(this.params.hillLevel - 0.05, this.params.hillLevel + 0.05, height);
     return (1 - smooth(0, 0.35, beach)) * (1 - smooth(0, 0.4, desert)) * (1 - smooth(0, 0.6, wood)) * (1 - smooth(0, 0.4, rock));
   }
 
@@ -572,10 +576,10 @@ export class MapGenerator {
 
   /** Höhe -1..1 an einer beliebigen Welt-Position (in Tiles, nicht gerundet). */
   heightAt(x: number, y: number, step: number = 1): number {
-    return this.elevation(x * MAP_SCALE, y * MAP_SCALE, step);
+    return this.elevation(x * this.params.mapScale, y * this.params.mapScale, step);
   }
 
-  getTile(x: number, y: number, scale: number = MAP_SCALE): MapTile {
+  getTile(x: number, y: number, scale: number = this.params.mapScale): MapTile {
     const nx = x * scale;
     const ny = y * scale;
 

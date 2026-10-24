@@ -6,7 +6,7 @@
 
 import { TILE, TileStore, hashText, type StoredTile } from './tileStore';
 import { MAX_FLAT_ZONES } from '../world/flatten';
-import { NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS } from '../noise';
+import { NOISE_LAYERS, SimplexNoise, TERRAIN_PARAMS, type TerrainParams } from '../noise';
 import {
   CACHE_HEADROOM,
   DISPLAY_FRAGMENT_SOURCE,
@@ -59,8 +59,8 @@ function compile(gl: WebGL2RenderingContext, type: number, source: string): WebG
 export function uploadTerrainParams(
     gl: WebGL2RenderingContext,
     location: (name: string) => WebGLUniformLocation | null,
+    p: TerrainParams = TERRAIN_PARAMS,
 ) {
-  const p = TERRAIN_PARAMS;
   const f = (name: string, value: number) => gl.uniform1f(location(name), value);
 
   gl.uniform1i(location('uGrad'), 0);
@@ -305,9 +305,10 @@ export class TerrainRenderer {
       data.set(new SimplexNoise(seed + suffix).gradientTable(), layer * 256 * 256);
     });
 
-    const texture = gl.createTexture();
+    // Ein neuer Seed (regenerate) überschreibt dieselbe Textur.
+    this.permutations ??= gl.createTexture();
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.permutations);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.R8UI, 256, 256, layers, 0,
         gl.RED_INTEGER, gl.UNSIGNED_BYTE, data);
@@ -403,8 +404,31 @@ export class TerrainRenderer {
    */
   reachZ: number = MAX_RELIEF;
   /** Fertige Kacheln in IndexedDB (tileStore.ts) - null ohne Speicher. */
-  private readonly store: TileStore | null;
-  private readonly seed: string;
+  private store: TileStore | null;
+  private seed: string;
+  private permutations: WebGLTexture | null = null;
+
+  /**
+   * Andere Welt oder andere Regler (Generator-Seite /generator): lädt beides
+   * neu und verwirft die Caches; bis der neue fertig ist, steht der alte im Bild.
+   * Der Speicher bleibt danach aus - seine Kacheln gelten nur für TERRAIN_PARAMS.
+   */
+  regenerate(seed: string, params: TerrainParams) {
+    const gl = this.gl;
+    this.store = null;
+    // Die Tabellen kosten je Seed 11 x 64k Einträge - beim Schieben eines Reglers nicht neu
+    // (VERIFIED: ein Reglerschritt kostet so 0,5 ms im Browser).
+    if (seed !== this.seed) this.uploadPermutations(seed);
+    this.seed = seed;
+    gl.useProgram(this.program);
+    uploadTerrainParams(gl, (name) => this.location(name), params);
+    gl.useProgram(this.fillProgram);
+    uploadTerrainParams(gl, (name) => this.fillLocation(name), params);
+    // Kein Schlüssel passt mehr: selectCache befüllt einen neuen.
+    for (const b of this.buffers) b.key = '';
+    this.prefetch = [];
+    this.arrivals = [];
+  }
   private arrivals: { b: CacheBuffer; generation: number; tile: string; data: StoredTile }[] = [];
   /**
    * Vorausrechnen (bake): Weltpunkte, um die herum Kacheln vorab in den
