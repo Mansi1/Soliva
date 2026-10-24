@@ -332,7 +332,7 @@ export class ResourceField {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       lowest = Math.min(lowest, this.mapGen.heightAt(x + dx * radius, y + dy * radius, NEAR_STEP));
     }
-    return reliefZ(lowest);
+    return reliefZ(lowest, this.mapGen.params);
   }
 
   /**
@@ -347,8 +347,10 @@ export class ResourceField {
    * dort Bilder, eine Region zu zeichnen kostet kaum etwas. Felsen, Gold und
    * Beeren bleiben Modelle und kommen einzeln, nur was im Bild steht - eine
    * ganze Region Felsen als Modell kostete gemessen ~1 ms je Bild.
+   * Ohne `world` (Generator-Seite /generator) steht alles unberührt da
+   * (VERIFIED: tools/ui/smoke.mjs öffnet die Seite ohne Fehler).
    */
-  instances(view: ViewRect, world: World, out: EntityInstance[],
+  instances(view: ViewRect, world: World | null, out: EntityInstance[],
             selected: { x: number; y: number } | null = null, blend = 1,
             statics?: { batcher: Batcher; out: StaticBatch[] }, onScreen?: OnScreen) {
     const x1 = view.x + view.width;
@@ -367,7 +369,7 @@ export class ResourceField {
     }
 
     this.batcher = statics.batcher;
-    this.syncTouched(world, selected);
+    if (world) this.syncTouched(world, selected);
     const treesOnly = onScreen !== undefined;
     const start = performance.now();
     for (let ry = Math.floor(view.y / REGION_TILES); ry <= Math.floor(y1 / REGION_TILES); ry++) {
@@ -408,9 +410,9 @@ export class ResourceField {
   }
 
   /** Ein Vorkommen so, wie es gerade ist - abgebaut, gefällt, ausgewählt. */
-  private pushNode(node: ResourceNode, world: World, out: EntityInstance[],
+  private pushNode(node: ResourceNode, world: World | null, out: EntityInstance[],
                    selected: { x: number; y: number } | null, blend: number) {
-    const share = world.remainingShare(node.x, node.y, node.total);
+    const share = world ? world.remainingShare(node.x, node.y, node.total) : 1;
     // Beerensträucher bleiben stehen und verlieren nur ihre Beeren
     // (motion[3] = Rest, siehe P_BERRY im Shader). Felsen schrumpfen
     // und verschwinden, wenn sie leer sind.
@@ -421,14 +423,14 @@ export class ResourceField {
     if (share <= 0 && !bush && !tree) return;
     // Liegt auf dem Tile ein Feld, ist der Stumpf ausgegraben - Felder
     // gibt es nur auf abgebauten Vorkommen, gefragt wird also nur dort.
-    if (share <= 0 && world.at(node.x, node.y)?.isFarm()) return;
+    if (share <= 0 && world?.at(node.x, node.y)?.isFarm()) return;
     // Gepflanzte Bäume wachsen vom Setzling (15 %) zur vollen Größe (Deposits.growth).
-    const grown = tree ? world.deposits.growth(node.x, node.y, world.timeAt(blend)) : 1;
+    const grown = tree && world ? world.deposits.growth(node.x, node.y, world.timeAt(blend)) : 1;
     node.instance.size = bush || tree ? node.size * (grown < 1 ? 0.15 + 0.85 * grown : 1) : node.size * (0.45 + 0.55 * share);
     // Gefällte Bäume kippen um bzw. liegen: Winkel und Richtung des
     // Falls stecken in motion[1] und motion[2].
     const motion = node.instance.motion!;
-    const fall = tree ? world.fall(node.x, node.y, blend) : null;
+    const fall = tree && world ? world.fall(node.x, node.y, blend) : null;
     // Ganz verbraucht steht der Stumpf wieder aufrecht - der liegende
     // Stamm ist abgesägt und weggetragen.
     motion[1] = fall && share > 0 ? fall.angle : 0;
@@ -545,6 +547,15 @@ export class ResourceField {
     region.stale = false;
     region.wrong = false;
     addRenderStats('regionMs', performance.now() - start);
+  }
+
+  /** Gibt alle festen Puffer frei - die Generator-Seite (/generator) ersetzt das Feld bei jedem Reglerschritt (VERIFIED: einziger Aufrufer generator.ts). */
+  dispose() {
+    for (const region of this.regions.values()) {
+      for (const b of [region.trees, region.others]) if (b) this.batcher?.deleteBatch(b);
+    }
+    this.regions.clear();
+    this.chunks.clear();
   }
 
   /** Fallen Stücke weg, wird die Region beim nächsten Zeigen neu gebaut; ihr Puffer ist frei. */

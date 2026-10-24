@@ -13,6 +13,7 @@ test('Routen der Seite liefern die index.html', () => {
   assert.equal(rewrite('/'), '/index.html');
   assert.equal(rewrite('/game/Testseed'), '/index.html');
   assert.equal(rewrite('/galerie'), '/index.html');
+  assert.equal(rewrite('/generator'), '/index.html');
   assert.equal(rewrite('/tools/lsystem/'), '/tools/lsystem/index.html');
 });
 

@@ -1,6 +1,6 @@
 // Rauchtest im Browser: spielt die wichtigsten Wege einmal durch - Hauptmenü,
 // neues Spiel, bauen, ausbilden, Feld über das Untermenü, Weide, speichern und neu
-// laden, Demo, alter Spielstand, Galerie, Baustellen (B26), Clips aus Blender. Bricht mit Exit-Code 1 ab, wenn
+// laden, Demo, alter Spielstand, Galerie, Baustellen (B26), Clips aus Blender, Kartengenerator (VERIFIED: läuft in make e2e). Bricht mit Exit-Code 1 ab, wenn
 // etwas fehlt oder die Seite einen Fehler wirft.
 //
 // Aufruf: erst `npm run dev`, dann `npm run smoke` bzw.
@@ -425,6 +425,25 @@ const clipLibraries = await page.evaluate(() => window.__clipLibraries ?? {});
 const emptyLibraries = ['humanoid', 'humanoid_sit', 'humanoid_tools', 'humanoid_carry', 'quadruped', 'mill', 'flag'].filter((n) => !(clipLibraries[n] > 0));
 check('Clips aus Blender geladen', emptyLibraries.length === 0,
   emptyLibraries.length ? `leer: ${emptyLibraries.join(', ')}` : Object.entries(clipLibraries).map(([n, c]) => `${n} ${c}`).join(', '));
+
+// Kartengenerator: ein Regler je Wert aus TERRAIN_PARAMS, ein geänderter steht in der Adresse.
+await page.goto(BASE + '/generator?seed=Testseed');
+await wait(2000);
+const generatorSliders = await page.$$('.gen-slider input');
+check('Generator zeigt Regler', generatorSliders.length > 20, `${generatorSliders.length} Regler`);
+await page.locator('.gen-slider', { hasText: 'Meeresspiegel' }).locator('input')
+  .evaluate((el) => { el.value = '-0.2'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+await wait(500);
+check('Generator: geänderter Wert in der Adresse', new URL(page.url()).searchParams.get('seaLevel') === '-0.2', page.url());
+await page.click('.gen-buttons >> text=Schräg');
+await wait(1500);
+check('Generator: schräg', (await page.textContent('.gen-buttons')).includes('Von oben'));
+// Billboards von Anfang an, abschaltbar - Fehler beim Zeichnen der Modelle fängt pageErrors unten.
+check('Generator: Billboards an', await page.isChecked('.gen-check input'));
+await page.uncheck('.gen-check input');
+await wait(1000);
+const generatorFps = await page.textContent('.gen-fps');
+check('Generator zeigt Bilder je Sekunde', /^\d+ Bilder\/s$/.test(generatorFps ?? ''), generatorFps);
 
 check('keine Fehler auf der Seite', pageErrors.length === 0, pageErrors.join(' | '));
 await browser.close();

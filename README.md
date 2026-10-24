@@ -56,6 +56,7 @@ Gehostet wird auf AWS (S3 + CloudFront, `infra/README.md`): Jeder Push auf `main
 |---|---|
 | `/` | das Spiel, beginnend im Hauptmenü |
 | `/galerie` | alle Modelle und Animationen ohne Gelände (`?zeige=Birke&zoom=300` zeigt auf ein Modell) |
+| `/generator` | der Kartengenerator von oben oder schräg, mit Seed und einem Regler je Wert aus `TERRAIN_PARAMS` (`?seed=Insel&seaLevel=-0.3`), nah heran mit Bäumen, Felsen und Beeren (Bäume als Bild, per Schalter als Modell), oben links die Bilder je Sekunde; das Spiel bleibt bei `TERRAIN_PARAMS` |
 
 Die Welt (Seed) wählt man im Hauptmenü unter Einzelspieler → Neues Spiel;
 gleicher Name, gleiche Welt. Standard ist `Soliva`. Unter Einzelspieler →

@@ -9,25 +9,10 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-09T21:24:52Z s=560a6297 FINDING src/main.ts:nextTrack hook learn=none: Stale comment, not mechanically checkable.
 2026-10-09T21:24:52Z s=560a6297 FINDING scope: Hud.tsx, Ground.ts, terrainRenderer.ts, terrainShader.ts, map.ts, crowd.ts, farming.ts, villagers.ts, world.ts, crowd.test.mjs learn=none: Scope note, not a defect.
 2026-10-09T21:24:52Z s=560a6297 FINDING .github/workflows/verify.yml:checkout learn=none: CI itself is the check; confirmed once the push with workflow scope runs.
-2026-10-10T00:14:16Z s=560a6297 FAIL prose
-2026-10-10T00:20:02Z s=560a6297 DONE fp=32e92ff7e523 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+56)
-2026-10-10T00:20:02Z s=560a6297 FINDING src/world/villagers.ts:enter/nearestDropSite learn=test: Regression test in tests/water-path.test.mjs.
-2026-10-10T00:20:02Z s=560a6297 FINDING tests/training-queue.test.mjs, tests/build-preview.test.mjs learn=test: Single fixture; mutation-checked test.
-2026-10-10T00:20:02Z s=560a6297 FINDING README.md, docs/ANIMATION.md, docs/OFFEN.md T02/T06 learn=verifier: Prose gate.
-2026-10-10T00:20:02Z s=560a6297 FINDING B19 rename (24 files) learn=test: Smoke checks Dorfzentrum labels.
 2026-10-10T00:20:02Z s=560a6297 FINDING scope learn=none: Scope note.
-2026-10-10T00:33:44Z s=560a6297 DONE fp=7aa3fd1afe1e cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+58)
-2026-10-10T00:33:44Z s=560a6297 FINDING src/world/farming.ts:furrowNeeds learn=test: tests/fields.test.mjs B2 harvests only the ripe furrow with wood=0, then phase wood.
-2026-10-10T11:26:52Z s=560a6297 FAIL prose
-2026-10-10T11:31:17Z s=560a6297 DONE fp=1bb36e527682 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+65)
 2026-10-10T11:31:17Z s=560a6297 FINDING src/world/villagers.ts:throwRelease learn=none: Visual one-frame glitch; no cheap mechanical check without a rendering harness.
 2026-10-10T11:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:away (P_TOOL) learn=none: Covered by gallery screenshot; smoke checks clip libraries load, not prop visibility.
-2026-10-10T11:42:03Z s=560a6297 DONE fp=b7347b860d62 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+74)
 2026-10-10T11:42:03Z s=560a6297 FINDING src/world/unit/*.ts walk/flee learn=none: Requirement interpretation, not a code defect.
-2026-10-10T07:46:55Z s=560a6297 DONE fp=8e3cb678f581 cov=79.7% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+59)
-2026-10-10T08:01:28Z s=560a6297 DONE fp=9ba99f4436fd cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+62)
-2026-10-10T15:47:58Z s=560a6297 DONE fp=250970fa8dea cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
-2026-10-10T15:47:58Z s=560a6297 FINDING src/models/animals/boar.glb:Head.Neck learn=memory: Documented as model rule in docs/BLENDER.md (Tiere); no cheap mechanical check for intended pivot location beyond gallery.
 2026-10-10T15:47:58Z s=560a6297 FINDING src/world/unit/Boar.ts:height learn=test: Size test checks every species against its model height.
 2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
 2026-10-10T16:19:50Z s=560a6297 DONE fp=62a0de175c8b cov=80.4% paths=src/components/SelectionPanel.tsx,src/game/selectionView.ts,src/main.ts,src/world/building/Armory.ts(+13)
@@ -104,3 +89,18 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-23T17:20:36Z s=9d3ed845 FINDING src/world/world.ts:applySave learn=test: tests/shoes.test.mjs: old save moves wood and leather pairs with their kinds
 2026-10-23T17:20:36Z s=9d3ed845 FINDING src/models/buildings/cobbler.glb learn=test: tests/check-models.test.mjs and tests/ids.test.mjs
 2026-10-23T17:20:36Z s=9d3ed845 FINDING src/world/villagers.ts:tickTask gather; src/world/construction.ts:tickBuilder; tickFarmer; blockedAt; selectionView.animalSex learn=test: tests/water-path, construction, fields, herd B35-B39 tests
+2026-10-23T19:32:29Z s=9d3ed845 DONE fp=716203380481 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+30)
+2026-10-23T19:32:29Z s=9d3ed845 FINDING src/generator.ts:frame cellPixels learn=test: smoke.mjs now clicks Schräg on /generator; frame cost itself is not asserted (no benchmarks by user rule).
+2026-10-23T19:32:29Z s=9d3ed845 FINDING src/gl/terrainRenderer.ts:regenerate learn=none: performance detail without a stable threshold to test
+2026-10-23T19:32:29Z s=9d3ed845 FINDING src/generator.ts:wheel learn=none: trivial input guard
+2026-10-23T19:32:29Z s=9d3ed845 FINDING src/generator.ts:reachZ learn=none: page-local wiring
+2026-10-23T19:32:29Z s=9d3ed845 FINDING src/generatorParams.ts:fromQuery learn=test: tests/generator.test.mjs
+2026-10-23T20:28:31Z s=9d3ed845 DONE fp=e70dfce745e3 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+31)
+2026-10-23T20:28:31Z s=9d3ed845 FINDING src/noise.ts:MapGenerator learn=test: tests/generator.test.mjs MapGenerator test
+2026-10-23T20:28:31Z s=9d3ed845 FINDING src/world/resources.ts:dispose learn=none: GPU buffer lifetime is not observable in node tests; one caller (generator.ts)
+2026-10-23T20:28:31Z s=9d3ed845 FINDING tools/ui/smoke.mjs:Generator fps learn=none: editing mistake, caught by make lint
+2026-10-23T22:35:04Z s=9d3ed845 DONE fp=1bc30d54898a cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+31)
+2026-10-23T22:52:48Z s=9d3ed845 DONE fp=8fa26cd81866 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+31)
+2026-10-23T23:15:07Z s=9d3ed845 DONE fp=9a7d64f3bba8 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+31)
+2026-10-23T23:57:16Z s=9d3ed845 DONE fp=bd012c0b2679 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+32)
+2026-10-23T23:57:16Z s=9d3ed845 FINDING vite.config.ts:saveBillboards learn=none: dev-only debug output folder; no cheap mechanical check without a browser bake, covered by the comment at the plugin
