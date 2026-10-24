@@ -118,11 +118,13 @@ await started();
 await wait(2500);
 check('Hauptmenü beim Öffnen', await page.$eval('#start', (e) => !e.hidden));
 check('Hauptmenü hat Einzelspieler', !!(await page.$('#start >> text=Einzelspieler')));
+check('Hauptmenü: Pagegeist läuft', !!(await page.$('.pagegeist')));
 check('erster Besuch wählt keine Welt', (await page.evaluate(() => localStorage.getItem('pgm.seed'))) === null);
 
 // Neues Spiel
 await newGame(SEED);
 check('neues Spiel startet', (await page.title()).endsWith(SEED) && await page.$eval('#start', (e) => e.hidden), await page.title());
+check('im Spiel kein Pagegeist', !(await page.$('.pagegeist')));
 // Ohne GPU (SwiftShader) dauert ein Bild Sekunden und Klicks laufen in Zeitüberschreitungen.
 console.log(`  GPU: ${await page.evaluate(() => window.getRenderInfo?.().gpu)}`);
 

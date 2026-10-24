@@ -13,7 +13,6 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T11:31:17Z s=560a6297 FINDING src/world/villagers.ts:throwRelease learn=none: Visual one-frame glitch; no cheap mechanical check without a rendering harness.
 2026-10-10T11:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:away (P_TOOL) learn=none: Covered by gallery screenshot; smoke checks clip libraries load, not prop visibility.
 2026-10-10T11:42:03Z s=560a6297 FINDING src/world/unit/*.ts walk/flee learn=none: Requirement interpretation, not a code defect.
-2026-10-10T15:47:58Z s=560a6297 FINDING src/world/unit/Boar.ts:height learn=test: Size test checks every species against its model height.
 2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
 2026-10-10T16:19:50Z s=560a6297 DONE fp=62a0de175c8b cov=80.4% paths=src/components/SelectionPanel.tsx,src/game/selectionView.ts,src/main.ts,src/world/building/Armory.ts(+13)
 2026-10-10T16:19:50Z s=560a6297 FINDING src/main.ts:imtheking cheat learn=none: Frozen getter makes any leftover write fail loudly; no further check needed.
@@ -104,3 +103,4 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-23T23:15:07Z s=9d3ed845 DONE fp=9a7d64f3bba8 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+31)
 2026-10-23T23:57:16Z s=9d3ed845 DONE fp=bd012c0b2679 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+32)
 2026-10-23T23:57:16Z s=9d3ed845 FINDING vite.config.ts:saveBillboards learn=none: dev-only debug output folder; no cheap mechanical check without a browser bake, covered by the comment at the plugin
+2026-10-24T01:06:19Z s=ccb2ed49 DONE fp=690b6dba53d3 cov=80.7% paths=src/components/StartScreen.tsx

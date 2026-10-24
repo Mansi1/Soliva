@@ -54,7 +54,7 @@ Gehostet wird auf AWS (S3 + CloudFront, `infra/README.md`): Jeder Push auf `main
 
 | Adresse | Inhalt |
 |---|---|
-| `/` | das Spiel, beginnend im Hauptmenü |
+| `/` | das Spiel, beginnend im Hauptmenü; dort läuft der Poltergeist [Pagegeist](https://github.com/d4ndel1on/pagegeist) über die Tafel |
 | `/galerie` | alle Modelle und Animationen ohne Gelände (`?zeige=Birke&zoom=300` zeigt auf ein Modell) |
 | `/generator` | der Kartengenerator von oben oder schräg, mit Seed und einem Regler je Wert aus `TERRAIN_PARAMS` (`?seed=Insel&seaLevel=-0.3`), nah heran mit Bäumen, Felsen und Beeren (Bäume als Bild, per Schalter als Modell), oben links die Bilder je Sekunde; das Spiel bleibt bei `TERRAIN_PARAMS` |
 

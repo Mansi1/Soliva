@@ -4,9 +4,12 @@
 // Galerie und dem L-System-Werkzeug. Dahinter zieht langsam die Welt vorbei;
 // das Spiel selbst steht, bis man unter Einzelspieler weiterspielt, einen
 // Spielstand lädt oder neu beginnt - für ein neues Spiel fragt es nach der
-// Welt (Seed).
+// Welt (Seed). Über die Tafel läuft Pagegeist, ein kleiner Poltergeist
+// (@d4ndel1on/pagegeist). VERIFIED: nur im Hauptmenü, im Spiel ist sie weg
+// (close zerstört sie; tools/ui/smoke.mjs prüft beides).
 
 import { createRef, render } from 'defuss';
+import { createPagegeist, type PagegeistInstance } from '@d4ndel1on/pagegeist';
 import './StartScreen.css';
 import woodBar from '../icons/wood-bar.png';
 import { confirmDialog } from './ConfirmDialog';
@@ -83,6 +86,8 @@ export class StartScreen {
   private seedInput = createRef<HTMLInputElement>();
   /** Wohin "Zurück" auf der Seite "Neues Spiel" führt - ins Spiel-Menü geöffnet: zum Hauptmenü. */
   private back: Page = 'single';
+  /** Der Poltergeist auf der Tafel, solange das Hauptmenü offen ist. */
+  private geist: PagegeistInstance | null = null;
 
   constructor(private hooks: StartHooks) {
     this.root = document.createElement('div');
@@ -120,7 +125,7 @@ export class StartScreen {
             <StartButton label="Mehrspieler" hint="bald" disabled />
             <StartButton label="Einstellungen" onClick={() => h.openSettings()} />
             <StartButton label="Galerie" hint="alle Modelle" onClick={() => window.location.assign(`${import.meta.env.BASE_URL}galerie`)} />
-            <StartButton label="Kartengenerator" hint="Regler ausprobieren" onClick={() => window.location.assign(`${import.meta.env.BASE_URL}generator`)} />
+            <StartButton label="Kartengenerator" hint="Regler" onClick={() => window.location.assign(`${import.meta.env.BASE_URL}generator`)} />
             <StartButton label="L-System" hint={'Bäume & Pflanzen'} onClick={() => window.location.assign(`${import.meta.env.BASE_URL}tools/lsystem/`)} />
           </nav>
         ) : page === 'single' ? (
@@ -206,6 +211,11 @@ export class StartScreen {
     this.root.hidden = false;
     document.body.classList.add('title-screen');
     this.qr.hidden = false;
+    this.geist ??= createPagegeist({
+      outfit: 'corset',
+      shoes: 'heels',
+      fishnets: true,
+    });
     if (page === 'new') this.back = 'main';
     this.show(page);
   }
@@ -216,5 +226,7 @@ export class StartScreen {
     this.root.hidden = true;
     document.body.classList.remove('title-screen');
     this.qr.hidden = true;
+    this.geist?.destroy();
+    this.geist = null;
   }
 }
