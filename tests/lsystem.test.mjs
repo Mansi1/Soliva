@@ -107,3 +107,42 @@ test('ohne Gabel verjüngt sich ein Ast gleichmäßig, ohne Sprung', () => {
   });
   assert.ok(runs > 0, 'Rezept ohne Stücke ohne Gabel prüft nichts');
 });
+
+test('Krümmung: der Stamm weicht ab, das erste Stück am Boden bleibt senkrecht', () => {
+  // Ohne Drehbefehl liefe FFFF schnurgerade; der Stammfuß (rootFoot) setzt
+  // waagerecht an und braucht ein senkrechtes erstes Stück.
+  const spec = { ...PRESETS.haengebirke, axiom: 'FFFF', rules: '', iterations: 0, jitter: 0, tropism: 0 };
+  const run = (wander) => interpret(tokenize(spec.axiom), { ...spec, wander }, rng(1)).segments;
+  const straight = run(0), curved = run(4);
+  assert.ok(straight.every((s) => s.b[0] === 0 && s.b[2] === 0));
+  assert.deepEqual([curved[0].b[0], curved[0].b[2]], [0, 0]);
+  assert.ok(Math.hypot(curved[3].b[0], curved[3].b[2]) > 0.01);
+});
+
+test('Wurzel-Seed ändert nur den Stammfuß', () => {
+  const spec = { ...PRESETS.haengebirke, iterations: 4 };
+  assert.equal(JSON.stringify(rootPoints(spec)), JSON.stringify(rootPoints({ ...spec, rootSeed: spec.seed })));
+  assert.notEqual(JSON.stringify(rootPoints(spec)), JSON.stringify(rootPoints({ ...spec, rootSeed: 7 })));
+  assert.equal(grow(spec).segments, grow({ ...spec, rootSeed: 7 }).segments);
+  assert.equal(grow(spec).leaves, grow({ ...spec, rootSeed: 7 }).leaves);
+});
+
+test('Beispiele sind so hoch und so dick wie ihre Art (baumarten.json)', async () => {
+  const { default: data } = await import('../tools/lsystem/baumarten.json', { with: { type: 'json' } });
+  for (const art of data.arten) {
+    const [low, high] = art.height_m.typical;
+    const { typical, max } = art.trunk_diameter_cm;
+    for (const name of art.presets) {
+      const spec = PRESETS[name];
+      const rnd = rng(spec.seed);
+      const { tokens } = rewrite(tokenize(spec.axiom), parseRules(spec.rules), spec.iterations, rnd);
+      const { segments, radii } = interpret(tokens, spec, rnd);
+      const top = Math.max(...segments.map((s) => s.b[1]));
+      assert.ok(top >= low && top <= high, `${name}: ${top.toFixed(1)} m, ${art.id} ${low}-${high} m`);
+      // Durchmesser am Boden (dickster Stamm) in cm: in der typischen Spanne, sonst höchstens die Höchstdicke.
+      const d = 200 * Math.max(...segments.map((s, i) => (s.parent < 0 && Math.abs(s.a[1]) < 1e-6 ? radii[i][0] : 0)));
+      const [dLow, dHigh] = typical ?? [0, max ?? Infinity];
+      assert.ok(d >= dLow - 1e-6 && d <= dHigh + 1e-6, `${name}: Stamm ${d.toFixed(0)} cm, ${art.id} ${dLow}-${dHigh} cm`);
+    }
+  }
+});

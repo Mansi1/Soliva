@@ -8,7 +8,7 @@ import { GROUPS, PRESETS, isPresetName, type PresetName } from './presets/index.
 import { render, sceneFromObj, type Scene, type View } from './render.ts';
 
 /** Regler: Feld des Rezepts, das sie einstellen - die id im HTML ist derselbe Name. */
-const SLIDERS = ['iterations', 'angle', 'tropism', 'jitter', 'lengthFactor', 'leafSize', 'sides'] as const satisfies readonly (keyof TreeSpec)[];
+const SLIDERS = ['iterations', 'angle', 'tropism', 'jitter', 'wander', 'lengthFactor', 'leafSize', 'sides'] as const satisfies readonly (keyof TreeSpec)[];
 const TEXTS = ['axiom', 'rules', 'leaves'] as const satisfies readonly (keyof TreeSpec)[];
 
 function element<T extends HTMLElement>(id: string, type: new () => T): T {
@@ -26,6 +26,8 @@ function textField(id: string): HTMLInputElement | HTMLTextAreaElement {
 const canvas = element('view', HTMLCanvasElement);
 const presetSelect = element('preset', HTMLSelectElement);
 const seedInput = element('seed', HTMLInputElement);
+/** Leer: die Wurzeln folgen dem Seed. */
+const rootSeedInput = element('rootSeed', HTMLInputElement);
 const stats = element('stats', HTMLElement);
 const error = element('error', HTMLElement);
 const leafModeSelect = element('leafMode', HTMLSelectElement);
@@ -46,31 +48,34 @@ const cards = () => cardsSelect.value !== '0';
 /** Rezept aus dem gewählten Beispiel und den Eingaben. */
 function currentSpec(): TreeSpec {
   const spec: { -readonly [K in keyof TreeSpec]: TreeSpec[K] } = { ...base, seed: Number(seedInput.value) || 1 };
+  if (Number(rootSeedInput.value) >= 1) spec.rootSeed = Number(rootSeedInput.value);
   for (const { key, input } of sliders) spec[key] = Number(input.value);
   for (const { key, input } of texts) spec[key] = input.value;
   return spec;
 }
 
 /** Beispiel laden; `seed` überschreibt den Seed des Beispiels (aus der URL). */
-function load(name: PresetName, seed = PRESETS[name].seed) {
+function load(name: PresetName, seed = PRESETS[name].seed, rootSeed?: number) {
   base = PRESETS[name];
   seedInput.value = String(seed);
+  rootSeedInput.value = rootSeed ? String(rootSeed) : '';
   for (const { key, input } of sliders) input.value = String(base[key]);
   for (const { key, input } of texts) input.value = base[key];
   update();
 }
 
 /** Beispiel, Seed und Blätter in die URL - zum Teilen und Neuladen. */
-function syncUrl(seed: number) {
+function syncUrl({ seed, rootSeed }: TreeSpec) {
   const query = new URLSearchParams({
     preset: presetSelect.value, seed: String(seed), leaves: leafMode(), cards: cards() ? '1' : '0',
   });
+  if (rootSeed) query.set('roots', String(rootSeed));
   history.replaceState(null, '', `?${query}`);
 }
 
 async function update() {
   const spec = currentSpec();
-  syncUrl(spec.seed);
+  syncUrl(spec);
   const mode = leafMode();
   const current = ++generation;
   for (const { key, value } of sliders) value.textContent = String(spec[key]);
@@ -151,6 +156,7 @@ presetSelect.addEventListener('change', () => {
 });
 for (const { input } of [...sliders, ...texts]) input.addEventListener('input', update);
 seedInput.addEventListener('input', update);
+rootSeedInput.addEventListener('input', update);
 leafModeSelect.addEventListener('change', update);
 cardsSelect.addEventListener('change', update);
 const wire = element('wire', HTMLInputElement);
@@ -167,10 +173,14 @@ element('reseed', HTMLButtonElement).addEventListener('click', () => {
   seedInput.value = String(1 + Math.floor(Math.random() * 99_999));
   update();
 });
+element('reroot', HTMLButtonElement).addEventListener('click', () => {
+  rootSeedInput.value = String(1 + Math.floor(Math.random() * 99_999));
+  update();
+});
 element('download', HTMLButtonElement).addEventListener('click', download);
 element('download-glb', HTMLButtonElement).addEventListener('click', () => { void downloadGlb(); });
 
-// ?preset=<name>&seed=<n>&leaves=shape|texture&cards=0|1 - so verlinkt auch die Galerie (gallery.html) hierher.
+// ?preset=<name>&seed=<n>&roots=<n>&leaves=shape|texture&cards=0|1 - so verlinkt auch die Galerie (gallery.html) hierher.
 const params = new URLSearchParams(location.search);
 const requested = params.get('preset') ?? '';
 const initial: PresetName = isPresetName(requested) ? requested : 'laubbaum';
@@ -178,4 +188,5 @@ const seed = Number(params.get('seed'));
 if (params.get('leaves') === 'shape') leafModeSelect.value = 'shape';
 if (params.get('cards') === '0') cardsSelect.value = '0';
 presetSelect.value = initial;
-load(initial, Number.isInteger(seed) && seed >= 1 ? seed : undefined);
+const rootSeed = Number(params.get('roots'));
+load(initial, Number.isInteger(seed) && seed >= 1 ? seed : undefined, Number.isInteger(rootSeed) && rootSeed >= 1 ? rootSeed : undefined);

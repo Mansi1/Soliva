@@ -381,7 +381,8 @@
       "name_latin": "Fagus sylvatica",
       "group": "Laubbaum",
       "presets": [
-        "buche"
+        "buche",
+        "blutbuche"
       ],
       "game": null,
       "height_m": {

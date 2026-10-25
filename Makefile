@@ -54,9 +54,11 @@ metrics:  ; @echo "UNKNOWN[metrics] BC undefined: print current service|build me
 bench:    ; bun run bench
 test:     ; bun run test
 # Node schreibt "ℹ all files | <Zeilen-%> | ...", das Gate liest "TOTAL <n>%".
+# iconv -c: parallele Testdateien schreiben ihre Ausgabe manchmal ineinander und zerreißen ein
+# Zeichen (gesehen 2026-10-25); ungültiges UTF-8 bricht das Gate ab.
 coverage:
 	@mkdir -p tmp; node --test --experimental-test-coverage tests/*.test.mjs >tmp/coverage.txt 2>&1; s=$$?; \
-	tail -n 40 tmp/coverage.txt; awk -F'|' '/all files/ { gsub(/ /, "", $$2); print "TOTAL " $$2 "%" }' tmp/coverage.txt; exit $$s
+	tail -n 40 tmp/coverage.txt | iconv -c -f utf-8 -t utf-8; awk -F'|' '/all files/ { gsub(/ /, "", $$2); print "TOTAL " $$2 "%" }' tmp/coverage.txt; exit $$s
 # Erlaubt: Stil des vorhandenen Codes - new Array(n) belegt bewusst vor, die Kopie vor dem Löschen aus einem Set ist gewollt.
 lint:     ; bunx oxlint --deny-warnings -A unicorn/no-new-array -A unicorn/no-useless-spread -A unicorn/prefer-string-starts-ends-with -A typescript/triple-slash-reference
 # Das veröffentlichte Artefakt unter einem Basispfad wie bei den Previews (/pr-<n>/, .github/workflows/deploy-aws.yml) ausliefern

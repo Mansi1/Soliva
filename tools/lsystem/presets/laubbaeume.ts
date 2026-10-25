@@ -29,7 +29,7 @@ A 0.35 -> "/(90)F[&(28)A]/(180)[&(28)A]^(5)A`,
 const eiche = preset({
   roots: { count: 6, spread: 3.4, rise: 2.2 },
   group, label: 'Eiche', axiom: 'FFFA', iterations: 7, angle: 48, length: 1.25, lengthFactor: 0.84,
-  jitter: 0.4, tropism: 0.1,
+  jitter: 0.4, tropism: 0.1, wander: 6,
   rules: `# Knorrig: weite Winkel, starke Streuung, schwere Äste neigen sich waagrecht.
 # Der Leittrieb knickt immer wieder ab (+(25)).
 A 0.45 -> "[&FFA]/(137.5)[&FA]/(137.5)[&(62)FA]

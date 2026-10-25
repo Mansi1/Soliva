@@ -85,6 +85,8 @@ export interface TreeSpec {
   readonly jitter: number;
   /** Neigung zur Schwerkraft je Ast; negativ: nach oben. */
   readonly tropism: number;
+  /** Krümmung: zufälliges Abweichen der Wuchsrichtung in Grad je Meter (vor `scale`), auch ohne Drehbefehl. */
+  readonly wander: number;
   /** Zeichen außer L, an denen Laub sitzt (meist die unfertigen Knospen). */
   readonly leaves: string;
   readonly leafShape: 'clump' | 'needle';
@@ -109,6 +111,16 @@ export interface TreeSpec {
   readonly sides: number;
   /** Wurzelanläufe am Stammfuß nach Art des Baums; ohne: DEFAULT_ROOTS. */
   readonly roots?: RootSpec;
+  /** Seed nur für die Wurzelanläufe; ohne: `seed`. */
+  readonly rootSeed?: number;
+  /**
+   * Vergrößert Längen und Laub; ohne größeres Laub sähe der Baum licht aus.
+   * Die Astspitzen bleiben so dick wie im Rezept (echte Zweige), die Dicke des
+   * Stamms stellt `pipe` ein. Die Beispiele setzen beides nach Höhe und
+   * Durchmesser ihrer Art (presets/index.ts). Ohne: 1. Früchte und andere
+   * Organe behalten ihre Größe.
+   */
+  readonly scale?: number;
 }
 
 /** Wurzelanläufe einer Baumart; der Seed streut sie je Baum. */
@@ -276,6 +288,10 @@ export function interpret(tokens: readonly Token[], spec: TreeSpec, rnd: () => n
   const segments: Segment[] = [];
   const leaves: Leaf[] = [];
   const stack: Turtle[] = [];
+  // Eigener Zufall für die Krümmung: die Verzweigung bleibt, wie sie ohne war.
+  const drift = rng(spec.seed * 104729 + 7);
+  const k = spec.scale ?? 1;
+  const at = (v: Vec3): Vec3 => (k === 1 ? v : add([0, 0, 0], v, k));
   let t: Turtle = { p: [0, 0, 0], frame: { h: [0, 1, 0], l: [-1, 0, 0], u: [0, 0, 1] }, step: spec.length, segment: -1, tropism: spec.tropism };
 
   const turn = (axis: keyof Frame, degrees: number) => {
@@ -287,10 +303,11 @@ export function interpret(tokens: readonly Token[], spec: TreeSpec, rnd: () => n
     switch (symbol) {
       case 'F':
       case 'f': {
-        const p = add(t.p, t.frame.h, jitter(arg ?? t.step));
+        const step = jitter(arg ?? t.step);
+        const p = add(t.p, t.frame.h, step);
         let segment = t.segment;
-        if (symbol === 'F') segment = segments.push({ a: t.p, b: p, parent: t.segment }) - 1;
-        t = { ...t, p, segment, frame: bend(t.frame, t.tropism) };
+        if (symbol === 'F') segment = segments.push({ a: at(t.p), b: at(p), parent: t.segment }) - 1;
+        t = { ...t, p, segment, frame: wander(bend(t.frame, t.tropism), spec.wander * DEG * step, drift) };
         break;
       }
       case '+': turn('u', angle); break;
@@ -305,10 +322,23 @@ export function interpret(tokens: readonly Token[], spec: TreeSpec, rnd: () => n
       case '[': stack.push(t); break;
       case ']': t = stack.pop() ?? t; break;
       default:
-        if (leafSymbols.has(symbol)) leaves.push({ symbol, scale: arg ?? 1, p: t.p, heading: t.frame.h, left: t.frame.l });
+        if (leafSymbols.has(symbol)) leaves.push({ symbol, scale: arg ?? 1, p: at(t.p), heading: t.frame.h, left: t.frame.l });
     }
   }
   return { segments, radii: pipeRadii(segments, spec), leaves };
+}
+
+/**
+ * Kein Baum wächst ganz gerade: Nach jedem Stück weicht die Richtung um bis zu
+ * `angle` in eine zufällige Richtung ab. Erst nach dem Stück, nicht davor: So
+ * bleibt das erste Stück am Boden senkrecht, und der Stammfuß (rootFoot) setzt
+ * mit waagerechtem Ring nahtlos an. Ein Drehbefehl je F in den Regeln ginge
+ * auch, müsste aber in jedes Rezept und änderte die Verzweigung.
+ */
+function wander(frame: Frame, angle: number, rnd: () => number): Frame {
+  if (!angle) return frame;
+  const axis = rotate(frame.l, frame.h, rnd() * 2 * Math.PI);
+  return turnFrame(frame, axis, angle * rnd());
 }
 
 /** Tropismus: die Blickrichtung neigt sich zur Schwerkraft, umso mehr, je quer sie steht. */
@@ -513,7 +543,7 @@ function rootFoot(m: Model, spec: TreeSpec, skeleton: Skeleton, seg: number, cut
   const [r0, r1] = skeleton.radii[seg];
   // Eigener Zufall aus dem Seed: jeder Baum anders, aber das Laub bleibt, wo
   // es mit dem Haupt-Zufall war.
-  const vary = rng(spec.seed * 7919 + 13);
+  const vary = rng((spec.rootSeed ?? spec.seed) * 7919 + 13);
   // Höhe: nach Art und Seed, aber unter dem Schnitt und im ersten Stück.
   const rise = Math.min(shape.rise * r0 * (0.85 + vary() * 0.3), cut.p[1] * 0.8, (b[1] - a[1]) * 0.8);
   if (rise <= 0) return null;
@@ -737,7 +767,7 @@ export function build(skeleton: Skeleton, spec: TreeSpec, rnd: () => number, { l
     });
   }
   const foliage: Organ = {
-    shape: spec.leafShape, size: spec.leafSize, materials: spec.leafMaterials, leaf: spec.leaf, leafCount: spec.leafCount,
+    shape: spec.leafShape, size: spec.leafSize * (spec.scale ?? 1), materials: spec.leafMaterials, leaf: spec.leaf, leafCount: spec.leafCount,
   };
   const count = new Map<Organ, number>();
   for (const leaf of skeleton.leaves) {

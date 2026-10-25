@@ -22,22 +22,10 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T21:55:49Z s=560a6297 FINDING src/world/render.ts:throw/hoe phase learn=none: Visual timing; checked in gallery throw sequence screenshots, no cheap mechanical check.
 2026-10-11T21:55:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask learn=none: Shader constant; covered visually only.
 2026-10-11T22:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:shin anchor learn=none: Visual-only shader change.
-2026-10-11T22:31:17Z s=560a6297 FINDING src/models/villagers/{male,female}.glb learn=test: tests/ids + check-models.
-2026-10-11T22:31:17Z s=560a6297 FINDING src/world/save.ts:inv.shoes learn=test: tests/shoes.test.mjs save round-trip.
-2026-10-11T22:46:39Z s=560a6297 FAIL tests.unit,coverage
-2026-10-11T22:49:58Z s=560a6297 DONE fp=4a467cf24e27 cov=80.5% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+21)
-2026-10-11T22:49:58Z s=560a6297 FINDING src/world/archery.ts (allBuildings().some) learn=test: tests/archery.test.mjs exercises sendToRange.
-2026-10-11T22:49:58Z s=560a6297 FINDING merge feat/schuhe (PR #65) into feat/bogen learn=test: tests/archery + tests/shoes cover both inventory slots after merge.
-2026-10-11T22:49:58Z s=560a6297 FINDING src/world/unit/skills.ts:practise learn=test: tests/archery.test.mjs master 1.5x, capped.
 2026-10-11T22:49:58Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask bow bit learn=none: Visual-only shader constant.
-2026-10-11T22:58:26Z s=560a6297 DONE fp=87959e667926 cov=80.5% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+28)
-2026-10-11T22:58:26Z s=560a6297 FINDING src/world/pasture.ts:deliver (inside) learn=test: tests/pasture.test.mjs asserts he is visible while tending.
 2026-10-11T22:58:26Z s=560a6297 FINDING src/world/building/Pasture.ts:key learn=none: No check for duplicate build keys exists; a cheap test could assert unique BUILDINGS keys - left as note.
 2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:tick case archery learn=none: Merge artefact; tsc noFallthrough not enabled, tests/archery+pasture pass after fix.
-2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:hopeless / blockedAt / hunt learn=test: tests/pasture, spear, shoes, archery all green (139).
 2026-10-11T22:58:26Z s=560a6297 FINDING src/gl/entityRenderer.ts:PROP_TEST learn=none: Visual-only shader constant.
-2026-10-11T23:37:49Z s=560a6297 DONE fp=eee85c79118a cov=80.5% paths=docs/OFFEN.md,memory.md,src/components/SelectionPanel.css,src/components/SelectionPanel.tsx(+17)
-2026-10-11T23:37:49Z s=560a6297 FINDING src/world/save.ts:migrate learn=test: tests/research.test.mjs save round-trip; memory.md notes migrate must pass new top-level fields.
 2026-10-11T23:37:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:SHAPE.clogs icon learn=test: smoke checks research buttons have an image.
 2026-10-11T23:37:49Z s=560a6297 FINDING src/world/research.ts:blocker learn=none: Depends on B26 merge; will be handled there.
 2026-10-11T23:37:49Z s=560a6297 FINDING src/world/villagers.ts:hunt leather learn=test: tests/research.test.mjs hunted sheep gives 4 leather + meat.
@@ -104,3 +92,15 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-25T17:12:47Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:rootFoot ground learn=test: 'Wurzeln reichen nicht unter den Boden'
 2026-10-25T18:34:02Z s=ccb2ed49 DONE fp=9dd5ceea940a cov=88.2% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+13)
 2026-10-25T18:34:02Z s=ccb2ed49 FINDING tools/lsystem/baumarten.json learn=none: data file is not read by code yet; a schema test would pin a format no consumer uses (YAGNI)
+2026-10-25T21:07:58Z s=ccb2ed49 DONE fp=f0d44a57f22d cov=88.2% paths=Makefile,README.md,bun.lock,package.json(+15)
+2026-10-25T21:07:58Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:interpret wander learn=test: tests/lsystem.test.mjs Krümmung: FFFF deviates with wander>0, first segment stays at x=z=0
+2026-10-25T21:07:58Z s=ccb2ed49 FINDING tools/lsystem/presets/nadelbaeume.ts:mammutbaum wander learn=none: appearance per species; no cheap mechanical bound that is a verified requirement
+2026-10-25T21:07:58Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:rootFoot rootSeed learn=test: Wurzel-Seed test: same rootSeed as seed gives identical foot, other rootSeed changes foot, segments and leaves unchanged
+2026-10-25T21:07:58Z s=ccb2ed49 FINDING Makefile:coverage learn=none: race inside node test runner output, not reproducible on demand; documented in Makefile comment
+2026-10-25T22:20:01Z s=ccb2ed49 DONE fp=5610eb04ca70 cov=88.4% paths=Makefile,README.md,bun.lock,package.json(+16)
+2026-10-25T22:20:01Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:interpret scale learn=none: appearance; the height requirement itself is tested
+2026-10-25T22:20:01Z s=ccb2ed49 FINDING tools/lsystem/presets/index.ts:sized learn=test: Beispiele sind so hoch wie ihre Art: every mapped preset must lie in its species typical range
+2026-10-25T22:20:01Z s=ccb2ed49 FINDING src/gl/entityRenderer.ts:unitLength learn=none: observation about an unchanged caller
+2026-10-25T22:25:46Z s=ccb2ed49 DONE fp=f6ffccaf03c9 cov=88.5% paths=Makefile,README.md,bun.lock,package.json(+16)
+2026-10-25T22:25:46Z s=ccb2ed49 FINDING tools/lsystem/presets/index.ts:SPECIES fallback learn=none: data gap, needs research of missing diameters; reported to the user
+2026-10-25T22:25:46Z s=ccb2ed49 FINDING tools/lsystem/presets/index.ts:sized pipe learn=test: species test asserts diameter in typical range or <= max

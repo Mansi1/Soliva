@@ -11,7 +11,7 @@ export interface Preset extends TreeSpec {
 }
 
 const DEFAULTS = {
-  seed: 1, lengthFactor: 0.9, jitter: 0, tropism: 0, leaves: '', leafShape: 'clump',
+  seed: 1, lengthFactor: 0.9, jitter: 0, tropism: 0, wander: 4, leaves: '', leafShape: 'clump',
   leafMaterials: ['Leaf', 'Ivy', 'IvyDark'], stemMaterial: 'Bark', tip: 0.03, pipe: 2.2, sides: 8,
 } as const satisfies Partial<TreeSpec>;
 
