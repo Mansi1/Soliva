@@ -146,3 +146,15 @@ test('Beispiele sind so hoch und so dick wie ihre Art (baumarten.json)', async (
     }
   }
 });
+
+test('Gerüst bleibt endlich, auch bei langen Ketten mit Krümmung', () => {
+  // Der Busch lieferte NaN: Der Rahmen drehte um seine eigenen, durch Rundung
+  // minimal zu langen Achsen, und der Fehler wuchs mit jeder Drehung (turnFrame).
+  // Volle Schritte - der Test oben kürzt auf 5, da blieb es endlich.
+  for (const [name, spec] of Object.entries(PRESETS)) {
+    const rnd = rng(spec.seed);
+    const { tokens } = rewrite(tokenize(spec.axiom), parseRules(spec.rules), spec.iterations, rnd);
+    const bad = interpret(tokens, spec, rnd).segments.filter((s) => [...s.a, ...s.b].some((v) => !Number.isFinite(v)));
+    assert.equal(bad.length, 0, name);
+  }
+});

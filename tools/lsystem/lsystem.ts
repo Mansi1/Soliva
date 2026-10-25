@@ -269,8 +269,13 @@ interface Frame {
   readonly u: Vec3;
 }
 
-const turnFrame = (f: Frame, axis: Vec3, angle: number): Frame =>
-  ({ h: rotate(f.h, axis, angle), l: rotate(f.l, axis, angle), u: rotate(f.u, axis, angle) });
+// Achse normiert: rotate hält die Länge nur bei einer Einheitsachse. Dreht
+// man um eine Rahmenachse, die durch Rundung minimal von 1 abweicht, wächst der
+// Fehler mit jeder Drehung, bis lange Ketten NaN liefern (Busch mit Krümmung).
+const turnFrame = (f: Frame, axis: Vec3, angle: number): Frame => {
+  const k = normalize(axis);
+  return { h: rotate(f.h, k, angle), l: rotate(f.l, k, angle), u: rotate(f.u, k, angle) };
+};
 
 interface Turtle {
   readonly p: Vec3;

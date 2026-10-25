@@ -26,11 +26,7 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-11T22:58:26Z s=560a6297 FINDING src/world/building/Pasture.ts:key learn=none: No check for duplicate build keys exists; a cheap test could assert unique BUILDINGS keys - left as note.
 2026-10-11T22:58:26Z s=560a6297 FINDING src/world/villagers.ts:tick case archery learn=none: Merge artefact; tsc noFallthrough not enabled, tests/archery+pasture pass after fix.
 2026-10-11T22:58:26Z s=560a6297 FINDING src/gl/entityRenderer.ts:PROP_TEST learn=none: Visual-only shader constant.
-2026-10-11T23:37:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:SHAPE.clogs icon learn=test: smoke checks research buttons have an image.
 2026-10-11T23:37:49Z s=560a6297 FINDING src/world/research.ts:blocker learn=none: Depends on B26 merge; will be handled there.
-2026-10-11T23:37:49Z s=560a6297 FINDING src/world/villagers.ts:hunt leather learn=test: tests/research.test.mjs hunted sheep gives 4 leather + meat.
-2026-10-11T23:55:10Z s=560a6297 DONE fp=670c1141e8ce cov=80.6% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+19)
-2026-10-11T23:55:10Z s=560a6297 FINDING src/world/world.ts:startResearch learn=test: tests/construction.test.mjs asserts startResearch on a town center site is refused.
 2026-10-11T23:55:10Z s=560a6297 FINDING src/world/building/BuildingBase.ts:built / stores / isUnitProducer learn=test: tests/construction.test.mjs: site does not store, house, train or work.
 2026-10-11T23:55:10Z s=560a6297 FINDING src/gl/entityRenderer.ts:gCut for sites learn=none: Screenshot comparison within noise.
 2026-10-11T23:55:10Z s=560a6297 FINDING tools/ui/smoke.mjs learn=test: Smoke covers site and finished workshop.
@@ -104,3 +100,7 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-25T22:25:46Z s=ccb2ed49 DONE fp=f6ffccaf03c9 cov=88.5% paths=Makefile,README.md,bun.lock,package.json(+16)
 2026-10-25T22:25:46Z s=ccb2ed49 FINDING tools/lsystem/presets/index.ts:SPECIES fallback learn=none: data gap, needs research of missing diameters; reported to the user
 2026-10-25T22:25:46Z s=ccb2ed49 FINDING tools/lsystem/presets/index.ts:sized pipe learn=test: species test asserts diameter in typical range or <= max
+2026-10-25T22:35:06Z s=ccb2ed49 DONE fp=9d5dbe3d98d4 cov=88.5% paths=Makefile,README.md,bun.lock,package.json(+16)
+2026-10-25T22:35:06Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:turnFrame learn=test: Gerüst bleibt endlich: interprets every preset at full iterations; fails on HEAD f8f171d, passes with the fix
+2026-10-25T23:11:26Z s=ccb2ed49 DONE fp=73e47adeb9d8 cov=88.5% paths=Makefile,README.md,bun.lock,package.json(+16)
+2026-10-25T23:11:26Z s=ccb2ed49 FINDING tools/lsystem/index.html:#reroot learn=none: layout detail, checked by screenshot
