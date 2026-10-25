@@ -36,6 +36,7 @@
     <div><label for="jitter">Streuung <span id="jitter-value"></span></label><input id="jitter" type="range" min="0" max="0.6" step="0.01"></div>
     <div><label for="lengthFactor">Längenfaktor <span id="lengthFactor-value"></span></label><input id="lengthFactor" type="range" min="0.5" max="1.1" step="0.01"></div>
     <div><label for="leafSize">Laubgröße <span id="leafSize-value"></span></label><input id="leafSize" type="range" min="0" max="2" step="0.05"></div>
+    <div><label for="sides">Ecken am Stamm <span id="sides-value"></span></label><input id="sides" type="range" min="3" max="16" step="1"></div>
     <div><label for="seed">Seed</label><input id="seed" type="number" min="1"></div>
     <div><label for="leaves">Laub-Zeichen</label><input id="leaves"></div>
   </div>
@@ -49,6 +50,8 @@
     <option value="1">Blattebenen (Zweig mit mehreren Blättern)</option>
     <option value="0">Einzelblätter</option>
   </select>
+  <label style="display: flex; gap: 6px; align-items: center"><input id="wire" type="checkbox" style="width: auto; margin: 0"> Gitter</label>
+  <label style="display: flex; gap: 6px; align-items: center"><input id="stump" type="checkbox" style="width: auto; margin: 0"> Nur Stumpf (wie im Spiel nach dem Fällen)</label>
   <button id="reseed">Neuer Seed</button>
   <button id="download">OBJ + MTL herunterladen</button>
   <button id="download-glb">Für Blender herunterladen (.glb)</button>

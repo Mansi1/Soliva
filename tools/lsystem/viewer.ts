@@ -8,7 +8,7 @@ import { GROUPS, PRESETS, isPresetName, type PresetName } from './presets/index.
 import { render, sceneFromObj, type Scene, type View } from './render.ts';
 
 /** Regler: Feld des Rezepts, das sie einstellen - die id im HTML ist derselbe Name. */
-const SLIDERS = ['iterations', 'angle', 'tropism', 'jitter', 'lengthFactor', 'leafSize'] as const satisfies readonly (keyof TreeSpec)[];
+const SLIDERS = ['iterations', 'angle', 'tropism', 'jitter', 'lengthFactor', 'leafSize', 'sides'] as const satisfies readonly (keyof TreeSpec)[];
 const TEXTS = ['axiom', 'rules', 'leaves'] as const satisfies readonly (keyof TreeSpec)[];
 
 function element<T extends HTMLElement>(id: string, type: new () => T): T {
@@ -153,6 +153,16 @@ for (const { input } of [...sliders, ...texts]) input.addEventListener('input', 
 seedInput.addEventListener('input', update);
 leafModeSelect.addEventListener('change', update);
 cardsSelect.addEventListener('change', update);
+const wire = element('wire', HTMLInputElement);
+wire.addEventListener('change', () => {
+  view.wire = wire.checked;
+  draw();
+});
+const stump = element('stump', HTMLInputElement);
+stump.addEventListener('change', () => {
+  view.stump = stump.checked;
+  draw();
+});
 element('reseed', HTMLButtonElement).addEventListener('click', () => {
   seedInput.value = String(1 + Math.floor(Math.random() * 99_999));
   update();

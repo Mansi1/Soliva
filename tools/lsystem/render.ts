@@ -23,6 +23,32 @@ export interface View {
   /** Blick von oben, Radiant. */
   pitch: number;
   zoom: number;
+  /** Kanten der Dreiecke einzeichnen. */
+  wire?: boolean;
+  /** Nur was im Spiel nach dem Fällen stehen bleibt: Stumpf und Stammfuß. */
+  stump?: boolean;
+}
+
+/** Bleibt im Spiel nach dem Fällen stehen (src/gl/entityRenderer.ts: Stumpf und Teile am Boden). */
+const isStump = (part: Part) => part.name.startsWith('Trunk.Stump') || part.name === 'Root';
+
+/** Höhe und Halbmesser nur des Stumpfs - für den Bildausschnitt. */
+const stumpBounds = new WeakMap<Scene, { top: number; radius: number }>();
+function boundsOf(scene: Scene, stump: boolean): { top: number; radius: number } {
+  if (!stump) return scene;
+  let bounds = stumpBounds.get(scene);
+  if (!bounds) {
+    bounds = { top: 0.1, radius: 0.1 };
+    for (const part of scene.parts.filter(isStump)) {
+      for (let v = part.first; v < part.first + part.count; v++) {
+        const [x, y, z] = scene.positions.subarray(v * 3, v * 3 + 3);
+        bounds.top = Math.max(bounds.top, y);
+        bounds.radius = Math.max(bounds.radius, Math.hypot(x, z));
+      }
+    }
+    stumpBounds.set(scene, bounds);
+  }
+  return bounds;
 }
 
 /** Dreiecke je Look, als Soup mit flachen Normalen - fertig für den Upload. */
@@ -161,7 +187,13 @@ uniform mat3 uRot;      // Drehung der Ansicht - für die Normale
 uniform float uScale;   // 1 für den Baum, Kronenradius für die Boden-Scheibe
 out vec3 vNormal;
 out vec2 vUV;
+out vec3 vBary;
 void main() {
+  // VERIFIED: lose Dreiecke ohne Index, jeder Batch beginnt bei einem Vielfachen
+  // von 3 (sceneFromObj) - die Ecke im Dreieck ergibt sich aus der Nummer. So
+  // braucht das Gitter keinen eigenen Puffer.
+  int corner = gl_VertexID % 3;
+  vBary = vec3(corner == 0, corner == 1, corner == 2);
   vNormal = uRot * aNormal;
   vUV = aUV;
   gl_Position = uMVP * vec4(aPos * uScale, 1.0);
@@ -170,14 +202,19 @@ void main() {
 const FRAGMENT_SOURCE = `#version 300 es
 precision mediump float;
 uniform int uMode;      // 0 Farbe, 1 Foto, 2 unbeleuchtet (Boden)
+uniform bool uWire;     // Kanten der Dreiecke einzeichnen
 uniform vec3 uColor;    // Farbe bzw. Einfärbung des Fotos
 uniform sampler2D uTex;
 in vec3 vNormal;
 in vec2 vUV;
+in vec3 vBary;
 out vec4 outColor;
 const vec3 LIGHT = normalize(vec3(0.45, 0.75, 0.5));
 void main() {
   if (uMode == 2) { outColor = vec4(uColor, 1.0); return; }
+  // Etwa ein Pixel breite Kante, auch auf durchsichtigen Teilen der Blattebenen.
+  vec3 edge = vBary / fwidth(vBary);
+  if (uWire && min(min(edge.x, edge.y), edge.z) < 1.0) { outColor = vec4(0.95, 0.85, 0.3, 1.0); return; }
   vec3 n = normalize(vNormal);
   if (n.z < 0.0) n = -n; // immer die dem Auge zugewandte Seite
   float light = max(0.0, dot(n, LIGHT));
@@ -204,7 +241,7 @@ interface SceneBuffers { vao: WebGLVertexArrayObject; count: number }
 interface Renderer {
   readonly canvas: HTMLCanvasElement;
   readonly gl: WebGL2RenderingContext;
-  readonly locations: Record<'uMVP' | 'uRot' | 'uScale' | 'uMode' | 'uColor' | 'uTex', WebGLUniformLocation | null>;
+  readonly locations: Record<'uMVP' | 'uRot' | 'uScale' | 'uMode' | 'uColor' | 'uTex' | 'uWire', WebGLUniformLocation | null>;
   readonly ground: SceneBuffers;
   readonly scenes: WeakMap<Scene, SceneBuffers>;
   readonly textures: WeakMap<Texture, WebGLTexture>;
@@ -259,7 +296,7 @@ function renderer(): Renderer | null {
   gl.linkProgram(program);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'Link-Fehler');
   gl.useProgram(program);
-  const locations = Object.fromEntries((['uMVP', 'uRot', 'uScale', 'uMode', 'uColor', 'uTex'] as const)
+  const locations = Object.fromEntries((['uMVP', 'uRot', 'uScale', 'uMode', 'uColor', 'uTex', 'uWire'] as const)
     .map((name) => [name, gl.getUniformLocation(program, name)])) as Renderer['locations'];
   gl.enable(gl.DEPTH_TEST);
   // Weiche Blattränder trotz Tiefentest: Alpha steuert die MSAA-Abdeckung.
@@ -312,7 +349,7 @@ export function render(canvas: HTMLCanvasElement, scene: Scene | null, view: Vie
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   if (scene) {
     // Bildausschnitt wie bisher: die ganze Pflanze samt Boden-Scheibe im Bild.
-    const { top, radius } = scene;
+    const { top, radius } = boundsOf(scene, !!view.stump);
     const scale = view.zoom * 0.85 * Math.min(H / (top + radius * 0.5), W / (2 * radius + 1));
     const ox = W / 2, oy = H / 2 + (top * scale) / 2;
     const cy = Math.cos(view.yaw), sy = Math.sin(view.yaw), cp = Math.cos(view.pitch), sp = Math.sin(view.pitch);
@@ -329,6 +366,7 @@ export function render(canvas: HTMLCanvasElement, scene: Scene | null, view: Vie
     // uRot ist spaltenweise - die Drehung oben zeilenweise, also transponieren.
     gl.uniformMatrix3fv(locations.uRot, true, rot);
     gl.uniform1i(locations.uTex, 0);
+    gl.uniform1i(locations.uWire, view.wire ? 1 : 0);
 
     gl.uniform1i(locations.uMode, 2);
     gl.uniform3fv(locations.uColor, GROUND);
@@ -343,7 +381,10 @@ export function render(canvas: HTMLCanvasElement, scene: Scene | null, view: Vie
     }
     gl.uniform1f(locations.uScale, 1);
     gl.bindVertexArray(buffers.vao);
-    for (const { look, first, count } of scene.batches) {
+    const draws = view.stump
+      ? scene.parts.filter(isStump).map((part) => ({ ...part, look: scene.batches[part.batch].look }))
+      : scene.batches;
+    for (const { look, first, count } of draws) {
       if ('texture' in look) {
         gl.uniform1i(locations.uMode, 1);
         gl.uniform3fv(locations.uColor, look.texture.tint);

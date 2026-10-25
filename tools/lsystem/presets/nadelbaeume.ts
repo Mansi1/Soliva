@@ -5,6 +5,7 @@ import { autumn, preset, variant, winter, type Preset } from './base.ts';
 const group = 'Nadelbäume';
 
 const fichte = preset({
+  roots: { count: 6, spread: 3.8, rise: 1.2 },
   group, label: 'Fichte', axiom: 'FFT', iterations: 11, angle: 35, length: 1.2, jitter: 0.1, tropism: 0.05,
   rules: `# Der Stamm setzt je Schritt einen Quirl an; die Zweige hängen leicht
 T -> F"[W]/(40)T
@@ -16,6 +17,7 @@ C -> "FLC`,
 });
 
 const tanne = preset({
+  roots: { count: 5, spread: 3.4, rise: 1.3 },
   group, label: 'Tanne', axiom: 'FT', iterations: 13, angle: 50, length: 0.6, lengthFactor: 0.93, jitter: 0.06,
   tropism: -0.02,
   rules: `# Anders als die Fichte: Äste fast waagrecht und steif (leicht nach oben statt hängend),
@@ -31,6 +33,7 @@ C -> "(0.7)FLC`,
 });
 
 const douglasie = preset({
+  roots: { count: 5, spread: 3.4, rise: 1.3 },
   group, label: 'Douglasie', axiom: 'FFT', iterations: 12, angle: 40, length: 1.1, lengthFactor: 0.92, jitter: 0.15,
   tropism: -0.04,
   rules: `# Wie die Fichte, aber lockerer und die Astspitzen schwingen nach oben
@@ -45,6 +48,7 @@ C -> "(0.8)FLC`,
 });
 
 const kiefer = preset({
+  roots: { count: 4, spread: 2.2, rise: 1.4 },
   group, label: 'Waldkiefer', axiom: 'FFFFFFFT', iterations: 8, angle: 40, length: 1.1, lengthFactor: 0.92,
   jitter: 0.35, tropism: -0.06,
   rules: `# Langer kahler Stamm (die unteren Äste sterben ab), oben eine lichte, flache Krone.
@@ -116,6 +120,7 @@ A 0.4 -> "[&FA]/(137.5)[&FA]/(137.5)[&FA]`,
 });
 
 const mammutbaum = preset({
+  roots: { count: 7, spread: 3.4, rise: 2.4 },
   group, label: 'Mammutbaum', axiom: 'FFFFT', iterations: 16, angle: 30, length: 2.4, lengthFactor: 0.93,
   jitter: 0.15, tropism: 0.12,
   rules: `# Riesig, mit sehr dickem Stamm (kleiner pipe-Exponent) und kurzen, hängenden Ästen

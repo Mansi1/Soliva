@@ -13,32 +13,14 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-10T11:31:17Z s=560a6297 FINDING src/world/villagers.ts:throwRelease learn=none: Visual one-frame glitch; no cheap mechanical check without a rendering harness.
 2026-10-10T11:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:away (P_TOOL) learn=none: Covered by gallery screenshot; smoke checks clip libraries load, not prop visibility.
 2026-10-10T11:42:03Z s=560a6297 FINDING src/world/unit/*.ts walk/flee learn=none: Requirement interpretation, not a code defect.
-2026-10-10T15:48:12Z s=560a6297 DONE fp=8514279440e3 cov=80.4% paths=.github/workflows/verify.yml,AGENTS.md,README.md,bun.lock(+78)
-2026-10-10T16:19:50Z s=560a6297 DONE fp=62a0de175c8b cov=80.4% paths=src/components/SelectionPanel.tsx,src/game/selectionView.ts,src/main.ts,src/world/building/Armory.ts(+13)
 2026-10-10T16:19:50Z s=560a6297 FINDING src/main.ts:imtheking cheat learn=none: Frozen getter makes any leftover write fail loudly; no further check needed.
-2026-10-10T16:32:42Z s=560a6297 DONE fp=b33ff45b11dd cov=80.4% paths=docs/BLENDER.md,src/components/SelectionPanel.tsx,src/gallery.ts,src/game/Picker.ts(+20)
 2026-10-10T16:32:42Z s=560a6297 FINDING src/game/Picker.ts:animal, src/game/overlay.ts, src/game/selectionView.ts, src/game/hoverInfo.ts learn=none: Fixed by reading animal.look/size/maxFood; all display callers grepped (def.food/def.shape/def.height in src/game, src/components).
-2026-10-11T11:36:32Z s=560a6297 DONE fp=71f4d4813424 cov=80.4% paths=docs/BLENDER.md,src/components/SelectionPanel.tsx,src/gallery.ts,src/game/Picker.ts(+33)
 2026-10-11T11:36:32Z s=560a6297 FINDING src/game/selectionView.ts:import catalog, goodsText/animalName learn=none: Pure merge resolution; covered by existing storage-stock and herd tests plus smoke.
-2026-10-11T14:07:06Z s=560a6297 FAIL prose
-2026-10-11T14:09:11Z s=560a6297 DONE fp=d5ca381ab268 cov=80.4% paths=docs/ANIMATION.md,docs/BLENDER.md,memory.md,src/gallery.ts(+10)
 2026-10-11T14:09:11Z s=560a6297 FINDING docs/ANIMATION.md:413 T06 learn=none: Prose gate checks it mechanically.
-2026-10-11T14:09:11Z s=560a6297 FINDING make e2e port 4173 learn=memory: memory.md Umgebung entry 2026-10-11.
-2026-10-11T14:09:11Z s=560a6297 FINDING src/world/render.ts:loadLook learn=test: tests/load-look.test.mjs
 2026-10-11T14:09:11Z s=560a6297 FINDING src/gl/entityRenderer.ts:CARRY_STILL learn=none: Visual stand-in; a real stand-with-load clip needs larger uniform arrays.
-2026-10-11T14:01:39Z s=560a6297 FAIL tests.e2e.1
-2026-10-11T14:04:13Z s=560a6297 DONE fp=25f10ca3e639 cov=80.4% paths=docs/BLENDER.md,memory.md,src/components/SelectionPanel.tsx,src/gallery.ts(+22)
-2026-10-11T14:04:13Z s=560a6297 FINDING make e2e / make start (port 4173) learn=memory: Parallel worktrees share the fixed preview port; run make verify in worktrees one after another. Recorded in memory.md.
 2026-10-11T14:04:13Z s=560a6297 FINDING src/world/world.ts:canPlant learn=none: Not observed in Testseed; the condition is named in the ponytail comment.
-2026-10-11T14:04:13Z s=560a6297 FINDING src/world/deposits.ts:restore/plantedSave learn=test: tests/forester.test.mjs
-2026-10-11T21:55:49Z s=560a6297 DONE fp=88457e3ead34 cov=80.4% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+26)
 2026-10-11T21:55:49Z s=560a6297 FINDING src/world/render.ts:throw/hoe phase learn=none: Visual timing; checked in gallery throw sequence screenshots, no cheap mechanical check.
-2026-10-11T21:55:49Z s=560a6297 FINDING src/world/render.ts:figureHolding (hunter) learn=test: tests/spear.test.mjs + load-look; gallery screenshot.
 2026-10-11T21:55:49Z s=560a6297 FINDING src/gl/entityRenderer.ts:away mask learn=none: Shader constant; covered visually only.
-2026-10-11T21:55:49Z s=560a6297 FINDING src/world/villagers.ts:hopeless learn=test: tests/spear.test.mjs gives up on the hare.
-2026-10-11T21:55:49Z s=560a6297 FINDING src/world/save.ts:inv learn=test: tests/spear.test.mjs save round-trip and old save.
-2026-10-11T22:31:17Z s=560a6297 DONE fp=c0a7c323a884 cov=80.5% paths=docs/ANIMATION.md,docs/BLENDER.md,docs/OFFEN.md,memory.md(+22)
-2026-10-11T22:31:17Z s=560a6297 FINDING src/world/villagers.ts:lookForShoes learn=test: tests/shoes.test.mjs idle fetch, detour near, no detour far.
 2026-10-11T22:31:17Z s=560a6297 FINDING src/gl/entityRenderer.ts:shin anchor learn=none: Visual-only shader change.
 2026-10-11T22:31:17Z s=560a6297 FINDING src/models/villagers/{male,female}.glb learn=test: tests/ids + check-models.
 2026-10-11T22:31:17Z s=560a6297 FINDING src/world/save.ts:inv.shoes learn=test: tests/shoes.test.mjs save round-trip.
@@ -104,3 +86,21 @@ A lesson recurring ≥2 → test | .agents/VERIFY.py rule | MEMORY line, then de
 2026-10-23T23:57:16Z s=9d3ed845 DONE fp=bd012c0b2679 cov=80.7% paths=README.md,docs/BLENDER.md,docs/OFFEN.md,index.html(+32)
 2026-10-23T23:57:16Z s=9d3ed845 FINDING vite.config.ts:saveBillboards learn=none: dev-only debug output folder; no cheap mechanical check without a browser bake, covered by the comment at the plugin
 2026-10-24T01:06:19Z s=ccb2ed49 DONE fp=690b6dba53d3 cov=80.7% paths=src/components/StartScreen.tsx
+2026-10-24T01:12:09Z s=ccb2ed49 DONE fp=cc81b9867b58 cov=80.7% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+1)
+2026-10-24T03:36:19Z s=ccb2ed49 FAIL tests.unit,coverage
+2026-10-24T03:39:12Z s=ccb2ed49 FAIL tests.unit
+2026-10-24T03:58:01Z s=ccb2ed49 DONE fp=34f65d3f1205 cov=84.7% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+9)
+2026-10-24T03:58:01Z s=ccb2ed49 FINDING tools/lsystem/bark/data.ts:2,tools/lsystem/leaves/data.ts:2 learn=test: tests/lsystem-sides.test.mjs imports the tool in node, so a missing attribute fails make test
+2026-10-24T03:58:01Z s=ccb2ed49 FINDING tools/lsystem/index.html:#wire learn=none: layout detail, only visible in a screenshot; no cheap mechanical check
+2026-10-25T16:30:46Z s=ccb2ed49 DONE fp=ed54c0205c65 cov=87.8% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+9)
+2026-10-25T16:30:46Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:build collar learn=none: visual only; no cheap geometric check without a mesh intersection test
+2026-10-25T16:30:46Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:collar inner radius learn=none: visual only
+2026-10-25T16:30:46Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:barkTube naming learn=none: the name rule is unchanged (start radius > 0.12); a test would need ring radii per object from the OBJ, not cheap
+2026-10-25T16:43:05Z s=ccb2ed49 DONE fp=17fa5fde4d21 cov=87.8% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+10)
+2026-10-25T16:43:05Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:pipeRadii learn=test: tests/lsystem.test.mjs asserts continuity and taper for every single-child segment; fails on the old cylinder radii
+2026-10-25T17:12:47Z s=ccb2ed49 DONE fp=c9a7db5276cb cov=88.2% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+12)
+2026-10-25T17:12:47Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:rootFoot learn=test: seam test fails if ring count, frame or radius diverge
+2026-10-25T17:12:47Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:rootFoot reach learn=none: appearance only
+2026-10-25T17:12:47Z s=ccb2ed49 FINDING tools/lsystem/lsystem.ts:rootFoot ground learn=test: 'Wurzeln reichen nicht unter den Boden'
+2026-10-25T18:34:02Z s=ccb2ed49 DONE fp=9dd5ceea940a cov=88.2% paths=README.md,bun.lock,package.json,src/components/StartScreen.tsx(+13)
+2026-10-25T18:34:02Z s=ccb2ed49 FINDING tools/lsystem/baumarten.json learn=none: data file is not read by code yet; a schema test would pin a format no consumer uses (YAGNI)

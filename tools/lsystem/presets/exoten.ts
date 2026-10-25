@@ -4,6 +4,7 @@ import { preset, type Preset } from './base.ts';
 const group = 'Exoten';
 
 const palme = preset({
+  roots: { count: 0, spread: 0, rise: 0 },
   group, label: 'Kokospalme', axiom: '&(14)FFFFFFFFF^(3)FK', iterations: 8, angle: 30, length: 0.9,
   jitter: 0.1, tropism: -0.035,
   rules: `# Schlanker, gebogener Stamm ohne Äste (leichter Auftrieb), oben die Wedel.
@@ -15,6 +16,7 @@ G -> ~(0.25)F(0.4)[+(65)b]/(180)[+(65)b]/(180)G`,
 });
 
 const baobab = preset({
+  roots: { count: 6, spread: 2.4, rise: 1.4 },
   group, label: 'Affenbrotbaum', axiom: 'F(1.8)F(1.8)F(1.4)A', iterations: 4, angle: 55, length: 1.3,
   lengthFactor: 0.7, jitter: 0.3, tropism: -0.04,
   rules: `# Flaschenstamm: dick (kleiner pipe-Exponent) und kurz, oben wenige knorrige Äste mit wenig Laub
@@ -52,6 +54,7 @@ A 0.4 -> "F[&(40)FA]/(137.5)[&FA]`,
 });
 
 const saguaro = preset({
+  roots: { count: 0, spread: 0, rise: 0 },
   group, label: 'Saguaro-Kaktus', iterations: 0, angle: 90, length: 1, jitter: 0.1, rules: '',
   // Kein Wachstum nötig: das Axiom ist die ganze Pflanze. Die Arme gehen erst
   // waagrecht ab (&(90)) und biegen dann nach oben (^(90)); pipe 40 hält alles gleich dick.
