@@ -1,5 +1,5 @@
 // Die erzeugten Blattdaten (leaves.json, von fetch.ts) - überall nutzbar, auch im Browser.
-import json from './leaves.json';
+import json from './leaves.json' with { type: 'json' };
 import type { LeafName, Tone } from './sources.ts';
 
 export type { LeafName, Tone } from './sources.ts';

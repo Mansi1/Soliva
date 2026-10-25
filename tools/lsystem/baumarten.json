@@ -1,0 +1,4591 @@
+{
+  "description": "Wachstum und Steckbrief von Baumarten, aus einer Web-Recherche (2026-10-25). Nur Werte mit Quelle; unbekannt = null.",
+  "format": {
+    "ranges": "[min, max]; [v, v] = Einzelwert; [null, v] = nur Obergrenze bekannt",
+    "height_at_age_m": "Höhe in Metern nach 10/20/50/100/200 Jahren - aus Ertragstafeln (Bestand, Spanne über Bonitäten) oder Wuchsprofilen; Herkunft je Art in notes",
+    "growth": "height_cm_per_year: young/mature; trunk_diameter_cm_per_year; context: Freistand oder Bestand",
+    "presets": "Rezepte in tools/lsystem/presets, die diese Art darstellen",
+    "game": "Baumart im Spiel (src/world/catalog.ts TreeSpecies)"
+  },
+  "count": 58,
+  "arten": [
+    {
+      "id": "bergahorn",
+      "name_de": "Bergahorn",
+      "name_latin": "Acer pseudoplatanus",
+      "group": "Laubbaum",
+      "presets": [
+        "ahorn"
+      ],
+      "game": "maple",
+      "height_m": {
+        "typical": [
+          30,
+          35
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          60,
+          80
+        ],
+        "max": 350
+      },
+      "crown_width_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": 20
+      },
+      "age_years": {
+        "typical": [
+          150,
+          500
+        ],
+        "max": 600,
+        "first_fruit": [
+          20,
+          30
+        ],
+        "height_growth_culminates": [
+          20,
+          25
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.4,
+          0.7
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 30-50 cm/Jahr: naturadb (Freistand). Durchmesser: Bestand Thüringen (Lochhieb im Buchenwald), ~50-jährige Ahorne 22 m hoch und 20 cm stark (Mittel 0,4 cm/Jahr, aus Quelle berechnet), vorwüchsige Ahorne 0,7 cm/Jahr.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          16,
+          16
+        ],
+        "50": [
+          22,
+          22
+        ],
+        "100": [
+          32,
+          32
+        ],
+        "200": null
+      },
+      "crown_shape": "breit gewölbte, eiförmige bis breitkuppelige Krone; Kronendurchmesser kann im Freistand die Baumhöhe übertreffen",
+      "root_system": "Herzwurzel",
+      "light": "Halbschatten (Jugend schattentolerant, im Alter lichtbedürftiger)",
+      "bark": "schuppig, braun bis graubraun, blättert in Platten ab",
+      "leaves": "gegenständig, 5-lappig, Stiel 3-15 cm, oberseits dunkelgrün, unterseits heller; Herbstfärbung goldgelb",
+      "flowers_fruit": "gelbgrüne hängende Rispen (6-12 cm) April-Mai; geflügelte Spaltfrüchte, Flügel etwa rechtwinklig, reif ab September",
+      "wood": "hell, fest; Furnier, Musikinstrumente, Möbel (Holzwert 1)",
+      "habitat": "Mischwälder Mitteleuropas bis zur Waldgrenze (Schwarzwald 1480 m, Alpen 1650 m), kühl-feuchte Lagen; Park- und Alleebaum",
+      "notes": "Höhe: Atlas 30-35 m, naturadb/Göttingen 30-40 m, FVA max 40 m. baumkunde nennt im Text bis 30 m, im Wuchsprofil 35 m Endhöhe. Volle Höhe mit 80-100 Jahren (Göttingen). Höhe 10/20 Jahre: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. 50 Jahre: waldwissen Thüringen (Bestand). 100 Jahre: FVA - Bestand mit Oberhöhe 30 m im Alter 80 entspricht absoluter Bonität 32 m (H100). Alter: FVA Flachland bis 150, Gebirge bis 600; Göttingen/LWF bis 500; Atlas >350-400. Stamm bis 3,5 m: Göttingen (sehr alte Bäume). Forst: Standdauer 120-140 Jahre bei ~60 cm Durchmesser (naturadb). Kronendurchmesser bis 20 m: naturadb. Kronenbreite bei BHD 40 cm im Bestand 7,3 m (waldwissen Sand-Birke-Artikel, Vergleichswert).",
+      "sources": [
+        "https://www.baumkunde.de/Acer_pseudoplatanus/",
+        "https://www.naturadb.de/pflanzen/acer-pseudoplatanus/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Acer_pseudoplatanus.pdf",
+        "https://www.uni-goettingen.de/de/16397.html",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Bergahorn.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/bewirtschaftung-des-bergahorns-ein-fallbeispiel-aus-thueringen",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Bergahorn.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/bestandespflege/wertholzproduktion-mit-der-sand-birke"
+      ]
+    },
+    {
+      "id": "spitzahorn",
+      "name_de": "Spitzahorn",
+      "name_latin": "Acer platanoides",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          60,
+          100
+        ],
+        "max": 150
+      },
+      "crown_width_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          150,
+          200
+        ],
+        "max": 250,
+        "first_fruit": [
+          15,
+          40
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            60,
+            150
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          1.25,
+          1.25
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 60-150 cm/Jahr: naturadb (Freistand); Atlas und FVA: etwa 1 m/Jahr in den ersten 10 Jahren. Durchmesser: FVA - auf guten Standorten 50 cm BHD in ca. 40 Jahren (Bestand; 1,25 cm/Jahr aus Quelle berechnet).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          12,
+          12
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "rund, breit und dicht, kurzer Stamm; groß ausladend",
+      "root_system": "Herzwurzel (keine echte Pfahlwurzel, mehrere Seitenwurzeln vom Wurzelhals)",
+      "light": "Halbschatten (keimt und wächst im Schatten, im Alter lichtbedürftiger)",
+      "bark": "längsrissig, schwärzlich-braun",
+      "leaves": "gegenständig, 5-7-lappig mit spitzen Zähnen, 10-18 cm breit, Milchsaft im Stiel; Herbstfärbung gelb-orange",
+      "flowers_fruit": "gelbgrüne Doldenrispen vor dem Laubaustrieb, insektenbestäubt; Flügelfrüchte stumpfwinklig, 3-5 cm",
+      "wood": "Holzwert 1/4/5; Möbel bis Brennholz",
+      "habitat": "Mitteleuropa bis Westasien, Ebene bis ~1000 m (Alpen bis 1400 m); Stadt- und Alleebaum",
+      "notes": "Höhe: baumkunde 15-25 m (Profil 25 m), naturadb 20-30, Atlas/FVA 25-30, Göttingen normal 20, bis 30 m. Starker Widerspruch zum Jugendwachstum: baumkunde 4 m nach 10 Jahren vs. Atlas/FVA ~1 m/Jahr in den ersten 10 Jahren. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: baumkunde ~150, Göttingen/FVA 180, naturadb bis 200, Atlas >250 unter optimalen Bedingungen. Geschlechtsreife: Freistand ab 15 Jahren, Bestand 25-40 (Göttingen); Atlas 25-30. Durchmesser: Atlas 60-80 cm, ausnahmsweise über 150 cm; Göttingen über 1 m.",
+      "sources": [
+        "https://www.baumkunde.de/Acer_platanoides/",
+        "https://www.naturadb.de/pflanzen/acer-platanoides/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Acer_platanoides.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Spitzahorn.pdf",
+        "https://www.uni-goettingen.de/de/16404.html"
+      ]
+    },
+    {
+      "id": "stieleiche",
+      "name_de": "Stieleiche",
+      "name_latin": "Quercus robur",
+      "group": "Laubbaum",
+      "presets": [
+        "eiche"
+      ],
+      "game": "oak",
+      "height_m": {
+        "typical": [
+          25,
+          40
+        ],
+        "max": 50
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 300
+      },
+      "crown_width_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": 25
+      },
+      "age_years": {
+        "typical": [
+          500,
+          800
+        ],
+        "max": 1400,
+        "first_fruit": [
+          15,
+          20
+        ],
+        "height_growth_culminates": [
+          40,
+          40
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            25,
+            35
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.34,
+          0.41
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). Durchmesser: NW-FVA-Ertragstafel Eiche (Bestand, Mitteldurchmesser).",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          15,
+          15
+        ],
+        "50": [
+          18.9,
+          18.9
+        ],
+        "100": [
+          27,
+          27
+        ],
+        "200": null
+      },
+      "crown_shape": "breit, locker und unregelmäßig, knorrige gewundene Äste; im Freistand weit ausladend",
+      "root_system": "Pfahlwurzel (Tiefwurzler)",
+      "light": "Licht (Jungpflanzen etwas schattentolerant)",
+      "bark": "dunkel- bis graubraun, ab ~30 Jahren tief längsgefurcht",
+      "leaves": "7-12 cm lang, bis 8 cm breit, 5-7 rundliche Lappen je Seite, sehr kurzer Stiel (2-7 mm), Blattgrund geöhrt",
+      "flowers_fruit": "männliche Kätzchen 2-4 cm, Mai; Eicheln an 4-6 cm langen Stielen",
+      "wood": "hart, schwer, dauerhaft; Holzwert 1/2/3/5 (Furnier, Bau, Fass)",
+      "habitat": "fast ganz Europa bis Kaukasus; Norddeutsches Tiefland bis ~1000 m (Alpen bis 1300 m); Auen, frische bis staunasse Lehmböden",
+      "notes": "Höhe: WSL 20-40, Göttingen 25-40 (ausnahmsweise 50 oder 60 m), naturadb 25-35 (unbehelligt bis 50 m), Atlas 30-40 m (über 40 m). baumkunde Text bis 40, Profil 25 m. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand - baumkunde 15 m mit 20 J liegt über der Ertragstafel (Bonität 33: 13,6 m). NW-FVA-Ertragstafel Eiche 2021 (gestaffelte Hochdurchforstung, Bestand), Oberhöhe H100 mittlere Bonität 27 m: 50 J 18,9 m, 100 J 27,0 m, 150 J 31,3 m; Spanne über Bonitäten 21-33 m: 50 J 13,2-24,6 m, 100 J 21-33 m, 150 J 25,4-37,2 m; Alter 20 nur Bonität 30/33: 11,3/13,6 m. Mitteldurchmesser dg 100 J: 31,5-43,1 cm; 150 J: 48-61,9 cm. Durchmesserzuwachs 0,34-0,41 cm/Jahr (dg 50->100 J, aus Tafel berechnet). WSL: mit 100 Jahren 24-26 m. Kulmination Höhenzuwachs ~40 J (Göttingen), Höhenwachstum endet mit 120-200 J (Göttingen) bzw. 120-150 J (naturadb). Alter: naturadb 500-800, Göttingen 800 (Schütt), ausnahmsweise 1400 (Erlbeck); Atlas >1000. Stamm: Göttingen BHD >200, max 300 cm; Atlas meist bis 1 m, alte bis 3-4 m. Breite: naturadb 15-20 m, Stadt Brandenburg bis 25 m (nur Suchtreffer).",
+      "sources": [
+        "https://www.baumkunde.de/Quercus_robur/",
+        "https://www.naturadb.de/pflanzen/quercus-robur/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Quercus_robur_petraea.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Stieleiche.pdf",
+        "https://www.uni-goettingen.de/de/16691.html",
+        "https://www.nw-fva.de/fileadmin/nwfva/common/unterstuetzen/xlslx/Eichentafel.xlsx"
+      ]
+    },
+    {
+      "id": "traubeneiche",
+      "name_de": "Traubeneiche",
+      "name_latin": "Quercus petraea",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 500
+      },
+      "crown_width_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          500,
+          800
+        ],
+        "max": 1000,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            25,
+            35
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.34,
+          0.41
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). Durchmesser: NW-FVA-Ertragstafel Eiche (gilt für Eiche allgemein, Bestand).",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          15,
+          15
+        ],
+        "50": [
+          18.9,
+          18.9
+        ],
+        "100": [
+          27,
+          27
+        ],
+        "200": null
+      },
+      "crown_shape": "breite, regelmäßiger aufgebaute Krone; Stamm geht oft weiter in die Krone durch als bei der Stieleiche",
+      "root_system": "Pfahlwurzel (Tiefwurzler)",
+      "light": "Licht",
+      "bark": "graubraun, gerippt bzw. längsrissig",
+      "leaves": "8-12 cm lang, bis 5 cm breit, 5-7 Lappen, Stiel ~2 cm, Grund keilförmig ohne Öhrchen, leicht ledrig",
+      "flowers_fruit": "männliche Kätzchen bis 6 cm; Eicheln (bis 3 cm) fast ungestielt in Gruppen von 1-5",
+      "wood": "wie Stieleiche; Holzwert 1/2/3/5; Furniereichen werden ~250 Jahre alt",
+      "habitat": "Mitteleuropa; nördlich der Alpen bis ~700 m, Südalpen bis 1600 m; sommertrockene, mildwinterliche Lagen, meidet Staunässe",
+      "notes": "Höhe: naturadb 20-30, baumkunde bis 40 (Profil 30). Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. NW-FVA-Ertragstafel Eiche 2021 (gestaffelte Hochdurchforstung, Bestand), Oberhöhe H100 mittlere Bonität 27 m: 50 J 18,9 m, 100 J 27,0 m, 150 J 31,3 m; Spanne über Bonitäten 21-33 m: 50 J 13,2-24,6 m, 100 J 21-33 m, 150 J 25,4-37,2 m; Alter 20 nur Bonität 30/33: 11,3/13,6 m. Mitteldurchmesser dg 100 J: 31,5-43,1 cm; 150 J: 48-61,9 cm. Durchmesserzuwachs 0,34-0,41 cm/Jahr (dg 50->100 J, aus Tafel berechnet). Höhenwachstum endet mit 100-200 Jahren (naturadb). Alter: naturadb 500-800, selten über 1000. Stamm: naturadb meist unter 2 m, ausnahmsweise bis 5 m. Umtrieb Forst: ca. 160 Jahre (Atlas), Furnier ~250 (naturadb).",
+      "sources": [
+        "https://www.baumkunde.de/Quercus_petraea/",
+        "https://www.naturadb.de/pflanzen/quercus-petraea/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Quercus_robur_petraea.pdf",
+        "https://www.nw-fva.de/fileadmin/nwfva/common/unterstuetzen/xlslx/Eichentafel.xlsx"
+      ]
+    },
+    {
+      "id": "rotbuche",
+      "name_de": "Rotbuche",
+      "name_latin": "Fagus sylvatica",
+      "group": "Laubbaum",
+      "presets": [
+        "buche",
+        "blutbuche"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          40
+        ],
+        "max": 50
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 260
+      },
+      "crown_width_m": {
+        "typical": [
+          10,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          150,
+          300
+        ],
+        "max": 350,
+        "first_fruit": [
+          15,
+          50
+        ],
+        "height_growth_culminates": [
+          30,
+          40
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.33,
+          0.62
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). Durchmesser: NW-FVA-Ertragstafel Buche (Bestand, Mitteldurchmesser dg 50->100 Jahre über Bonitäten 24,5-40,5 m, aus Tafel berechnet).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          10,
+          10
+        ],
+        "50": [
+          19.5,
+          19.5
+        ],
+        "100": [
+          32.5,
+          32.5
+        ],
+        "200": null
+      },
+      "crown_shape": "im Bestand schmal und hoch angesetzt, säulenartiger Stamm; im Freistand dicht verzweigt, breit gewölbt",
+      "root_system": "Herzwurzel (oft eher flach)",
+      "light": "Schatten (schattentoleranteste Laubbaumart)",
+      "bark": "bleigrau, glatt",
+      "leaves": "5-10 cm lang, 3-7 cm breit, ganzrandig-wellig, jung seidig behaart, später glänzend dunkelgrün",
+      "flowers_fruit": "einhäusig, windbestäubt, April-Mai; Bucheckern (~2 cm) in 4-klappigem Fruchtbecher, Mastjahre alle 5-8 Jahre",
+      "wood": "hart, nicht witterungsfest; Möbel, Parkett, Brennholz",
+      "habitat": "Mitteleuropa, Ebene bis 1600 m (Alpen); frische, basenreiche Böden",
+      "notes": "Höhe: Atlas 30-40, bis 50; Göttingen 30-35 (Durchschnittsalter 160), ausnahmsweise 45; baumkunde Text 25-30, Profil 35; naturadb 20-30 (Garten). Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. 50/100: NW-FVA-Ertragstafel Buche 2021 (Bestand), Oberhöhe Bonität 32,5 m: 50 J 19,5 m, 100 J 32,5 m; Spanne Bonitäten 24,5-40,5 m: 50 J 12,9-26,2 m; 150 J 29,7-34,1 m (Bonität 24,5/28,5). FVA: 30 m mit 100 J bzw. 40 m mit 150 J auf guten Standorten. Kulmination: laufender Höhenzuwachs Alter 30, durchschnittlicher Alter 40 (FVA). Alter: Atlas 150-300, naturadb Forst 140-160, Freistand >300; Göttingen bis 350. Erste Blüte 15-20 J (naturadb) vs. 40-50 J (Atlas). BHD max 260 cm (FVA); Bestand bis 150 cm (Göttingen). Kronenbreite bei BHD 40 cm im Bestand 8,1 m (waldwissen-Vergleich).",
+      "sources": [
+        "https://www.baumkunde.de/Fagus_sylvatica/",
+        "https://www.naturadb.de/pflanzen/fagus-sylvatica/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Fagus_sylvatica.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Rotbuche.pdf",
+        "https://www.nw-fva.de/fileadmin/nwfva/common/unterstuetzen/xlslx/Buchentafel.xlsx",
+        "https://www.uni-goettingen.de/de/fagus+sylvatica+/+rot-buche/15904.html",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/bestandespflege/wertholzproduktion-mit-der-sand-birke"
+      ]
+    },
+    {
+      "id": "winterlinde",
+      "name_de": "Winterlinde",
+      "name_latin": "Tilia cordata",
+      "group": "Laubbaum",
+      "presets": [
+        "linde"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          30
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": [
+          10,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          300,
+          1000
+        ],
+        "max": 1000,
+        "first_fruit": [
+          20,
+          50
+        ],
+        "height_growth_culminates": [
+          10,
+          20
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            25,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.29,
+          0.6
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). Durchmesser: FVA - BHD 40-60 cm in 100-140 Jahren Umtrieb (Bestand; Spanne aus Quelle berechnet).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          12,
+          12
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "hochgewölbt, im Bestand schmal und ordentlich, im Alter unregelmäßig; astfreier Schaft 10-15 m möglich",
+      "root_system": "Herzwurzel (baumkunde: Pfahlwurzler; naturadb: Herzwurzler)",
+      "light": "Halbschatten bis Schatten (schattentolerant, Toleranz nimmt mit dem Alter ab)",
+      "bark": "dunkelgrau, längsgefurcht mit dichten Leisten",
+      "leaves": "schief herzförmig, 5-7 cm, unterseits blaugrün mit braunen Achselbärten",
+      "flowers_fruit": "4-12 duftende gelblich-weiße Blüten je Stand mit Flugblatt, Juni/Juli; Nüsschen 5-7 mm, kaum gerippt",
+      "wood": "weich, gleichmäßig; Schnitz- und Drechselholz",
+      "habitat": "Mitteleuropa, Ebene bis ~1500 m (Alpen); weiter nach Norden und Osten als Sommerlinde",
+      "notes": "Höhe: naturadb 25-30 (Steckbrief 15-30), baumkunde ~30 (Profil 24), Atlas 30-40 m; BWI 2012 Bayern max 33,8 m, Mittel 21 m (waldwissen). Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. FVA: Höhenwachstum kulminiert mit 10-20 J, Oberhöhe >35 m möglich; waldwissen: Jugendwachstum bis ~70 J rasch, Höhenwachstum mit 120-180 J abgeschlossen. Bayern BWI: Linde Mittelhöhe 21 m im Alter 71 (FVA Sommerlinde-Steckbrief, gilt für Linde). Alter: bis 1000 (baumkunde, FVA, naturadb), Atlas >1000, als Niederwald >2000. Stamm: naturadb/baumkunde bis ~2 m; Atlas meist bis ~1 m; BWI Bayern BHD max 154 cm, Mittel 29 cm. Fruchtbeginn: Freistand 20-25, Bestand 30-50 J (LWF); Atlas 30-40.",
+      "sources": [
+        "https://www.baumkunde.de/Tilia_cordata/",
+        "https://www.naturadb.de/pflanzen/tilia-cordata/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Tilia_spp.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Winterlinde.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/standortskunde/sto-und-waldbau-winterlinde"
+      ]
+    },
+    {
+      "id": "sommerlinde",
+      "name_de": "Sommerlinde",
+      "name_latin": "Tilia platyphyllos",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          35
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          50,
+          150
+        ],
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          18,
+          25
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          400,
+          1000
+        ],
+        "max": 1000,
+        "first_fruit": [
+          15,
+          30
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            45
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). WSL: schnellwüchsig.",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          18,
+          18
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "breit eiförmig, tief angesetzt, kurzer Stamm mit kräftigen aufragenden Hauptästen",
+      "root_system": "Herzwurzel (baumkunde: Pfahlwurzler; naturadb: Herzwurzler)",
+      "light": "Halbschatten",
+      "bark": "längsrissig, dick gerippt",
+      "leaves": "herzförmig, 10-15 cm, beidseits behaart, Achselbärte weißlich; Herbst goldgelb",
+      "flowers_fruit": "2-5 Blüten je Stand, Juni (10-14 Tage vor Winterlinde); Nuss ~1 cm, 5-kantig, holzig",
+      "wood": "weich, fest; Schnitzholz, Spielzeug",
+      "habitat": "Mittel- und Südeuropa, Hangwälder, Schluchtwälder; Nordalpen bis ~1000 m, Zentralalpen bis 1500 m",
+      "notes": "Höhe: naturadb 30-35, im Alter über 40; baumkunde bis 40 (Profil 35); WSL 15-30 (40); FVA bis 40 m. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Bayern BWI: Linde Mittelhöhe 21 m im Alter 71 (FVA). Alter: naturadb >1000, FVA >400, baumkunde ~1000. Stamm: naturadb 0,5-1,5 m; mehrstämmige Altbäume Umfang 9 m und mehr. Blüte: naturadb 15-20 J, WSL 20-30 J.",
+      "sources": [
+        "https://www.baumkunde.de/Tilia_platyphyllos/",
+        "https://www.naturadb.de/pflanzen/tilia-platyphyllos/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Tilia_spp.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Sommerlinde.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Sommerlinde.pdf"
+      ]
+    },
+    {
+      "id": "rosskastanie",
+      "name_de": "Rosskastanie",
+      "name_latin": "Aesculus hippocastanum",
+      "group": "Laubbaum",
+      "presets": [
+        "kastanie"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          30
+        ],
+        "max": 39
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 100
+      },
+      "crown_width_m": {
+        "typical": [
+          12,
+          20
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          300
+        ],
+        "max": 300,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand, Park/Allee).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          14,
+          14
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "dicht, breit gewölbt, oft asymmetrisch, kurzer Stamm",
+      "root_system": "Herzwurzel (Wurzeln bis 8 m tief und 15-20 m um den Baum)",
+      "light": "Halbschatten (Sonne bis Halbschatten)",
+      "bark": "graubraun, grobrissig, schuppig abplatzend",
+      "leaves": "gefingert, 5-7 Blättchen bis 25 cm lang; Winterknospen sehr klebrig",
+      "flowers_fruit": "weiße aufrechte Rispen bis 30 cm, April-Mai; stachelige Kapsel 5-7 cm mit 1-2 Kastanien (leicht giftig)",
+      "wood": "geringwertig; Schnitzholz, Blindholz (Holzwert 3-4)",
+      "habitat": "Balkan (Griechenland, Albanien, Nordmazedonien, 900-1300 m); in Mitteleuropa eingebürgert, Park- und Alleebaum",
+      "notes": "Höhe: Göttingen und naturadb 25-30 m; baumkunde Text bis 25, Profil 36 m; Atlas bis 39 m. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter/Stamm: naturadb bis 300 Jahre, Stamm bis ~1 m; bei 30 m Höhe etwa 200-300 Jahre alt. Keine forstlichen Wachstumsdaten gefunden.",
+      "sources": [
+        "https://www.baumkunde.de/Aesculus_hippocastanum/",
+        "https://www.naturadb.de/pflanzen/aesculus-hippocastanum/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Aesculus_hippocastanum.pdf",
+        "https://www.uni-goettingen.de/de/aesculus+hippocastanum+/+rosskastanie/305205.html"
+      ]
+    },
+    {
+      "id": "edelkastanie",
+      "name_de": "Edelkastanie",
+      "name_latin": "Castanea sativa",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          25
+        ],
+        "max": 35
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          10,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          600
+        ],
+        "max": 1000,
+        "first_fruit": [
+          15,
+          30
+        ],
+        "height_growth_culminates": [
+          9,
+          9
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            35,
+            45
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.8,
+          1
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 35-45 cm/Jahr: naturadb (Freistand). Bestand (FVA): Höhenzuwachs kulminiert mit ~9 Jahren bei 51-111 cm/Jahr, ab dem 49. Jahr unter 5 cm/Jahr; auf guten Standorten >1 m/Jahr. Durchmesser: hiebsreife Bäume im Mittel 45 cm BHD mit 50 Jahren (FVA), 60 cm mit 60 Jahren möglich (waldwissen); Spanne aus Quellen berechnet.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          5,
+          5
+        ],
+        "20": [
+          20,
+          20
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "breit ausladend, breitoval, dicht; im geschlossenen Wald schmal mit astfreiem Schaft 6-12 m",
+      "root_system": "Pfahlwurzel (Tiefwurzler)",
+      "light": "Halbschatten (Sonne bis Halbschatten)",
+      "bark": "graubraun, tief längsrissig, im Alter oft gedreht; Netzborke ab 15-20 Jahren",
+      "leaves": "lanzettlich, 10-30 cm lang, bis 8 cm breit, grob gesägt, glänzend dunkelgrün",
+      "flowers_fruit": "Kätzchen bis ~15 cm, Juni-Juli; stachelige Fruchthülle mit 1-3 essbaren Maronen, reif ab Oktober",
+      "wood": "dauerhaft (Resistenzklasse 2); Rebpfähle, Fassdauben, Möbel; Ringschäle-anfällig",
+      "habitat": "Südeuropa, Kleinasien, Kaukasus; nördlich der Alpen wohl durch Römer eingeführt; Weinbauklima, kalkarme tiefgründige Böden; collin bis ~700 m (CH)",
+      "notes": "Höhe: Göttingen meist 20-25, Hochwald bis 35 m; WSL 10-35; waldwissen 15 bis über 33; naturadb 15-20; baumkunde ~30. Starker Widerspruch bei Höhe mit 10 Jahren: baumkunde 5 m vs. FVA Bonitätsfächer (Bestand Europa) 8,4-11,4 m. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. waldwissen: 75-jähriger Mischbestand dg 48,3 cm, Oberhöhe 27,3 (dort als 'cm' gedruckt, gemeint m). WSL: Hochwald 80-100 Jahre, bis 30 m. Kronendurchmesser 10-15 m oder mehr (WSL). Alter: naturadb bei uns ~200, südlich der Alpen bis 1000; Göttingen/waldwissen 500-600; WSL bis 500; Atlas kultiviert bis 1000. Stamm: baumkunde über 1 m; Atlas Umfang bis 12 m. Fruchtbeginn: WSL 15-20, naturadb/waldwissen 20-30 J.",
+      "sources": [
+        "https://www.baumkunde.de/Castanea_sativa/",
+        "https://www.naturadb.de/pflanzen/castanea-sativa/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Castanea_sativa.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Edelkastanie.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Esskastanie.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/kurzportrait-edelkastanie",
+        "https://www.uni-goettingen.de/de/castanea+sativa+/+edelkastanie/546312.html"
+      ]
+    },
+    {
+      "id": "gemeine_esche",
+      "name_de": "Gemeine Esche",
+      "name_latin": "Fraxinus excelsior",
+      "group": "Laubbaum",
+      "presets": [
+        "esche"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          35
+        ],
+        "max": 45
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 170
+      },
+      "crown_width_m": {
+        "typical": [
+          18,
+          23
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          250
+        ],
+        "max": 250,
+        "first_fruit": [
+          20,
+          30
+        ],
+        "height_growth_culminates": [
+          30,
+          40
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            45
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.4,
+          1
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). Durchmesser: FVA Wertholz - mittlerer Radialzuwachs 2-5 mm/Jahr (= 0,4-1,0 cm Durchmesser), Zieldurchmesser 60 cm in 60-75 Jahren (Bestand).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          15,
+          15
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "gewölbt, offen, mit aufsteigenden Ästen; Großbaum mit runder Krone",
+      "root_system": "Senkerwurzel (anfangs Pfahlwurzel; baumkunde: Pfahlwurzler; naturadb: Tiefwurzler)",
+      "light": "Licht (Sämlinge anfangs schattentolerant, später starker Lichtbedarf)",
+      "bark": "grau, längsrissig, breit gerippt",
+      "leaves": "gegenständig, unpaarig gefiedert mit 4-6 Fiederpaaren, ~25 cm; Knospen schwarz",
+      "flowers_fruit": "unscheinbare Rispen vor dem Laubaustrieb (April-Mai), windbestäubt; geflügelte Nüsse 2-5 cm in Büscheln, oft bis Frühjahr am Baum",
+      "wood": "zäh, elastisch; Werkzeugstiele, Sportgeräte, Parkett (Holzwert 1-5)",
+      "habitat": "Mitteleuropa, Ebene bis ~700 m häufig, Alpen bis 1400 (1600-1800) m; tiefgründige, nährstoffreiche, gut wasserversorgte Böden; Eschentriebsterben",
+      "notes": "Höhe: Atlas 20-35, gelegentlich 45; naturadb 20-25 (selten 40); baumkunde bis 40 (Profil 30); Göttingen: volle Höhe mit etwa 100 Jahren, bis 40 m. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. FVA-Bestand: Höhenbonität 27-33 m im Alter 60. Höhenzuwachs lässt ab 30-40 Jahren stark nach (FVA). Alter: baumkunde bis 200, Göttingen ~250, naturadb 200 und mehr. Durchmesser: baumkunde bis 1 m, Göttingen bis 1,70 m; Białowieża-Exemplar >40 m, Umfang 5,4 m. Breite 18-23 m: naturadb. Kronenbreite bei BHD 40 cm im Bestand 7,7 m (waldwissen-Vergleich).",
+      "sources": [
+        "https://www.baumkunde.de/Fraxinus_excelsior/",
+        "https://www.naturadb.de/pflanzen/fraxinus-excelsior/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Fraxinus_excelsior.pdf",
+        "https://www.waldwissen.net/assets/waldwirtschaft/waldbau/pflege/fva_esche_wertholz/fva_esche_wertholz.pdf",
+        "https://www.uni-goettingen.de/de/fraxinus+excelsior+/+gemeine+esche/33081.html"
+      ]
+    },
+    {
+      "id": "bergulme",
+      "name_de": "Bergulme",
+      "name_latin": "Ulmus glabra",
+      "group": "Laubbaum",
+      "presets": [
+        "ulme"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          35
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          100,
+          200
+        ],
+        "max": 300
+      },
+      "crown_width_m": {
+        "typical": [
+          12,
+          20
+        ],
+        "max": 20
+      },
+      "age_years": {
+        "typical": [
+          400,
+          500
+        ],
+        "max": 500,
+        "first_fruit": [
+          20,
+          40
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            60
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). WSL: in den ersten 30 Jahren sehr rasch, bis 90 % der späteren Höhe; Höhenwachstum nach 60 Jahren weitgehend abgeschlossen.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          16,
+          16
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "meist kegelförmig und regelmäßig abgerundet, breit ausladend",
+      "root_system": "Herzwurzel/Tiefwurzel (kräftig, tiefgehend; Brettwurzeln auf der Windseite)",
+      "light": "Halbschatten",
+      "bark": "jung silbergrau bis bräunlich glatt, später grau- bis dunkelbraune Borke",
+      "leaves": "5-16 cm, sehr asymmetrischer Grund, oft dreispitzig, oberseits rau, doppelt gesägt, Stiel 3-6 mm",
+      "flowers_fruit": "Blüten vor dem Laub, Februar-April; geflügelte Nuss mittig, 1,6-2,3 cm, reif ab Mai",
+      "wood": "dauerhaft, eichenähnlich für Bau, Möbel",
+      "habitat": "Mitteleuropa, Schlucht- und Hangwälder, Norddeutsches Tiefland bis ~1400 m; frische, nährstoffreiche Böden; Ulmensterben",
+      "notes": "Höhe: naturadb 25-35 (meist 15-25, bis 40); WSL 30 m häufig, 40 m an besten Standorten; baumkunde Text 30-40, Profil 30; Atlas bis 40. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: baumkunde bis 400, WSL ~500. Stamm: baumkunde 1-2 m, naturadb sehr alte ~3 m (~400 J). Krone bis 20 m (WSL). Blühbeginn: baumkunde 20 J, Göttingen 30-40 J.",
+      "sources": [
+        "https://www.baumkunde.de/Ulmus_glabra/",
+        "https://www.naturadb.de/pflanzen/ulmus-glabra/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Ulmus_spp.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Bergulme/Wuchsform%20und%20Gefahr.htm",
+        "https://www.uni-goettingen.de/de/ulmus+glabra+/+berg-ulme%2c+ulmus+laevis+/+flatter-ulme%2c+ulmus+minor+/+feld-ulme/56305.html"
+      ]
+    },
+    {
+      "id": "feldulme",
+      "name_de": "Feldulme",
+      "name_latin": "Ulmus minor",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          18,
+          25
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 600,
+        "first_fruit": [
+          30,
+          40
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            40
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          16,
+          16
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "aufrecht, ausladend; Kronenform variabel (gewölbt bis zylindrisch)",
+      "root_system": "Pfahlwurzel/Tiefwurzel; starke Wurzelbrut",
+      "light": "Licht (Pionier, lichtbedürftig; naturadb Sonne bis Halbschatten)",
+      "bark": "graubraun, längsrissig, schuppig",
+      "leaves": "6-10 cm, bis 8 cm breit, stark asymmetrisch, oberseits glatt, Achselbärte",
+      "flowers_fruit": "Blüte März-April vor dem Laub; geflügelte Nüsse 13-20 mm, Same nahe der Kerbe, reif ab Mai",
+      "wood": "gutes Konstruktionsholz (Holzwert 1-2)",
+      "habitat": "Hartholzauen großer Flusstäler, Europa bis Kaukasus, bis ~500 m; Ulmensterben",
+      "notes": "Starker Widerspruch bei der Höhe: Atlas 'rarely exceeds 20 m' vs. naturadb 25-30 m vs. baumkunde bis 40 m (Profil 30 m). Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: naturadb 600 und mehr, 'wachsen recht langsam' (naturadb), obwohl im Steckbrief als raschwüchsig geführt. Geschlechtsreife 30-40 J (Göttingen, für Ulmen allgemein).",
+      "sources": [
+        "https://www.baumkunde.de/Ulmus_minor/",
+        "https://www.naturadb.de/pflanzen/ulmus-minor/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Ulmus_spp.pdf",
+        "https://www.uni-goettingen.de/de/ulmus+glabra+/+berg-ulme%2c+ulmus+laevis+/+flatter-ulme%2c+ulmus+minor+/+feld-ulme/56305.html"
+      ]
+    },
+    {
+      "id": "ahornblaettrige_platane",
+      "name_de": "Ahornblättrige Platane",
+      "name_latin": "Platanus × hispanica",
+      "group": "Laubbaum",
+      "presets": [
+        "platane"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          30
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            45,
+            60
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand, Stadtbaum). FVA: Hochwald 16-18 m³/ha/Jahr bis Alter 58, Wachstum lang anhaltend (Bäume über 300 J mit deutlichem Zuwachs).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          18,
+          18
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "breitkronig, breit ausladend",
+      "root_system": "Herzwurzel",
+      "light": "Licht (naturadb: Sonne bis Schatten)",
+      "bark": "gelb- bis graubraun, blättert in großen Platten ab (Fleckenmuster)",
+      "leaves": "handförmig 3-5-lappig, 15-20 cm, glänzend dunkelgrün",
+      "flowers_fruit": "kugelige Blütenstände; Fruchtkugeln 3-4 cm, meist zu zweit an 15-20 cm langen Stielen, über Winter am Baum",
+      "wood": "Holzwert 1 laut baumkunde; Möbel, Furnier",
+      "habitat": "Hybride (P. orientalis × P. occidentalis), Herkunft unklar; in Deutschland Park- und Alleebaum, kleine Waldbestände (Karlsruhe bis Alter 70)",
+      "notes": "Höhe: naturadb 25-30, baumkunde bis 40 (Profil 35). FVA: im Herkunftsgebiet bis 50 m und 3 m Durchmesser (bezieht sich auf die Platanen der Elternarten, nicht auf die Hybride in Mitteleuropa; daher nicht als max übernommen). Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Keine Alters- oder Durchmesserangaben für die Hybride gefunden.",
+      "sources": [
+        "https://www.baumkunde.de/Platanus_x_hispanica/",
+        "https://www.naturadb.de/pflanzen/platanus-x-hispanica/",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Platane.pdf"
+      ]
+    },
+    {
+      "id": "hainbuche",
+      "name_de": "Hainbuche",
+      "name_latin": "Carpinus betulus",
+      "group": "Laubbaum",
+      "presets": [
+        "hainbuche"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          25
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          50,
+          70
+        ],
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          120,
+          150
+        ],
+        "max": 150,
+        "first_fruit": [
+          20,
+          20
+        ],
+        "height_growth_culminates": [
+          30,
+          40
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            35
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand, 'gut dreißig Zentimeter jährlich'). Bestand: Höhenzuwachs sinkt ab Alter 30-40 rasch (FVA); in der Jugend raschwüchsiger als Buche, ab Stangenholz unterlegen; BHD-Zuwachs nur ~1/3 der Buche (LWF Naturwaldreservate).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          10,
+          10
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "unregelmäßig eiförmig bis kegelig, im Alter gewölbt; dicht",
+      "root_system": "Herzwurzel",
+      "light": "Schatten (stark schattentolerant, auch volle Sonne)",
+      "bark": "dunkelgrau, auch alt ziemlich glatt mit netzartigem Muster; Stamm spannrückig",
+      "leaves": "5-10 cm lang, bis 6 cm breit, doppelt gesägt, Nerven parallel; Herbst gelb",
+      "flowers_fruit": "Kätzchen mit dem Laub (Mai-Juni), männlich 4-7 cm; Nüsschen 6-15 mm an dreilappigem Flügel, reif ab September",
+      "wood": "sehr hart, zäh, schwer ('Eisenholz'); Werkzeug, Parkett, Klavierteile, Brennholz",
+      "habitat": "Mitteleuropa, Norddeutsches Tiefland bis ~1000 m; Eichen-Hainbuchenwälder",
+      "notes": "Höhe: Atlas 20-25, selten >30; FVA bis ca. 30; Göttingen 26-28; baumkunde bis 25 (Profil 20); naturadb 5-20 m. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: 120-150 (FVA), baumkunde/naturadb bis 150. BHD 50-70 cm (FVA). naturadb-Breite 0,6-7,5 m gilt für Heckenware und nicht als Kronenbreite übernommen.",
+      "sources": [
+        "https://www.baumkunde.de/Carpinus_betulus/",
+        "https://www.naturadb.de/pflanzen/carpinus-betulus/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Carpinus_betulus.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Hainbuche.pdf",
+        "https://www.uni-goettingen.de/de/carpinus+betulus+/+hainbuche/56478.html",
+        "https://www.lwf.bayern.de/mam/cms04/waldbau-bergwald/dateien/w12_zum_wachstum_hainbuchen_in_zwei_naturwaldreservaten.pdf"
+      ]
+    },
+    {
+      "id": "schwarzerle",
+      "name_de": "Schwarzerle",
+      "name_latin": "Alnus glutinosa",
+      "group": "Laubbaum",
+      "presets": [
+        "erle"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          10,
+          25
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          50,
+          80
+        ],
+        "max": 100
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          12
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          60,
+          120
+        ],
+        "max": 160,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            25,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.2,
+          1
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 25-50 cm/Jahr: naturadb (Freistand). Bestand (LWF Wuchsreihe Wasserburg 642, WSL): laufender Höhenzuwachs startet bei ~1 m/Jahr und fällt bis Alter 40 unter 25 cm/Jahr. Durchmesser: potenzielle Jahrringbreiten 5 mm (Alter 20), 3 mm (Alter 40), 1-2 mm ab 60 (= 1,0 bis 0,2 cm Durchmesser/Jahr, aus Ringbreite x2 berechnet).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          5,
+          5
+        ],
+        "20": [
+          18,
+          18
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "jung pyramidal, später aufrecht-oval, im Alter unregelmäßig; Äste locker",
+      "root_system": "Herzwurzel (bis 4 m tief, auch in Grundwasser)",
+      "light": "Licht (Jugend lichtbedürftig, Pionier)",
+      "bark": "dunkelgrau bis schwarz, rissig",
+      "leaves": "rundlich, vorne oft eingebuchtet, 4-9 cm, jung klebrig, unterseits gelbliche Achselbärte",
+      "flowers_fruit": "männliche Kätzchen 6-12 cm, vor dem Laub; holzige Zapfen bis 2 cm überwintern",
+      "wood": "unter Wasser sehr dauerhaft; Möbel, Sperrholz, Bleistifte, Pfähle",
+      "habitat": "Bachufer, Auen, Bruchwälder; Ebene bis ~1200-1300 m; staunasse Böden, bindet Luftstickstoff",
+      "notes": "Starker Widerspruch bei Höhe mit 10 Jahren: baumkunde 5 m vs. LWF-Wuchsreihe (Bestand, Oberhöhe) 10 m mit 10 J und 20 m mit 30 J; LWF/WSL: mit 20 J 50 %, mit 40 J 85 % der Endhöhe. Höhe 10/20 im Feld: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. BHD 50 cm mit 80 J unter optimalen Bedingungen (LWF); Kernwüchse 50-80, max ~100 cm bei 120-150 J. Höhe: Atlas 10-25, ausnahmsweise 35-40; WSL/LWF bis 35; naturadb 10-30 (selten über 20); baumkunde ~25. Alter: Atlas normal ~60, max 160; baumkunde/naturadb ~120.",
+      "sources": [
+        "https://www.baumkunde.de/Alnus_glutinosa/",
+        "https://www.naturadb.de/pflanzen/alnus-glutinosa/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Alnus_glutinosa.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Schwarzerle.pdf",
+        "https://lwf.bayern.de/mam/cms04/waldbau-bergwald/dateien/w42_waldwachstumskundliche_charakterisierung_der_schwarzerle.pdf",
+        "https://www.uni-goettingen.de/de/alnus+glutinosa+/+schwarz-erle/11022.html"
+      ]
+    },
+    {
+      "id": "echte_walnuss",
+      "name_de": "Echte Walnuss",
+      "name_latin": "Juglans regia",
+      "group": "Laubbaum",
+      "presets": [
+        "walnuss"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          35
+        ],
+        "max": 35
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          100,
+          200
+        ],
+        "max": 1000,
+        "first_fruit": [
+          10,
+          20
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            50,
+            100
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). WSL: mäßig starkwüchsig.",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          10,
+          10
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "breit, groß ausladend; Kronendurchmesser im Verhältnis zum Stammdurchmesser größer als bei jeder anderen europäischen Laubbaumart",
+      "root_system": "Pfahlwurzel (schon ab Jugend)",
+      "light": "Licht",
+      "bark": "graubraun bis schwärzlich-grau, längsrissig",
+      "leaves": "unpaarig gefiedert, 7-9 cm lange ganzrandige Blättchen, jung rötlich, Geruch beim Zerreiben",
+      "flowers_fruit": "männliche Kätzchen bis 15 cm; Walnuss 4-5 cm, bis 18 g",
+      "wood": "dunkelbraun, wertvolles Furnier- und Möbelholz (Holzwert 1)",
+      "habitat": "Balkan bis Südwestasien/Iran; in Mitteleuropa eingebürgert; spätfrostempfindlich",
+      "notes": "Höhe: Atlas 25-35; Göttingen bis 25, in Beständen bis 35; baumkunde ~30; WSL bis 25; naturadb 15-30. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: Atlas 100-200 (bis 1000); naturadb meist 120-150, ausnahmsweise 600; Göttingen 130-160, bis 200; WSL höchstens 150 - starker Widerspruch. Fruchtbeginn: naturadb 10-20 J (ertragreich ab 30-40), Göttingen 15-20 J. Breite 8-10 m (naturadb) wirkt gegenüber Atlas-Aussage zur sehr breiten Krone klein.",
+      "sources": [
+        "https://www.baumkunde.de/Juglans_regia/",
+        "https://www.naturadb.de/pflanzen/juglans-regia/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Juglans_regia.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Walnussbaum.pdf",
+        "https://www.uni-goettingen.de/de/juglans+regia+/+echte+walnuss/76535.html"
+      ]
+    },
+    {
+      "id": "haengebirke",
+      "name_de": "Hängebirke",
+      "name_latin": "Betula pendula",
+      "group": "Laubbaum",
+      "presets": [
+        "birke",
+        "haengebirke"
+      ],
+      "game": "birch",
+      "height_m": {
+        "typical": [
+          10,
+          25
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 100
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          90,
+          120
+        ],
+        "max": 150,
+        "first_fruit": [
+          10,
+          25
+        ],
+        "height_growth_culminates": [
+          25,
+          40
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            45
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.6,
+          1.2
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 30-45 cm/Jahr: naturadb (Freistand). Bestand: im Sauerland 1-2 m/Jahr in den ersten Jahren (FVA). Durchmesser: Radialzuwachs max ~6 mm/Jahr in den ersten 20 Jahren konkurrenzfrei, ~4,5 mm in den folgenden 20 Jahren, ~3 mm im 5. Jahrzehnt (waldwissen) bzw. 4-5 mm bei früher Freistellung (FVA); Durchmesser = 2 x Radialzuwachs.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          5,
+          5
+        ],
+        "20": [
+          18,
+          18
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "locker, hochgewölbt, Seitenzweige hängend; schlanker, meist durchgehender Stamm",
+      "root_system": "Herzwurzel",
+      "light": "Licht",
+      "bark": "weiß mit schwarzen Rissen, am Stammfuß tief gefurcht",
+      "leaves": "dreieckig-rautenförmig, 4-7 cm, doppelt gesägt, lang zugespitzt; Herbst goldgelb",
+      "flowers_fruit": "einhäusig, April-Mai; Fruchtkätzchen mit geflügelten Nüsschen (2-3 mm), reif ab August",
+      "wood": "hell; Sperrholz, Furnier, Möbel; Braunkern ab ~40 J",
+      "habitat": "Mitteleuropa vom Tiefland bis in die Alpen (bis ~1800-1900 m); Pionier auf armen Böden",
+      "notes": "Höhe: WSL 10-25, Atlas bis 30, naturadb 10-20, baumkunde 10-25. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Bestand: mittlere Bonität ~23 m mit 60 J; Bonitätsfächer 15-30 m im Alter 60 (waldwissen, BW/Saarland); WSL: Endhöhe nach rund 50 J erreicht. Höhenwachstum nimmt ab Alter 25 stark ab (FVA); ab 20-25 m Höhe (30-40 J) baut die Krone kaum aus. Starker Widerspruch beim Jugend-Höhenzuwachs: naturadb 30-45 cm/Jahr vs. FVA 1-2 m/Jahr. Alter: Atlas 90-100, selten 150; WSL 90-120; naturadb bis 150. Stamm knapp 1 m (naturadb). Kronenbreite bei BHD 40 cm im Bestand 6,2 m (waldwissen). Fruktifikation Freistand ab 10, Bestand 20-25 J.",
+      "sources": [
+        "https://www.baumkunde.de/Betula_pendula/",
+        "https://www.naturadb.de/pflanzen/betula-pendula/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Betula_spp.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/haengebirke.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Sandbirke.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/bestandespflege/wertholzproduktion-mit-der-sand-birke"
+      ]
+    },
+    {
+      "id": "moorbirke",
+      "name_de": "Moorbirke",
+      "name_latin": "Betula pubescens",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          8,
+          20
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          12
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          90,
+          100
+        ],
+        "max": 150,
+        "first_fruit": [
+          10,
+          25
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          1,
+          1.2
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Bestand (waldwissen nach Hynynen et al. 2010, Nordeuropa): Kronenfreistellung etwa im Alter 12 bei BHD 12-14 cm (Mittel ~1,0-1,2 cm/Jahr, aus Quelle berechnet); Reifephase ab BHD ~28 cm.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          5,
+          5
+        ],
+        "20": [
+          15,
+          15
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "aufrecht, Zweige nicht überhängend; Form variabel, im Hochgebirge strauchig",
+      "root_system": "Herzwurzel (naturadb)",
+      "light": "Licht",
+      "bark": "schmutzig-weiß, in dünnen Streifen ablösend, ohne tiefe schwarze Borke",
+      "leaves": "rautenförmig-eiförmig, 3-5 cm, jung behaart",
+      "flowers_fruit": "Kätzchen; männlich bis 8 cm; Nüsschen schmaler geflügelt als bei der Hängebirke",
+      "wood": "geringwertig (Holzwert 3/4); Span-, Faserplatten, Zellstoff",
+      "habitat": "Moore und nasse Böden; Norddeutsches Tiefland bis Alpen (~2200 m); weiter nach Nordwesten und Nordosten verbreitet als Hängebirke",
+      "notes": "Höhe: naturadb 8-15, Atlas selten über 20, baumkunde 10-30 (Profil 20). Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. waldwissen (Hynynen et al., Finnland): bis 25 m mit 30 J, max. Oberhöhe 30 m mit 50 J, danach Zuwachsrückgang - widerspricht den kleinen Gartenhöhen stark. Alter: naturadb über 100; Atlas (Birken allgemein) 90-100, selten 150. Fruchtbeginn aus Atlas für Birken allgemein. Kein Jahreszuwachs in cm gefunden.",
+      "sources": [
+        "https://www.baumkunde.de/Betula_pubescens/",
+        "https://www.naturadb.de/pflanzen/betula-pubescens/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Betula_spp.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/waldbau-mit-der-moorbirke"
+      ]
+    },
+    {
+      "id": "silberweide",
+      "name_de": "Silberweide",
+      "name_latin": "Salix alba",
+      "group": "Laubbaum",
+      "presets": [
+        "kopfweide"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          15,
+          25
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          20,
+          100
+        ],
+        "max": 300,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            150,
+            200
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "WSL: jährliche Zuwachsrate 1,5-2 m (ohne Angabe Freistand/Bestand). Als Kopfweide jährlich bis auf den Stamm zurückgeschnitten.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          6,
+          6
+        ],
+        "20": [
+          20,
+          20
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "steil aufgerichtete Äste, reich verzweigt; als Kopfweide kurzer dicker Stamm mit Rutenkopf",
+      "root_system": "Flachwurzel",
+      "light": "Licht (stark lichtbedürftig, schattenintolerant)",
+      "bark": "graubraun, sehr tief längsgefurcht",
+      "leaves": "lanzettlich, bis 10 cm lang, 2 cm breit, gesägt, unterseits silbrig seidig behaart",
+      "flowers_fruit": "zweihäusig; Kätzchen mit dem Laub, männlich bis 7 cm; Kapseln mit Samenwolle",
+      "wood": "leicht, geringwertig; Zäune; Ruten der Kopfweiden für Flechtwerk",
+      "habitat": "Flussauen, Tiefland und Flusstäler bis ~900 m; feuchte Böden mit Wasseranschluss",
+      "notes": "Höhe: Atlas bis 30, WSL 30, baumkunde ~25, naturadb 15-25. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter - starker Widerspruch: Atlas meist nur 20-30 Jahre; naturadb meist 100, selten 300; baumkunde bis 200; Göttingen natürliche Lebensdauer ~200. Stamm: baumkunde bis ~1 m (alt oft hohl), Atlas 1 m oder mehr, naturadb gut 1 m. Kopfweide: traditionell jährlich auf den Stamm zurückgeschnitten, Ruten für Korbflechterei; Höhlenbrüter-Lebensraum (baumkunde).",
+      "sources": [
+        "https://www.baumkunde.de/Salix_alba/",
+        "https://www.naturadb.de/pflanzen/salix-alba/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Salix_alba.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Silberweide.pdf",
+        "https://www.uni-goettingen.de/de/salix+alba+/+silberweide/536128.html"
+      ]
+    },
+    {
+      "id": "trauerweide",
+      "name_de": "Trauerweide",
+      "name_latin": "Salix × sepulcralis 'Tristis' (Salix babylonica)",
+      "group": "Laubbaum",
+      "presets": [
+        "trauerweide"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          13,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            80
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb 'Salix alba Tristis' (Freistand, Gartengehölz); naturadb Salix babylonica 50-100 cm/Jahr.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          10,
+          10
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "breit überhängend, bogig ausladende Äste mit langen, bis zum Boden hängenden Zweigen",
+      "root_system": "Flachwurzel",
+      "light": "Licht (Sonne)",
+      "bark": "junge Triebe seidig behaart, später kahl, grünlich (bei 'Tristis' goldgelbe Triebe)",
+      "leaves": "lanzettlich, 8-16 cm lang, 0,8-1,5 cm breit, fein gesägt, unterseits graugrün",
+      "flowers_fruit": "zweihäusig, Kätzchen 2-4 cm; Kapseln",
+      "wood": "keine Angabe",
+      "habitat": "Zierbaum an Gewässern und in Parks; S. babylonica stammt aus China",
+      "notes": "Taxonomie uneinheitlich: naturadb führt 'Tristis' als Salix alba 'Tristis' (Höhe 15-20, Breite 13-15 m); baumkunde-Daten gelten für Salix babylonica (Text bis 10 m, Profil 4-10-15 m; frosthart nur bis -12 °C), naturadb S. babylonica 10-20 m hoch, 5-8 m breit. height_at_age 10/20 aus baumkunde S. babylonica, nicht für 'Tristis' belegt. Keine forstlichen Daten oder Altersangaben gefunden.",
+      "sources": [
+        "https://www.baumkunde.de/Salix_babylonica/",
+        "https://www.naturadb.de/pflanzen/salix-alba-tristis/",
+        "https://www.naturadb.de/pflanzen/salix-babylonica/"
+      ]
+    },
+    {
+      "id": "schwarzpappel",
+      "name_de": "Schwarzpappel",
+      "name_latin": "Populus nigra",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": "poplar",
+      "height_m": {
+        "typical": [
+          30,
+          35
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          100,
+          150
+        ],
+        "max": 400,
+        "first_fruit": [
+          10,
+          10
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            70
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). waldwissen/WSL: braucht nur 30-50 Jahre bis zu einem Baum von gut 30 m Höhe (Buche 120-140).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "breit, locker, unregelmäßig, mit ausgebreiteten Ästen; alte Stämme mit dicken Maserknollen",
+      "root_system": "Flachwurzel (brettartige Wurzelanläufe)",
+      "light": "Licht (naturadb Sonne bis Halbschatten)",
+      "bark": "grau, tief längsgefurcht",
+      "leaves": "dreieckig-eiförmig bis rautenförmig, 5-12 cm, fein gezähnt, kahl; Herbst gelb",
+      "flowers_fruit": "zweihäusig; männliche Kätzchen rot-purpurn 5-8 cm, weibliche bis 10 cm; Kapseln mit Samenwolle",
+      "wood": "sehr leicht, glatt; Schnitzholz, Zellstoff, Energieholz",
+      "habitat": "Weichholzaue; Mittel-, Süd- und Osteuropa bis Asien, Nordwestafrika; feuchte, nährstoffreiche Böden, verträgt Überflutung; bedroht",
+      "notes": "Höhe: WSL 30-35, waldwissen gut 30, Atlas bis 40, baumkunde bis 30, naturadb 20-25. Keine Höhe-nach-Alter-Werte gefunden (baumkunde ohne Wuchsprofil). Alter: Atlas meist 100, gelegentlich 300-400; waldwissen 100-150; naturadb bis 400 (meist bis 200). Stamm: Atlas/waldwissen bis 2 m. naturadb-Breite 3-5 m passt zur Säulenpappel und wurde nicht als Kronenbreite übernommen. Reproduktionsfähig ab etwa 10 J (LWF Wissen 52, nur Suchtreffer).",
+      "sources": [
+        "https://www.baumkunde.de/Populus_nigra/",
+        "https://www.naturadb.de/pflanzen/populus-nigra/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Populus_nigra.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Schwarzpappel.pdf",
+        "https://www.waldwissen.net/de/lebensraum-wald/baeume-und-waldpflanzen/laubbaeume/die-schwarzpappel-populus-nigra"
+      ]
+    },
+    {
+      "id": "zitterpappel",
+      "name_de": "Zitterpappel",
+      "name_latin": "Populus tremula",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          15,
+          30
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          50,
+          100
+        ],
+        "max": 100
+      },
+      "crown_width_m": {
+        "typical": [
+          7,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          50,
+          100
+        ],
+        "max": 200,
+        "first_fruit": null,
+        "height_growth_culminates": [
+          1,
+          10
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            80
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 40-80 cm/Jahr: naturadb (Freistand). FVA: Höhenwachstum kulminiert in den ersten 10 Jahren mit durchschnittlich 75 cm/Jahr; NW-Deutschland 55 cm/Jahr in den ersten beiden Vegetationsperioden. Atlas: schnelles Wachstum bis ~20 J, Zuwachs kulminiert mit ~30 J.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          4,
+          4
+        ],
+        "20": [
+          15,
+          15
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "locker, kegelig-pyramidal (Atlas) bzw. breit auf geradem Stamm (baumkunde); naturadb: schmal, säulenförmig",
+      "root_system": "Flachwurzel; starke Wurzelbrut (Klone)",
+      "light": "Licht",
+      "bark": "jung glatt, gelbbraun bis grünlich-grau, später längsrissig, schwärzlich",
+      "leaves": "fast kreisrund, 3-10 cm, buchtig gezähnt, an seitlich abgeflachtem Stiel (zittert im Wind)",
+      "flowers_fruit": "zweihäusig; graue zottige Kätzchen 5-10 cm vor dem Laub; Kapseln mit Samenwolle",
+      "wood": "leicht, wenig fest; Zündhölzer, Zellstoff, Spanplatten",
+      "habitat": "Eurasien von Island bis Kamtschatka; Tiefland bis ~1800 m (Alpen); Pionier auf Schlagflächen",
+      "notes": "Höhe: naturadb 15-30, baumkunde bis 30 (Profil 25), Atlas ausnahmsweise 30, FVA 30. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: baumkunde ~100, naturadb max 100, Atlas Mittel 50-100, FVA max 200 (tiefe Lagen 70-90); Klone über Jahrtausende. Stamm: naturadb 50-100 cm, FVA 60-80 cm BHD, Atlas selten bis 1 m. 'height_growth_culminates' [1,10]: FVA 'in den ersten 10 Jahren'.",
+      "sources": [
+        "https://www.baumkunde.de/Populus_tremula/",
+        "https://www.naturadb.de/pflanzen/populus-tremula/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Populus_tremula.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Aspe.pdf"
+      ]
+    },
+    {
+      "id": "robinie",
+      "name_de": "Robinie",
+      "name_latin": "Robinia pseudoacacia",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 35
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          30,
+          76
+        ],
+        "max": 122
+      },
+      "crown_width_m": {
+        "typical": [
+          12,
+          18
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          60,
+          100
+        ],
+        "max": 300,
+        "first_fruit": [
+          6,
+          40
+        ],
+        "height_growth_culminates": [
+          15,
+          20
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            120
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.45,
+          0.88
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs 40-120 cm/Jahr: naturadb (Freistand). FVA: in den ersten 5 Jahren im Mittel 30 (schlechte) bis 80 cm/Jahr (gute Standorte); waldwissen: im 1. Jahr ~2 m, Stockausschläge bis 3 m. Durchmesser: Lockow Ertragsklasse 0,5: BHD 44 cm mit 50 J (0,88 cm/Jahr); Region BW: 80-jährig 36,3 cm (0,45 cm/Jahr), aus Quelle berechnet (Bestand).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          9,
+          9
+        ],
+        "50": [
+          31,
+          31
+        ],
+        "100": [
+          38,
+          38
+        ],
+        "200": null
+      },
+      "crown_shape": "rundlich, licht; ein- oder mehrstämmig, Stamm oft schon ab 1 m verzweigt",
+      "root_system": "Herzwurzel (naturadb); auf lockeren Böden Pfahlwurzel, auf dichten flach (waldwissen); starke Wurzelbrut, Wurzeln bis 14 m Reichweite",
+      "light": "Licht (Pionier, wenig schattentolerant)",
+      "bark": "graubraun, tief gefurcht mit gedrehten Rissen",
+      "leaves": "unpaarig gefiedert, 11-15 Blättchen, Blatt 15-20 cm; Nebenblattdornen; Herbst gelb",
+      "flowers_fruit": "weiße duftende hängende Trauben, Blüten 1,5-2,5 cm; flache Hülsen 5-10 cm mit 4-10 Samen, bleiben bis zu einem Jahr am Baum",
+      "wood": "sehr hart, fest, sehr dauerhaft (Resistenzklasse 1-2); Pfähle bis 50 Jahre haltbar, Sportgeräte",
+      "habitat": "Atlantisches Nordamerika; in Europa seit dem 17. Jh. eingebürgert, invasiv auf Magerrasen; Stickstofffixierer",
+      "notes": "Starker Widerspruch bei Höhe nach Alter: baumkunde 9 m mit 20 J (Profil 3-9-25) vs. Lockow & Lockow 2015 Ertragsklasse 0,5 (beste) Oberhöhe 31 m mit 50 J und 38 m mit 100 J (waldwissen, Bestand); FVA-Region: 80-jährig 30 m Oberhöhe (absolute Bonität 32 m). Werte 50/100 sind Bestes-Bonität-Bestand. waldwissen: Höhenwachstum mit 30-40 J weitgehend eingestellt; FVA (Italien/Ungarn): jährlicher Höhenzuwachs kulminiert mit 15-20 J. Höhe: Atlas als Einzelbaum 20, im Bestand 30, bis 35; WSL 20-25; FVA oft 12-18, bis 30. Alter: Atlas 60-100 (Rekord >300); naturadb meist 50-60, bis 200; waldwissen meist 100, gelegentlich 200; WSL: ab 50-60 J nehmen Zuwachs und Vitalität rasch ab.",
+      "sources": [
+        "https://www.baumkunde.de/Robinia_pseudoacacia/",
+        "https://www.naturadb.de/pflanzen/robinia-pseudoacacia/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Robinia_pseudoacacia.pdf",
+        "https://www.waldwissen.net/assets/FVA/Waldwirtschaft/Artensteckbriefe_2.0/Robinie.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Robinie.pdf",
+        "https://www.waldwissen.net/de/waldwirtschaft/waldbau/kurzportrait-robinie"
+      ]
+    },
+    {
+      "id": "eberesche",
+      "name_de": "Eberesche",
+      "name_latin": "Sorbus aucuparia",
+      "group": "Laubbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          8,
+          15
+        ],
+        "max": 25
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 60
+      },
+      "crown_width_m": {
+        "typical": [
+          4,
+          6
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          60,
+          100
+        ],
+        "max": 150,
+        "first_fruit": [
+          15,
+          15
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            70
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jung-Zuwachs: naturadb (Freistand). WSL: kann bis zum Alter 45 die gleichen Wuchsleistungen wie die Fichte erbringen.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          8,
+          8
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "locker, schmal bis rundlich; oft mehrstämmig oder strauchartig",
+      "root_system": "Senkerwurzel (Göttingen; naturadb: Tiefwurzler); auf Pseudogley flach",
+      "light": "Halbschatten (naturadb Sonne bis Halbschatten; schattentoleranter als andere Pioniere)",
+      "bark": "jung glatt, silbrig-grau, später schwärzlich, längsrissig",
+      "leaves": "unpaarig gefiedert, ~15 cm, 9-17 Blättchen; Herbst goldgelb bis rot",
+      "flowers_fruit": "weiße Schirmrispen Mai-Juni; korallenrote Apfelfrüchtchen 8-10 mm (1-1,5 cm), reif ab August, fast jährlich",
+      "wood": "Farbkern erst ab 30-40 J; zäh, Drechslerholz",
+      "habitat": "ganz Europa, Tiefland bis ~2000 m, Hauptverbreitung Mittelgebirge; Pionier, hitzeempfindlich",
+      "notes": "Höhe: baumkunde 5-10 (Profil 15), naturadb 8-15, Göttingen 15-25, WSL bis max 25. Höhe 10/20: baumkunde.de-Wuchsprofil (Höhe nach 10/20 Jahren/Endhöhe) ohne Angabe Freistand/Bestand. Alter: Göttingen/WSL max ~150 (nur im Gebirge), Flachland 60-80; baumkunde 80-100; naturadb bis 100; Atlas meist unter 100. Erdstammstücke bis 0,6 m Durchmesser (WSL). Samenbildung ab 15 J (Atlas).",
+      "sources": [
+        "https://www.baumkunde.de/Sorbus_aucuparia/",
+        "https://www.naturadb.de/pflanzen/sorbus-aucuparia/",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Sorbus_aucuparia.pdf",
+        "https://web.archive.org/web/2024/http://www.wsl.ch/gehoelze/Vogelbeere.pdf",
+        "https://www.uni-goettingen.de/de/sorbus+aucuparia+/+gew%c3%b6hnliche+eberesche%2c+gew%c3%b6hnliche+vogelbeere/43781.html"
+      ]
+    },
+    {
+      "id": "gemeine_fichte",
+      "name_de": "Gemeine Fichte",
+      "name_latin": "Picea abies",
+      "group": "Nadelbaum",
+      "presets": [
+        "fichte"
+      ],
+      "game": "spruce",
+      "height_m": {
+        "typical": [
+          30,
+          50
+        ],
+        "max": 63
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          100,
+          150
+        ],
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          6,
+          8
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          300
+        ],
+        "max": 600,
+        "first_fruit": [
+          20,
+          60
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            55
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: Gartenangabe naturadb (junge Bäume, Freistand). Höhe nach Alter: Bestand, Oberhöhe H100 aus Ertragstafel NW-FVA 2024 (Nordwestdeutschland, Bonitäten H100 27-43 m); Alter 200 aus Tiroler Ertragstafeln (Gebirge, Bestand).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": [
+          10.7,
+          13.6
+        ],
+        "50": [
+          15,
+          31.8
+        ],
+        "100": [
+          27,
+          43
+        ],
+        "200": [
+          25.9,
+          44.5
+        ]
+      },
+      "crown_shape": "Regelmäßig kegelförmig bis säulenförmig, Äste in Quirlen, obere aufsteigend, untere hängend; jung kegelförmig, im Alter zunehmend säulenförmig. Im Freistand bleiben die unteren Äste erhalten, im dichten Bestand sterben sie weit hinauf ab.",
+      "root_system": "Flachwurzel",
+      "light": "Schatten bis Halbschatten (schattentolerant, überdauert Jahrzehnte unter Schirm); naturadb: Sonne bis Halbschatten",
+      "bark": "In der Jugend glatt, im Alter schuppig; orangebraun bis rötlich (daher 'Rotfichte'); Harztropfen an Stamm und Ästen.",
+      "leaves": "Nadeln 1-2,5 cm, vierkantig, steif, spitz, hell- bis dunkelgrün.",
+      "flowers_fruit": "Einhäusig; Blüte ab 20-30 Jahren, im dichten Bestand bis 40. Intensive Blüte etwa alle 3-8 Jahre ('Schwefelregen'). Zapfen zylindrisch, 12-15 cm, hängend, fallen als Ganzes ab; Samen 4 mm, geflügelt.",
+      "wood": "Weich, weiß bis cremeweiß, gut bearbeitbar, nicht dauerhaft; Bauholz, Schreinerholz, Spanplatten, Zellstoff/Papier, Klangholz.",
+      "habitat": "Boreale Wälder Nord-/Osteuropas und subalpine Lagen von Alpen und Karpaten, vom Meeresniveau bis über 2400 m (dort Kümmerwuchs). Bevorzugt saure, nährstoffreiche, tiefgründige, frische Böden; meidet Sommertrockenheit und Staunässe. Weit über das natürliche Areal hinaus angebaut.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Alter 20 nur für die Bonitäten 39 und 43 tabelliert (schwächere beginnen später). Alter 100 = Bonitätsdefinition H100 (27-43 m). Alter 200 aus Tiroler Tafeln (Kalk/Silikat, SI 14-32), Alter 50 dort nur 4,9-22,7 m (Gebirge). Widerspruch Zuwachs: naturadb-Profil 40-55 cm/Jahr, naturadb-FAQ 20-30 cm/Jahr; als [20,55] zusammengefasst. first_fruit: Atlas 20-30 (bis 40 im dichten Bestand), naturadb 20-25 Solitär / 50-60 im Wald. Höhe max 63 m = Rekordbaum Bosnien 1970 (naturadb); Atlas: 50-60 m. Alter: Atlas meist 200-300, SDW im Gebirge weit über 300, naturadb 200-600 (Old Tjikko ~9550 J. ist klonal, Atlas). Wirtschaftlich meist mit 90-120 Jahren gefällt (SDW). Atlas: 'fast growing after 5-10 years'.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Picea_abies.pdf",
+        "https://rpf.baden-wuerttemberg.de/fileadmin/RP-Internet/Freiburg/Abteilung_8/Referat_81/FAZ_Mattenhof/Baumartenbestimmung_-_Steckbriefe/FICHTE_SDW-Steckbrief.pdf",
+        "https://www.naturadb.de/pflanzen/picea-abies/",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/albert_2024_eine_neue_generation_von_ertragstafeln_fur_die_baumarten.pdf",
+        "https://tirol.gv.at/fileadmin/themen/umwelt/wald/waldwirtschaft/downloads/ertragstafeln-fuer_tirol.pdf"
+      ]
+    },
+    {
+      "id": "weisstanne",
+      "name_de": "Weißtanne",
+      "name_latin": "Abies alba",
+      "group": "Nadelbaum",
+      "presets": [
+        "tanne"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          40
+        ],
+        "max": 65
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 380
+      },
+      "crown_width_m": {
+        "typical": [
+          10,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 600,
+        "first_fruit": [
+          30,
+          70
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            40
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (junge Bäume). Höhe nach Alter: Bestand, Oberhöhe aus Tiroler Ertragstafel Tanne (abgeleitet aus Ertragstafel Tanne Baden-Württemberg), SI 16,5-40,7 m.",
+        "speed": "langsam (Jugend), später schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": [
+          4.3,
+          26.4
+        ],
+        "100": [
+          16.5,
+          40.7
+        ],
+        "200": null
+      },
+      "crown_shape": "Jung kegelförmig, regelmäßig verzweigt; im Alter abgeflacht, 'Storchennest' (Seitenäste überholen den Gipfeltrieb). Äste weit ausladend, fast waagrecht.",
+      "root_system": "Pfahlwurzel / Herzwurzel (tief, bis 1,6 m nach Uni Göttingen, bis 3 m nach naturadb)",
+      "light": "Schatten (sehr schattentolerant, 'Schattenschlaf' bis 100 Jahre)",
+      "bark": "Jung glatt, hellgrau mit Harzbeulen; ab etwa 40-60 Jahren schuppig, Platten 3-8 mm dick; hell, fast weißlich (Name).",
+      "leaves": "Nadeln 10-35 mm lang, 2-3 mm breit, stumpf mit Einkerbung, oberseits dunkelgrün glänzend, unterseits zwei weiße Wachsstreifen, gescheitelt; bleiben 8-12 Jahre (Göttingen) bzw. 6-8 Jahre (Atlas).",
+      "flowers_fruit": "Blüte erst nach 30-40 Jahren (Freistand), im Bestand 60-70 Jahre; April-Juni. Zapfen aufrecht, 6-10 cm × 3-5 cm, einjährig, zerfallen am Baum, Spindel bleibt stehen.",
+      "wood": "Weich, leicht, harzfrei, grauweiß, ohne gefärbten Kern; Bauholz, Tischlerplatten, Wasserbau, früher Schiffsmasten, Papier.",
+      "habitat": "Montane Lagen Mittel-, Süd- und Osteuropas, 500-2000 m, 700-1800 mm Niederschlag; tiefgründige, frische, nicht nasse Böden; spätfrost- und wildverbissempfindlich.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Alter 20 und 200 nicht in der Tiroler Tanne-Tafel. Höhe: naturadb typisch 20-40 m (selten 60), SDW bis 50 m, Atlas über 60 m, Uni Göttingen max. gemessen 65 m. Alter: SDW bis 500, Atlas 500-600, naturadb über 600. BHD max 3,8 m in einem Urwald (Göttingen).",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Abies_alba.pdf",
+        "https://rpf.baden-wuerttemberg.de/fileadmin/RP-Internet/Freiburg/Abteilung_8/Referat_81/FAZ_Mattenhof/Baumartenbestimmung_-_Steckbriefe/TANNE_SDW-Steckbrief.pdf",
+        "https://www.uni-goettingen.de/de/biologie/36753.html",
+        "https://www.naturadb.de/pflanzen/abies-alba/",
+        "https://tirol.gv.at/fileadmin/themen/umwelt/wald/waldwirtschaft/downloads/ertragstafeln-fuer_tirol.pdf"
+      ]
+    },
+    {
+      "id": "nordmanntanne",
+      "name_de": "Nordmanntanne",
+      "name_latin": "Abies nordmanniana",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          30
+        ],
+        "max": 60
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": [
+          7,
+          9
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 700,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten, junge Bäume). Höhe Alter 50: FVA Baden-Württemberg, Versuchsflächen (Bestand), Obergrenze.",
+        "speed": "langsam (Jugend), dann stark zunehmend"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": [
+          null,
+          30
+        ],
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Anfangs schmal, später breit kegelförmig bis breit pyramidal; konischer Wuchs, im Alter oft abgeflacht oder gerundet.",
+      "root_system": "Pfahlwurzel",
+      "light": "Halbschatten bis Schatten",
+      "bark": null,
+      "leaves": "Nadeln 2-3,5 cm, nach oben gedreht, unterseits zwei weiße Stomabänder.",
+      "flowers_fruit": "Pollenzapfen rötlich-purpurn; Zapfen 12-20 cm, aufrecht, mit herausragenden Deckschuppen. Gute Fruktifizierung alle zwei Jahre.",
+      "wood": "Ähnlich Weißtanne, Rohdichte 0,35 g/cm³; Bauholz, Zellstoff/Papier, Flugzeugbau, Musikinstrumente. In Mitteleuropa vor allem Weihnachtsbaum.",
+      "habitat": "Westkaukasus und Nordost-Anatolien, 400-2000 m, 800-2400 mm Niederschlag, Jahresmittel 6-11 °C; auch auf Meeresniveau. Kältetoleranz -25 °C. Tiefe, frische Böden.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. FVA: wächst in der Jugend langsamer als die Weißtanne; bis Alter 50 kann eine Höhe von 30 m erreicht werden. Max 60 m, BHD 200 cm, 700 Jahre im natürlichen Areal (FVA); Atlas: über 60 m. naturadb: Garten meist 25-30 m, alte Bäume bis 500 Jahre, Stammdicke bis zwei Meter.",
+      "sources": [
+        "https://www.waldwissen.net/assets/waldwirtschaft/waldbau/fva_artensteckbriefe/abies_nordmanniana_baumartensteckbrief.pdf",
+        "https://forest.jrc.ec.europa.eu/media/atlas/Abies_spp.pdf",
+        "https://www.naturadb.de/pflanzen/abies-nordmanniana/"
+      ]
+    },
+    {
+      "id": "douglasie",
+      "name_de": "Douglasie",
+      "name_latin": "Pseudotsuga menziesii",
+      "group": "Nadelbaum",
+      "presets": [
+        "douglasie"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          50
+        ],
+        "max": 100
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 400
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 1300,
+        "first_fruit": [
+          12,
+          15
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            40
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten). Höhe nach Alter: Bestand, Oberhöhe H100 aus Ertragstafel NW-FVA 2024 (Bonitäten H100 35-50 m).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": [
+          7.7,
+          15.9
+        ],
+        "50": [
+          23.9,
+          35.5
+        ],
+        "100": [
+          35,
+          50
+        ],
+        "200": null
+      },
+      "crown_shape": "Spitzkegelförmig; alt säulenförmig mit kurzer, flacher Krone.",
+      "root_system": "Herzwurzel",
+      "light": "Halbschatten (Pionier nach Feuer, in Sukzession schattentolerant); naturadb: Sonne bis Halbschatten",
+      "bark": "Jung glatt, olivgrün mit Harzbeulen; später dick, Borke mit tiefen, innen ockergelben Rissen; rotbraun bis graubraun.",
+      "leaves": "Nadeln 2-3,5 cm, weich, oben dunkel bläulichgrün, unten zwei weißgrüne Stomabänder; duften zerrieben nach Orange.",
+      "flowers_fruit": "Einhäusig, Zapfen ab 12-15 Jahren. Zapfen 4-9 cm, hängend, Deckschuppen länger als Samenschuppen, herausragend. Blüte April-Mai.",
+      "wood": "Mäßig schwer, hart, sehr fest; Splint gelblich-weiß, Kern rotbraun; dauerhaft, ähnlich Lärche; Bau, Außenverkleidung, Furnier.",
+      "habitat": "Westliches Nordamerika, 0-3200 m. In Europa auf tiefgründigen, frischen, gut drainierten Böden, mittlere Lagen, über 800 mm Niederschlag; häufigste nichtheimische Baumart Mitteleuropas.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Alter 100 = Bonitätsdefinition H100 (35-50 m). Höhe: naturadb 30-50 m, SDW in Deutschland bis 60 m (höchster Baum Deutschlands >63 m in Freiburg, Atlas), Atlas 60-80 m, im Heimatareal ausnahmsweise über 100 m. Alter: SDW in Europa bis über 400, Atlas Heimat über 1300. BHD: Atlas bis 2 m, Heimat bis 4 m. naturadb-Zuwachs (20-40 cm) wirkt niedrig gegenüber der Ertragstafel; die Tafel spricht in der Jugend für über 50 cm/Jahr, wurde aber hier nicht in cm/Jahr umgerechnet.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Pseudotsuga_menziesii.pdf",
+        "https://rpf.baden-wuerttemberg.de/fileadmin/RP-Internet/Freiburg/Abteilung_8/Referat_81/FAZ_Mattenhof/Baumartenbestimmung_-_Steckbriefe/DOUGLASIE_SDW-Steckbrief.pdf",
+        "https://www.naturadb.de/pflanzen/pseudotsuga-menziesii/",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/albert_2024_eine_neue_generation_von_ertragstafeln_fur_die_baumarten.pdf"
+      ]
+    },
+    {
+      "id": "waldkiefer",
+      "name_de": "Waldkiefer",
+      "name_latin": "Pinus sylvestris",
+      "group": "Nadelbaum",
+      "presets": [
+        "kiefer"
+      ],
+      "game": "pine",
+      "height_m": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 150
+      },
+      "crown_width_m": {
+        "typical": [
+          7,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          300
+        ],
+        "max": 750,
+        "first_fruit": [
+          15,
+          40
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            15,
+            40
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb. Höhe nach Alter: Bestand, Oberhöhe H100 aus Ertragstafel NW-FVA 2024 (Bonitäten H100 21-37 m); Alter 200 aus Tiroler Ertragstafel Kiefer-Südtirol.",
+        "speed": null
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": [
+          11.4,
+          13.2
+        ],
+        "50": [
+          14.2,
+          26.5
+        ],
+        "100": [
+          21,
+          37
+        ],
+        "200": [
+          12.4,
+          44.4
+        ]
+      },
+      "crown_shape": "In der Jugend regelmäßig kegelförmig; im Alter löst sich die Hauptachse auf, unregelmäßige, schirmartig gewölbte Krone.",
+      "root_system": "Pfahlwurzel (tief, mit starken Seitenwurzeln, sehr sturmfest)",
+      "light": "Licht",
+      "bark": "Oben am Stamm und in der Krone kräftig rotgelb, papierdünn abschuppend ('Spiegelrinde'); unten dickborkig, tiefrissig, braun bis graubraun.",
+      "leaves": "Nadeln zu zweit an Kurztrieben, 4-7 cm (naturadb) bzw. 5-7 cm (Atlas), blau- bis graugrün, leicht gedreht, derb; bleiben 2-6 Jahre.",
+      "flowers_fruit": "Einhäusig; männliche Blüten gelb/rosa an der Triebbasis, weibliche rosa-purpurn an der Triebspitze. Zapfen 3-8 cm, kegelig-länglich; bis zur Samenreife insgesamt 3 Jahre (SDW), fällt als Ganzes ab.",
+      "wood": "Kräftig rotbrauner Kern, dicker gelblichweißer Splint, dunkelt nach; Möbel, Innenausbau, Fenster, Spanplatten, Masten.",
+      "habitat": "Von Spanien bis Ostsibirien, 37-70° N, Meeresniveau bis 2600 m. Pionier auf armen, trockenen Sanden und Mooren; auf guten Böden von Fichte und Laubbäumen verdrängt.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Alter 20 nur für Bonitäten 33 und 37 tabelliert. Alter 100 = Bonitätsdefinition H100. Alter 200 aus Tirol/Südtirol (SI 8,1-36,2). Höhe: SDW 20-30 m (bis über 40), Atlas Mittel 23-27 m, über 40 m möglich; max ist 'über 40'. Alter: SDW bis 600, Atlas über 400, ein Baum in Lappland über 750; naturadb meist 200-300, bis 600. BHD: naturadb Text bis 1 m, FAQ sehr alte bis 1,5 m. Blüte: Solitär nach 15, im Bestand 30-40 Jahre (naturadb).",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Pinus_sylvestris.pdf",
+        "https://rpf.baden-wuerttemberg.de/fileadmin/RP-Internet/Freiburg/Abteilung_8/Referat_81/FAZ_Mattenhof/Baumartenbestimmung_-_Steckbriefe/KIEFER_SDW-Steckbrief.pdf",
+        "https://www.naturadb.de/pflanzen/pinus-sylvestris/",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/albert_2024_eine_neue_generation_von_ertragstafeln_fur_die_baumarten.pdf",
+        "https://tirol.gv.at/fileadmin/themen/umwelt/wald/waldwirtschaft/downloads/ertragstafeln-fuer_tirol.pdf"
+      ]
+    },
+    {
+      "id": "schwarzkiefer",
+      "name_de": "Schwarzkiefer",
+      "name_latin": "Pinus nigra",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 50
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          400,
+          500
+        ],
+        "max": 1000,
+        "first_fruit": [
+          15,
+          20
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            40
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb. Höhen nach Alter: Mittelhöhen von Jungbeständen in Mitteleuropa (NW-FVA Baumartensteckbrief), Bestand.",
+        "speed": "langsam (Jugend), später anhaltend"
+      },
+      "height_at_age_m": {
+        "10": [
+          3,
+          3
+        ],
+        "20": [
+          8,
+          8
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Jung dicht kegelförmig, im Alter schirmförmig, flach ausladend.",
+      "root_system": "Pfahlwurzel (kräftig, Vertikalwurzeln bis 5-6 m; auf flachgründigen Böden oberflächennah, dringt in Felsspalten)",
+      "light": "Licht (Pionier, etwas schattentoleranter als Waldkiefer)",
+      "bark": "Dunkel graubraun bis schwarz, im Alter tief längsgefurcht.",
+      "leaves": "Nadeln zu zweit, 8-15 (19) cm, 1-2 mm dick, gerade oder gebogen, fein gesägt; bleiben 3-4 (bis 8) Jahre.",
+      "flowers_fruit": "Einhäusig; männliche Kätzchen gelb, weibliche rötlich. Zapfen sitzend, 4-8 (9) cm × 2-4 cm, gelbbraun, reifen im Herbst des 2. Jahres, öffnen im 3.; 30-40 Samen, Flügel 19-26 mm. Fruchtreife mit 15-20 Jahren, Vollmasten alle 2-5 Jahre.",
+      "wood": "Früher im Schiffbau verwendet; heute vielseitig, weit verbreitete Aufforstungsbaumart.",
+      "habitat": "Südeuropa, Kleinasien, Nordwestafrika, 250-2200 m (Optimum 800-1500 m); sehr trockenheits- und windresistent, kalktolerant, geringe Nährstoffansprüche; meidet Staunässe.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Weitere Höhen: Bestand österreichischer Herkunft auf der Fränkischen Platte im Alter 99: Mittelhöhe 25,6 m, mittlerer BHD 34,8 cm (FVA-Steckbrief); auf besseren Standorten mittlere Höhe 120-jähriger Bäume 30 m (NW-FVA); Oberhöhen um 30 m möglich. Gutes Höhenwachstum hält bis Alter 80 an (NW-FVA). Höhe: Atlas meist 30 m, ausnahmsweise 40; NW-FVA ssp. laricio 40 (50) m, ssp. salzmannii 20-25 m; naturadb 20-30 (Text 30-40, selten über 50). Alter: Atlas über 400, NW-FVA im Schnitt rund 500, 'Vier-Brüder-Baum' in Deutschland über 1000 Jahre (Atlas).",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Pinus_nigra.pdf",
+        "https://www.waldwissen.net/assets/waldwirtschaft/waldbau/fva_artensteckbriefe/pinus_nigra_baumartensteckbrief.pdf",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/BaEm/schwarzkiefer_nw-fva.pdf",
+        "https://www.naturadb.de/pflanzen/pinus-nigra/"
+      ]
+    },
+    {
+      "id": "zirbe",
+      "name_de": "Zirbe",
+      "name_latin": "Pinus cembra",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          10,
+          12
+        ],
+        "max": 25
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          3,
+          8
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 1000,
+        "first_fruit": [
+          40,
+          60
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            10,
+            25
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb. Höhe nach Alter: Bestand, Oberhöhe aus Tiroler Ertragstafel 'Zirbe-Murau' (SI 5,9-20,9 m), Hochlagen.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": [
+          6.5,
+          11.4
+        ],
+        "100": [
+          5.9,
+          20.9
+        ],
+        "200": [
+          9.3,
+          27
+        ]
+      },
+      "crown_shape": "Jung dicht kegelförmig, später zylindrisch, schließlich sehr offen; oft gekrümmt oder verdreht, geschützt auch gerade und groß.",
+      "root_system": "Pfahlwurzel",
+      "light": "Licht",
+      "bark": null,
+      "leaves": "Nadeln zu fünft, 5-9 cm; bleiben bis zu 12 Jahre.",
+      "flowers_fruit": "Einhäusig, windbestäubt. Zapfen erst nach 40-60 Jahren, 4-8 cm, purpurn reifend, Reife in 2 Jahren. Samen ungeflügelt, groß (7 × 10 mm), essbar; Verbreitung v. a. durch den Tannenhäher.",
+      "wood": "Fest und von guter Qualität, wegen langsamen Wuchses und krummer Form wirtschaftlich unbedeutend; Schutzwald gegen Lawinen und Erosion.",
+      "habitat": "Alpen (v. a. Ostalpen), Tatra, Karpaten; Waldgrenze 1100-2500 m (über 2700 m als Busch); kontinentales Klima, frosthart bis -43 °C; meist mit Lärche.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Alter 50 nur für die Bonitäten SI ≥14,8 tabelliert. Alter 100 = SI-Definition. Atlas: 10-12 m, gelegentlich 20-25 m; naturadb 10-25 m.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Pinus_cembra.pdf",
+        "https://www.naturadb.de/pflanzen/pinus-cembra/",
+        "https://tirol.gv.at/fileadmin/themen/umwelt/wald/waldwirtschaft/downloads/ertragstafeln-fuer_tirol.pdf"
+      ]
+    },
+    {
+      "id": "schirmpinie",
+      "name_de": "Schirmpinie",
+      "name_latin": "Pinus pinea",
+      "group": "Nadelbaum",
+      "presets": [
+        "schirmpinie"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          30
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": [
+          15,
+          20
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 300,
+        "first_fruit": [
+          15,
+          20
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            25,
+            30
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten).",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Jung kugelig und buschig, mittelalt schirmförmig, alt flach und breit; kurzer Stamm mit vielen aufwärts gerichteten Ästen, Benadelung an den Astenden.",
+      "root_system": "Pfahlwurzel (ältere Bäume zusätzlich oberflächennahe Seitenwurzeln)",
+      "light": "Licht (verträgt in der Jugend leichten Schatten)",
+      "bark": "Rotbraun, tief rissig, mit breiten, flachen, orange-purpurnen Platten; dick, schützt gegen Feuer.",
+      "leaves": "Nadeln zu zweit, 8-15 cm (Atlas) bzw. 10-20 cm (naturadb), blaugrün; bleiben 2-4 Jahre.",
+      "flowers_fruit": "Einhäusig. Zapfen eiförmig-kugelig, 8-12 cm, reifen im 3. Jahr; Samen (Pinienkerne) 15-20 mm, schwer, essbar, Flügel unwirksam. Mastjahre.",
+      "wood": "Gute Qualität, aber wegen langsamen Wuchses wenig angebaut; wichtigstes Produkt sind die Samen; Dünenbefestigung.",
+      "habitat": "Mittelmeerraum, vor allem Küsten der Iberischen Halbinsel, Südfrankreich, Italien; wärme-, licht- und trockenheitsliebend; min. etwa 250 mm, Optimum 600 mm Niederschlag; saure Sandböden bevorzugt, pH 4-9.",
+      "notes": "Höhe: Atlas und naturadb 25-30 m; naturadb-FAQ freistehend 15-25 m. Stammdurchmesser widersprüchlich: Atlas über 2 m, naturadb bis 1 m. Keine Höhe-nach-Alter-Tafel gefunden (spanische Bonitätsmodelle von Calama et al. 2003 waren nicht abrufbar). Atlas: Wuchs 'relativ langsam' im Vergleich zu anderen Arten.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Pinus_pinea.pdf",
+        "https://www.naturadb.de/pflanzen/pinus-pinea/"
+      ]
+    },
+    {
+      "id": "europaeische_laerche",
+      "name_de": "Europäische Lärche",
+      "name_latin": "Larix decidua",
+      "group": "Nadelbaum",
+      "presets": [
+        "laerche"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          25,
+          35
+        ],
+        "max": 50
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          50,
+          150
+        ],
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": [
+          12,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          400
+        ],
+        "max": 1000,
+        "first_fruit": [
+          12,
+          25
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb; Sämling 10-20 cm im 1. Jahr, 50-100 cm im 2. Jahr (naturadb). Höhe nach Alter: Bestand, Oberhöhe aus Tiroler Ertragstafel 'Lärche-Südtirol' (SI 11,5-40,1 m).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": [
+          9.4,
+          28.8
+        ],
+        "100": [
+          11.5,
+          40.1
+        ],
+        "200": [
+          20.3,
+          39.9
+        ]
+      },
+      "crown_shape": "Regelmäßig pyramidal bis kegelförmig, licht und locker; Stamm gerade, am Hang am Fuß gebogen.",
+      "root_system": "Herzwurzel (intensiv, sehr sturmfest)",
+      "light": "Licht",
+      "bark": "Rissig, rotbraun bis hellgrau.",
+      "leaves": "Sommergrün: weiche Nadeln in Büscheln zu 20-40, 1,5-4 cm × 1 mm, hellgrün, im Herbst gelb, dann abgeworfen.",
+      "flowers_fruit": "Einhäusig; männliche Zapfen 5-10 mm schwefelgelb; weibliche rosa-rot bis purpur. Samenzapfen etwa 2,5 cm, bleiben bis zu 10 Jahre am Baum. Erste Blüte im Freistand mit 12-15, im Bestand mit 20-25 Jahren (naturadb).",
+      "wood": "Splint dünn, gelblichweiß; Kern orange bis rotbraun; harzreich, dauerhaft; Außenbau, Fenster, Wasserbau, Schiffsmasten und -planken.",
+      "habitat": "Gebirge Süd-, Mittel- und Osteuropas (Alpen, Karpaten, Sudeten, Polen), 180-2500 m, oft an der Waldgrenze; lichtbedürftige Pionierbaumart, kälte- und windhart, keine Staunässe.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Alter 50 nur für SI ≥18,6 tabelliert. Die Tiroler Werte stammen aus dem Gebirge; LWF (BWI 2, Bayern): gemessene Lärchen 6-179 Jahre, Höhen 4,8-44,1 m (Mittel 25,5 m bei mittlerem Alter 65), Durchmesser 7-92,9 cm; LWF hält Ertragstafeln für die Lärche nur eingeschränkt brauchbar. Höhe: Atlas bis 45 m, selten über 50; SDW bis über 50 m. Alter: Atlas 600-800 unter Optimalbedingungen, in Hochlagen über 1000; SDW bis 600 (-800); naturadb typisch 200-400. Volumenzuwachs kulminiert in Bayern im Alter 41-60 (LWF, Baumartengruppe Lärche).",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Larix_decidua.pdf",
+        "https://rpf.baden-wuerttemberg.de/fileadmin/RP-Internet/Freiburg/Abteilung_8/Referat_81/FAZ_Mattenhof/Baumartenbestimmung_-_Steckbriefe/LAERCHE_SDW-Steckbrief.pdf",
+        "https://www.naturadb.de/pflanzen/larix-decidua/",
+        "https://tirol.gv.at/fileadmin/themen/umwelt/wald/waldwirtschaft/downloads/ertragstafeln-fuer_tirol.pdf",
+        "https://lwg.bayern.de/mam/cms04/boden-klima/dateien/wachstum_der_laerche_in_bayern_w69.pdf"
+      ]
+    },
+    {
+      "id": "atlaszeder",
+      "name_de": "Atlaszeder",
+      "name_latin": "Cedrus atlantica",
+      "group": "Nadelbaum",
+      "presets": [
+        "zeder"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          35
+        ],
+        "max": 45
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          10,
+          15
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 700,
+        "first_fruit": [
+          35,
+          40
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            50
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten). Höhe Alter 100: Oberhöhe in Beständen in Frankreich (NW-FVA Steckbrief).",
+        "speed": null
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": [
+          13,
+          36
+        ],
+        "200": null
+      },
+      "crown_shape": "Aufrecht, ausladend, kegelförmige Krone mit schirmartigen Astpartien.",
+      "root_system": "Herzwurzel",
+      "light": "Halbschatten (Halbschattbaumart, Pionier; erträgt in der Jugend Schatten)",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Blühfähig ab 35-40 Jahren, reichlicher Zapfenbehang erst ab 60; Blüte September-Oktober; Zapfen öffnen nach wechselnden Frost-/Tauphasen; Samen fliegen bis etwa 60 m.",
+      "wood": "Gut bearbeitbar und spaltbar, problemlose Trocknung, verwitterungsbeständig ohne Bodenkontakt; Rohdichte 0,42-0,66 g/cm³; Möbel, Vertäfelung, Innen-/Außenbau.",
+      "habitat": "Atlasgebirge in Marokko und Algerien, 1350-2400 m, 500-1786 mm Niederschlag vorwiegend im Winter; Kälte bis -25 °C, Hitze bis 40 °C; tiefgründige, gut drainierte Böden, keine Staunässe.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Exotenwald Weinheim: im Alter 116 Jahre 36 m Oberhöhe und 45 cm BHD (FVA). Höhe: NW-FVA gewöhnlich 30-35 m, auf guten Standorten über 45 m; FVA bis 35 m; naturadb (Garten) 15-25 m. Max. Alter 600-700 Jahre (FVA, NW-FVA). FVA: gute Fruktifizierung nach dem 40. Lebensjahr.",
+      "sources": [
+        "https://www.waldwissen.net/assets/waldwirtschaft/waldbau/fva_artensteckbriefe/cedrus_atlantica_baumartensteckbrief.pdf",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/BaEm/atlaszeder_nw-fva.pdf",
+        "https://www.naturadb.de/pflanzen/cedrus-atlantica/"
+      ]
+    },
+    {
+      "id": "libanonzeder",
+      "name_de": "Libanonzeder",
+      "name_latin": "Cedrus libani",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          40
+        ],
+        "max": 46
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          100,
+          250
+        ],
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          4,
+          6
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 1000,
+        "first_fruit": [
+          30,
+          40
+        ],
+        "height_growth_culminates": [
+          10,
+          40
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            60
+          ],
+          "mature": [
+            10,
+            40
+          ]
+        },
+        "trunk_diameter_cm_per_year": [
+          1,
+          1
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "NW-FVA: Höhenzuwachs während der Kulmination (10-40 J.) 20-60 (100) cm/Jahr; auf ungünstigen Standorten später kulminierend (50-100 J.) nur 10-40 cm/Jahr. Bayreuth (Bestand, ssp. stenocoma): 0,5 m/Jahr Höhe, 1 cm/Jahr Durchmesser. naturadb: anfangs 3-5 cm/Jahr, später 20-30 cm/Jahr.",
+        "speed": "langsam (Jugend), dann rasch"
+      },
+      "height_at_age_m": {
+        "10": [
+          0.6,
+          2.7
+        ],
+        "20": null,
+        "50": null,
+        "100": [
+          null,
+          32
+        ],
+        "200": null
+      },
+      "crown_shape": "In der Jugend breit pyramidenförmig, im Alter breit tafelförmig, locker.",
+      "root_system": "Herzwurzel (tief, 2-3 m; einjährige Pflanzen bereits 50-70 cm Wurzellänge)",
+      "light": "Licht (bis 20-40 Jahre auch Halbschatten, später Kronenfreiheit nötig)",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Einhäusig; blüht ab etwa 30 Jahren, Zapfen erst nach rund 40 Jahren (naturadb); gute Fruktifizierung in Zyklen von 3 Jahren.",
+      "wood": "Seit der Antike wichtige Wirtschaftsbaumart; in der Türkei Umtrieb 120-180 Jahre bei Zieldurchmesser 50-60 cm.",
+      "habitat": "Taurus (Türkei), Libanon, Syrien, 500-2400 m (meist 1000-2100 m), 600-1200 mm Niederschlag; Kälte bis -35 °C; sehr tolerant gegen Sommertrockenheit.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. 30 cm hohe Pflanzen sind 3-7 Jahre alt; bis Alter 10 werden 0,6-2,7 m erreicht; für 30-jährige Bäume 1,6-11,1 m; auf besseren Standorten mit 100 Jahren 32 m (alle NW-FVA). Höhe: im Freistand 25 m, in geschlossenen Beständen 30-40 m (NW-FVA); FVA bis 46 m und 249 cm BHD; naturadb in Deutschland bis 20 m, Heimat bis 40 m. Stammdurchmesser widersprüchlich: naturadb 1-2,5 m, selten über 3,5 m; FVA max 249 cm. Kronenbreite 4-6 m (naturadb) gilt vermutlich für junge Gartenbäume. Kulmination: andere Quelle in NW-FVA (Ayasligil 1997) nennt 20-50 Jahre; naturadb: größte Zuwächse bis 45-50 Jahre, ab etwa 70 kaum noch Höhenzuwachs.",
+      "sources": [
+        "https://www.waldwissen.net/assets/waldwirtschaft/waldbau/fva_artensteckbriefe/cedrus_libani_baumartensteckbrief.pdf",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/BaEm/libanonzeder_nw-fva.pdf",
+        "https://www.naturadb.de/pflanzen/cedrus-libani/"
+      ]
+    },
+    {
+      "id": "mittelmeer_zypresse",
+      "name_de": "Mittelmeer-Zypresse",
+      "name_latin": "Cupressus sempervirens",
+      "group": "Nadelbaum",
+      "presets": [
+        "zypresse"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          35
+        ],
+        "max": 40
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 200
+      },
+      "crown_width_m": {
+        "typical": [
+          1,
+          5
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          200,
+          500
+        ],
+        "max": 800,
+        "first_fruit": [
+          3,
+          6
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            60
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten).",
+        "speed": "schnell (Jugend)"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Sehr variabel: von breit ausladend (so breit wie hoch) bis kegel- oder säulenförmig (Säulenzypresse, kultivierte Form, in Naturbeständen selten).",
+      "root_system": "Flachwurzel (großes, flaches Wurzelsystem)",
+      "light": "Licht",
+      "bark": "Graubraun mit faserigen Längsleisten.",
+      "leaves": "Schuppenblätter 2-5 mm, dunkelgrün, dicht anliegend.",
+      "flowers_fruit": "Einhäusig, windbestäubt; Blüten schon an 3-6-jährigen Pflanzen; Bestäubung Mittwinter bis Frühjahr. Zapfen holzig, eiförmig, 2-4 cm, 8-14 Schuppen, reifen nach einem Jahr; 8-20 Samen je Schuppe.",
+      "wood": "Sehr dauerhaft gegen Pilze und Insekten (auch im Wasser), duftend, insektenabweisend; Kleinschreinerei, Außenbau, Schiffbau, Truhen, Särge.",
+      "habitat": "Östlicher Mittelmeerraum bis Iran (natürliches Areal unklar), 0-2000 m; trocken-heiße Sommer, schon ab 200 mm Niederschlag; Pionier auf felsigen, trockenen Böden; Jungpflanzen frostempfindlich, alte bis -20 °C.",
+      "notes": "Höhe: Atlas bis 35-40 m, naturadb 20-35 m. Stamm: Atlas 1 m Durchmesser, selten über 2 m. Alter: in Naturbeständen 200-500 Jahre nicht selten, eine Zypresse in Italien über 800 Jahre (Atlas). Keine Höhe-nach-Alter-Tafel gefunden.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Cupressus_sempervirens.pdf",
+        "https://www.naturadb.de/pflanzen/cupressus-sempervirens/"
+      ]
+    },
+    {
+      "id": "europaeische_eibe",
+      "name_de": "Europäische Eibe",
+      "name_latin": "Taxus baccata",
+      "group": "Nadelbaum",
+      "presets": [
+        "eibe"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          3,
+          10
+        ],
+        "max": 28
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 400
+      },
+      "crown_width_m": {
+        "typical": [
+          3,
+          5
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 1000,
+        "first_fruit": [
+          30,
+          120
+        ],
+        "height_growth_culminates": [
+          150,
+          160
+        ]
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            1,
+            3
+          ],
+          "mature": [
+            10,
+            20
+          ]
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "NW-FVA: Sämlinge in den ersten acht Jahren 1-3 cm/Jahr, später bei ausreichend Licht 10-20 cm/Jahr; kann unter Schirm jahrzehntelang bei 10-50 cm Höhe verharren. naturadb (Garten): 20-30 cm/Jahr.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Anfangs breit kegelförmig, später kugelig; oft mehrstämmig, Strauch oder Baum; ab etwa 250 Jahren oft hohl.",
+      "root_system": "Herzwurzel (naturadb, tief und dicht); Atlas: flach mit ausgedehnten horizontalen Wurzeln",
+      "light": "Schatten (schattentoleranteste Baumart Deutschlands)",
+      "bark": null,
+      "leaves": "Nadeln 2-3 cm × 3 mm, weich, oben dunkelgrün, unten heller mit Streifen, zweizeilig; bleiben bis 8 Jahre (SDW) bzw. 3-8 Jahre (naturadb). Harzfrei.",
+      "flowers_fruit": "Meist zweihäusig. Samen mit rotem, fleischigem Samenmantel (Arillus) ~7 mm, der einzige ungiftige Teil; Verbreitung durch Vögel. Solitärbäume fruchten ab 30-35, im dichten Bestand ab 70-120 Jahren (NW-FVA); naturadb: 15-30 Jahre.",
+      "wood": "Schwer, aber elastisch; sehr wertvoll; Langbögen, Armbrüste, Musikinstrumente, Möbel; ältestes Holzartefakt (Speer, ~150.000 Jahre).",
+      "habitat": "Fast ganz Europa, Atlas, Kleinasien; am besten in ozeanischem Klima; Unter- und Zwischenstand, einzeln oder in Gruppen; basenreiche Böden, nicht staunass; durch Wildverbiss stark gefährdet.",
+      "notes": "Höhe: naturadb 3-10 m (selten 18); SDW bis 20 m; NW-FVA bis 20 m, Ausnahme 28 m, in Mitteleuropa meist bis 15 m; Atlas selten über 20 m. BHD: NW-FVA selten über 60-80 cm, Ausnahme über 1 m; Atlas bis 4 m (sehr alte, hohle Bäume). Alter stark umstritten: Atlas Berichte bis 5000 Jahre; NW-FVA gesichert 600-1000 Jahre, älteste in Deutschland 500-800; SDW bis 800 (1000); naturadb 650-750. Keine Höhe-nach-Alter-Tafel; NW-FVA vergleicht Eibenbestände mit der Weißtannen-Ertragstafel.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Taxus_baccata.pdf",
+        "https://rpf.baden-wuerttemberg.de/fileadmin/RP-Internet/Freiburg/Abteilung_8/Referat_81/FAZ_Mattenhof/Baumartenbestimmung_-_Steckbriefe/EIBE_SDW-Steckbrief.pdf",
+        "https://www.nw-fva.de/fileadmin/nwfva/publikationen/pdf/BaEm/eibe_nw-fva.pdf",
+        "https://www.naturadb.de/pflanzen/taxus-baccata/"
+      ]
+    },
+    {
+      "id": "kuestenmammutbaum",
+      "name_de": "Küstenmammutbaum",
+      "name_latin": "Sequoia sempervirens",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          61,
+          91
+        ],
+        "max": 110.3
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 610
+      },
+      "crown_width_m": {
+        "typical": [
+          4,
+          8
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 2200,
+        "first_fruit": [
+          5,
+          15
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            80
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten). FEIS (Heimat): Sämlinge bis 46 cm in der ersten Saison, 4-10-jährige bis 2,0 m pro Saison, Stockausschläge bis 2,1 m in einer Saison. Höhe nach Alter: Bestand (young-growth redwood, Kalifornien), Höhe der herrschenden Bäume nach Brusthöhenalter, Lindquist & Palley 1963, Site Index 100-240 ft.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": [
+          6.4,
+          29
+        ],
+        "50": [
+          17.4,
+          52.1
+        ],
+        "100": [
+          30.5,
+          73.2
+        ],
+        "200": null
+      },
+      "crown_shape": "Schmal pyramidal, später säulenförmig; Stammbasis stark verbreitert (Brettwurzeln).",
+      "root_system": "Flachwurzel (tiefes, weit ausgreifendes Seitenwurzelsystem ohne Pfahlwurzel)",
+      "light": "Schatten (schattentolerant bis sehr schattentolerant)",
+      "bark": "Bis 30 cm dick (FEIS), 20-30 cm (Stuttgart); rötlich, faserig, weich; dunkel orangebraun.",
+      "leaves": "Immergrün, fiederartig, spiralig angeordnet, dunkelgrün.",
+      "flowers_fruit": "Samenproduktion ab 5-15 Jahren; kleine eiförmige Zapfen; Samen fliegen 61-122 m; starke Vermehrung durch Stockausschlag.",
+      "wood": "Leicht spaltbar, außerordentlich dauerhaft.",
+      "habitat": "Kalifornisches Küstengebirge (Südoregon bis Mittelkalifornien), 0-915 m, Nebelgürtel, im Mittel 180 cm Niederschlag; Auen und Hänge.",
+      "notes": "height_at_age_m: Werte als [min, max] über die Bonitäten/Standortsklassen der genannten Tafel; [v, v] = Einzelwert der Quelle; [null, v] = nur Obergrenze genannt. Umrechnung ft→m (×0,3048) aus Tabelle 1 (Lindquist & Palley 1963): Alter 20 = 21-95 ft, 50 = 57-171 ft, 100 = 100-240 ft; Alter = Brusthöhenalter. SI 240 ist laut Quelle eine Obergrenze der Erweiterung; Probeflächen reichten von SI 100 bis 232. Kalifornische Standortsklassen bei 100 Jahren: 32,0 bis ≥54,86 m (CCR §1060). FEIS: ein 400-jähriger Baum am Hang 0,6 m BHD, ein 600-jähriger auf Schwemmfächer 3,6 m BHD. Max. Durchmesser widersprüchlich: FEIS 6,1 m (beim höchsten Baum), Stuttgarter Tabelle 900 cm. Max. Höhe: FEIS 110,3 m, Stuttgart 112 m. Max. Alter: FEIS über 2200, Stuttgart ca. 1500. naturadb (Garten in DE): 20-40 m hoch, 4-8 m breit.",
+      "sources": [
+        "https://www.fs.usda.gov/database/feis/plants/tree/seqsem/all.html",
+        "https://cdnverify.bof.fire.ca.gov/media/8130/empirical_yield_tables_for_young-growth_redwood_bulletin_796_-_1963-ada.pdf",
+        "https://www.law.cornell.edu/regulations/california/14-CCR-1060",
+        "https://ojs-jh-gfn.ub.uni-stuttgart.de/index.php/jahreshefte/article/download/276/279/1067",
+        "https://www.naturadb.de/pflanzen/sequoia-sempervirens/"
+      ]
+    },
+    {
+      "id": "riesenmammutbaum",
+      "name_de": "Riesenmammutbaum",
+      "name_latin": "Sequoiadendron giganteum",
+      "group": "Nadelbaum",
+      "presets": [
+        "mammutbaum"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          76,
+          84
+        ],
+        "max": 95
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          500,
+          700
+        ],
+        "max": 1100
+      },
+      "crown_width_m": {
+        "typical": [
+          2,
+          4
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 3200,
+        "first_fruit": [
+          20,
+          20
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            80
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten). FEIS: Keimling im ersten Herbst 8-10 cm, nach dem 2. Jahr 20-30 cm hoch. Hohenheim: Höhenwachstum junger Bäume nur mäßig, Breitenwachstum ungewöhnlich stark.",
+        "speed": null
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Kegelförmig; Stamm bis 30-40 m astfrei (FEIS), bis 50 m (Hohenheim); Stammbasis stark verbreitert.",
+      "root_system": "Tiefwurzler (naturadb); Sämling mit Pfahlwurzel 25-38 cm nach dem 2. Jahr",
+      "light": "Licht (Sämlinge wachsen am besten bei halbem vollem Sonnenlicht)",
+      "bark": "Rotbraun, faserig, schwammig, weich, harzfrei, tief längsrissig; 30-60 cm (Stuttgart), bis 60 cm am Stammfuß (FEIS), 30-75 cm (Hohenheim).",
+      "leaves": "Schuppenartig, anliegend, immergrün.",
+      "flowers_fruit": "Zapfen ab etwa 20 Jahren; 5-8 cm, durchschnittlich 230 Samen; bleiben 8-12 Jahre am Baum; große Bäume ~11.000 Zapfen, 300.000-400.000 Samen pro Jahr.",
+      "wood": "Leicht, weich.",
+      "habitat": "Westhänge der Sierra Nevada (Kalifornien), 830-2700 m (Hauptvorkommen 1400-2000 m), 88-138 cm Niederschlag, viel Schnee; tiefgründige, gut drainierte sandige Lehme.",
+      "notes": "Deutschland (Stuttgart, Krüger 2005): Bäume der 'Wilhelma-Saat' 1864/65 hatten etwa 50 Jahre vor 2005 (also mit rund 90 Jahren) die 40-m-Marke überschritten; die dicksten erreichen mit rund 140 Jahren etwa 2,70 m BHD, gleichaltrige an anderen Orten unter 1 m. Daraus wurde bewusst keine height_at_age-Zahl gemacht. Kronenbreite 2-4 m laut naturadb ist auffällig klein (Hohenheim: starkes Breitenwachstum junger Bäume). Max. BHD widersprüchlich: FEIS Rekord 11 m, Stuttgarter Tabelle 1200 cm, Hohenheim bis 8 m in 1,3 m Höhe (17 m an der Basis). Max. Höhe: FEIS 95 m, Hohenheim bis 95 m, Stuttgart 88 m. Ältester per Jahrringzählung 3200 Jahre (FEIS), Stuttgart ca. 3000.",
+      "sources": [
+        "https://www.fs.usda.gov/database/feis/plants/tree/seqgig/all.html",
+        "https://humboldt-reloaded.uni-hohenheim.de/uploads/tx_uhohhrprojekte/Poster%20Mammutbaum%20Weinsteige%20final%2020jun2012.pdf",
+        "https://ojs-jh-gfn.ub.uni-stuttgart.de/index.php/jahreshefte/article/download/276/279/1067",
+        "https://www.naturadb.de/pflanzen/sequoiadendron-giganteum/"
+      ]
+    },
+    {
+      "id": "urweltmammutbaum",
+      "name_de": "Urweltmammutbaum",
+      "name_latin": "Metasequoia glyptostroboides",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          35
+        ],
+        "max": 50
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          100,
+          220
+        ],
+        "max": 250
+      },
+      "crown_width_m": {
+        "typical": [
+          9,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 500,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            40,
+            60
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Zuwachs cm/Jahr: naturadb (Garten).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Jung pyramidenförmig, dicht kegelförmig; im Alter breit und abgerundet; Äste erster Ordnung weit ausladend, höhere Ordnung hängend, gegenständig. Freistehend bis zum Boden beastet, tiefe Stammkehlungen, Stammbasis verbreitert.",
+      "root_system": "Flachwurzel",
+      "light": "Sonne bis Halbschatten",
+      "bark": "Rötlich, später grau, rissig abblätternd.",
+      "leaves": "Sommergrün: fiederartig, weiche Nadeln an Kurztrieben, die im Herbst samt Nadeln abfallen.",
+      "flowers_fruit": "Blüte im Mai (naturadb), rot.",
+      "wood": "Leicht, nicht sehr festes Gefüge, weich.",
+      "habitat": "China (Ost-Sichuan, West-Hubei, Hunan), 700-1500 m; feuchte Bach- und Flussufer, Schluchten; tiefgründige, nährstoffreiche Lehme; frosthart bis etwa -23 °C (naturadb) bzw. -32 °C (Türnich), spätfrostempfindlich, keine Staunässe. Erst 1941 entdeckt, 'lebendes Fossil'.",
+      "notes": "Höhe: naturadb 30-35 m; Türnich 30-35, in Einzelfällen über 50 m (Quelle dort: Wikipedia); Stuttgarter Tabelle max. 40 m. Durchmesser: Türnich 1-2,2 m BHD; Stuttgart max. 250 cm. Höchstalter: Stuttgart ca. 500, Türnich 420 Jahre. Keine verlässliche Zuwachs- oder Höhe-nach-Alter-Tafel gefunden.",
+      "sources": [
+        "https://www.naturadb.de/pflanzen/metasequoia-glyptostroboides/",
+        "https://ojs-jh-gfn.ub.uni-stuttgart.de/index.php/jahreshefte/article/download/276/279/1067",
+        "https://baumpate.schloss-tuernich.de/baumsteckbrief/urweltmammutbaum;169.html"
+      ]
+    },
+    {
+      "id": "wacholder",
+      "name_de": "Wacholder",
+      "name_latin": "Juniperus communis",
+      "group": "Nadelbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          4.5,
+          5
+        ],
+        "max": 15
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          10,
+          30
+        ],
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          0.5,
+          1
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 1647,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            10,
+            15
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.1,
+          0.1
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "naturadb: Zuwachs 10-15 cm/Jahr, Dickenwachstum etwa 1 mm/Jahr.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Sehr variabel: säulenförmig, kegelförmig, breit rundlich oder kriechend; Strauch oder kleiner Baum, oft mehrstämmig; eigentlicher Stamm selten höher als 2 m.",
+      "root_system": "Tiefwurzler",
+      "light": "Licht",
+      "bark": null,
+      "leaves": "Nadeln in Dreierquirlen, sitzend, 5-12 (15) mm, stechend, oberseits mit einem weißen Band; leben 3-4 Jahre.",
+      "flowers_fruit": "Meist zweihäusig. Beerenzapfen fleischig, kugelig, bis 1 cm, purpur bis schwarz (bereift), reifen im 2. oder 3. Jahr; 1-3 ungeflügelte Samen; Verbreitung durch Vögel.",
+      "wood": null,
+      "habitat": "Weiteste Verbreitung aller Koniferen (Nordhalbkugel), von Nordskandinavien bis Südspanien (dort im Gebirge); Weiden, Heiden, über der Baumgrenze; arme, saure oder kalkhaltige, durchlässige Böden; Pionier; kälte- und trockenheitstolerant.",
+      "notes": "Max. Alter 1647 Jahre (ältester datierter Strauch, Nordfennoskandien; Mindestalter, PMC 2025). Ein Stamm von etwa 30 cm Dicke ist oft mehrere hundert Jahre alt (naturadb). Höhe meist um 5 m, ausnahmsweise bis 15 m (naturadb); Atlas: langsam wachsend, Strauch oder baumförmig.",
+      "sources": [
+        "https://forest.jrc.ec.europa.eu/media/atlas/Juniperus_communis.pdf",
+        "https://www.naturadb.de/pflanzen/juniperus-communis/",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC11751590/"
+      ]
+    },
+    {
+      "id": "kulturapfel",
+      "name_de": "Kulturapfel",
+      "name_latin": "Malus domestica",
+      "group": "Obstbaum",
+      "presets": [
+        "apfel"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          5,
+          6
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          6,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": [
+          6,
+          8
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Hochstamm auf Sämlingsunterlage (Streuobst/Hausbaum). Zu erwartende Baumhöhe je Unterlage laut LfULG Sachsen: Sämling 5–6 m, A2 5–6 m, MM106 4 m, M4 3 m, M26 3 m, M9 2,5 m; Ertragseintritt Sämling 6–8 J., A2 5–7 J., MM106/M4 3–5 J., M26/M9 2–3 J. Kronendurchmesser 6–10 m gilt für ausgewachsene Hochstämme (nach mind. 50 Jahren).",
+        "speed": null
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Hochstamm mit ca. 160–180 cm Stammhöhe bis zur Krone; gängige Erziehung als Rundkrone (Öschbergkrone) mit Mitteltrieb und 3–4 Leitästen, auch Oval-, Etagen- oder Hohlkrone.",
+      "root_system": "Durch die Unterlage bestimmt; Sämling ist standfest (kein Dauerpfahl), schwache Unterlagen wie M9/M26 brauchen einen Pfahl.",
+      "light": "Licht",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Ertrag ausgewachsener Hochstämme ca. 250 kg (100–350 kg) je Baum (FiBL). Spätfröste im April/Mai können große Ertragsverluste verursachen.",
+      "wood": null,
+      "habitat": "Nährstoffreiche, nicht zu schwere, gut durchlässige Böden; nach Kernobst wegen Bodenmüdigkeit nicht direkt wieder Apfel pflanzen. Pflanzabstand Sämling 8 m (LfULG); Streuobst 12–15 m zwischen, 9–12 m in den Reihen (FiBL).",
+      "notes": "Höhe: LfULG Sachsen nennt für Sämlingsunterlage nur 5–6 m (Hausgarten-Kontext), University of Minnesota Extension für 'seedling or standard rootstock' 20 ft (6 m) oder mehr und 8+ Jahre bis zum Ertrag. FiBL: Hochstamm-Lebensdauer 'lang (50 und mehr Jahre)', Aufbauphase 15–20 Jahre bis Vollertrag; Hochstammobstbäume insgesamt 80 (Zwetschge) bis 200 Jahre (Birne) – für Apfel allein keine Zahl, daher age_years.typical/max = null. Schwach wachsende Unterlagen: Lebensdauer ca. 20–25 Jahre (laut Suchauszug eines sächsischen Vortrags 'Baumobst für den Garten', Original nicht abrufbar, nicht in Zahlen übernommen). Keine Quelle mit jährlichem Höhen- oder Dickenzuwachs gefunden.",
+      "sources": [
+        "https://publikationen.sachsen.de/bdb/artikel/13415/documents/36745",
+        "https://www.bubikon.ch/_rte/information/2940079",
+        "https://www.fibl.org/fileadmin/documents/shop/1292-hochstaemme.pdf",
+        "https://extension.umn.edu/fruit/growing-apples"
+      ]
+    },
+    {
+      "id": "suesskirsche",
+      "name_de": "Süßkirsche",
+      "name_latin": "Prunus avium",
+      "group": "Obstbaum",
+      "presets": [
+        "kirsche"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          20,
+          25
+        ],
+        "max": 35
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          50,
+          70
+        ],
+        "max": 120
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          70,
+          100
+        ],
+        "max": 100,
+        "first_fruit": [
+          6,
+          8
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.4,
+          1
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Größen-, Alters- und Zuwachswerte stammen aus der Forstwirtschaft (Vogelkirsche im Waldbestand, FVA Baden-Württemberg, EUFORGEN). Obstbaulich: Süßkirsche auf Vogelkirschsämling wächst stark; Ertragsbeginn bei Rundkrone im 6.–8. Standjahr, bei Spindel 4.–5. (LWF/LWG Bayern).",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Freistehend große, rundliche, breite Kronen mit dicken Stämmen (LWF). Junge Bäume eher kegelförmig.",
+      "root_system": "Auf Vogelkirschsämling standfest, Pfahl nur in den ersten Jahren. Vermehrt sich auch über Wurzelbrut; Stockausschlag auch aus den Wurzeln.",
+      "light": "Licht",
+      "bark": "Waagerecht abrollende, glänzende Ringelborke mit großen Lentizellen (EUFORGEN).",
+      "leaves": null,
+      "flowers_fruit": "Weiße Blüten in großer Menge, eine der ersten blühenden Baumarten im Frühjahr; insektenbestäubt, selbstunverträglich. Ertrag ausgewachsener Hochstämme ca. 150 kg (100–200 kg) je Baum (FiBL).",
+      "wood": "Wertvolles, recht hartes Holz mit gelblichem Splint und rötlichem Kern; Furnier und Massivmöbel. Rohdichte 0,60–0,69 g/cm³ (Mittel 0,63). Geringe Witterungsbeständigkeit.",
+      "habitat": "Europa, Nordafrika, Westasien; bis 1800 m in den Alpen. Niederschlag 400–1400 mm, Jahresmittel 5–15 °C. Tiefgründige, nährstoffreiche Böden, pH 5,5–8,5, empfindlich gegen Staunässe.",
+      "notes": "FVA: bis 25 m Höhe, 70 cm BHD, ca. 100 Jahre; halbe Endhöhe schon nach 15–25 Jahren; jährlicher Durchmesserzuwachs 4–10 mm (höhere Werte nur bei Freistellung); Stammfäule ab dem 70./80. Jahr. EUFORGEN (Slowenien): reif mit 60–80 Jahren bei 20–25 m und 50–70 cm BHD, Ausnahmebäume bis 35 m und über 120 cm, lebt meist 70–100 Jahre. LWF Bayern (obstbaulich): veredelte Süßkirschen werden 'deutlich über 60 Jahre' alt; auf sehr schwachen Unterlagen 15–20 Jahre, auf leicht reduzierenden 20–25 Jahre. Kronenbreite: nur Baumschulangabe (über 15 m bei alten Bäumen), daher null. Pflanzabstand Streuobst 12–15 × 10–12 m (FiBL).",
+      "sources": [
+        "https://www.waldwissen.net/assets/waldwirtschaft/waldbau/fva_artensteckbriefe/prunus_avium_baumartensteckbrief.pdf",
+        "https://euforgen.org/fileadmin/templates/euforgen.org/upload/Countries/Slovenia/Technical_guidelines/Prunus_avium_SVN.pdf",
+        "https://www.lwg.bayern.de/mam/cms04/biodiversitaet/dateien/w65-suesskirschen-im-obstbau.pdf",
+        "https://www.fibl.org/fileadmin/documents/shop/1292-hochstaemme.pdf"
+      ]
+    },
+    {
+      "id": "kulturbirne",
+      "name_de": "Kulturbirne",
+      "name_latin": "Pyrus communis",
+      "group": "Obstbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          8,
+          12
+        ],
+        "max": 20
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          6,
+          10
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 200,
+        "first_fruit": [
+          6,
+          8
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Hoch- und Mittelstamm auf Sämlingsunterlage (Obstwiese/Hausbaum): Ertragseintritt 6–8 Jahre, Standfläche 10–14 m² (LfULG Sachsen). Quittenunterlagen (MA, Adams, MC) für Niederstamm/Spindel: Ertrag nach 2–5 Jahren.",
+        "speed": null
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Hochstamm; in den ersten Standjahren wächst die Stammverlängerung deutlich stärker als die Seitentriebe (steil aufrecht). Birnen tragen vorwiegend an altem, kurzem Holz.",
+      "root_system": "Sämlingsunterlage standfest; Quittenunterlagen flachwurzelnd und pfahlbedürftig.",
+      "light": "Licht",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Ertrag ausgewachsener Hochstämme ca. 300 kg (250–350 kg) je Baum (FiBL).",
+      "wood": null,
+      "habitat": "Heimat Kaukasus und Zentralasien. Geschützte, warme Lagen mit warmen, nährstoff- und humusreichen Böden; Winterfröste unter −20 °C und Spätfrostlagen meiden.",
+      "notes": "FiBL: Mostbirnbäume erreichen 15–20 m, Hochstammobstbäume werden bis 200 Jahre alt (Birne als oberes Ende). Typische Höhe 8–12 m nur aus Baumschul-Sortenblättern (ebben.nl). Kronendurchmesser ausgewachsener Hochstämme 6–10 m (Gemeinde Bubikon). Gartenportal nennt bis 180 Jahre in Deutschland (schwache Quelle, nicht übernommen). Pflanzabstand Streuobst 12–15 × 10–12 m (FiBL). Kein jährlicher Zuwachs gefunden; Schnittregel LfULG: Spitze kürzen, bis der Jahreszuwachs 40 cm nicht mehr überschreitet (Erziehungsvorgabe, kein Wuchsmaß).",
+      "sources": [
+        "https://publikationen.sachsen.de/bdb/artikel/13504/documents/36744",
+        "https://www.fibl.org/fileadmin/documents/shop/1292-hochstaemme.pdf",
+        "https://www.bubikon.ch/_rte/information/2940079",
+        "https://www.ebben.nl/de/treeebb/pycgwild-pyrus-communis-gieser-wildeman/pdf/"
+      ]
+    },
+    {
+      "id": "zwetschge_pflaume",
+      "name_de": "Zwetschge/Pflaume",
+      "name_latin": "Prunus domestica",
+      "group": "Obstbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          5.5,
+          6.1
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          5,
+          8
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 80,
+        "first_fruit": [
+          3,
+          4
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Höhe 18–20 ft (5,5–6,1 m) für 'Stanley' als Standardbaum (NC State Extension; Halbstamm 12–15 ft, Zwerg 8–10 ft). Kronendurchmesser 5–8 m für ausgewachsene Hochstämme nach mind. 50 Jahren (Bubikon). Alter 80 Jahre für Hochstamm-Zwetschgen (FiBL).",
+        "speed": null
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Hochstamm mit Krone ab ca. 160–180 cm Stammhöhe.",
+      "root_system": "Durch die Unterlage bestimmt (z. B. St. Julien, Myrobalane, Marianna, Wangenheimer).",
+      "light": "Licht",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Ertrag ausgewachsener Hochstämme ca. 120 kg (100–150 kg) je Baum (FiBL). 'Stanley' trägt nach 3–4 Jahren (NC State).",
+      "wood": null,
+      "habitat": "Zwetschgen ertragen auch schwerere und feuchte Böden (FiBL).",
+      "notes": "Lebensdauer nur als Obergrenze 80 Jahre (FiBL: 'Hochstammobstbäume erreichen ein Alter von 80 (Zwetschken) bis 200 Jahren (Birnen)'). Gartenportal: auf Wangenheimer ca. 3,5 m, auf Sämling bis 7 m (schwache Quelle, nur als Hinweis). Pflanzabstand Streuobst 10–13 × 8–10 m (FiBL). Kein jährlicher Zuwachs gefunden.",
+      "sources": [
+        "https://plants.ces.ncsu.edu/plants/prunus-domestica-stanley/common-name/stanley-european-plum",
+        "https://www.bubikon.ch/_rte/information/2940079",
+        "https://www.fibl.org/fileadmin/documents/shop/1292-hochstaemme.pdf",
+        "https://www.gartenjournal.net/zwetschgenbaum"
+      ]
+    },
+    {
+      "id": "olivenbaum",
+      "name_de": "Olivenbaum",
+      "name_latin": "Olea europaea",
+      "group": "Obstbaum",
+      "presets": [
+        "olive"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          8,
+          15
+        ],
+        "max": 15
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 500,
+        "first_fruit": [
+          4,
+          12
+        ],
+        "height_growth_culminates": 50
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            20,
+            40
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.2,
+          0.6
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Jungwuchs 20–40 cm/Jahr laut Baumschule (Evergreen Trees). Dickenzuwachs: Radialzuwachs 0,1–0,3 cm/Jahr an einem Ölbaum in Israel (Ehrlich et al. 2017), verdoppelt zum Durchmesser; Regression an verwilderten Oliven in Victoria/Australien (Hamilton et al. 2011): Alter = 0,4584 × Stammdurchmesser (mm), also ca. 2,2 mm Durchmesser je Jahr.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": [
+          1.4,
+          1.4
+        ],
+        "20": null,
+        "50": [
+          6,
+          6
+        ],
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Immergrüner, oft mehrstämmiger Baum mit dichter, runder Krone.",
+      "root_system": null,
+      "light": "Licht",
+      "bark": "Junge Stämme silbergrau bis grün, mit dem Alter grau und rau (Hamilton et al. nach Muyt 2001).",
+      "leaves": "Gegenständig, 3–8 cm lang, 1–4 cm breit, oberseits glänzend dunkel graugrün, unterseits silbrig schuppig.",
+      "flowers_fruit": "Kleine cremeweiße Blüten im Frühjahr; purpurschwarze Steinfrucht mit hartem braunem Kern, reift im Sommer. Fruchtbeginn mit 10–12 Jahren unbewässert (ca. 500 mm Regen), mit 4–5 Jahren bewässert.",
+      "wood": "Bildet nicht immer regelmäßige Jahrringe; Zählungen verschiedener Labore an denselben Proben wichen bis zum Faktor drei ab.",
+      "habitat": "Mittelmeerraum; in Südaustralien verwildert (Umweltunkraut in Victoria).",
+      "notes": "height_at_age_m 10 und 50 sind aus den beiden Regressionen von Hamilton et al. 2011 berechnet (Alter→Durchmesser→Höhe: Höhe = −0,0001·D² + 0,0657·D, D in mm), gelten für verwilderte Oliven in Victoria und nicht für Kulturbäume; 100 Jahre liegt am Rand der Daten und bleibt null. Höhe: AUB Landscape Plant Database 8–15 m, mehr als 50 Jahre bis zur Endhöhe (daher height_growth_culminates = 50 als Untergrenze); Hamilton et al. 2–15 m. Alter: Camarero et al. 2021 (Jahrring + Radiokarbon): die meisten Monumentalbäume vermutlich höchstens 300–500 Jahre; IUCN-Datenbank und Wyndham City nennen 1000 Jahre und mehr – starker Widerspruch, max = 500 nach der datierten Studie.",
+      "sources": [
+        "https://landscapeplants.aub.edu.lb/Plants/PlantProfile/f83da496-ff95-481f-ba73-914698d71be4",
+        "https://caws.org.nz/PPQ2526/PPQ%2026-1%20pp017-21%20Hamilton.pdf",
+        "https://frontiersin.org/articles/10.3389/fpls.2017.01918/full",
+        "https://iris.unibas.it/handle/11563/188276",
+        "https://www.evergreentrees.com.au/products/olea-europaea-olive-tree-ex-ground",
+        "https://www.iucngisd.org/gisd/pdf.php?sc=1585"
+      ]
+    },
+    {
+      "id": "kokospalme",
+      "name_de": "Kokospalme",
+      "name_latin": "Cocos nucifera",
+      "group": "Exot",
+      "presets": [
+        "palme"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          10,
+          20
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          20,
+          30
+        ],
+        "max": 50
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          50,
+          70
+        ],
+        "max": 100,
+        "first_fruit": [
+          5,
+          8
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": [
+            30,
+            100
+          ]
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Hohe Sorten brauchen 3–4 Jahre, bis sich ein Stamm über dem Boden bildet (FAO). Stammstreckung 30–100 cm/Jahr je nach Alter, Ökotyp und Boden (IRD/CIRAD-Übersicht, nur über Suchauszug gelesen). Alter 50–70 Jahre in Kultur, 60–100 Jahre wild (FAO EcoCrop).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Unverzweigter, schlanker, oft gebogener Stamm mit Schopf aus Fiederblättern.",
+      "root_system": "Büschelwurzelsystem; Hauptwurzeln ca. 10 mm dick, reichen 10 m und mehr vom Stamm (FAO EcoCrop).",
+      "light": "Licht",
+      "bark": null,
+      "leaves": "Gefiedert, 4–7 m lang, 1–1,5 m breit.",
+      "flowers_fruit": "Blütenstände ganzjährig, etwa einer pro Monat, 90–120 cm lang, männliche und weibliche Blüten. Blühbeginn Zwergsorten 4–5 (FAO: 3,5–4,5) Jahre, hohe Sorten 7–8 (FAO: 5–7) Jahre; volle Tracht nach 10–12 Jahren. Frucht 20–30 cm lang, reift ca. 12 Monate nach Bestäubung; 30–90 Nüsse je Baum und Jahr, bis 150.",
+      "wood": "Kein Kambium, daher kein Dickenwachstum des Stammes. Rohdichte 0,30–0,90 im äußeren, 0,10–0,35 im inneren Drittel; nur der äußere Teil des Stammfußes ist fest genug für Schnittholz; hoher Kieselsäuregehalt.",
+      "habitat": "Tropische Küsten; bestes Wachstum auf tiefen, durchlässigen sandigen Lehmen, pH 5,5–8,0; bis 1200 m am Äquator, am ertragreichsten unter 600 m; 1000–5000 mm Niederschlag; Jahresmittel 27–35 °C.",
+      "notes": "trunk_diameter_cm_per_year = null: Palme ohne sekundäres Dickenwachstum (FAO: Stamm nimmt nach der Bildung nicht mehr an Durchmesser zu). Stammdurchmesser 40–50 cm an der verdickten Basis, 20–30 cm in Brusthöhe (USDA FS Tropical Tree Seed Manual); Agroforestree 30–40 cm. Höhe: USDA FS 10–20 m, selten fast 30 m; FAO EcoCrop ca. 25 m, ausnahmsweise 30 m; Agroforestree hohe Sorten 24–30 m. Zuwachswert 30–100 cm/Jahr nur indirekt belegt (IRD-PDF war nicht abrufbar, Wert aus Suchauszug).",
+      "sources": [
+        "https://research.fs.usda.gov/download/treesearch/45147.pdf",
+        "https://ecocrop.apps.fao.org/ecocrop/srv/en/cropView?id=744",
+        "https://www.fao.org/4/w7731e/w7731e07.htm",
+        "https://growables.org/information/TropicalFruit/CocosAgroforestry.htm",
+        "https://horizon.documentation.ird.fr/exl-doc/pleins_textes/divers19-12/010034839.pdf"
+      ]
+    },
+    {
+      "id": "afrikanischer_affenbrotbaum_baobab",
+      "name_de": "Afrikanischer Affenbrotbaum (Baobab)",
+      "name_latin": "Adansonia digitata",
+      "group": "Exot",
+      "presets": [
+        "baobab"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          10,
+          25
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 1400
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": 15
+      },
+      "age_years": {
+        "typical": null,
+        "max": 1500,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            17,
+            34
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Jungpflanzung auf Feldern in Bankass, Mali (Kelly et al. 2022): hohe wurzelnackte Setzlinge 34 cm/Jahr, Containerpflanzen 17–22 cm/Jahr; mittlere Höhe 228 cm, BHD 2,3 cm bei der Messung. PFAF: junge Bäume erreichen 2 m in 2 Jahren, danach sehr langsam.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Flaschenförmig verdickter Stamm mit breiter, ausladender Krone (PFAF: bis 20 m hoch, 15 m breit).",
+      "root_system": null,
+      "light": "Licht",
+      "bark": "Dick und feuerresistent (Agroforestree).",
+      "leaves": null,
+      "flowers_fruit": "Große, eiförmige, hängende Kapselfrüchte ca. 30 cm lang mit trockenem, Vitamin-C-reichem Fruchtfleisch (PFAF).",
+      "wood": "Weißlich, schwammig und leicht (ca. 320 kg/m³ lufttrocken), pilzanfällig, ohne Handelswert, nicht als Brennholz geeignet; keine verlässlichen Jahrringe bei großen Bäumen.",
+      "habitat": "Dornsavannen des tropischen und südlichen Afrika und der südlichen Arabischen Halbinsel (POWO); bis 1500 m, Jahresmittel 20–30 °C, 250–1000 mm Regen (toleriert 100–1500 mm), 4–10 Trockenmonate.",
+      "notes": "Höhe: NParks 10–25 m, Agroforestree 10–25 m, PFAF bis 20 m. Stamm: PFAF Durchmesser 10–14 m (max = 1400 cm); NParks Umfang meist 3–10 m, bis 28 m. Alter: Radiokarbon (Patrut et al. 2010) ältestes Holz eines Baumes in Südafrika ca. 1000 Jahre; Chapman-Baobab (Botswana) ältester Stamm ca. 1345 Jahre; PFAF bis ca. 1500, einzelne vermutet 2000. Llifle: ein Baum mit 7 m Durchmesser war per Radiokarbon ca. 600 Jahre alt (schwache Quelle). Radialzuwachs nimmt mit dem Alter ab, Flächen-/Volumenzuwachs stieg bis ca. 650 Jahre (Patrut 2010) – keine Zahl in cm/Jahr gelesen. Fruchtbeginn: PFAF nennt '2 bis 15 Jahre' – unplausibel weit und nicht bestätigt, daher null.",
+      "sources": [
+        "https://ideas.repec.org/a/spr/endesu/v24y2022i6d10.1007_s10668-021-01768-4.html",
+        "https://pfaf.org/plants/baobab-judas-fruit-adansonia-digitata/",
+        "https://www.nparks.gov.sg/FloraFaunaWeb/Flora/2/6/2696",
+        "https://darchive.mblwhoilibrary.org/entities/publication/cb8a7809-b357-5b2c-82af-5b78f3c8b6e4",
+        "https://repository.up.ac.za/items/8ef5c07c-80b2-4f73-9c73-6e52e0e0838e/full",
+        "https://powo.science.kew.org/taxon/558628-1",
+        "https://llifle.com/Encyclopedia/TREES/Family/Bombacaceae/103/Adansonia_bahobab"
+      ]
+    },
+    {
+      "id": "schirmakazie",
+      "name_de": "Schirmakazie",
+      "name_latin": "Vachellia tortilis",
+      "group": "Exot",
+      "presets": [
+        "akazie"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          5,
+          20
+        ],
+        "max": 21
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          8,
+          13
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 650,
+        "first_fruit": null,
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.04,
+          0.48
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Wildbäume in der hyperariden Ostwüste Ägyptens (Andersen & Krzywinski 2007): Radialzuwachs 0,2–2,4 mm/Jahr, hier zum Durchmesser verdoppelt; Standortmittel 0,23–1,87 mm/Jahr radial. In Kultur nur 3–5 m hoch bei 8–13 m Breite (SANBI).",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Flache, schirmförmige Krone, deutlich breiter als hoch.",
+      "root_system": null,
+      "light": "Licht",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": null,
+      "wood": null,
+      "habitat": "Trockensavannen und Wüstenränder Afrikas bis Vorderasien; in Indien (Rajasthan) als beste Akazie für die Aufforstung arider Zonen beurteilt (CAZRI).",
+      "notes": "Höhe in der Natur 5–20 m (SANBI, University of Arizona Arboretum), bis 21 m (World Agroforestry); 'fairly slow-growing' (SANBI). Alter: datierte Bäume 200–650 Jahre, nach Autoren eher Unterschätzung. Größter beobachteter Baum der Ostwüste: Radius 444 mm (≈ 89 cm Durchmesser, nicht als typischer Wert übernommen). Kein Höhenzuwachs pro Jahr gefunden; der oft zitierte Wert 60 mm/Jahr gilt für Vachellia erioloba, nicht für V. tortilis. SANBI-Seite lieferte 403; Werte aus Suchauszug.",
+      "sources": [
+        "https://pza.sanbi.org/node/9642",
+        "https://arboretum.arizona.edu/sites/arboretum.arizona.edu/files/Vachellia%20tortilis_SD_1.pdf",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC1929062",
+        "https://apps.worldagroforestry.org/treedb/AFTPDFS/Acacia_tortilis.PDF",
+        "https://cazri.res.in/publications/KrishiKosh/20-(ACACIA%20TORTILIS%20FOSK%20A%20PROMISING%20FAST%20GROWING).pdf"
+      ]
+    },
+    {
+      "id": "kanarischer_drachenbaum",
+      "name_de": "Kanarischer Drachenbaum",
+      "name_latin": "Dracaena draco",
+      "group": "Exot",
+      "presets": [
+        "drachenbaum"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          10,
+          15
+        ],
+        "max": 21
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 365,
+        "first_fruit": [
+          9,
+          30
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Langsam: etwa zehn Jahre bis 1,2 m (treelib), kann schneller wachsen. Der Stamm hört mit 10–15 Jahren auf zu wachsen, bildet den ersten Blütenstand und verzweigt sich; jeder Ast wächst wieder 10–15 Jahre bis zur nächsten Verzweigung.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": [
+          1.2,
+          1.2
+        ],
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Schirmförmige Krone aus wiederholt gabelig verzweigten Ästen; Alter nur über die Zahl der Verzweigungsebenen schätzbar.",
+      "root_system": null,
+      "light": "Licht",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Weiße, lilienähnliche, duftende Blüten, danach korallenrote Beeren. Erste Blüte im Garten bei voller Sonne mit 9–12 Jahren, Halbschatten 16, Schatten 18–19 Jahre (Springer 'Trees' 2015); Literatur nennt 9–10 bis fast 30 Jahre.",
+      "wood": "Keine Jahrringe (Einkeimblättrige).",
+      "habitat": "Kanaren, Kapverden, Madeira, West-Marokko; auf den Azoren eingeführt.",
+      "notes": "Höhe 10–15 m, gelegentlich 21 m und ältester bekannter Baum (Teneriffa) auf 250–365 Jahre geschätzt: nur Pflanzenportal (Aloes in Wonderland). Stammdicke wächst bei Dracaena durch ein atypisches Dickenwachstum, aber kein Zahlenwert gefunden (null). first_fruit = Spanne des ersten Blühens.",
+      "sources": [
+        "https://treelib.ca/species/1411/dracaena_draco/",
+        "https://link.springer.com/article/10.1007/s00468-015-1307-z",
+        "https://aloesinwonderland.com/plant-gallery/dracaena-draco"
+      ]
+    },
+    {
+      "id": "blauer_eukalyptus",
+      "name_de": "Blauer Eukalyptus",
+      "name_latin": "Eucalyptus globulus",
+      "group": "Exot",
+      "presets": [
+        "eukalyptus"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          30,
+          55
+        ],
+        "max": 80
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 210
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": [
+          4,
+          5
+        ],
+        "height_growth_culminates": 10
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            null,
+            250
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.73,
+          0.73
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Plantagen/verwilderte Bestände in Kalifornien: der Großteil des Höhenwachstums in den ersten 5–10 Jahren, 60–70 % der Endhöhe mit etwa 10 Jahren (FEIS); mittlerer jährlicher Zuwachs kulminiert mit 10 Jahren (Rinehart & Standiford 1983). Jungpflanzen bis 2,5 m Neuzuwachs pro Jahr (Temperate Plants Database). Durchmesserzuwachs 7,3 mm/Jahr in einer 100-jährigen Plantage in den Nilgiris, Indien.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Offene, unregelmäßige Krone mit hängenden Ästen.",
+      "root_system": "Keine Pfahlwurzel; braucht mind. 0,6 m Bodentiefe (FEIS). Tiefes, weites Wurzelsystem, beeinflusst Wasserhaushalt bis 14 m Tiefe und 30 m vom Stamm (California Agriculture). Lignotuber, treibt stark aus Stöcken aus.",
+      "light": "Licht",
+      "bark": "Blassgraubraun, löst sich in langen papierartigen Streifen und legt eine glatte, hellgelbe Oberfläche frei.",
+      "leaves": "Jugendblätter gegenständig, oval, wachsig blaugrün an vierkantigen Trieben; Altersblätter wechselständig, lanzett- bis sichelförmig, 10–30 cm lang, ledrig.",
+      "flowers_fruit": "Gelblichweiße Blüten ca. 5 cm breit, in Kalifornien Dezember–Mai, ab 4–5 Jahren (Cal-IPC: 2–5 Jahre). Holzige Kapsel 6–25 mm, reift ca. 11 Monate nach der Blüte. Gute Samenjahre alle 3–5 Jahre.",
+      "wood": "Bildet schnell Holz; in Kalifornien Brennholzernte alle 7 Jahre möglich.",
+      "habitat": "Tasmanien und Südost-Australien; weltweit meistgepflanzte Eukalyptusart. In Kalifornien bestes Wachstum im Nebelgürtel der Küste, braucht feuchte Böden, Grundwasser oder Nebeltropfen; schattenintolerant.",
+      "notes": "height_cm_per_year.young = [null, 250]: nur Obergrenze 2,5 m/Jahr belegt. trunk_diameter_cm_per_year nur ein Messwert (Nilgiris). Größenangaben mit starkem Widerspruch: Stanford zitiert einen kalifornischen Bericht von 1907 mit 24-jährigen Bäumen von 175 ft (≈53 m) und über 3 ft (≈0,9 m) Durchmesser; eine neuseeländische Baumschule schätzt nur 8 m Höhe nach 10 Jahren. Höhe: FEIS 30–55 m, in Kalifornien bis 80 m; Cal-IPC 'häufig 100 ft oder mehr', Stamm 7 ft (≈2,1 m) oder mehr (max = 210 cm); Stanford-Rekordbaum 2001: 160 ft, Umfang 38 ft. Kein Höchstalter gefunden.",
+      "sources": [
+        "https://fs.usda.gov/database/feis/plants/tree/eucglo/all.html",
+        "https://www.cal-ipc.org/docs/ip/management/wwh/pdf/19654.pdf",
+        "https://escholarship.org/uc/item/9db933pg",
+        "https://trees.stanford.edu/ENCYC/EUCglo.htm",
+        "https://research.fs.usda.gov/treesearch/27462",
+        "https://temperate.theferns.info/plant/Eucalyptus+globulus",
+        "https://www.i-scholar.in/index.php/indianforester/article/view/25117"
+      ]
+    },
+    {
+      "id": "saguaro_kaktus",
+      "name_de": "Saguaro-Kaktus",
+      "name_latin": "Carnegiea gigantea",
+      "group": "Exot",
+      "presets": [
+        "saguaro"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          12,
+          15
+        ],
+        "max": 23.8
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          150,
+          175
+        ],
+        "max": 200,
+        "first_fruit": [
+          35,
+          35
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Wildpflanzen im Saguaro National Park (NPS). In den ersten acht Jahren nur 1–1,5 inch (2,5–3,8 cm) Höhe. Größe-Alter-Tabelle (NPS): 1–3 inch mit 5–10 Jahren, 2 ft mit 20–40 Jahren, 6–8 ft mit 35–70 Jahren, ca. 40 ft (gesunder Altbaum) mit teils über 150 Jahren. Wachstum hängt stark von Regen, Temperatur und Boden ab.",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": [
+          0.025,
+          0.076
+        ],
+        "20": null,
+        "50": [
+          1.8,
+          2.4
+        ],
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Säule; Arme bilden sich meist mit 50–70 Jahren (in trockeneren Gebieten bis 100 Jahre) bzw. ab ca. 8–20 ft Höhe; manche bilden nie Arme.",
+      "root_system": null,
+      "light": "Licht",
+      "bark": null,
+      "leaves": null,
+      "flowers_fruit": "Erste Blüte mit etwa 35 Jahren (ca. 6–8 ft Höhe), im trockeneren Westteil erst mit ca. 70 Jahren; Blüte Ende April bis Mitte Juni, jede Blüte 18–24 Stunden offen.",
+      "wood": null,
+      "habitat": "Sonora-Wüste (Arizona).",
+      "notes": "Kein sekundäres Dickenwachstum im Sinne eines Baumes; trunk_diameter_cm_per_year = null, keine Durchmesserangaben bei NPS. height_at_age_m sind Spannen aus der NPS-Tabelle (10 J.: 1–3 inch; 50 J. liegt in der Spanne 35–70 J. für 6–8 ft); 20 J. nicht eindeutig (2 ft erst mit 20–40 Jahren). Höhe: NPS-Wachstumsseite ca. 40 ft (12 m) für gesunde Altpflanzen, NPS-Artikel bis 50 ft (15 m); höchster gemessener Saguaro 78 ft (23,8 m) ohne Arme. Erwachsen mit ca. 125 Jahren, dann 6 t oder mehr. Lebensdauer im Mittel 150–175, einige über 200 Jahre.",
+      "sources": [
+        "https://www.nps.gov/sagu/learn/nature/saguaro-growth.htm",
+        "https://www.nps.gov/articles/saguaro-cactus.htm",
+        "https://www.nps.gov/sagu/learn/nature/how-saguaros-grow.htm"
+      ]
+    },
+    {
+      "id": "ginkgo",
+      "name_de": "Ginkgo",
+      "name_latin": "Ginkgo biloba",
+      "group": "Sonstige",
+      "presets": [
+        "ginkgo"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          15,
+          24
+        ],
+        "max": 30
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          9,
+          18
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": [
+          20,
+          50
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Park- und Straßenbäume. Langsam bis mittel: 10–15 ft (3–4,6 m) in 10–12 Jahren (Dirr, über NW Missouri State Arboretum); mit Wasser und Dünger auch sehr schnell. Junge Bäume oft extrem langsam, kümmernde Bäume stehen jahrelang fast still (Trees and Shrubs Online); nach der Pflanzung einige Jahre sehr langsam, danach mäßig (UF/IFAS).",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": [
+          18.9,
+          18.9
+        ],
+        "200": [
+          22,
+          22
+        ]
+      },
+      "crown_shape": "Rund bis pyramidal, unregelmäßig und offen, jung licht und mit dem Alter dichter (UF/IFAS); männliche Bäume meist etwas pyramidal, Stamm oft tief in mehrere aufrechte Hauptäste geteilt, Seitenäste mit hängenden Spitzen. Alte Bäume breit ausladend.",
+      "root_system": "Gilt nicht als problematisch (UF/IFAS).",
+      "light": "Licht",
+      "bark": "Graubraun mit Rippen, im Alter tief gefurcht.",
+      "leaves": "Fächerförmig, gelappt, 2–3 inch (5–7,5 cm), parallele Gabelnervatur, sommergrün, im Herbst leuchtend gelb und schnell abfallend; Stiele 1½–3½ inch.",
+      "flowers_fruit": "Zweihäusig; weibliche Bäume tragen ovale bis runde, ¾–1½ inch lange Samen mit fleischiger, übelriechender Hülle (tan bis orange), daher meist männliche Bäume gepflanzt. Geschlecht erst bei Blühbeginn erkennbar, nach 20–50 Jahren (Lexington).",
+      "wood": null,
+      "habitat": "Ursprünglich China (Anhui, Jiangsu), scheinbar wild noch im Bergland zwischen Anhui und Zhejiang; sonst nur kultiviert. Verträgt Stadtklima, Hitze, Luftverschmutzung, Salz; Zonen 3A–8A.",
+      "notes": "height_at_age_m aus britischen Bäumen mit bekanntem Pflanzjahr (Trees and Shrubs Online): Knap Hill (gepfl. 1859) 62 ft ≈ 18,9 m im Jahr 1961 (≈102 J.); Kew-Ginkgo (gepfl. 1762) 56 ft ≈ 17 m 1888 (126 J.), 62 ft 1904, 72 ft ≈ 22 m 1970 (208 J.), 82 ft ≈ 25 m 1984; Linton Park (gepfl. 1844) 90 ft ≈ 27,4 m 1965 (121 J.) – große Streuung je Standort. Höhe: UF/IFAS 50–75 ft (15–23 m), Spread 50–60 ft (15–18 m); NW Missouri 50–80 ft, Spread 30–40 ft; Trees and Shrubs Online über 100 ft (30 m); RHS 'höher als 12 m', 20–50 Jahre bis zur Endhöhe. Alter: 'ältester etwa 1000 Jahre' nur Baumschulangaben, daher max = null. Kew-Ginkgo Umfang 13½ ft (≈4,1 m) 1970.",
+      "sources": [
+        "https://ask.ifas.ufl.edu/publication/ST273",
+        "https://www.nwmissouri.edu/ARBORETUM/tree/ginkgobilboba.htm",
+        "https://www.treesandshrubsonline.org/articles/ginkgo/ginkgo-biloba",
+        "https://www.rhs.org.uk/Plants/879/wd/Details",
+        "https://www.lexingtonky.gov/ginkgo"
+      ]
+    },
+    {
+      "id": "tulpen_magnolie",
+      "name_de": "Tulpen-Magnolie",
+      "name_latin": "Magnolia × soulangeana",
+      "group": "Sonstige",
+      "presets": [
+        "magnolie"
+      ],
+      "game": null,
+      "height_m": {
+        "typical": [
+          4.6,
+          9.1
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          6.1,
+          9.1
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": null,
+        "height_growth_culminates": 20
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Gartenbaum. Wachstum mäßig schnell, verlangsamt sich deutlich ab etwa 20 Jahren (UF/IFAS); Lexington und Utah State: mittel.",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Mehrstämmig, ausladend; jung deutlich aufrecht, mit ca. 10 Jahren eher oval als rund; Krone unregelmäßig, offen, aufrecht bis rund.",
+      "root_system": null,
+      "light": "Licht",
+      "bark": "Hellgrau, glatt, auffällig.",
+      "leaves": "Wechselständig, einfach, ganzrandig, verkehrt-eiförmig bis länglich, 2–8 inch (5–20 cm), sommergrün, Herbstfarbe gelb.",
+      "flowers_fruit": "Große, behaarte Blütenknospen überwintern an den Triebspitzen; Blüte im Spätwinter/Frühjahr vor dem Laub, Spätfrost zerstört oft die Blüten. Frucht länglich, unregelmäßig, 1–3 inch, rot, trocken.",
+      "wood": "Spröde Äste.",
+      "habitat": "Gartenhybride, nicht in Nordamerika heimisch; Zonen 4B–9A.",
+      "notes": "Höhe: Lexington 15–30 ft (4,6–9,1 m), Breite 20–30 ft (6,1–9,1 m); UF/IFAS ('Burgundy') 20–25 ft, Breite 20–30 ft; University of Redlands bis 25 ft. Kein jährlicher Zuwachs in Zahlen gefunden.",
+      "sources": [
+        "https://ask.ifas.ufl.edu/publication/ST388/pdf",
+        "https://www.lexingtonky.gov/node/19381",
+        "https://extension.usu.edu/treebrowser/catalog/magnolia-saucer"
+      ]
+    },
+    {
+      "id": "kobushi_magnolie",
+      "name_de": "Kobushi-Magnolie",
+      "name_latin": "Magnolia kobus",
+      "group": "Sonstige",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          7.6,
+          9.1
+        ],
+        "max": 12
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          7.6,
+          10.7
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": [
+          25,
+          30
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Gartenbaum. Langsam wachsend (NC State, Utah State).",
+        "speed": "langsam"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Breit, Krone etwa so breit wie hoch.",
+      "root_system": "Wurzeln leicht verletzlich, Verpflanzen nur mit Vorsicht.",
+      "light": "Halbschatten",
+      "bark": "Silbrig bis bräunlich-grau, warzig, an alten Stämmen gerippt; Äste spröde.",
+      "leaves": "Wechselständig, einfach, aromatisch, ganzrandig, länglich-elliptisch bis verkehrt-eiförmig, bis 7,5 inch (19 cm), oberseits dunkelgrün, unterseits hellgrün und behaart; kaum Herbstfarbe.",
+      "flowers_fruit": "Becherförmige, duftende Blüten 3–6 inch (7,5–15 cm), cremeweiß, oft rosa oder weinrot überlaufen, 6–9 Blütenblätter, im zeitigen Frühjahr vor dem Laub. Junge Pflanzen blühen spärlich; aus Samen bis 30 Jahre bis zur vollen Blüte bzw. etwa 25 Jahre bis zur besten Blüte. Zapfenartige Sammelfrucht bis 3 inch mit roten Samen, platzt im Herbst auf.",
+      "wood": null,
+      "habitat": "Korea und Japan. Feuchte, humusreiche, durchlässige Lehmböden; verträgt hohen pH, Kälte, die meisten Böden, aber keine sehr nassen oder trockenen Böden und kaum Stadtluft; Zonen 4a–8b.",
+      "notes": "Licht: volle Sonne bis Halbschatten (NC State); Südlagen in voller Sonne meiden, weil die Knospen sonst zu früh austreiben. Höhe: NC State 25–30 ft (7,6–9,1 m), Breite 25–35 ft (7,6–10,7 m); Temperate Plants Database ca. 12 m (max). first_fruit = Spanne bis zur vollen bzw. besten Blüte, nicht erste Blüte.",
+      "sources": [
+        "https://plants.ces.ncsu.edu/plants/magnolia-kobus",
+        "https://extension.usu.edu/treebrowser/catalog/magnolia-kobus.php",
+        "https://temperate.theferns.info/plant/Magnolia+kobus"
+      ]
+    },
+    {
+      "id": "echter_feigenbaum",
+      "name_de": "Echter Feigenbaum",
+      "name_latin": "Ficus carica",
+      "group": "Obstbaum",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          3,
+          9
+        ],
+        "max": null
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 17.5
+      },
+      "crown_width_m": {
+        "typical": [
+          3.7,
+          5
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": [
+          50,
+          150
+        ],
+        "max": null,
+        "first_fruit": [
+          1,
+          2
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            25,
+            60
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Kulturbäume aus Stecklingen. Jungwuchs 30–60 cm/Jahr laut Baumschule (Sorte 'Figalicious'), ca. 25 cm/Jahr laut CSBE; Growables: schnell. Trägt weniger als ein Jahr nach dem Auspflanzen von Stecklingen (Purdue/Morton), laut CSBE meist innerhalb von zwei Jahren.",
+        "speed": "schnell"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Niedriger, breit ausladender Baum oder Großstrauch.",
+      "root_system": "Meist flach und weit streichend, bedeckt bis ca. 15 m Fläche; in durchlässigem Boden einzelne Wurzeln bis 6 m tief (Purdue/Morton).",
+      "light": "Licht",
+      "bark": null,
+      "leaves": "Sommergrün, handförmig mit 3–7 Hauptlappen, Spreite bis 25 cm lang und breit.",
+      "flowers_fruit": "Feige ist ein Blütenstand (Syconium), 2,5–10 cm lang, mit 30–1600 Samen; meist zwei Ernten pro Jahr; reichlich Milchsaft. Erträge sinken nach etwa 12–15 Jahren.",
+      "wood": null,
+      "habitat": "Vermutlich Westasien; in den Tropen auf 800–1800 m; verträgt an günstigen Standorten 10–20 °F Frost.",
+      "notes": "Höhe: Purdue/Morton 10–30 ft (3–9 m); RHS 2,5–4 m; Canberra National Arboretum 8 m × 5 m; Growables 12 × 12 ft. Stamm meist nicht über 7 inch (17,5 cm) (Purdue). Lebensdauer 50–150 Jahre (Growables), 100 Jahre (Canberra); Purdue nur 'sehr hohes Alter'. Jungwuchsrate nur aus Baumschul-/Laienquellen.",
+      "sources": [
+        "https://hort.purdue.edu/newcrop/morton/fig.html",
+        "https://growables.org/information/TropicalFruit/Fig.htm",
+        "https://www.nationalarboretum.act.gov.au/living-collections/forests-and-trees/forest-3",
+        "https://www.rhs.org.uk/plants/7199/ficus-carica-f/details",
+        "https://csbe.org/edible-fig-ficus-carica",
+        "https://www.evergreentrees.com.au/products/ficus-carica-figalicious-figalicious-fig-tree"
+      ]
+    },
+    {
+      "id": "dattelpalme",
+      "name_de": "Dattelpalme",
+      "name_latin": "Phoenix dactylifera",
+      "group": "Exot",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          15,
+          25
+        ],
+        "max": 35
+      },
+      "trunk_diameter_cm": {
+        "typical": null,
+        "max": 50
+      },
+      "crown_width_m": {
+        "typical": null,
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": null,
+        "first_fruit": [
+          6,
+          10
+        ],
+        "height_growth_culminates": null
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": null,
+          "mature": [
+            30,
+            45
+          ]
+        },
+        "trunk_diameter_cm_per_year": null,
+        "crown_width_cm_per_year": null,
+        "context": "Kulturpalmen (University of Arizona Arboretum): 30–45 cm Höhe pro Jahr, ca. 5 m in 15–20 Jahren. Pro Jahr 10–26 neue Blätter (FAO).",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": [
+          5,
+          5
+        ],
+        "50": null,
+        "100": null,
+        "200": null
+      },
+      "crown_shape": "Unverzweigter Stamm mit Schopf aus 100–125 grünen Fiederblättern; bildet in den ersten 6–16 Jahren Seitentriebe (Kindel).",
+      "root_system": "Büschelwurzeln, 85 % in ca. 2 m Tiefe und 2 m Umkreis, einzelne tiefer als 6 m und bis 25 m seitlich (FAO).",
+      "light": "Licht",
+      "bark": "Stamm mit Blattstielbasen, Umfang ca. 1–1,10 m, bleibt zeitlebens gleich dick.",
+      "leaves": "Fiederblätter 3–6 m (meist ca. 4 m) lang, leben 3–7 Jahre; Fiederblättchen ca. 0,5 m.",
+      "flowers_fruit": "Zweihäusig; weibliche Blütenstände mit 50–150 Ährchen zu je 8000–10000 Blüten, im Mittel ca. 12 Blütenstände pro Jahr. Frucht 2–60 g, 18–110 mm lang. Ertrag 'Medjool' 80–120 kg, 'Barhee' im Mittel 200 kg (bis 500 kg) je Palme. Sämlinge tragen nach 6–10 Jahren (Arizona).",
+      "wood": null,
+      "habitat": "Tropische und subtropische Gebiete Afrikas und Südasiens; heute Mittelmeerraum, Asien, Nordamerika, Australien. Wüstenoasen.",
+      "notes": "Kein sekundäres Dickenwachstum: Seitenwachstum endet früh, der Umfang nimmt nach voller Kronenentwicklung nicht mehr zu (FAO), daher trunk_diameter_cm_per_year = null. Stammdurchmesser bis 0,5 m (Arizona). Höhe: FAO Stamm ca. 20 m; Arizona bis 35 m bzw. 50–100 ft; NParks 15–25 m (selten 30 m). height_at_age 20 = 5 m aus '5 m in 15–20 Jahren' (Arizona). Arizona nennt auch 'trägt nach etwa 10 Jahren'. Lebensdauer: nur Suchauszüge ohne klare Quelle (100–150 Jahre), daher null.",
+      "sources": [
+        "https://www.fao.org/4/y4360e/y4360e05.htm",
+        "https://apps.cals.arizona.edu/arboretum/taxon.aspx?id=207",
+        "https://www.nparks.gov.sg/florafaunaweb/flora/3/4/3414"
+      ]
+    },
+    {
+      "id": "sumpfzypresse",
+      "name_de": "Sumpfzypresse",
+      "name_latin": "Taxodium distichum",
+      "group": "Sonstige",
+      "presets": [],
+      "game": null,
+      "height_m": {
+        "typical": [
+          10,
+          40
+        ],
+        "max": 44.1
+      },
+      "trunk_diameter_cm": {
+        "typical": [
+          90,
+          210
+        ],
+        "max": null
+      },
+      "crown_width_m": {
+        "typical": [
+          6,
+          9
+        ],
+        "max": null
+      },
+      "age_years": {
+        "typical": null,
+        "max": 2624,
+        "first_fruit": [
+          30,
+          30
+        ],
+        "height_growth_culminates": 200
+      },
+      "growth": {
+        "height_cm_per_year": {
+          "young": [
+            30,
+            60
+          ],
+          "mature": null
+        },
+        "trunk_diameter_cm_per_year": [
+          0.64,
+          0.64
+        ],
+        "crown_width_cm_per_year": null,
+        "context": "Landschaftsbäume: 1–2 ft (30–60 cm) pro Jahr (Clemson). Gute Bedingungen (Wikipedia nach Silvics of North America): 3 m in 5 Jahren, 21 m in 41 Jahren, 36 m in 96 Jahren; Höhenwachstum endet weitgehend mit ca. 200 Jahren. Pflanzung auf Ton (USDA FS, Krinard & Johnson 1987): mittlerer Durchmesser von 6,1 auf 8,6 inch zwischen Alter 21 und 31 (≈0,64 cm/Jahr); die 30 größten Bäume je acre mit 31 Jahren 14,2 inch (36 cm) BHD und 72 ft (22 m) hoch.",
+        "speed": "mittel"
+      },
+      "height_at_age_m": {
+        "10": null,
+        "20": null,
+        "50": null,
+        "100": [
+          36,
+          36
+        ],
+        "200": null
+      },
+      "crown_shape": "Jung schmal bis breit pyramidal, im Alter breit und flach gewölbt; Stamm im Alter gerieft mit verbreitertem Fuß.",
+      "root_system": "Auf nassen Standorten 'Kniee' (Pneumatophoren), meist 0,3–0,9 m hoch.",
+      "light": "Licht",
+      "bark": "Graubraun bis rotbraun, löst sich in langen senkrechten Streifen.",
+      "leaves": "Sommergrüne Konifere; zweizeilige Nadeln 1,3–1,9 cm an abfallenden Kurztrieben, Austrieb hellgelbgrün, Herbstfarbe orangerot bis rotbraun.",
+      "flowers_fruit": "Runde Zapfen ca. ¾–1 inch (2–2,5 cm), grün, reifen braun im Herbst/Winter; männliche Kätzchen 7–13 cm. Gute Samenjahre alle 3–5 Jahre; die meisten Bäume tragen erst mit ca. 30 Jahren Samen.",
+      "wood": "Fäulnisresistent; alte Bestände 112–196 m³/ha.",
+      "habitat": "Südosten der USA: SO-New-Jersey bis Florida, westlich bis Zentral-Texas, Mississippi aufwärts bis S-Illinois/Indiana; Sümpfe, saisonal überflutete Auen, Flussufer. Verträgt auch schlecht durchlässige, verdichtete oder trockene Böden; Zonen 4–10.",
+      "notes": "Starker Widerspruch beim Wachstum: 36 m in 96 Jahren unter guten Bedingungen gegenüber 4–5 m nach 50 Jahren in Nordost-England und nur 30 cm in 5 Jahren auf einer Pflanzung in Florida (alle Wikipedia). height_at_age 100 = 36 m gilt für 96 Jahre. UF/IFAS: 40–50 ft (12–15 m) in 15–25 Jahren; Arbor Day 13–24 inch/Jahr; Iowa DNR 24+ inch/Jahr. Höhe: Wikipedia 10–40 m, höchster 44,1 m (Virginia); Clemson in der Landschaft 50–70 ft (15–21 m), wild 100–150 ft. Kronenbreite 20–30 ft (6–9 m) für Landschaftsbäume (Clemson). Schattentoleranz mittel (Virginia Tech). Alter: über 1600 Jahre (Virginia Tech), mindestens 2624 Jahre am Black River, NC (Stahle et al. 2019 über Wikipedia). Silvics-Originalseite war nicht abrufbar; Wachstumswerte daher über Wikipedia, das Silvics of North America (Wilhite & Toliver 1990) zitiert.",
+      "sources": [
+        "https://en.wikipedia.org/wiki/Taxodium_distichum",
+        "https://research.fs.usda.gov/treesearch/1709",
+        "https://hgic.clemson.edu/factsheet/bald-cypress/",
+        "https://dendro.cnre.vt.edu/DENDROLOGY/landowner_detail.cfm?ID=117",
+        "https://edis.ifas.ufl.edu/publication/ST620/pdf",
+        "https://treecalc.arborday.org/members/documents/keys/spring-2024/10-baldcypress-trees_1205.pdf"
+      ]
+    }
+  ]
+}

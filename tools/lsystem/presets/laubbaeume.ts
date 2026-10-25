@@ -27,8 +27,9 @@ A 0.35 -> "/(90)F[&(28)A]/(180)[&(28)A]^(5)A`,
 });
 
 const eiche = preset({
+  roots: { count: 6, spread: 3.4, rise: 2.2 },
   group, label: 'Eiche', axiom: 'FFFA', iterations: 7, angle: 48, length: 1.25, lengthFactor: 0.84,
-  jitter: 0.4, tropism: 0.1,
+  jitter: 0.4, tropism: 0.1, wander: 6,
   rules: `# Knorrig: weite Winkel, starke Streuung, schwere Äste neigen sich waagrecht.
 # Der Leittrieb knickt immer wieder ab (+(25)).
 A 0.45 -> "[&FFA]/(137.5)[&FA]/(137.5)[&(62)FA]
@@ -39,6 +40,7 @@ A 0.2 -> "F+(25)/(70)A`,
 });
 
 const buche = preset({
+  roots: { count: 6, spread: 3.2, rise: 2.6 },
   group, label: 'Buche', axiom: 'FFFFA', iterations: 8, angle: 28, length: 1.25, lengthFactor: 0.85,
   jitter: 0.2, tropism: 0.02,
   rules: `# Glatte graue Rinde, langer Stamm, dichte ovale Krone mit steilen Ästen
@@ -89,6 +91,7 @@ A -> "[&FFA]/(180)[&FA]/(90)`,
 });
 
 const platane = preset({
+  roots: { count: 6, spread: 3.2, rise: 2.4 },
   group, label: 'Platane', axiom: 'FFFFA', iterations: 7, angle: 42, length: 1.5, lengthFactor: 0.84,
   jitter: 0.3, tropism: 0.07,
   rules: `# Mächtig und breit, fleckig helle Rinde
@@ -131,6 +134,7 @@ A 0.4 -> "[&(30)FFA]/(180)[&FA]`,
 });
 
 const birke = preset({
+  roots: { count: 4, spread: 2.6, rise: 1.6 },
   group, label: 'Birke', axiom: 'FFFFA', iterations: 8, angle: 25, length: 1.2, lengthFactor: 0.84,
   jitter: 0.25, tropism: 0.2,
   rules: `# Weiße Rinde, schlank, die Zweigspitzen hängen (Tropismus)
@@ -141,11 +145,12 @@ A 0.4 -> "[&(35)FA]/(137.5)F[&FA]`,
 });
 
 const haengebirke = preset({
+  roots: { count: 4, spread: 2.6, rise: 1.6 },
   group, label: 'Hängebirke', axiom: 'FFFFFA', iterations: 7, angle: 34, length: 1.4, lengthFactor: 0.85,
   jitter: 0.2, tropism: 0.45,
   rules: `A 0.6 -> "[&FFA]/(120)[&FFA]/(120)[&FA]
 A 0.4 -> "[&(20)FFA]/(180)[&FA]`,
-  leaves: 'A', leafSize: 0.45, leafMaterials: ['Leaf', 'Ivy'], stemMaterial: 'BarkWhite', tip: 0.02,
+  leaves: 'A', leafSize: 0.45, leafMaterials: ['Leaf', 'Ivy'], stemMaterial: 'BarkWhite', tip: 0.02, pipe: 3,
   leaf: 'birke',
 });
 

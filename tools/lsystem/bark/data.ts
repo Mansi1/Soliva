@@ -1,5 +1,5 @@
 // Die erzeugten Rinden-Daten (textures.json, von bark/fetch.ts) - überall nutzbar.
-import json from './textures.json';
+import json from './textures.json' with { type: 'json' };
 import { BARK_SOURCES, MATERIAL_BARK, type BarkName } from './sources.ts';
 import type { Material } from '../materials.ts';
 

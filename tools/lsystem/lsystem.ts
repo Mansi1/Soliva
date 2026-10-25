@@ -85,6 +85,8 @@ export interface TreeSpec {
   readonly jitter: number;
   /** Neigung zur Schwerkraft je Ast; negativ: nach oben. */
   readonly tropism: number;
+  /** Krümmung: zufälliges Abweichen der Wuchsrichtung in Grad je Meter (vor `scale`), auch ohne Drehbefehl. */
+  readonly wander: number;
   /** Zeichen außer L, an denen Laub sitzt (meist die unfertigen Knospen). */
   readonly leaves: string;
   readonly leafShape: 'clump' | 'needle';
@@ -105,6 +107,30 @@ export interface TreeSpec {
   readonly tip: number;
   /** Exponent des Pipe-Modells: 2 = Fläche bleibt gleich, größer = schlankerer Stamm. */
   readonly pipe: number;
+  /** Ecken am dicken Stamm (mindestens 3); dünnere Äste haben anteilig weniger, Zweige 3. */
+  readonly sides: number;
+  /** Wurzelanläufe am Stammfuß nach Art des Baums; ohne: DEFAULT_ROOTS. */
+  readonly roots?: RootSpec;
+  /** Seed nur für die Wurzelanläufe; ohne: `seed`. */
+  readonly rootSeed?: number;
+  /**
+   * Vergrößert Längen und Laub; ohne größeres Laub sähe der Baum licht aus.
+   * Die Astspitzen bleiben so dick wie im Rezept (echte Zweige), die Dicke des
+   * Stamms stellt `pipe` ein. Die Beispiele setzen beides nach Höhe und
+   * Durchmesser ihrer Art (presets/index.ts). Ohne: 1. Früchte und andere
+   * Organe behalten ihre Größe.
+   */
+  readonly scale?: number;
+}
+
+/** Wurzelanläufe einer Baumart; der Seed streut sie je Baum. */
+export interface RootSpec {
+  /** Wie viele, ±1 je nach Seed; 0: keine (Palme, Kaktus). */
+  readonly count: number;
+  /** Wie weit sie hinausreichen, in Halbmessern des Stammfußes. */
+  readonly spread: number;
+  /** Wie hoch am Stamm sie ansetzen, in Halbmessern des Stammfußes. */
+  readonly rise: number;
 }
 
 export interface Segment {
@@ -243,8 +269,13 @@ interface Frame {
   readonly u: Vec3;
 }
 
-const turnFrame = (f: Frame, axis: Vec3, angle: number): Frame =>
-  ({ h: rotate(f.h, axis, angle), l: rotate(f.l, axis, angle), u: rotate(f.u, axis, angle) });
+// Achse normiert: rotate hält die Länge nur bei einer Einheitsachse. Dreht
+// man um eine Rahmenachse, die durch Rundung minimal von 1 abweicht, wächst der
+// Fehler mit jeder Drehung, bis lange Ketten NaN liefern (Busch mit Krümmung).
+const turnFrame = (f: Frame, axis: Vec3, angle: number): Frame => {
+  const k = normalize(axis);
+  return { h: rotate(f.h, k, angle), l: rotate(f.l, k, angle), u: rotate(f.u, k, angle) };
+};
 
 interface Turtle {
   readonly p: Vec3;
@@ -262,6 +293,10 @@ export function interpret(tokens: readonly Token[], spec: TreeSpec, rnd: () => n
   const segments: Segment[] = [];
   const leaves: Leaf[] = [];
   const stack: Turtle[] = [];
+  // Eigener Zufall für die Krümmung: die Verzweigung bleibt, wie sie ohne war.
+  const drift = rng(spec.seed * 104729 + 7);
+  const k = spec.scale ?? 1;
+  const at = (v: Vec3): Vec3 => (k === 1 ? v : add([0, 0, 0], v, k));
   let t: Turtle = { p: [0, 0, 0], frame: { h: [0, 1, 0], l: [-1, 0, 0], u: [0, 0, 1] }, step: spec.length, segment: -1, tropism: spec.tropism };
 
   const turn = (axis: keyof Frame, degrees: number) => {
@@ -273,10 +308,11 @@ export function interpret(tokens: readonly Token[], spec: TreeSpec, rnd: () => n
     switch (symbol) {
       case 'F':
       case 'f': {
-        const p = add(t.p, t.frame.h, jitter(arg ?? t.step));
+        const step = jitter(arg ?? t.step);
+        const p = add(t.p, t.frame.h, step);
         let segment = t.segment;
-        if (symbol === 'F') segment = segments.push({ a: t.p, b: p, parent: t.segment }) - 1;
-        t = { ...t, p, segment, frame: bend(t.frame, t.tropism) };
+        if (symbol === 'F') segment = segments.push({ a: at(t.p), b: at(p), parent: t.segment }) - 1;
+        t = { ...t, p, segment, frame: wander(bend(t.frame, t.tropism), spec.wander * DEG * step, drift) };
         break;
       }
       case '+': turn('u', angle); break;
@@ -291,10 +327,23 @@ export function interpret(tokens: readonly Token[], spec: TreeSpec, rnd: () => n
       case '[': stack.push(t); break;
       case ']': t = stack.pop() ?? t; break;
       default:
-        if (leafSymbols.has(symbol)) leaves.push({ symbol, scale: arg ?? 1, p: t.p, heading: t.frame.h, left: t.frame.l });
+        if (leafSymbols.has(symbol)) leaves.push({ symbol, scale: arg ?? 1, p: at(t.p), heading: t.frame.h, left: t.frame.l });
     }
   }
   return { segments, radii: pipeRadii(segments, spec), leaves };
+}
+
+/**
+ * Kein Baum wächst ganz gerade: Nach jedem Stück weicht die Richtung um bis zu
+ * `angle` in eine zufällige Richtung ab. Erst nach dem Stück, nicht davor: So
+ * bleibt das erste Stück am Boden senkrecht, und der Stammfuß (rootFoot) setzt
+ * mit waagerechtem Ring nahtlos an. Ein Drehbefehl je F in den Regeln ginge
+ * auch, müsste aber in jedes Rezept und änderte die Verzweigung.
+ */
+function wander(frame: Frame, angle: number, rnd: () => number): Frame {
+  if (!angle) return frame;
+  const axis = rotate(frame.l, frame.h, rnd() * 2 * Math.PI);
+  return turnFrame(frame, axis, angle * rnd());
 }
 
 /** Tropismus: die Blickrichtung neigt sich zur Schwerkraft, umso mehr, je quer sie steht. */
@@ -316,15 +365,41 @@ function pipeRadii(segments: readonly Segment[], spec: TreeSpec): [number, numbe
     if (children[i].length) tips[i] = children[i].reduce((sum, k) => sum + tips[k], 0);
   }
   const radius = (i: number) => spec.tip * tips[i] ** (1 / spec.pipe);
-  return segments.map((_, i) => {
+  const radii = segments.map((_, i): [number, number] => {
     const r = radius(i);
     const end = children[i].length ? Math.max(...children[i].map(radius)) : r * 0.6;
     return [r, end];
   });
+  // Ein Stück ohne Gabel trägt dieselben Spitzen wie das nächste - es bliebe
+  // ein Zylinder bis zur Gabel und verlöre seine Dicke erst im letzten Stück.
+  // Darum verjüngt sich jeder Lauf ohne Gabel gleichmäßig über seine Länge.
+  segments.forEach((s, i) => {
+    if (s.parent >= 0 && children[s.parent].length === 1) return; // mitten im Lauf
+    const run = [i];
+    while (children[run[run.length - 1]].length === 1) run.push(children[run[run.length - 1]][0]);
+    const lengths = run.map((k) => length(add(segments[k].b, segments[k].a, -1)));
+    const total = lengths.reduce((sum, l) => sum + l, 0);
+    if (run.length < 2 || total <= 0) return;
+    const r0 = radii[run[0]][0], r1 = radii[run[run.length - 1]][1];
+    let at = 0;
+    run.forEach((k, j) => {
+      const from = r0 + ((r1 - r0) * at) / total;
+      at += lengths[j];
+      radii[k] = [from, r0 + ((r1 - r0) * at) / total];
+    });
+  });
+  return radii;
 }
 
-/** Eckenzahl eines Astes: dicke rund, dünne fast dreieckig. */
-const sides = (r: number) => (r > 0.24 ? 16 : r > 0.14 ? 12 : r > 0.07 ? 9 : r > 0.03 ? 6 : 4);
+/**
+ * Eckenzahl eines Astes: `max` (TreeSpec.sides) am dicken Stamm, dünnere Äste
+ * anteilig weniger, die dünnsten Zweige immer 3 - die runden Normalen glätten
+ * den Umriss. VERIFIED: Die Äste tragen über 80 % der Dreiecke, meist dünne
+ * Zweige (Hängebirke, 7 Schritte, 2026-10-24), darum folgen die Zweige dem
+ * Regler nicht. Mit max 8: 8, 6, 4, 3.
+ */
+export const sides = (r: number, max: number) =>
+  Math.max(3, Math.round(max * (r > 0.24 ? 1 : r > 0.12 ? 0.75 : r > 0.05 ? 0.5 : 0)));
 
 /**
  * Eine Kette von Aststücken als durchgehender Schlauch mit Texturkoordinaten:
@@ -332,11 +407,12 @@ const sides = (r: number) => (r > 0.24 ? 16 : r > 0.14 ? 12 : r > 0.07 ? 9 : r >
  * Kacheln der Rinden-Textur). An jedem Gelenk sitzt ein gemeinsamer Ring
  * senkrecht zur gemittelten Richtung, und der Querschnitt wird ohne Verdrehen
  * mitgeführt (Parallel-Transport) - so knickt der Stamm an den Nahtstellen
- * nicht mehr sichtbar und die Rinde läuft glatt durch.
+ * nicht mehr sichtbar und die Rinde läuft glatt durch. `collar`: Kragen eines
+ * Seitenastes (siehe build) - ein erster Ring im Elternast vor dem Ansatz.
  */
 function barkTube(m: Model, mtl: Material, skeleton: Skeleton, chain: readonly number[],
-  dist0: number, uOff: number, tile: number, caps: { readonly bottom: boolean; readonly top: boolean },
-  cut: { readonly from?: StumpCut; readonly to?: StumpCut; readonly name?: string } = {}) {
+  dist0: number, uOff: number, tile: number, maxSides: number, caps: { readonly bottom: boolean; readonly top: boolean },
+  cut: { readonly from?: StumpCut; readonly to?: StumpCut; readonly name?: string; readonly collar?: StumpCut } = {}) {
   const segs = chain.map((i) => skeleton.segments[i]);
   const pts: Vec3[] = [cut.from?.p ?? segs[0].a, ...segs.map((s) => s.b)];
   const radii = [cut.from?.r ?? skeleton.radii[chain[0]][0], ...chain.map((i) => skeleton.radii[i][1])];
@@ -345,24 +421,28 @@ function barkTube(m: Model, mtl: Material, skeleton: Skeleton, chain: readonly n
     pts[pts.length - 1] = cut.to.p;
     radii[radii.length - 1] = cut.to.r;
   }
-  const dirs = segs.map((s) => normalize(add(s.b, s.a, -1)));
+  // Ecken nach der eigenen Dicke, nicht nach dem Kragen.
+  const n = sides(radii[0], maxSides);
+  if (cut.collar) {
+    pts.unshift(cut.collar.p);
+    radii.unshift(cut.collar.r);
+  }
+  const dirs = pts.slice(1).map((p, j) => normalize(add(p, pts[j], -1)));
   const joints = pts.map((_, j): Vec3 =>
     (j === 0 ? dirs[0] : j === dirs.length ? dirs[j - 1] : normalize(add(dirs[j - 1], dirs[j], 1))));
   // Am Schnitt liegt der Ring waagerecht - das Spiel erkennt die Schnittfläche
   // daran, dass sie genau in der Höhe des Stumpfs liegt.
   if (cut.from) joints[0] = [0, 1, 0];
   if (cut.to) joints[joints.length - 1] = [0, 1, 0];
-  const n = sides(radii[0]);
 
   // Startrahmen wie bei beam(), danach je Gelenk mitgedreht.
   const up: Vec3 = Math.abs(joints[0][1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
   let s1 = normalize(cross(joints[0], up));
   let s2 = cross(s1, joints[0]);
 
-  const vertices: Vec3[] = [];
-  const normals: Vec3[] = [];
-  const uvs: [number, number][] = [];
-  const faces: number[][] = [];
+  const allVertices: Vec3[] = [];
+  const allNormals: Vec3[] = [];
+  const allUvs: [number, number][] = [];
   let dist = dist0;
   for (let j = 0; j < pts.length; j++) {
     if (j > 0) {
@@ -376,32 +456,161 @@ function barkTube(m: Model, mtl: Material, skeleton: Skeleton, chain: readonly n
         s2 = rotate(s2, k, angle);
       }
     }
+    // Gehrung: Der Ring quer zur gemittelten Richtung schnürte den Ast an
+    // einem Knick ein - in der Knickebene um 1/cos(halber Winkel) strecken.
+    const bend = j > 0 && j < dirs.length ? add(dirs[j], dirs[j - 1], -1) : null;
+    const bendLength = bend ? length(bend) : 0;
+    const miter = bendLength > 1e-6 ? Math.min(MITER_MAX, 1 / dot(joints[j], dirs[j])) - 1 : 0;
     for (let k = 0; k <= n; k++) { // k = n schließt den Mantel (gleicher Punkt, volles u)
       const t = Math.PI / n + ((k % n) * 2 * Math.PI) / n;
       const radial = add(add([0, 0, 0], s1, Math.cos(t)), s2, Math.sin(t));
-      vertices.push(add(pts[j], radial, radii[j]));
-      normals.push(radial); // rund schattiert
-      uvs.push([uOff + (k / n) * ((2 * Math.PI * radii[j]) / tile), dist / tile]);
+      const stretch = miter && bend ? add(radial, bend, (miter * dot(radial, bend)) / (bendLength * bendLength)) : radial;
+      allVertices.push(add(pts[j], stretch, radii[j]));
+      allNormals.push(radial); // rund schattiert
+      allUvs.push([uOff + (k / n) * ((2 * Math.PI * radii[j]) / tile), dist / tile]);
     }
   }
-  for (let j = 0; j + 1 < pts.length; j++) {
-    const a0 = j * (n + 1), b0 = (j + 1) * (n + 1);
-    for (let k = 0; k < n; k++) faces.push([a0 + k, a0 + k + 1, b0 + k + 1, b0 + k]);
-  }
-  // Deckel nur, wo man sie sehen kann: am Boden und an Astspitzen ohne Kinder -
-  // mit eigener, flacher Normale entlang des Astes.
-  const cap = (ring: number, normal: Vec3, flip: boolean) => {
-    const start = vertices.length;
-    for (let k = 0; k < n; k++) {
-      vertices.push(vertices[ring + k]);
-      normals.push(normal);
-      uvs.push([0, 0]);
+  // Ein Stück heißt Trunk, wenn es dicker als TRUNK_RADIUS beginnt - das Spiel
+  // behält Trunk in jeder Entfernung und sägt es in Stammstücke. Läuft der
+  // Schlauch vom Stamm in einen Ast, teilt ihn ein gemeinsamer Ring in zwei
+  // Objekte; der Kragenring zählt dabei wie der Ring dahinter.
+  const own = cut.collar ? [radii[1], ...radii.slice(1)] : radii;
+  const thin = own.findIndex((r, j) => j < own.length - 1 && r <= TRUNK_RADIUS);
+  const split = cut.name || thin < 0 ? pts.length - 1 : thin;
+  const ring = n + 1;
+  /** Ringe from..to als ein Objekt, mit Deckel nur, wo man ihn sehen kann. */
+  const emit = (name: string, from: number, to: number) => {
+    if (to <= from) return;
+    const vertices = allVertices.slice(from * ring, (to + 1) * ring);
+    const normals = allNormals.slice(from * ring, (to + 1) * ring);
+    const uvs = allUvs.slice(from * ring, (to + 1) * ring);
+    const faces: number[][] = [];
+    for (let j = 0; j < to - from; j++) {
+      const a0 = j * ring, b0 = (j + 1) * ring;
+      for (let k = 0; k < n; k++) faces.push([a0 + k, a0 + k + 1, b0 + k + 1, b0 + k]);
     }
-    faces.push(Array.from({ length: n }, (_, k) => start + (flip ? n - 1 - k : k)));
+    // Deckel am Boden und an Astspitzen ohne Kinder - mit eigener, flacher
+    // Normale entlang des Astes.
+    const cap = (at: number, normal: Vec3, flip: boolean) => {
+      const start = vertices.length;
+      for (let k = 0; k < n; k++) {
+        vertices.push(vertices[at * ring + k]);
+        normals.push(normal);
+        uvs.push([0, 0]);
+      }
+      faces.push(Array.from({ length: n }, (_, k) => start + (flip ? n - 1 - k : k)));
+    };
+    if (caps.bottom && from === 0) cap(0, [-joints[0][0], -joints[0][1], -joints[0][2]], true);
+    if (caps.top && to === pts.length - 1) cap(to - from, joints[to], false);
+    m.mesh(name, mtl, vertices, faces, uvs, normals);
   };
-  if (caps.bottom) cap(0, [-joints[0][0], -joints[0][1], -joints[0][2]], true);
-  if (caps.top) cap((pts.length - 1) * (n + 1), joints[pts.length - 1], false);
-  m.mesh(cut.name ?? (radii[0] > 0.12 ? 'Trunk' : 'Branch'), mtl, vertices, faces, uvs, normals);
+  emit(cut.name ?? 'Trunk', 0, split);
+  emit('Branch', split, pts.length - 1);
+}
+
+/** Wurzelanläufe einer Baumart ohne eigene Angabe (TreeSpec.roots). */
+const DEFAULT_ROOTS: RootSpec = { count: 5, spread: 3, rise: 1.8 };
+
+/** Ab diesem Halbmesser (Meter) am Anfang ist ein Stück Stamm (Trunk), darunter Ast (Branch). */
+const TRUNK_RADIUS = 0.12;
+
+/** Höchste Streckung eines Rings an einem Knick (Gehrung) - bei fast umkehrenden Ästen. */
+const MITER_MAX = 2;
+
+/** Dünner (Halbmesser, Meter) bekommt ein Elternast keinen Kragen an seinen Seitenästen - die Grenze der dreieckigen Zweige in sides(). */
+const COLLAR_MIN_RADIUS = 0.05;
+
+/** Ein Wurzelanlauf reicht höchstens so viel weiter hinaus, wie der Fuß hoch ist. */
+const FOOT_SLOPE = 2.5;
+/** Punkte um den Stammfuß - genug für die Wurzelanläufe, ein Vielfaches der Ecken des Stamms. */
+const FOOT_AROUND = 24;
+/** Ringe des Stammfußes von unten (0) nach oben (1), unten dichter, wo er sich aufweitet. */
+const FOOT_RINGS = [0, 0.1, 0.25, 0.5, 1];
+
+/**
+ * Stammfuß: vom Boden bis `rise` Stamm-Halbmesser hoch ein Stück mit dem Stamm.
+ * Nach unten weitet er sich auf und läuft in Richtung jeder Wurzel in einen
+ * Anlauf aus, der flach am Boden endet (Anzahl, Reichweite und Höhe nach
+ * TreeSpec.roots, je Baum gestreut aus dem Seed). Der oberste Ring liegt genau
+ * auf dem untersten des Stumpfs - gleiche Punkte, Texturkoordinaten und
+ * Normalen -, so gibt es keine Naht: Er hat ein Vielfaches der Ecken des
+ * Stamms, die zusätzlichen Punkte liegen oben auf dessen Kanten. Er heißt Root:
+ * Das Spiel lässt Teile am Boden beim Fällen stehen (entityRenderer, grounded),
+ * und der Halbmesser des Stumpfs, nach dem es den liegenden Stamm ausrichtet,
+ * bleibt der des Stamms. Waagerechte Ringe: unten liegt alles genau auf y = 0 -
+ * das Spiel stellt das Modell mit seinem tiefsten Punkt auf den Boden.
+ * null ohne Anläufe (Palme, Kaktus); dann beginnt der Stumpf wie bisher am Boden.
+ */
+function rootFoot(m: Model, spec: TreeSpec, skeleton: Skeleton, seg: number, cut: StumpCut, uOff: number, tile: number) {
+  const shape = spec.roots ?? DEFAULT_ROOTS;
+  if (shape.count <= 0) return null;
+  const { a, b } = skeleton.segments[seg];
+  const [r0, r1] = skeleton.radii[seg];
+  // Eigener Zufall aus dem Seed: jeder Baum anders, aber das Laub bleibt, wo
+  // es mit dem Haupt-Zufall war.
+  const vary = rng((spec.rootSeed ?? spec.seed) * 7919 + 13);
+  // Höhe: nach Art und Seed, aber unter dem Schnitt und im ersten Stück.
+  const rise = Math.min(shape.rise * r0 * (0.85 + vary() * 0.3), cut.p[1] * 0.8, (b[1] - a[1]) * 0.8);
+  if (rise <= 0) return null;
+  const t = rise / (b[1] - a[1]);
+  const top: StumpCut = { p: add(a, add(b, a, -1), t), r: r0 + (r1 - r0) * t };
+  const count = Math.max(1, shape.count + Math.round((vary() - 0.5) * 2));
+  const turn = vary() * 2 * Math.PI;
+  const lobes = Array.from({ length: count }, (_, k) => ({
+    angle: turn + ((k + (vary() - 0.5) * 0.6) / count) * 2 * Math.PI,
+    // Wie weit über den Stamm hinaus, in Halbmessern des Fußes - nicht flacher
+    // als FOOT_SLOPE, auch wenn der Schnitt die Höhe gekürzt hat (Eiche).
+    reach: Math.min((shape.spread - 1) * (0.7 + vary() * 0.6), (FOOT_SLOPE * rise) / top.r),
+    width: (Math.PI / count) * (0.6 + vary() * 0.4),
+  }));
+  // Halbmesser über dem Kreis: unten etwas breiter, in den Anläufen weit
+  // hinaus, beides nach oben auslaufend - bei h = 1 genau der Stamm.
+  const radius = (theta: number, h: number) => {
+    let extra = 0.3 * (1 - h) ** 2;
+    for (const lobe of lobes) {
+      const d = Math.abs((((theta - lobe.angle) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI);
+      // Rund statt spitz: flacher Scheitel, steile Flanken.
+      if (d < lobe.width) extra += lobe.reach * (1 - h) ** 3 * Math.cos((d / lobe.width) * (Math.PI / 2)) ** 0.6;
+    }
+    return top.r * (1 + extra);
+  };
+  // Rahmen und Winkel wie barkTube bei einem waagerechten Ring.
+  const n = sides(top.r, spec.sides);
+  const around = n * Math.ceil(FOOT_AROUND / n);
+  const s1: Vec3 = [0, 0, -1], s2: Vec3 = [1, 0, 0];
+  const dir = (theta: number) => add(add([0, 0, 0], s1, Math.cos(theta)), s2, Math.sin(theta));
+  // Auf den Kanten des n-Ecks des Stamms statt auf dem Kreis - oben deckungsgleich.
+  const polygon = (theta: number) => {
+    const step = (2 * Math.PI) / n;
+    const phi = ((((theta + Math.PI / n) % step) + step) % step) - Math.PI / n;
+    return Math.cos(Math.PI / n) / Math.cos(phi);
+  };
+  const axis = add(top.p, a, -1);
+  const height = length(axis);
+  const point = (theta: number, h: number) => add(add(a, axis, h), dir(theta), radius(theta, h));
+  const vertices: Vec3[] = [];
+  const normals: Vec3[] = [];
+  const uvs: [number, number][] = [];
+  for (const h of FOOT_RINGS) {
+    for (let i = 0; i <= around; i++) { // i = around schließt den Mantel
+      const theta = Math.PI / n + ((i % around) * 2 * Math.PI) / around;
+      vertices.push(add(add(a, axis, h), dir(theta), radius(theta, h) * polygon(theta)));
+      // Rund schattiert wie der Stamm: Normale der glatten Fläche, oben genau seine.
+      const e = 1e-3;
+      const across = add(point(theta + e, h), point(theta - e, h), -1);
+      const along = add(point(theta, Math.min(1, h + e)), point(theta, Math.max(0, h - e)), -1);
+      const normal = normalize(cross(along, across));
+      normals.push(h === 1 ? dir(theta) : dot(normal, dir(theta)) < 0 ? [-normal[0], -normal[1], -normal[2]] : normal);
+      uvs.push([uOff + (i / around) * ((2 * Math.PI * top.r) / tile), (h * height) / tile]);
+    }
+  }
+  const faces: number[][] = [];
+  for (let j = 0; j + 1 < FOOT_RINGS.length; j++) {
+    const a0 = j * (around + 1), b0 = (j + 1) * (around + 1);
+    for (let i = 0; i < around; i++) faces.push([a0 + i, a0 + i + 1, b0 + i + 1, b0 + i]);
+  }
+  m.mesh('Root', spec.stemMaterial, vertices, faces, uvs, normals);
+  return { top, dist: height };
 }
 
 /** Höhe des Baumstumpfs über dem Boden in Metern - dort sägen die Dorfbewohner ab. */
@@ -480,15 +689,15 @@ export function build(skeleton: Skeleton, spec: TreeSpec, rnd: () => number, { l
   if (!bark) {
     segments.forEach((s, i) => {
       const [r0, r1] = skeleton.radii[i];
-      const name = r0 > 0.12 ? 'Trunk' : 'Branch';
+      const name = r0 > TRUNK_RADIUS ? 'Trunk' : 'Branch';
       if (stump?.below.has(i)) {
-        m.beam('Trunk.Stump', spec.stemMaterial, s.a, s.b, r0 * 2, { w1: r1 * 2, n: sides(r0) });
+        m.beam('Trunk.Stump', spec.stemMaterial, s.a, s.b, r0 * 2, { w1: r1 * 2, n: sides(r0, spec.sides) });
       } else if (stump?.seg === i) {
         const { cut } = stump;
-        m.beam('Trunk.Stump', spec.stemMaterial, s.a, cut.p, r0 * 2, { w1: cut.r * 2, n: sides(r0) });
-        m.beam(name, spec.stemMaterial, cut.p, s.b, cut.r * 2, { w1: r1 * 2, n: sides(r0) });
+        m.beam('Trunk.Stump', spec.stemMaterial, s.a, cut.p, r0 * 2, { w1: cut.r * 2, n: sides(r0, spec.sides) });
+        m.beam(name, spec.stemMaterial, cut.p, s.b, cut.r * 2, { w1: r1 * 2, n: sides(r0, spec.sides) });
       } else {
-        m.beam(name, spec.stemMaterial, s.a, s.b, r0 * 2, { w1: r1 * 2, n: sides(r0) });
+        m.beam(name, spec.stemMaterial, s.a, s.b, r0 * 2, { w1: r1 * 2, n: sides(r0, spec.sides) });
       }
     });
   } else {
@@ -507,8 +716,9 @@ export function build(skeleton: Skeleton, spec: TreeSpec, rnd: () => number, { l
       hasChild[s.parent] = true;
     });
     // Hauptfortsetzung je Ast: das dickste Kind am Astende. Es bildet mit dem
-    // Elternstück einen durchgehenden Schlauch, solange die Seitenzahl gleich
-    // bleibt; die übrigen Kinder beginnen eigene Schläuche.
+    // Elternstück einen durchgehenden Schlauch mit der Eckenzahl seines Anfangs -
+    // ein neuer Schlauch mit weniger Ecken ließe dort eine Stufe. Die übrigen
+    // Kinder beginnen eigene Schläuche mit Kragen.
     const mainChild = new Array<number>(segments.length).fill(-1);
     segments.forEach((s, i) => {
       if (s.parent < 0) return;
@@ -517,7 +727,24 @@ export function build(skeleton: Skeleton, spec: TreeSpec, rnd: () => number, { l
     });
     const continues = (i: number): boolean => {
       const p = segments[i].parent;
-      return p >= 0 && mainChild[p] === i && sides(skeleton.radii[i][0]) === sides(skeleton.radii[p][0]);
+      return p >= 0 && mainChild[p] === i;
+    };
+    // Kragen eines Seitenastes: Er beginnt nicht am Gabelpunkt, sondern ein
+    // Stück davor auf der Achse des Elternastes, quer zu ihr und knapp so dick
+    // wie er - der Ring liegt ganz im Elternast. Von dort läuft der Ast als
+    // Trichter durch den Gabelpunkt und wächst so aus der Rinde, statt als dünne
+    // Röhre in ihr zu stecken. Ein Ring quer zum Seitenast stünde dagegen am
+    // Ende des Elternastes seitlich über. Nur an Ästen dicker als ein Zweig -
+    // an Zweig auf Zweig sieht man ihn nicht, er kostete dort aber die meisten
+    // Dreiecke.
+    const collar = (parent: number): StumpCut | undefined => {
+      const r = parent >= 0 ? skeleton.radii[parent][1] : 0;
+      if (r <= COLLAR_MIN_RADIUS) return undefined;
+      const { a, b } = segments[parent];
+      const back = Math.min(r * 1.5, len[parent] * 0.5);
+      // Im Innenkreis des kantigen Elternastes, sonst stäche er durch dessen Flächen.
+      const inner = Math.cos(Math.PI / sides(skeleton.radii[parent][0], spec.sides));
+      return { p: add(b, normalize(add(b, a, -1)), -back), r: r * inner * 0.95 };
     };
     segments.forEach((s, i) => {
       if (continues(i)) return; // Teil eines Schlauchs, der weiter unten beginnt
@@ -531,18 +758,21 @@ export function build(skeleton: Skeleton, spec: TreeSpec, rnd: () => number, { l
         const { cut } = stump;
         const up = chain.slice(k);
         const cutDist = dist[stump.seg] + length(add(cut.p, segments[stump.seg].a, -1));
-        barkTube(m, spec.stemMaterial, skeleton, chain.slice(0, k + 1), dist[i], uOff[i], tile,
-          { bottom: s.parent < 0, top: true }, { to: cut, name: 'Trunk.Stump' });
-        barkTube(m, spec.stemMaterial, skeleton, up, cutDist, uOff[i], tile,
+        // Darunter der Stammfuß mit den Wurzelanläufen; der Stumpf beginnt auf ihm.
+        const foot = s.parent < 0 ? rootFoot(m, spec, skeleton, i, cut, uOff[i], tile) : null;
+        barkTube(m, spec.stemMaterial, skeleton, chain.slice(0, k + 1), foot ? foot.dist : dist[i], uOff[i], tile, spec.sides,
+          { bottom: s.parent < 0 && !foot, top: true }, { from: foot?.top, to: cut, name: 'Trunk.Stump' });
+        barkTube(m, spec.stemMaterial, skeleton, up, cutDist, uOff[i], tile, spec.sides,
           { bottom: true, top: !hasChild[last] }, { from: cut });
         return;
       }
-      barkTube(m, spec.stemMaterial, skeleton, chain, dist[i], uOff[i], tile,
-        { bottom: s.parent < 0, top: !hasChild[last] }, stump?.below.has(i) ? { name: 'Trunk.Stump' } : {});
+      barkTube(m, spec.stemMaterial, skeleton, chain, dist[i], uOff[i], tile, spec.sides,
+        { bottom: s.parent < 0, top: !hasChild[last] },
+        stump?.below.has(i) ? { name: 'Trunk.Stump' } : { collar: collar(s.parent) });
     });
   }
   const foliage: Organ = {
-    shape: spec.leafShape, size: spec.leafSize, materials: spec.leafMaterials, leaf: spec.leaf, leafCount: spec.leafCount,
+    shape: spec.leafShape, size: spec.leafSize * (spec.scale ?? 1), materials: spec.leafMaterials, leaf: spec.leaf, leafCount: spec.leafCount,
   };
   const count = new Map<Organ, number>();
   for (const leaf of skeleton.leaves) {

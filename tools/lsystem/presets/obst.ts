@@ -27,7 +27,7 @@ A 0.4 -> "F[&FA]/(137.5)[&(20)FA]`,
 
 const olive = preset({
   group, label: 'Olivenbaum', axiom: '[&(18)FFA]/(160)[&(12)FA]', iterations: 7, angle: 40, length: 0.9,
-  lengthFactor: 0.86, jitter: 0.45, tropism: 0.08,
+  lengthFactor: 0.86, jitter: 0.45, tropism: 0.08, wander: 7,
   rules: `# Uralt und verdreht: geteilter Stamm, niedrige, silbrige Krone
 A 0.5 -> "[&FA]/(137.5)[&FA]/(137.5)[&FA]
 A 0.3 -> "F+(20)[&FA]/(137.5)[&FA]
